@@ -1772,6 +1772,7 @@ const fetchAllTemplates = async () => {
   templatesLoading.value = true
   try {
     await store.fetchTemplates({ all: true, force: true })
+    store.fetchFavorites().catch(() => {}) // M5 — favoris personnels (non bloquant)
   } finally {
     templatesLoading.value = false
   }
@@ -2051,6 +2052,41 @@ const runRepeatApply = async () => {
     toast(t('planning.week.applied', { n: repeatResult.value.created_count }), 'success')
     await fetchWeekData()
   } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
+}
+
+// M5 (ADR-728) — Import des presets métier JobDomain
+const importOpen = ref(false)
+const importPreviewData = ref(null)
+const importSelected = ref([])
+const importResult = ref(null)
+const importLoading = ref(false)
+const openImport = async () => {
+  importOpen.value = true; importResult.value = null; importSelected.value = []; importLoading.value = true
+  try { importPreviewData.value = await store.fetchImportPreview() } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { importLoading.value = false }
+}
+const importItems = computed(() => {
+  const p = importPreviewData.value
+  if (!p || !p.has_presets) return []
+  return [
+    ...(p.schedule_templates || []).map(i => ({ ...i, type: 'schedule_template', group: 'planning.templates.newTemplate' })),
+    ...(p.week_templates || []).map(i => ({ ...i, type: 'week_template', group: 'planning.week.title' })),
+    ...(p.activity_presets || []).map(i => ({ ...i, type: 'activity_preset', group: 'planning.presets.title' })),
+  ]
+})
+const toggleImportSel = key => { const i = importSelected.value.indexOf(key); if (i >= 0) importSelected.value.splice(i, 1); else importSelected.value.push(key) }
+const runImport = async () => {
+  importLoading.value = true
+  try {
+    const sel = importSelected.value.length ? importSelected.value : null
+    importResult.value = await store.importPresets(sel)
+    toast(t('planning.import.done', { n: (importResult.value.created || []).length }), 'success')
+    await Promise.all([store.fetchTemplates({ all: true, force: true }), store.fetchActivityPresets(), store.fetchWeekTemplates(), store.fetchCoverageCategories()])
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { importLoading.value = false }
+}
+
+// M5 — favoris personnels
+const toggleFav = async (type, id) => {
+  try { await store.toggleFavorite(type, id) } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
 }
 
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
@@ -2360,6 +2396,18 @@ watch(activeTab, tab => {
           @click="openCreateShift()"
         >
           {{ $t('planning.newShift') }}
+        </VBtn>
+        <VBtn
+          v-if="activeTab === 'templates'"
+          v-can="'workforce.planning_view'"
+          variant="tonal"
+          color="success"
+          prepend-icon="tabler-sparkles"
+          data-test="preset-import-open"
+          class="me-2"
+          @click="openImport"
+        >
+          {{ $t('planning.import.title') }}
         </VBtn>
         <VBtn
           v-if="activeTab === 'templates'"
@@ -3746,6 +3794,24 @@ watch(activeTab, tab => {
                   icon
                   variant="text"
                   size="x-small"
+                  :color="store.isFavorite('schedule_template', item.id) ? 'warning' : 'default'"
+                  :data-test="`fav-schedule_template-${item.id}`"
+                  @click.stop="toggleFav('schedule_template', item.id)"
+                >
+                  <VIcon
+                    :icon="store.isFavorite('schedule_template', item.id) ? 'tabler-star-filled' : 'tabler-star'"
+                    size="18"
+                  />
+                  <VTooltip
+                    activator="parent"
+                    :text="$t('planning.favorites.toggle')"
+                    location="top"
+                  />
+                </VBtn>
+                <VBtn
+                  icon
+                  variant="text"
+                  size="x-small"
                   color="primary"
                   :data-test="`template-edit-${item.id}`"
                   @click.stop="openEditTemplate(item)"
@@ -4820,6 +4886,83 @@ watch(activeTab, tab => {
             {{ $t('planning.week.result', { created: applyResult.created_count, unfilled: applyResult.unfilled, blocked: (applyResult.blocked || []).length }) }}
           </VAlert>
         </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- M5 (ADR-728) — Import des modèles métier (presets JobDomain) -->
+    <VDialog v-model="importOpen" max-width="720" scrollable>
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          {{ $t('planning.import.title') }}
+          <VSpacer />
+          <VBtn icon variant="text" size="small" @click="importOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+        <VCardText>
+          <div v-if="importLoading && !importPreviewData" class="text-center py-6">
+            <VProgressCircular indeterminate color="primary" />
+          </div>
+          <template v-else-if="importPreviewData && importPreviewData.has_presets">
+            <p class="text-body-2 mb-2">
+              {{ $t('planning.import.intro') }}
+            </p>
+            <div class="d-flex gap-2 flex-wrap mb-3">
+              <VChip size="small" color="success" variant="tonal">
+                {{ importPreviewData.summary.new }} {{ $t('planning.import.new') }}
+              </VChip>
+              <VChip v-if="importPreviewData.summary.existing" size="small" variant="tonal">
+                {{ importPreviewData.summary.existing }} {{ $t('planning.import.existing') }}
+              </VChip>
+              <VChip v-if="importPreviewData.summary.conflicts" size="small" color="warning" variant="tonal">
+                {{ importPreviewData.summary.conflicts }} {{ $t('planning.import.conflicts') }}
+              </VChip>
+            </div>
+            <p class="text-caption text-disabled mb-1">
+              {{ $t('planning.import.selectHint') }}
+            </p>
+            <div
+              v-for="it in importItems"
+              :key="it.type + ':' + it.code"
+              class="d-flex align-center gap-2 py-1 border-b"
+              data-test="preset-import-row"
+            >
+              <VCheckbox
+                :model-value="importSelected.includes(it.type + ':' + it.code)"
+                :disabled="it.status === 'existing'"
+                density="compact"
+                hide-details
+                @update:model-value="toggleImportSel(it.type + ':' + it.code)"
+              />
+              <div class="flex-grow-1">
+                <span class="text-body-2">{{ it.name }}</span>
+                <span class="text-caption text-disabled"> · {{ $t(it.group) }}</span>
+              </div>
+              <VChip size="x-small" :color="it.status === 'new' ? 'success' : it.status === 'conflict' ? 'warning' : undefined" variant="tonal">
+                {{ $t('planning.import.status.' + it.status) }}
+              </VChip>
+            </div>
+            <VAlert v-if="importResult" type="success" variant="tonal" class="mt-4" data-test="preset-import-result">
+              {{ $t('planning.import.result', { created: (importResult.created || []).length, conflicts: (importResult.conflicts || []).length }) }}
+            </VAlert>
+          </template>
+          <p v-else class="text-disabled py-4">
+            {{ $t('planning.import.none') }}
+          </p>
+        </VCardText>
+        <VCardActions v-if="importPreviewData && importPreviewData.has_presets" class="px-6 pb-4">
+          <span class="text-caption text-disabled">{{ importSelected.length ? $t('planning.import.selected', { n: importSelected.length }) : $t('planning.import.allItems') }}</span>
+          <VSpacer />
+          <VBtn
+            v-can="'workforce.planning_manage'"
+            color="primary"
+            :loading="importLoading"
+            data-test="preset-import-apply"
+            @click="runImport"
+          >
+            {{ $t('planning.import.import') }}
+          </VBtn>
+        </VCardActions>
       </VCard>
     </VDialog>
 

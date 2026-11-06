@@ -7525,6 +7525,31 @@
   "planning": {
     "title": "Planning",
     "subtitle": "Schedule shifts, manage templates and intervention sites",
+    "favorites": {
+      "toggle": "Add / remove from favorites",
+      "label": "Favorites",
+      "only": "Favorites only"
+    },
+    "import": {
+      "title": "Business models",
+      "intro": "Import ready-to-use templates tailored to your activity. You can then customize them.",
+      "selectHint": "Everything is selected by default. Uncheck what you do not want to import.",
+      "new": "new",
+      "existing": "already present",
+      "conflicts": "name clashes",
+      "import": "Import",
+      "done": "{n} item(s) imported",
+      "none": "No business model available for this activity.",
+      "selected": "{n} selected",
+      "allItems": "Import all",
+      "result": "{created} item(s) imported · {conflicts} name clash(es) skipped",
+      "status": {
+        "new": "New",
+        "existing": "Already present",
+        "customized": "Customized",
+        "conflict": "Name clash"
+      }
+    },
     "newShift": "New shift",
     "editShift": "Edit shift",
     "shiftCreated": "Shift created",

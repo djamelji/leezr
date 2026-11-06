@@ -582,6 +582,14 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::put('activity-presets/{id}', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'update'])->middleware($perm('workforce.planning_manage'));
     Route::delete('activity-presets/{id}', [\App\Modules\Workforce\Planning\Http\ActivityPresetController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
+    // Presets métier JobDomain (import) — Smart Planning M5 (ADR-728).
+    Route::get('presets/import-preview', [\App\Modules\Workforce\Presets\Http\WorkforcePresetController::class, 'preview'])->middleware($perm('workforce.planning_view'));
+    Route::post('presets/import', [\App\Modules\Workforce\Presets\Http\WorkforcePresetController::class, 'import'])->middleware($perm('workforce.planning_manage'));
+
+    // Favoris personnels — Smart Planning M5 (ADR-728).
+    Route::get('favorites', [\App\Modules\Workforce\Favorites\Http\WorkforceFavoriteController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('favorites/toggle', [\App\Modules\Workforce\Favorites\Http\WorkforceFavoriteController::class, 'toggle'])->middleware($perm('workforce.planning_view'));
+
     // Week templates (semaines types) — Smart Planning M3 (ADR-726). capture AVANT {id}. Lecture planning_view, écriture planning_manage.
     Route::get('week-templates', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('week-templates', [\App\Modules\Workforce\Planning\Http\WeekTemplateController::class, 'store'])->middleware($perm('workforce.planning_manage'));

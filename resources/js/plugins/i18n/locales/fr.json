@@ -7525,6 +7525,31 @@
   "planning": {
     "title": "Planning",
     "subtitle": "Planifiez les shifts, gérez les modèles et les lieux d'intervention",
+    "favorites": {
+      "toggle": "Ajouter / retirer des favoris",
+      "label": "Favoris",
+      "only": "Favoris uniquement"
+    },
+    "import": {
+      "title": "Modèles métier",
+      "intro": "Importez des modèles prêts à l'emploi adaptés à votre activité. Vous pourrez ensuite les personnaliser.",
+      "selectHint": "Tout est sélectionné par défaut. Décochez ce que vous ne voulez pas importer.",
+      "new": "nouveaux",
+      "existing": "déjà présents",
+      "conflicts": "homonymes",
+      "import": "Importer",
+      "done": "{n} élément(s) importé(s)",
+      "none": "Aucun modèle métier disponible pour cette activité.",
+      "selected": "{n} sélectionné(s)",
+      "allItems": "Tout importer",
+      "result": "{created} élément(s) importé(s) · {conflicts} homonyme(s) ignoré(s)",
+      "status": {
+        "new": "Nouveau",
+        "existing": "Déjà présent",
+        "customized": "Personnalisé",
+        "conflict": "Homonyme"
+      }
+    },
     "newShift": "Nouveau shift",
     "editShift": "Modifier le shift",
     "shiftCreated": "Shift créé",

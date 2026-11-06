@@ -13,6 +13,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     _coverageCategories: [],
     _activityPresets: [],
     _weekTemplates: [],
+    _favorites: [],
     _statistics: null,
     _loading: false,
   }),
@@ -28,6 +29,8 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     coverageCategories: state => state._coverageCategories,
     activityPresets: state => state._activityPresets,
     weekTemplates: state => state._weekTemplates,
+    favorites: state => state._favorites,
+    isFavorite: state => (type, id) => state._favorites.includes(`${type}:${id}`),
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -368,6 +371,26 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     },
     async repeatApplyWeekTemplate(id, payload) {
       return await $api(`/workforce/planning/week-templates/${id}/repeat-apply`, { method: 'POST', body: payload })
+    },
+
+    // ── M5 (ADR-728) — Presets métier JobDomain + favoris ──
+    async fetchImportPreview() {
+      return await $api('/workforce/planning/presets/import-preview')
+    },
+    async importPresets(selected) {
+      return await $api('/workforce/planning/presets/import', { method: 'POST', body: { selected } })
+    },
+    async fetchFavorites() {
+      const data = await $api('/workforce/planning/favorites')
+      this._favorites = (data.data ?? data).map(f => `${f.favoritable_type}:${f.favoritable_id}`)
+      return this._favorites
+    },
+    async toggleFavorite(type, id) {
+      const r = await $api('/workforce/planning/favorites/toggle', { method: 'POST', body: { favoritable_type: type, favoritable_id: id } })
+      const key = `${type}:${id}`
+      if (r.favorited) { if (!this._favorites.includes(key)) this._favorites.push(key) }
+      else { this._favorites = this._favorites.filter(k => k !== key) }
+      return r
     },
 
     // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──

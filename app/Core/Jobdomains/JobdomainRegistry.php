@@ -384,8 +384,93 @@ class JobdomainRegistry
                     'default_fields' => $mergedFields,
                     'default_roles' => $definition['default_roles'] ?? [],
                     'default_documents' => $definition['default_documents'] ?? [],
+                    // M5 (ADR-728) — propositions métier Workforce (presets importables par la Company).
+                    'workforce_presets' => $definition['workforce_presets'] ?? static::workforcePresetsFor($key),
                 ],
             );
         }
+    }
+
+    /**
+     * M5 (ADR-728) — presets Workforce proposés par JobDomain (contrat versionné, référencés par CODE,
+     * résolus vers les identifiants Company à l'import). Platform-controlled (code-seeded via sync()).
+     * Les semaines types proposées sont PAR BESOINS (aucun salarié dans un preset).
+     */
+    public static function workforcePresetsFor(string $key): array
+    {
+        if ($key !== 'logistique') {
+            return [];
+        }
+
+        return [
+            'schema_version' => 1,
+            'coverage_categories' => [
+                ['code' => 'route', 'name' => 'Route', 'color' => '#4b6bfb'],
+                ['code' => 'preparation', 'name' => 'Préparation', 'color' => '#0ea5a3'],
+                ['code' => 'livraison', 'name' => 'Livraison', 'color' => '#8b5cf6'],
+                ['code' => 'formation', 'name' => 'Formation', 'color' => '#e0892a'],
+            ],
+            'activity_presets' => [
+                ['code' => 'brief', 'name' => 'Brief équipe', 'activity_type' => 'brief', 'coverage_category_code' => 'route', 'default_duration_minutes' => 30, 'priority' => 'normal'],
+                ['code' => 'chargement', 'name' => 'Chargement du véhicule', 'activity_type' => 'chargement', 'coverage_category_code' => 'preparation', 'default_duration_minutes' => 90, 'priority' => 'high'],
+                ['code' => 'tournee', 'name' => 'Route / tournée', 'activity_type' => 'tournee', 'coverage_category_code' => 'route', 'default_duration_minutes' => 210, 'priority' => 'normal'],
+                ['code' => 'livraison_client', 'name' => 'Livraison client', 'activity_type' => 'livraison', 'coverage_category_code' => 'livraison', 'default_duration_minutes' => 180, 'priority' => 'high'],
+                ['code' => 'inventaire', 'name' => 'Inventaire', 'activity_type' => 'inventaire', 'coverage_category_code' => 'preparation', 'default_duration_minutes' => 120, 'priority' => 'normal'],
+                ['code' => 'formation_secu', 'name' => 'Formation sécurité', 'activity_type' => 'formation', 'coverage_category_code' => 'formation', 'default_duration_minutes' => 120, 'priority' => 'critical'],
+            ],
+            'schedule_templates' => [
+                [
+                    'code' => 'shift_preparation', 'name' => 'Shift préparation', 'start_time' => '06:00', 'end_time' => '12:00',
+                    'break_duration_minutes' => 30, 'color' => '#0ea5a3', 'coverage_category_code' => 'preparation',
+                    'composition' => [
+                        'activities' => [
+                            ['preset_code' => 'brief', 'offset_minutes' => 0, 'duration_minutes' => 30],
+                            ['preset_code' => 'chargement', 'offset_minutes' => 30, 'duration_minutes' => 120],
+                            ['preset_code' => 'inventaire', 'offset_minutes' => 210, 'duration_minutes' => 150],
+                        ],
+                        'breaks' => [['offset_minutes' => 180, 'duration_minutes' => 30]],
+                    ],
+                ],
+                [
+                    'code' => 'shift_journee', 'name' => 'Shift journée', 'start_time' => '09:00', 'end_time' => '17:00',
+                    'break_duration_minutes' => 60, 'color' => '#4b6bfb', 'coverage_category_code' => 'route',
+                    'composition' => [
+                        'activities' => [
+                            ['preset_code' => 'brief', 'offset_minutes' => 0, 'duration_minutes' => 30],
+                            ['preset_code' => 'tournee', 'offset_minutes' => 30, 'duration_minutes' => 180],
+                            ['preset_code' => 'tournee', 'offset_minutes' => 270, 'duration_minutes' => 210],
+                        ],
+                        'breaks' => [['offset_minutes' => 210, 'duration_minutes' => 60]],
+                    ],
+                ],
+                [
+                    'code' => 'shift_livraison', 'name' => 'Shift livraison soir', 'start_time' => '14:00', 'end_time' => '20:00',
+                    'break_duration_minutes' => 30, 'color' => '#8b5cf6', 'coverage_category_code' => 'livraison',
+                    'composition' => [
+                        'activities' => [['preset_code' => 'livraison_client', 'offset_minutes' => 0, 'duration_minutes' => 180]],
+                        'breaks' => [],
+                    ],
+                ],
+                [
+                    'code' => 'shift_formation', 'name' => 'Formation', 'start_time' => '09:00', 'end_time' => '13:00',
+                    'break_duration_minutes' => 0, 'color' => '#e0892a', 'coverage_category_code' => 'formation',
+                    'composition' => ['activities' => [['preset_code' => 'formation_secu', 'offset_minutes' => 0, 'duration_minutes' => 120]], 'breaks' => []],
+                ],
+            ],
+            'week_templates' => [
+                [
+                    'code' => 'semaine_logistique', 'name' => 'Semaine logistique (par besoins)', 'strategy' => 'needs',
+                    'lines' => [
+                        ['day_index' => 0, 'schedule_template_code' => 'shift_preparation', 'kind' => 'needs', 'headcount' => 3],
+                        ['day_index' => 0, 'schedule_template_code' => 'shift_journee', 'kind' => 'needs', 'headcount' => 4],
+                        ['day_index' => 1, 'schedule_template_code' => 'shift_preparation', 'kind' => 'needs', 'headcount' => 3],
+                        ['day_index' => 1, 'schedule_template_code' => 'shift_journee', 'kind' => 'needs', 'headcount' => 4],
+                        ['day_index' => 2, 'schedule_template_code' => 'shift_journee', 'kind' => 'needs', 'headcount' => 4],
+                        ['day_index' => 3, 'schedule_template_code' => 'shift_journee', 'kind' => 'needs', 'headcount' => 4],
+                        ['day_index' => 4, 'schedule_template_code' => 'shift_livraison', 'kind' => 'needs', 'headcount' => 2],
+                    ],
+                ],
+            ],
+        ];
     }
 }

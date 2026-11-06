@@ -18,6 +18,7 @@ class Jobdomain extends Model
         'default_fields',
         'default_documents',
         'default_roles',
+        'workforce_presets', // M5 (ADR-728) — propositions métier Workforce (activait la colonne morte)
         'allow_custom_fields',
     ];
 
@@ -29,6 +30,7 @@ class Jobdomain extends Model
             'default_fields' => 'array',
             'default_documents' => 'array',
             'default_roles' => 'array',
+            'workforce_presets' => 'array',
             'allow_custom_fields' => 'boolean',
         ];
     }
