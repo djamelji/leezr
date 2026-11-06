@@ -19,7 +19,7 @@ class PlanningOperation extends Model
     const STATUS_UNDONE = 'undone';
 
     // Types « création » : annuler = supprimer les brouillons créés ; rétablir = réexécuter l'intention.
-    const CREATED_TYPES = ['create_shift', 'duplicate', 'copy', 'copy_week', 'bulk_template'];
+    const CREATED_TYPES = ['create_shift', 'duplicate', 'copy', 'copy_week', 'bulk_template', 'apply_week_template'];
     const TYPE_MOVE = 'move_shift';
 
     protected $fillable = [

@@ -12,6 +12,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     _coverage: [],
     _coverageCategories: [],
     _activityPresets: [],
+    _weekTemplates: [],
     _statistics: null,
     _loading: false,
   }),
@@ -26,6 +27,7 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     coverage: state => state._coverage,
     coverageCategories: state => state._coverageCategories,
     activityPresets: state => state._activityPresets,
+    weekTemplates: state => state._weekTemplates,
     statistics: state => state._statistics,
     loading: state => state._loading,
   },
@@ -327,6 +329,39 @@ export const usePlanningStore = defineStore('workforcePlanning', {
     async deleteActivityPreset(id) {
       await $api(`/workforce/planning/activity-presets/${id}`, { method: 'DELETE' })
       this._activityPresets = this._activityPresets.filter(p => p.id !== id)
+    },
+
+    // ── Week templates (semaines types) — M3 (ADR-726) ──
+    async fetchWeekTemplates() {
+      const data = await $api('/workforce/planning/week-templates')
+      this._weekTemplates = data.data ?? data
+      return this._weekTemplates
+    },
+    async createWeekTemplate(payload) {
+      const data = await $api('/workforce/planning/week-templates', { method: 'POST', body: payload })
+      this._weekTemplates.push(data)
+      return data
+    },
+    async updateWeekTemplate(id, payload) {
+      const data = await $api(`/workforce/planning/week-templates/${id}`, { method: 'PUT', body: payload })
+      const idx = this._weekTemplates.findIndex(w => w.id === id)
+      if (idx !== -1) this._weekTemplates[idx] = data
+      return data
+    },
+    async deleteWeekTemplate(id) {
+      await $api(`/workforce/planning/week-templates/${id}`, { method: 'DELETE' })
+      this._weekTemplates = this._weekTemplates.filter(w => w.id !== id)
+    },
+    async captureWeek(payload) {
+      const data = await $api('/workforce/planning/week-templates/capture', { method: 'POST', body: payload })
+      this._weekTemplates.push(data)
+      return data
+    },
+    async previewWeekTemplate(id, targetDate) {
+      return await $api(`/workforce/planning/week-templates/${id}/preview`, { method: 'POST', body: { target_date: targetDate } })
+    },
+    async applyWeekTemplate(id, payload) {
+      return await $api(`/workforce/planning/week-templates/${id}/apply`, { method: 'POST', body: payload })
     },
 
     // ── Scheduled activities (multi-activités) — Smart Planning SP1b ──

@@ -1918,6 +1918,102 @@ const insertPreset = p => {
   showComposition.value = true
 }
 
+// ── M3 (ADR-726) — Semaines types ──
+const WEEKDAY_NAMES = computed(() => [0, 1, 2, 3, 4, 5, 6].map(dow => new Date(2023, 0, 1 + dow).toLocaleDateString(locale.value, { weekday: 'short' })))
+const weekDayLabel = i => WEEKDAY_NAMES.value[((effectiveFirstDay.value + i) % 7 + 7) % 7]
+const weekDayItems = computed(() => [0, 1, 2, 3, 4, 5, 6].map(i => ({ title: weekDayLabel(i), value: i })))
+const weekStrategyItems = computed(() => [
+  { title: t('planning.week.stratNominative'), value: 'nominative' },
+  { title: t('planning.week.stratNeeds'), value: 'needs' },
+  { title: t('planning.week.stratMixed'), value: 'mixed' },
+])
+const weekKindItems = computed(() => [
+  { title: t('planning.week.kindNominative'), value: 'nominative' },
+  { title: t('planning.week.kindNeeds'), value: 'needs' },
+])
+
+const emptyWeek = () => ({ id: null, name: '', description: '', strategy: 'nominative', scope: 'company', lines: [] })
+const weekLibraryOpen = ref(false)
+const weekEditorOpen = ref(false)
+const weekForm = ref(emptyWeek())
+const weekFormLoading = ref(false)
+const weekCaptureName = ref('')
+
+const openWeekLibrary = async () => {
+  weekLibraryOpen.value = true
+  await Promise.all([store.fetchWeekTemplates(), store.fetchTemplates({ all: true }), employeesStore.fetchEmployees?.()])
+}
+const newWeek = () => { weekForm.value = emptyWeek(); weekEditorOpen.value = true }
+const editWeek = w => {
+  weekForm.value = {
+    id: w.id, name: w.name || '', description: w.description || '', strategy: w.strategy || 'nominative', scope: w.scope || 'company',
+    lines: (w.lines || []).map(l => ({ day_index: l.day_index, schedule_template_id: l.schedule_template_id, kind: l.kind, employee_id: l.employee_id, headcount: l.headcount || 1 })),
+  }
+  weekEditorOpen.value = true
+}
+const addWeekLine = (day = 0) => weekForm.value.lines.push({
+  day_index: day, schedule_template_id: store.allTemplates[0]?.id ?? null,
+  kind: weekForm.value.strategy === 'needs' ? 'needs' : 'nominative', employee_id: null, headcount: 1,
+})
+const removeWeekLine = idx => weekForm.value.lines.splice(idx, 1)
+const duplicateWeekLine = idx => weekForm.value.lines.splice(idx + 1, 0, { ...weekForm.value.lines[idx] })
+const weekLinesByDay = computed(() => [0, 1, 2, 3, 4, 5, 6].map(d => ({
+  day: d, lines: weekForm.value.lines.map((l, idx) => ({ ...l, idx })).filter(l => l.day_index === d),
+})))
+const saveWeek = async () => {
+  if (!weekForm.value.name) { toast(t('validation.required'), 'error'); return }
+  if (!weekForm.value.lines.length) { toast(t('planning.week.needLines'), 'error'); return }
+  weekFormLoading.value = true
+  try {
+    const payload = {
+      name: weekForm.value.name, description: weekForm.value.description || null, strategy: weekForm.value.strategy, scope: weekForm.value.scope,
+      lines: weekForm.value.lines.map(l => ({
+        day_index: l.day_index, schedule_template_id: l.schedule_template_id, kind: l.kind,
+        employee_id: l.kind === 'nominative' ? l.employee_id : null, headcount: l.kind === 'needs' ? (l.headcount || 1) : null,
+      })),
+    }
+    if (weekForm.value.id) { await store.updateWeekTemplate(weekForm.value.id, payload); toast(t('planning.week.updated'), 'success') }
+    else { await store.createWeekTemplate(payload); toast(t('planning.week.created'), 'success') }
+    weekEditorOpen.value = false
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { weekFormLoading.value = false }
+}
+const removeWeek = async w => { try { await store.deleteWeekTemplate(w.id); toast(t('planning.week.deleted'), 'success') } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } }
+const captureWeek = async () => {
+  if (!weekCaptureName.value) { toast(t('validation.required'), 'error'); return }
+  try { await store.captureWeek({ name: weekCaptureName.value, target_date: weekDateIso.value }); toast(t('planning.week.captured'), 'success'); weekCaptureName.value = '' } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
+}
+
+// Application
+const weekApplyOpen = ref(false)
+const weekApplyTarget = ref(null)
+const applyTargetDate = ref('')
+const applyPreview = ref(null)
+const applyAssignments = ref({})
+const applyResult = ref(null)
+const applyLoading = ref(false)
+const openWeekApply = async w => {
+  weekApplyTarget.value = w; applyTargetDate.value = weekDateIso.value; applyPreview.value = null; applyAssignments.value = {}; applyResult.value = null
+  weekApplyOpen.value = true
+  await Promise.all([store.fetchTemplates({ all: true }), employeesStore.fetchEmployees?.()])
+}
+const runWeekPreview = async () => {
+  if (!applyTargetDate.value) return
+  applyLoading.value = true
+  try { applyPreview.value = await store.previewWeekTemplate(weekApplyTarget.value.id, applyTargetDate.value); applyAssignments.value = {}; applyResult.value = null }
+  catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
+}
+const runWeekApply = async () => {
+  applyLoading.value = true
+  try {
+    const assignments = []
+    Object.entries(applyAssignments.value).forEach(([lineId, emps]) => { (emps || []).filter(Boolean).forEach(eid => assignments.push({ line_id: Number(lineId), employee_id: eid })) })
+    applyResult.value = await store.applyWeekTemplate(weekApplyTarget.value.id, { target_date: applyTargetDate.value, assignments })
+    toast(t('planning.week.applied', { n: applyResult.value.created_count }), 'success')
+    await fetchWeekData()
+  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') } finally { applyLoading.value = false }
+}
+const weekStatusColor = s => ({ applicable: 'success', blocked: 'error', to_confirm: 'warning', unfilled: 'warning' }[s] || 'default')
+
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
 
 const colorPresets = [
@@ -2225,6 +2321,18 @@ watch(activeTab, tab => {
           @click="openCreateShift()"
         >
           {{ $t('planning.newShift') }}
+        </VBtn>
+        <VBtn
+          v-if="activeTab === 'templates'"
+          v-can="'workforce.planning_view'"
+          variant="tonal"
+          color="primary"
+          prepend-icon="tabler-calendar-repeat"
+          data-test="week-library-open"
+          class="me-2"
+          @click="openWeekLibrary"
+        >
+          {{ $t('planning.week.title') }}
         </VBtn>
         <VBtn
           v-if="activeTab === 'templates'"
@@ -4372,6 +4480,211 @@ watch(activeTab, tab => {
               {{ $t('planning.presets.empty') }}
             </div>
           </div>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- M3 (ADR-726) — Bibliothèque de semaines types -->
+    <VNavigationDrawer
+      v-model="weekLibraryOpen"
+      class="wf-scroll-drawer"
+      temporary
+      location="end"
+      width="460"
+    >
+      <div class="d-flex align-center pa-4">
+        <h5 class="text-h5 flex-grow-1">
+          {{ $t('planning.week.title') }}
+        </h5>
+        <VBtn icon variant="text" size="small" @click="weekLibraryOpen = false">
+          <VIcon icon="tabler-x" />
+        </VBtn>
+      </div>
+      <VDivider />
+      <div class="pa-4">
+        <div v-can="'workforce.planning_manage'" class="d-flex gap-2 mb-3">
+          <VBtn color="primary" prepend-icon="tabler-plus" data-test="week-new" @click="newWeek">
+            {{ $t('planning.week.new') }}
+          </VBtn>
+        </div>
+        <div v-can="'workforce.planning_manage'" class="d-flex gap-2 mb-4">
+          <AppTextField v-model="weekCaptureName" :placeholder="$t('planning.week.captureName')" density="compact" hide-details data-test="week-capture-name" />
+          <VBtn variant="tonal" size="small" data-test="week-capture-btn" @click="captureWeek">
+            {{ $t('planning.week.capture') }}
+          </VBtn>
+        </div>
+        <VDivider class="mb-3" />
+        <div
+          v-for="w in store.weekTemplates"
+          :key="w.id"
+          class="d-flex align-center gap-2 py-2 border-b"
+          data-test="week-row"
+        >
+          <div class="flex-grow-1">
+            <div class="text-body-2 font-weight-medium">
+              {{ w.name }}
+            </div>
+            <div class="text-caption text-disabled">
+              {{ $t('planning.week.strat' + (w.strategy === 'needs' ? 'Needs' : w.strategy === 'mixed' ? 'Mixed' : 'Nominative')) }} · {{ (w.lines || []).length }} {{ $t('planning.week.lines') }}
+            </div>
+          </div>
+          <VBtn size="small" color="primary" variant="tonal" :data-test="`week-apply-${w.id}`" @click="openWeekApply(w)">
+            {{ $t('planning.week.apply') }}
+          </VBtn>
+          <VBtn v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="primary" :data-test="`week-edit-${w.id}`" @click="editWeek(w)">
+            <VIcon icon="tabler-edit" size="18" />
+          </VBtn>
+          <VBtn v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="error" :data-test="`week-delete-${w.id}`" @click="removeWeek(w)">
+            <VIcon icon="tabler-trash" size="18" />
+          </VBtn>
+        </div>
+        <div v-if="!store.weekTemplates.length" class="text-caption text-disabled">
+          {{ $t('planning.week.empty') }}
+        </div>
+      </div>
+    </VNavigationDrawer>
+
+    <!-- M3 — Éditeur de semaine type -->
+    <VDialog v-model="weekEditorOpen" max-width="920" scrollable>
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          {{ weekForm.id ? $t('planning.week.edit') : $t('planning.week.new') }}
+          <VSpacer />
+          <VBtn icon variant="text" size="small" @click="weekEditorOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+        <VCardText>
+          <VRow>
+            <VCol cols="12" md="6">
+              <AppTextField v-model="weekForm.name" :label="$t('planning.week.fields.name')" data-test="week-name" />
+            </VCol>
+            <VCol cols="12" md="6">
+              <AppSelect v-model="weekForm.strategy" :items="weekStrategyItems" :label="$t('planning.week.fields.strategy')" data-test="week-strategy" />
+            </VCol>
+          </VRow>
+          <p class="text-caption text-disabled mb-2">
+            {{ $t('planning.week.relativeHint') }}
+          </p>
+          <div
+            v-for="(l, i) in weekForm.lines"
+            :key="'wl' + i"
+            class="d-flex gap-2 align-center mb-2 flex-wrap"
+            data-test="week-line-row"
+          >
+            <AppSelect v-model="l.day_index" :items="weekDayItems" :label="$t('planning.week.fields.day')" density="compact" hide-details data-test="week-line-day" style="min-inline-size: 110px;" />
+            <AppSelect v-model="l.schedule_template_id" :items="armedTemplateItems" :label="$t('planning.week.fields.template')" density="compact" hide-details data-test="week-line-template" style="min-inline-size: 150px;" />
+            <AppSelect v-model="l.kind" :items="weekKindItems" :label="$t('planning.week.fields.kind')" density="compact" hide-details data-test="week-line-kind" style="min-inline-size: 130px;" />
+            <AppSelect v-if="l.kind === 'nominative'" v-model="l.employee_id" :items="employeeItems" :label="$t('planning.week.fields.employee')" density="compact" hide-details data-test="week-line-employee" style="min-inline-size: 150px;" />
+            <AppTextField v-else v-model.number="l.headcount" :label="$t('planning.week.fields.headcount')" type="number" min="1" density="compact" hide-details data-test="week-line-headcount" style="inline-size: 100px;" />
+            <VBtn icon variant="text" size="x-small" data-test="week-line-duplicate" @click="duplicateWeekLine(i)">
+              <VIcon icon="tabler-copy" size="16" />
+            </VBtn>
+            <VBtn icon variant="text" size="x-small" color="error" data-test="week-line-remove" @click="removeWeekLine(i)">
+              <VIcon icon="tabler-trash" size="16" />
+            </VBtn>
+          </div>
+          <VBtn variant="text" size="small" prepend-icon="tabler-plus" data-test="week-add-line" @click="addWeekLine(0)">
+            {{ $t('planning.week.addLine') }}
+          </VBtn>
+        </VCardText>
+        <VCardActions class="px-6 pb-4">
+          <VSpacer />
+          <VBtn variant="outlined" @click="weekEditorOpen = false">
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn color="primary" :loading="weekFormLoading" data-test="week-save" @click="saveWeek">
+            {{ weekForm.id ? $t('common.save') : $t('common.create') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <!-- M3 — Prévisualisation & application d'une semaine type -->
+    <VDialog v-model="weekApplyOpen" max-width="880" scrollable>
+      <VCard v-if="weekApplyTarget">
+        <VCardTitle class="d-flex align-center">
+          {{ $t('planning.week.apply') }} — {{ weekApplyTarget.name }}
+          <VSpacer />
+          <VBtn icon variant="text" size="small" @click="weekApplyOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+        <VCardText>
+          <div class="d-flex gap-2 align-end mb-3">
+            <AppTextField v-model="applyTargetDate" :label="$t('planning.week.targetWeek')" type="date" density="compact" hide-details data-test="week-target-date" style="max-inline-size: 200px;" />
+            <VBtn color="primary" :loading="applyLoading" data-test="week-preview-btn" @click="runWeekPreview">
+              {{ $t('planning.week.preview') }}
+            </VBtn>
+          </div>
+
+          <template v-if="applyPreview">
+            <div class="d-flex gap-2 flex-wrap mb-3" data-test="week-preview-summary">
+              <VChip size="small" color="success" variant="tonal">
+                {{ applyPreview.summary.applicable }} {{ $t('planning.week.st.applicable') }}
+              </VChip>
+              <VChip v-if="applyPreview.summary.to_confirm" size="small" color="warning" variant="tonal">
+                {{ applyPreview.summary.to_confirm }} {{ $t('planning.week.st.toConfirm') }}
+              </VChip>
+              <VChip v-if="applyPreview.summary.blocked" size="small" color="error" variant="tonal">
+                {{ applyPreview.summary.blocked }} {{ $t('planning.week.st.blocked') }}
+              </VChip>
+              <VChip v-if="applyPreview.overstaffing && applyPreview.overstaffing.overstaffed" size="small" color="warning" variant="tonal">
+                {{ $t('planning.week.overstaffing') }}
+              </VChip>
+            </div>
+
+            <div v-if="applyPreview.nominative.length" class="text-body-2 font-weight-medium mb-1">
+              {{ $t('planning.week.nominative') }}
+            </div>
+            <div
+              v-for="(n, i) in applyPreview.nominative"
+              :key="'nom' + i"
+              class="d-flex align-center gap-2 py-1 border-b text-caption"
+              data-test="week-nominative-row"
+            >
+              <span style="min-inline-size: 90px;">{{ n.date }}</span>
+              <span class="flex-grow-1">{{ n.employee_name || '—' }} · {{ n.template_name }}</span>
+              <VChip size="x-small" :color="weekStatusColor(n.status)" variant="tonal">
+                {{ n.status === 'applicable' ? (n.warning === 'pending_leave' ? $t('planning.week.pending') : $t('planning.week.st.applicable')) : $t('planning.week.reason.' + (n.reason || 'blocked')) }}
+              </VChip>
+            </div>
+
+            <div v-if="applyPreview.needs.length" class="text-body-2 font-weight-medium mt-3 mb-1">
+              {{ $t('planning.week.needs') }}
+            </div>
+            <div
+              v-for="(nd, i) in applyPreview.needs"
+              :key="'nd' + i"
+              class="py-2 border-b"
+              data-test="week-needs-row"
+            >
+              <div class="text-caption mb-1">
+                {{ nd.date }} · {{ nd.template_name }} · {{ $t('planning.week.toFill', { n: nd.headcount }) }}
+              </div>
+              <AppSelect
+                v-model="applyAssignments[nd.line_id]"
+                :items="nd.candidates.map(c => ({ title: c.name + (c.reason === 'pending_leave' ? ' ⚠' : ''), value: c.employee_id }))"
+                :label="$t('planning.week.assign')"
+                :placeholder="nd.candidates.length ? '' : $t('planning.week.noCandidate')"
+                multiple
+                chips
+                density="compact"
+                hide-details
+                :data-test="`week-needs-assign-${nd.line_id}`"
+              />
+            </div>
+
+            <div class="d-flex justify-end mt-4">
+              <VBtn color="primary" :loading="applyLoading" data-test="week-apply-btn" @click="runWeekApply">
+                {{ $t('planning.week.applyDrafts') }}
+              </VBtn>
+            </div>
+          </template>
+
+          <VAlert v-if="applyResult" type="success" variant="tonal" class="mt-4" data-test="week-apply-result">
+            {{ $t('planning.week.result', { created: applyResult.created_count, unfilled: applyResult.unfilled, blocked: (applyResult.blocked || []).length }) }}
+          </VAlert>
         </VCardText>
       </VCard>
     </VDialog>
