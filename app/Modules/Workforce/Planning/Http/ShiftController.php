@@ -196,6 +196,9 @@ class ShiftController extends Controller
                 overstaffingAck: $validated['overstaffing_ack'] ?? null,
                 overstaffingReason: $validated['overstaffing_reason'] ?? null,
                 actorId: $request->user()?->id,
+                // M1 (ADR-724) : application d'un modèle = matérialise ses activités préconfigurées.
+                // Création manuelle (sans modèle) ⇒ pas de composition à matérialiser.
+                materializeComposition: ($validated['schedule_template_id'] ?? null) !== null,
             );
             // ADR-722 — opération réversible.
             $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(

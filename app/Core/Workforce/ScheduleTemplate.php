@@ -65,7 +65,7 @@ class ScheduleTemplate extends Model
 
     public function toSnapshot(): array
     {
-        return [
+        $snapshot = [
             'template_id' => $this->id,
             'template_name' => $this->name,
             'code' => $this->code,
@@ -79,5 +79,43 @@ class ScheduleTemplate extends Model
             'icon' => $this->icon,
             'color' => $this->color,
         ];
+
+        // M1 (ADR-724) — composition enrichie (activités + pauses positionnées), figée par valeur.
+        // Compatibilité ascendante : sans composition, le snapshot reste strictement l'ancien format.
+        $composition = is_array($this->metadata ?? null) ? ($this->metadata['composition'] ?? null) : null;
+        if (is_array($composition) && (int) ($composition['schema_version'] ?? 0) === 1) {
+            $snapshot['schema_version'] = 1;
+            $snapshot['activities'] = array_values($composition['activities'] ?? []);
+
+            $breaks = $composition['breaks'] ?? [];
+            if ($breaks) {
+                // Les pauses relatives (offset depuis le début) sont converties en fenêtres HH:mm, format
+                // DÉJÀ attendu par ScheduledActivityValidator (une seule représentation, pas de doublon).
+                $startMin = self::timeToMinutes((string) $this->start_time);
+                $windows = [];
+                foreach ($breaks as $b) {
+                    $s = $startMin + (int) $b['offset_minutes'];
+                    $e = $s + (int) $b['duration_minutes'];
+                    $windows[] = ['start' => self::minutesToHHMM($s), 'end' => self::minutesToHHMM($e)];
+                }
+                $snapshot['break_windows'] = $windows;
+            }
+        }
+
+        return $snapshot;
+    }
+
+    private static function timeToMinutes(string $t): int
+    {
+        $p = explode(':', $t);
+
+        return ((int) ($p[0] ?? 0)) * 60 + (int) ($p[1] ?? 0);
+    }
+
+    private static function minutesToHHMM(int $m): string
+    {
+        $m = (($m % 1440) + 1440) % 1440;
+
+        return sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
     }
 }

@@ -6,9 +6,11 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\LeaveRequest;
+use App\Core\Workforce\ScheduledActivity;
 use App\Core\Workforce\ScheduleTemplate;
 use App\Core\Workforce\Shift;
 use App\Core\Workforce\WorkLocation;
+use App\Modules\Workforce\Services\ScheduledActivityValidator;
 use App\Modules\Workforce\Services\ShiftRuleValidator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +32,11 @@ class CreateShiftUseCase
         ?int $actorId = null,
         bool $skipOverstaffing = false,
         ?array $snapshotOverride = null,
+        bool $materializeComposition = false,
     ): Shift {
         return DB::transaction(function () use (
             $companyId, $employeeId, $date, $startAt, $endAt, $timezone,
-            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing, $snapshotOverride
+            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing, $snapshotOverride, $materializeComposition
         ) {
             $startAtCarbon = Carbon::parse($startAt);
             $endAtCarbon = Carbon::parse($endAt);
@@ -155,6 +158,14 @@ class CreateShiftUseCase
                 $shift->save();
             }
 
+            // M1 (ADR-724) — matérialisation des activités préconfigurées du modèle, DANS la transaction
+            // (atomique : une activité invalide annule tout le shift). Jamais en copie (snapshotOverride =
+            // CopyShiftsUseCase recopie les vraies ScheduledActivity) ni en duplication (sémantique préservée).
+            if ($materializeComposition && $snapshotOverride === null
+                && is_array($templateSnapshot) && ! empty($templateSnapshot['activities'])) {
+                $this->materializeComposition($companyId, $shift, $templateSnapshot['activities']);
+            }
+
             app(AuditLogger::class)->logCompany(
                 companyId: $companyId,
                 action: 'shift.created',
@@ -173,5 +184,50 @@ class CreateShiftUseCase
 
             return $shift;
         });
+    }
+
+    /**
+     * Matérialise les activités de la composition (offsets relatifs → instants absolus) en vraies
+     * ScheduledActivity. Chaque activité est validée par ScheduledActivityValidator (bornes du shift,
+     * chevauchement, pauses, capacité) — autorité unique, déjà déployée. Toute violation lève et annule
+     * la transaction (pas de shift incomplet). source='template' pour tracer l'origine.
+     *
+     * @param  list<array<string,mixed>>  $activities
+     */
+    private function materializeComposition(int $companyId, Shift $shift, array $activities): void
+    {
+        $validator = app(ScheduledActivityValidator::class);
+
+        foreach ($activities as $a) {
+            $offset = (int) ($a['offset_minutes'] ?? 0);
+            $duration = (int) ($a['duration_minutes'] ?? 0);
+            if ($duration <= 0) {
+                throw new \DomainException('Template activity has a non-positive duration.');
+            }
+            $start = $shift->start_at->copy()->addMinutes($offset);
+            $end = $start->copy()->addMinutes($duration);
+
+            $nonExclusive = (bool) ($a['non_exclusive'] ?? false);
+            // Autorité : bornes du shift, pause, chevauchement, capacité (union). Atomique si throw.
+            $validator->assertValid($shift, $start, $end, ['non_exclusive' => $nonExclusive]);
+
+            $priority = $a['priority'] ?? 'normal';
+            ScheduledActivity::create([
+                'company_id' => $companyId,
+                'shift_id' => $shift->id,
+                'employee_id' => $shift->employee_id, // dérivé du shift (invariant)
+                'schedule_template_id' => $shift->schedule_template_id,
+                'work_location_id' => $a['work_location_id'] ?? $shift->work_location_id,
+                'activity_type' => $a['activity_type'] ?? null,
+                'coverage_category_id' => $a['coverage_category_id'] ?? null,
+                'label' => $a['label'] ?? null,
+                'start_at' => $start,
+                'end_at' => $end,
+                'status' => ScheduledActivity::STATUS_PLANNED,
+                'priority' => in_array($priority, ScheduledActivity::PRIORITIES, true) ? $priority : 'normal',
+                'source' => 'template',
+                'metadata' => $nonExclusive ? ['non_exclusive' => true] : null,
+            ]);
+        }
     }
 }

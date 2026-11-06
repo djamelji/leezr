@@ -133,6 +133,7 @@ class BulkApplyTemplateUseCase
                     scheduleTemplateId: $template->id,
                     workLocationId: $template->work_location_id,
                     skipOverstaffing: true, // sureffectif déjà traité cumulativement
+                    materializeComposition: true, // M1 (ADR-724) : matérialise les activités du modèle
                 );
             }
 

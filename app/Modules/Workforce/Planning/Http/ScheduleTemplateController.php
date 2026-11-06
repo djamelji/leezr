@@ -5,6 +5,7 @@ namespace App\Modules\Workforce\Planning\Http;
 use App\Core\Workforce\ScheduleTemplate;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\ReadModels\ScheduleTemplateReadModel;
+use App\Modules\Workforce\Services\ScheduleTemplateCompositionValidator;
 use App\Modules\Workforce\UseCases\CreateScheduleTemplateUseCase;
 use App\Modules\Workforce\UseCases\UpdateScheduleTemplateUseCase;
 use Illuminate\Http\JsonResponse;
@@ -37,9 +38,17 @@ class ScheduleTemplateController extends Controller
             'coverage_category_id' => 'nullable|integer',
             'work_location_id' => 'nullable|integer',
             'department_id' => 'nullable|integer',
+            'composition' => 'nullable|array', // M1 (ADR-724) — structure validée par le domaine ci-dessous
         ]);
 
         try {
+            // M1 : composition validée/normalisée (bornes, chevauchements, priorités, ids stables) contre les horaires.
+            $composition = app(ScheduleTemplateCompositionValidator::class)->validateAndNormalize(
+                $validated['composition'] ?? null,
+                $validated['start_time'],
+                $validated['end_time'],
+            );
+
             $template = app(CreateScheduleTemplateUseCase::class)->execute(
                 companyId: $request->attributes->get('company_id'),
                 name: $validated['name'],
@@ -53,6 +62,7 @@ class ScheduleTemplateController extends Controller
                 activityType: $validated['activity_type'] ?? null,
                 departmentId: $validated['department_id'] ?? null,
                 coverageCategoryId: $validated['coverage_category_id'] ?? null,
+                composition: $composition,
             );
 
             return response()->json($template, 201);
@@ -80,9 +90,27 @@ class ScheduleTemplateController extends Controller
             'work_location_id' => 'nullable|integer',
             'department_id' => 'nullable|integer',
             'enabled' => 'nullable|boolean',
+            'composition' => 'nullable|array', // M1 (ADR-724)
         ]);
 
         try {
+            // M1 : si la composition est fournie, la valider contre les horaires EFFECTIFS (nouveaux ou actuels)
+            // et la fusionner dans metadata sans écraser les autres clés. null explicite ⇒ composition retirée.
+            if ($request->has('composition')) {
+                $effectiveStart = $validated['start_time'] ?? substr((string) $template->start_time, 0, 5);
+                $effectiveEnd = $validated['end_time'] ?? substr((string) $template->end_time, 0, 5);
+                $composition = app(ScheduleTemplateCompositionValidator::class)->validateAndNormalize(
+                    $validated['composition'] ?? null, $effectiveStart, $effectiveEnd,
+                );
+                $metadata = is_array($template->metadata) ? $template->metadata : [];
+                unset($metadata['composition']);
+                if ($composition !== null) {
+                    $metadata['composition'] = $composition;
+                }
+                $validated['metadata'] = $metadata ?: null;
+            }
+            unset($validated['composition']);
+
             return response()->json(app(UpdateScheduleTemplateUseCase::class)->execute($template, $validated));
         } catch (\DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

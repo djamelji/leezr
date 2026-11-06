@@ -22,6 +22,7 @@ class CreateScheduleTemplateUseCase
         ?string $activityType = null,
         ?int $departmentId = null,
         ?int $coverageCategoryId = null,
+        ?array $composition = null,
     ): ScheduleTemplate {
         $exists = ScheduleTemplate::withoutGlobalScopes()
             ->where('company_id', $companyId)
@@ -67,6 +68,8 @@ class CreateScheduleTemplateUseCase
             'coverage_category_id' => $coverageCategoryId,
             'work_location_id' => $workLocationId,
             'department_id' => $departmentId,
+            // M1 (ADR-724) — composition (activités + pauses) déjà validée/normalisée par le contrôleur.
+            'metadata' => $composition !== null ? ['composition' => $composition] : null,
         ]);
 
         app(AuditLogger::class)->logCompany(
