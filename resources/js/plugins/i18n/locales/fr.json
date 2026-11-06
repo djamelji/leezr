@@ -7912,6 +7912,14 @@
       "byEmployee": "Par salariés",
       "byPost": "Par postes"
     },
+    "night": "Nuit (passe minuit)",
+    "grid": {
+      "searchEmployee": "Rechercher un collaborateur",
+      "groupTeam": "Regrouper par équipe",
+      "groupNone": "Liste simple",
+      "density": "Densité d'affichage",
+      "noTeam": "Sans équipe"
+    },
     "absence": {
       "generic": "Absence",
       "pending": "en attente",

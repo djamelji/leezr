@@ -7912,6 +7912,14 @@
       "byEmployee": "By employee",
       "byPost": "By post"
     },
+    "night": "Night (crosses midnight)",
+    "grid": {
+      "searchEmployee": "Search a colleague",
+      "groupTeam": "Group by team",
+      "groupNone": "Flat list",
+      "density": "Display density",
+      "noTeam": "No team"
+    },
     "absence": {
       "generic": "Absence",
       "pending": "pending",

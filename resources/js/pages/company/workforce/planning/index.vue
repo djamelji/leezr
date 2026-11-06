@@ -252,10 +252,11 @@ const weekEnd = computed(() => {
 })
 
 const weekLabel = computed(() => {
-  const start = currentWeekStart.value.toLocaleDateString(locale.value, { day: 'numeric', month: 'long' })
-  const end = weekEnd.value.toLocaleDateString(locale.value, { day: 'numeric', month: 'long', year: 'numeric' })
+  // M6.B — format compact (une seule ligne) : « 2 – 8 nov. 2026 » (l'ancien format long s'enroulait).
+  const start = currentWeekStart.value.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' })
+  const end = weekEnd.value.toLocaleDateString(locale.value, { day: 'numeric', month: 'short', year: 'numeric' })
 
-  return `${t('planning.weekOf')} ${start} ${t('planning.to')} ${end}`
+  return `${start} – ${end}`
 })
 
 const weekDates = computed(() => {
@@ -595,6 +596,79 @@ const filteredGridRows = computed(() => {
       return { ...row, shifts }
     })
 })
+
+// ── M6.B (ADR-730) — lisibilité 50-100 collaborateurs : recherche, regroupement par équipe, densité ──
+// Purement présentationnel : repose sur filteredGridRows (même moteur de données), ne mute rien.
+const rowSearch = ref('')
+const groupBy = useCookie('planningGroupBy', { default: () => 'team' }) // 'team' | 'none'
+const density = useCookie('planningDensity', { default: () => 'comfortable' }) // 'comfortable' | 'compact'
+const collapsedGroups = ref(new Set())
+const toggleGroup = key => {
+  const s = new Set(collapsedGroups.value)
+  s.has(key) ? s.delete(key) : s.add(key)
+  collapsedGroups.value = s
+}
+const isGroupCollapsed = key => collapsedGroups.value.has(key)
+
+const searchedGridRows = computed(() => {
+  const q = (rowSearch.value || '').trim().toLowerCase()
+  if (!q) return filteredGridRows.value
+
+  return filteredGridRows.value.filter(r =>
+    `${r.employee?.first_name || ''} ${r.employee?.last_name || ''}`.toLowerCase().includes(q))
+})
+
+// Index de chaque ligne DANS filteredGridRows (référentiel de selectRange) : la sélection par plage
+// (shift-clic) reste correcte même si l'affichage est regroupé/filtré par la recherche.
+const rowIndexByEmp = computed(() => {
+  const m = new Map()
+  filteredGridRows.value.forEach((r, i) => m.set(r.employee_id, i))
+
+  return m
+})
+
+const departmentNameById = id => employeesStore.departments.find(d => d.id === id)?.name
+
+// Regroupement par équipe (département) avec sections repliables. Fallback plat si aucune équipe définie
+// (ne JAMAIS imposer une structure à une TPE sans départements — §9 « propositions, pas contraintes »).
+const groupedRows = computed(() => {
+  const rows = searchedGridRows.value
+  if (groupBy.value !== 'team' || !employeesStore.departments.length)
+    return [{ key: 'all', label: null, rows, count: rows.length }]
+
+  const groups = new Map()
+  rows.forEach(r => {
+    const did = r.employee?.department_id ?? '__none'
+    if (!groups.has(did)) groups.set(did, [])
+    groups.get(did).push(r)
+  })
+  const order = [...employeesStore.departments.map(d => d.id), '__none']
+  const out = []
+  order.forEach(did => {
+    if (!groups.has(did)) return
+    const rws = groups.get(did)
+    out.push({ key: String(did), label: did === '__none' ? t('planning.grid.noTeam') : (departmentNameById(did) || '—'), rows: rws, count: rws.length })
+  })
+
+  return out
+})
+const groupHours = rows => {
+  let mins = 0
+  rows.forEach(r => Object.values(r.shifts || {}).forEach(list => list.filter(s => s.status !== 'cancelled').forEach(s => {
+    const d = (new Date(s.end_at) - new Date(s.start_at)) / 60000
+    const brk = s.template_snapshot?.break_duration_minutes || 0
+    if (d > 0) mins += Math.max(0, d - brk)
+  })))
+
+  return (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1)
+}
+// Un shift traverse minuit si son heure de fin murale précède son heure de début (marqueur « nuit »).
+const shiftCrossesMidnight = shift => {
+  if (!shift?.start_at || !shift?.end_at) return false
+  const s = new Date(shift.start_at); const e = new Date(shift.end_at)
+
+  return (e.getHours() * 60 + e.getMinutes()) <= (s.getHours() * 60 + s.getMinutes()) && (e - s) > 0
+}
 
 // ── Coverage QUALIFIÉE (Lot A) — lignes par catégorie + édition inline ──────
 const coverageDaily = ref({})
@@ -2902,150 +2976,179 @@ watch(activeTab, tab => {
         <!-- Week Navigation + Grid (desktop) -->
         <VCard v-if="!smAndDown">
           <VCardText>
-            <div class="d-flex align-center justify-space-between">
-              <div class="d-flex align-center gap-2">
-                <VBtn
-                  icon
-                  variant="text"
-                  size="small"
-                  @click="prevWeek"
-                >
+            <div class="plan-toolbar d-flex align-center flex-wrap gap-2">
+              <!-- Navigation de semaine + Aujourd'hui -->
+              <div class="d-flex align-center">
+                <VBtn icon variant="text" size="small" @click="prevWeek">
                   <VIcon icon="tabler-chevron-left" />
                 </VBtn>
-                <h5 class="text-h5 font-weight-medium text-capitalize">
+                <h5 class="plan-week-label text-subtitle-1 font-weight-bold text-capitalize mx-1">
                   {{ weekLabel }}
                 </h5>
-                <VBtn
-                  icon
-                  variant="text"
-                  size="small"
-                  @click="nextWeek"
-                >
+                <VBtn icon variant="text" size="small" @click="nextWeek">
                   <VIcon icon="tabler-chevron-right" />
                 </VBtn>
-              </div>
-              <div class="d-flex align-center gap-2">
-                <VBtnToggle
-                  v-model="gridView"
-                  mandatory
-                  density="compact"
-                  variant="outlined"
-                  divided
-                  class="me-1"
-                >
-                  <VBtn value="employees" size="small" data-test="view-employees">
-                    <VIcon icon="tabler-users" size="16" class="me-1" /> {{ $t('planning.views.byEmployee') }}
-                  </VBtn>
-                  <VBtn value="posts" size="small" data-test="view-posts">
-                    <VIcon icon="tabler-briefcase" size="16" class="me-1" /> {{ $t('planning.views.byPost') }}
-                  </VBtn>
-                </VBtnToggle>
-                <VBtn
-                  v-if="allDraftShiftIds.length"
-                  v-can="'workforce.planning_publish'"
-                  variant="tonal"
-                  color="success"
-                  size="small"
-                  prepend-icon="tabler-send"
-                  data-test="publish-week"
-                  @click="publishWeek"
-                >
-                  {{ $t('planning.publishWeek') }}
-                </VBtn>
-                <VBtn
-                  v-can="'workforce.planning_manage'"
-                  variant="text"
-                  size="small"
-                  prepend-icon="tabler-copy"
-                  data-test="copy-prev-week"
-                  @click="copyPreviousWeek"
-                >
-                  {{ $t('planning.copyWeek.button') }}
-                </VBtn>
-                <VBtn
-                  v-can="'workforce.planning_manage'"
-                  variant="text"
-                  size="small"
-                  prepend-icon="tabler-calendar-share"
-                  data-test="copy-week"
-                  @click="openCopyWeek"
-                >
-                  {{ $t('planning.copy.copyWeek') }}
-                </VBtn>
-                <VBtn
-                  v-can="'workforce.planning_manage'"
-                  icon
-                  variant="text"
-                  size="small"
-                  :disabled="!canUndo || undoBusy"
-                  :title="canUndo ? $t('planning.undo.undoLabel', { op: lastUndoLabel }) : $t('planning.undo.nothing')"
-                  data-test="undo-btn"
-                  @click="doUndo"
-                >
-                  <VIcon icon="tabler-arrow-back-up" />
-                </VBtn>
-                <VBtn
-                  v-can="'workforce.planning_manage'"
-                  icon
-                  variant="text"
-                  size="small"
-                  :disabled="!canRedo || undoBusy"
-                  :title="$t('planning.undo.redoLabel')"
-                  data-test="redo-btn"
-                  @click="doRedo"
-                >
-                  <VIcon icon="tabler-arrow-forward-up" />
-                </VBtn>
-                <VChip
-                  v-if="clipboard"
-                  color="primary"
-                  size="small"
-                  closable
-                  data-test="clipboard-chip"
-                  @click:close="clearClipboard"
-                >
-                  <VIcon icon="tabler-clipboard" size="14" start />
-                  {{ $t('planning.copy.clipboard', { n: clipboard.shiftIds.length }) }}
-                </VChip>
-                <VBtn
-                  v-can="'workforce.coverage_manage'"
-                  variant="text"
-                  size="small"
-                  prepend-icon="tabler-users-group"
-                  @click="openCoverageManager"
-                >
-                  {{ $t('planning.coverage.manage') }}
-                </VBtn>
-                <VBtn
-                  variant="tonal"
-                  size="small"
-                  @click="goToToday"
-                >
+                <VBtn variant="tonal" size="small" class="ms-2" @click="goToToday">
                   {{ $t('planning.today') }}
                 </VBtn>
-                <VBtn
-                  v-if="allDraftShiftIds.length > 0"
-                  v-can="'workforce.planning_manage'"
-                  variant="text"
-                  size="small"
-                  :prepend-icon="selectedDraftIds.length === allDraftShiftIds.length ? 'tabler-square-check' : 'tabler-square'"
-                  @click="toggleSelectAll"
-                >
-                  {{ $t('planning.selectAll') }}
-                </VBtn>
-                <VBtn
-                  v-if="selectedDraftIds.length > 0"
-                  v-can="'workforce.planning_publish'"
-                  color="success"
-                  variant="flat"
-                  size="small"
-                  prepend-icon="tabler-send"
-                  data-test="publish-selection"
-                  @click="publishSelected"
-                >
-                  {{ $t('planning.publishSelection', { n: selectedDraftIds.length }) }}
-                </VBtn>
               </div>
+
+              <VSpacer />
+
+              <!-- Recherche collaborateur (§4) -->
+              <AppTextField
+                v-model="rowSearch"
+                :placeholder="$t('planning.grid.searchEmployee')"
+                density="compact"
+                hide-details
+                prepend-inner-icon="tabler-search"
+                clearable
+                class="plan-toolbar__search"
+                data-test="grid-search"
+              />
+
+              <!-- Regroupement par équipe (§4) -->
+              <VBtnToggle v-model="groupBy" mandatory density="compact" variant="outlined" divided>
+                <VBtn value="team" size="small" data-test="group-team">
+                  <VIcon icon="tabler-users-group" size="18" />
+                  <VTooltip activator="parent" :text="$t('planning.grid.groupTeam')" location="top" />
+                </VBtn>
+                <VBtn value="none" size="small" data-test="group-none">
+                  <VIcon icon="tabler-list" size="18" />
+                  <VTooltip activator="parent" :text="$t('planning.grid.groupNone')" location="top" />
+                </VBtn>
+              </VBtnToggle>
+
+              <!-- Densité (§4) -->
+              <VBtn
+                icon
+                variant="outlined"
+                size="small"
+                data-test="density-toggle"
+                @click="density = density === 'compact' ? 'comfortable' : 'compact'"
+              >
+                <VIcon :icon="density === 'compact' ? 'tabler-baseline-density-small' : 'tabler-baseline-density-medium'" size="18" />
+                <VTooltip activator="parent" :text="$t('planning.grid.density')" location="top" />
+              </VBtn>
+
+              <!-- Vue collaborateurs / postes -->
+              <VBtnToggle v-model="gridView" mandatory density="compact" variant="outlined" divided>
+                <VBtn value="employees" size="small" data-test="view-employees">
+                  <VIcon icon="tabler-users" size="18" />
+                  <VTooltip activator="parent" :text="$t('planning.views.byEmployee')" location="top" />
+                </VBtn>
+                <VBtn value="posts" size="small" data-test="view-posts">
+                  <VIcon icon="tabler-briefcase" size="18" />
+                  <VTooltip activator="parent" :text="$t('planning.views.byPost')" location="top" />
+                </VBtn>
+              </VBtnToggle>
+
+              <VDivider vertical class="mx-1" inset />
+
+              <!-- Actions : annuler / rétablir / copier / couverture -->
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                :disabled="!canUndo || undoBusy"
+                :title="canUndo ? $t('planning.undo.undoLabel', { op: lastUndoLabel }) : $t('planning.undo.nothing')"
+                data-test="undo-btn"
+                @click="doUndo"
+              >
+                <VIcon icon="tabler-arrow-back-up" />
+              </VBtn>
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                :disabled="!canRedo || undoBusy"
+                :title="$t('planning.undo.redoLabel')"
+                data-test="redo-btn"
+                @click="doRedo"
+              >
+                <VIcon icon="tabler-arrow-forward-up" />
+              </VBtn>
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                data-test="copy-prev-week"
+                @click="copyPreviousWeek"
+              >
+                <VIcon icon="tabler-copy" />
+                <VTooltip activator="parent" :text="$t('planning.copyWeek.button')" location="top" />
+              </VBtn>
+              <VBtn
+                v-can="'workforce.planning_manage'"
+                icon
+                variant="text"
+                size="small"
+                data-test="copy-week"
+                @click="openCopyWeek"
+              >
+                <VIcon icon="tabler-calendar-share" />
+                <VTooltip activator="parent" :text="$t('planning.copy.copyWeek')" location="top" />
+              </VBtn>
+              <VBtn
+                v-can="'workforce.coverage_manage'"
+                icon
+                variant="text"
+                size="small"
+                @click="openCoverageManager"
+              >
+                <VIcon icon="tabler-users-group" />
+                <VTooltip activator="parent" :text="$t('planning.coverage.manage')" location="top" />
+              </VBtn>
+              <VChip
+                v-if="clipboard"
+                color="primary"
+                size="small"
+                closable
+                data-test="clipboard-chip"
+                @click:close="clearClipboard"
+              >
+                <VIcon icon="tabler-clipboard" size="14" start />
+                {{ $t('planning.copy.clipboard', { n: clipboard.shiftIds.length }) }}
+              </VChip>
+
+              <!-- Sélection & publication -->
+              <VBtn
+                v-if="allDraftShiftIds.length > 0"
+                v-can="'workforce.planning_manage'"
+                variant="text"
+                size="small"
+                :prepend-icon="selectedDraftIds.length === allDraftShiftIds.length ? 'tabler-square-check' : 'tabler-square'"
+                @click="toggleSelectAll"
+              >
+                {{ $t('planning.selectAll') }}
+              </VBtn>
+              <VBtn
+                v-if="selectedDraftIds.length > 0"
+                v-can="'workforce.planning_publish'"
+                color="success"
+                variant="flat"
+                size="small"
+                prepend-icon="tabler-send"
+                data-test="publish-selection"
+                @click="publishSelected"
+              >
+                {{ $t('planning.publishSelection', { n: selectedDraftIds.length }) }}
+              </VBtn>
+              <VBtn
+                v-if="allDraftShiftIds.length"
+                v-can="'workforce.planning_publish'"
+                variant="flat"
+                color="success"
+                size="small"
+                prepend-icon="tabler-send"
+                data-test="publish-week"
+                @click="publishWeek"
+              >
+                {{ $t('planning.publishWeek') }}
+              </VBtn>
             </div>
 
             <!-- Grid filters (Smart Planning SP1a) -->
@@ -3245,6 +3348,7 @@ watch(activeTab, tab => {
               density="compact"
               :loading="gridLoading"
               class="planning-grid"
+              :class="`planning-grid--${density}`"
             >
               <thead>
               <tr class="day-header">
@@ -3257,14 +3361,16 @@ watch(activeTab, tab => {
                 <th
                   v-for="(date, i) in weekDates"
                   :key="date"
-                  class="text-center"
-                  style="min-width: 130px;"
-                  :class="{ 'bg-light': date === new Date().toISOString().slice(0, 10) }"
+                  class="text-center planning-day-head"
+                  :class="{
+                    'planning-day-head--today': date === new Date().toISOString().slice(0, 10),
+                    'planning-day-head--weekend': [0, 6].includes(new Date(date + 'T00:00:00').getDay()),
+                  }"
                 >
-                  <div class="text-capitalize font-weight-medium">
+                  <div class="planning-day-head__name text-capitalize">
                     {{ dayNames[i] }}
                   </div>
-                  <div class="text-body-2 text-medium-emphasis">
+                  <div class="planning-day-head__date">
                     {{ new Date(date + 'T00:00:00').getDate() }}
                   </div>
                 </th>
@@ -3424,33 +3530,68 @@ watch(activeTab, tab => {
                   </VBtn>
                 </td>
               </tr>
-              <tr
-                v-for="(row, rowIdx) in filteredGridRows"
-                :key="row.employee_id"
+              <template
+                v-for="group in groupedRows"
+                :key="group.key"
               >
-                <!-- Employee column -->
-                <td>
-                  <div class="d-flex align-center gap-3 py-2">
-                    <VAvatar
-                      color="primary"
-                      variant="tonal"
-                      size="32"
-                    >
-                      <span class="text-xs font-weight-medium">
-                        {{ (row.employee?.first_name?.[0] || '') + (row.employee?.last_name?.[0] || '') }}
-                      </span>
-                    </VAvatar>
-                    <div class="d-flex flex-column" style="min-inline-size: 0;">
-                      <span class="font-weight-medium text-truncate">
-                        {{ row.employee?.first_name }} {{ row.employee?.last_name }}
-                      </span>
-                      <span
-                        v-if="rowSummary(row).days"
-                        class="text-caption text-medium-emphasis"
-                      >{{ $t('planning.rowSummary', { hours: rowSummary(row).hours, days: rowSummary(row).days }) }}</span>
+                <!-- En-tête de groupe (équipe) repliable — §4 lisibilité 50-100 collaborateurs -->
+                <tr
+                  v-if="group.label"
+                  class="plan-group-row"
+                  data-test="group-header"
+                  @click="toggleGroup(group.key)"
+                >
+                  <th
+                    class="plan-group-cell"
+                    :colspan="8"
+                  >
+                    <div class="d-flex align-center gap-2">
+                      <VIcon
+                        :icon="isGroupCollapsed(group.key) ? 'tabler-chevron-right' : 'tabler-chevron-down'"
+                        size="16"
+                      />
+                      <VIcon icon="tabler-users-group" size="15" class="text-medium-emphasis" />
+                      <span class="font-weight-bold text-truncate">{{ group.label }}</span>
+                      <VChip size="x-small" variant="tonal" label>{{ group.count }}</VChip>
+                      <span class="text-caption text-medium-emphasis">{{ groupHours(group.rows) }}h</span>
                     </div>
-                  </div>
-                </td>
+                  </th>
+                </tr>
+                <tr
+                  v-for="row in group.rows"
+                  v-show="!group.label || !isGroupCollapsed(group.key)"
+                  :key="row.employee_id"
+                  class="plan-emp-row"
+                >
+                  <!-- Employee column -->
+                  <td class="plan-emp-cell">
+                    <div class="d-flex align-center gap-3">
+                      <VAvatar
+                        color="primary"
+                        variant="tonal"
+                        size="34"
+                      >
+                        <span class="text-xs font-weight-bold">
+                          {{ (row.employee?.first_name?.[0] || '') + (row.employee?.last_name?.[0] || '') }}
+                        </span>
+                      </VAvatar>
+                      <div class="d-flex flex-column" style="min-inline-size: 0;">
+                        <span class="font-weight-medium text-truncate plan-emp-name">
+                          {{ row.employee?.first_name }} {{ row.employee?.last_name }}
+                        </span>
+                        <div class="d-flex align-center gap-1 plan-emp-meta">
+                          <span
+                            v-if="groupBy !== 'team' && row.employee?.department_id"
+                            class="text-caption text-medium-emphasis text-truncate"
+                          >{{ departmentNameById(row.employee.department_id) }}</span>
+                          <span
+                            v-if="rowSummary(row).days"
+                            class="text-caption text-disabled"
+                          >{{ (groupBy !== 'team' && row.employee?.department_id) ? '· ' : '' }}{{ $t('planning.rowSummary', { hours: rowSummary(row).hours, days: rowSummary(row).days }) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
 
                 <!-- Day columns -->
                 <td
@@ -3459,6 +3600,7 @@ watch(activeTab, tab => {
                   class="text-center planning-cell"
                   :class="{
                     'bg-light': date === new Date().toISOString().slice(0, 10),
+                    'planning-cell--weekend': [0, 6].includes(new Date(date + 'T00:00:00').getDay()),
                     'plan-cell--drop-ok': isDragTargetCell(row.employee_id, dayIdx) && dragValid,
                     'plan-cell--drop-no': isDragTargetCell(row.employee_id, dayIdx) && !dragValid,
                     'plan-cell--selected': isCellSelected(row.employee_id, date),
@@ -3468,7 +3610,7 @@ watch(activeTab, tab => {
                   :data-date="date"
                   :data-dayidx="dayIdx"
                   :data-test="isCellSelected(row.employee_id, date) ? 'cell-selected' : 'cell'"
-                  @click="onCellClick(row.employee_id, date, dayIdx, rowIdx, $event)"
+                  @click="onCellClick(row.employee_id, date, dayIdx, rowIndexByEmp.get(row.employee_id), $event)"
                 >
                   <!-- Indisponibilité (congé/absence) — projection RH, type seul, confirmé vs en attente -->
                   <VChip
@@ -3528,7 +3670,21 @@ watch(activeTab, tab => {
                             :title="$t('planning.activities.count', { n: shiftActivityCount(shift) })"
                           >+{{ shiftActivityCount(shift) }}</span>
                         </span>
-                        <span class="plan-shift__time">{{ formatShiftRange(shift) }}</span>
+                        <span class="plan-shift__time">
+                          <VIcon
+                            v-if="shiftCrossesMidnight(shift)"
+                            icon="tabler-moon"
+                            size="10"
+                            class="plan-shift__night"
+                            :title="$t('planning.night')"
+                          />
+                          {{ formatShiftRange(shift) }}
+                          <span
+                            v-if="shift.work_location_id"
+                            class="plan-shift__loc"
+                            :title="locationName(shift.work_location_id)"
+                          ><VIcon icon="tabler-map-pin" size="9" /> {{ locationName(shift.work_location_id) }}</span>
+                        </span>
                       </button>
                       <!-- Quick actions menu -->
                       <VMenu location="bottom end">
@@ -3641,7 +3797,8 @@ watch(activeTab, tab => {
                     </VBtn>
                   </template>
                 </td>
-              </tr>
+                </tr>
+              </template>
             </tbody>
 
             <!-- Vue PAR POSTES : une ligne par catégorie, collaborateurs affectés par jour -->
@@ -5927,18 +6084,41 @@ watch(activeTab, tab => {
   border-radius: 50%;
 }
 
-// ── Grille Planning (refonte UX) : en-tête + colonne employé figés, densité maîtrisée ──
+// ── M6.B (ADR-730) — Barre d'outils compacte du calendrier ──
+.plan-toolbar {
+  row-gap: 8px;
+}
+.plan-toolbar__search {
+  max-inline-size: 190px;
+}
+.plan-week-label {
+  min-inline-size: 150px;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+// ── M6.B — Grille hebdomadaire D1 : en-tête + colonne collaborateur figés, densité, groupes ──
 .planning-grid-wrap {
   overflow: auto;
-  max-block-size: calc(100vh - 340px);
+  max-block-size: calc(100vh - 290px);
   border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
 .planning-grid {
+  // Densité : hauteur de ligne + padding pilotés par une variable (toggle compact/confortable).
+  --cell-pad-y: 6px;
+  --row-min-h: 56px;
+
   border-collapse: separate;
   border-spacing: 0;
 
-  // Seule la ligne d'en-tête des jours est figée en haut (évite le chevauchement des lignes de couverture).
+  &.planning-grid--compact {
+    --cell-pad-y: 2px;
+    --row-min-h: 38px;
+  }
+
+  // En-tête des jours figé en haut.
   thead tr.day-header th {
     position: sticky;
     inset-block-start: 0;
@@ -5946,7 +6126,17 @@ watch(activeTab, tab => {
     background: rgb(var(--v-theme-surface));
     box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
   }
-  thead tr.day-header th:first-child { z-index: 4; inset-inline-start: 0; }
+  thead tr.day-header th:first-child {
+    z-index: 4;
+    inset-inline-start: 0;
+    min-inline-size: 224px;
+    text-align: start;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(var(--v-theme-on-surface), 0.6);
+  }
 
   // Colonne collaborateur figée (cellules du corps).
   tbody td:first-child,
@@ -5957,7 +6147,6 @@ watch(activeTab, tab => {
     background: rgb(var(--v-theme-surface));
     box-shadow: inset -1px 0 0 rgba(var(--v-border-color), var(--v-border-opacity));
   }
-  // Colonne libellé de couverture figée horizontalement (alignée avec la colonne employé).
   .coverage-row th:first-child {
     position: sticky;
     inset-inline-start: 0;
@@ -5965,18 +6154,77 @@ watch(activeTab, tab => {
     background: rgb(var(--v-theme-surface));
   }
 
-  tbody tr:hover td { background-color: rgba(var(--v-theme-on-surface), 0.025); }
+  // En-tête de jour : nom discret + date proéminente, pastille « aujourd'hui », teinte week-end.
+  .planning-day-head {
+    min-inline-size: 134px;
+    padding-block: 7px 9px;
+  }
+  .planning-day-head__name {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(var(--v-theme-on-surface), 0.55);
+  }
+  .planning-day-head__date {
+    margin-block-start: 2px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+  .planning-day-head--today .planning-day-head__date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 26px;
+    block-size: 26px;
+    border-radius: 50%;
+    background: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary));
+  }
+  .planning-day-head--weekend {
+    background: rgba(var(--v-theme-on-surface), 0.025);
+  }
+
+  // Ligne collaborateur.
+  .plan-emp-cell {
+    padding-block: var(--cell-pad-y) !important;
+    vertical-align: middle;
+  }
+  .plan-emp-name {
+    font-size: 0.86rem;
+    line-height: 1.25;
+  }
+  .plan-emp-meta { line-height: 1.1; }
+  .plan-emp-row:hover td { background-color: rgba(var(--v-theme-on-surface), 0.03); }
+
+  // En-tête de groupe (équipe) repliable.
+  .plan-group-row th.plan-group-cell {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    padding: 6px 14px;
+    cursor: pointer;
+    background: rgba(var(--v-theme-primary), 0.07);
+    box-shadow: inset 0 -1px 0 rgba(var(--v-border-color), var(--v-border-opacity));
+    user-select: none;
+  }
+  .plan-group-row:hover th.plan-group-cell { background: rgba(var(--v-theme-primary), 0.12); }
 
   .planning-cell {
     cursor: pointer;
     vertical-align: top;
-    padding: 3px 5px !important;
-    min-inline-size: 118px;
-    block-size: 46px;
-    border-inline-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.6));
+    padding: var(--cell-pad-y) 5px !important;
+    min-inline-size: 134px;
+    block-size: var(--row-min-h);
+    border-inline-end: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) * 0.5));
+    // M6.B — dégage la cellule de l'en-tête de jour figé lors du scrollIntoView (clic fiable, clavier/e2e).
+    scroll-margin-block-start: 80px;
 
-    &:hover { background-color: rgba(var(--v-theme-on-surface), 0.04); }
+    &:hover { background-color: rgba(var(--v-theme-on-surface), 0.045); }
   }
+  .planning-cell--weekend { background-color: rgba(var(--v-theme-on-surface), 0.016); }
 
   .coverage-row th {
     padding-block: 3px;
@@ -5989,10 +6237,13 @@ watch(activeTab, tab => {
 
   tbody tr:first-child td { scroll-margin-block-start: 60px; }
 
-  .planning-add-btn { opacity: 0; transition: opacity 0.15s ease; }
+  // M6.B — le « + » (création) ne capte PAS le clic : la cellule (onCellClick) gère création ET
+  // sélection (Ctrl/Shift) → plus d'interception du centre. Le bouton « coller » reste cliquable.
+  .planning-add-btn { opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+  .planning-add-btn[data-test="paste-cell"] { pointer-events: auto; }
   .planning-cell:hover .planning-add-btn { opacity: 1; }
 
-  .bg-light { background-color: rgba(var(--v-theme-primary), 0.05); }
+  .bg-light { background-color: rgba(var(--v-theme-primary), 0.06); }
 }
 
 // ── Pill de shift : couleur du modèle en liseré + fond teinté, lisible, états clairs ──
@@ -6038,7 +6289,27 @@ watch(activeTab, tab => {
     &:hover { background: color-mix(in srgb, var(--sc) 24%, transparent); }
   }
 
-  &__time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  &__time {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  &__night { opacity: 0.75; }
+  &__loc {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    margin-inline-start: auto;
+    max-inline-size: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.72;
+    font-size: 0.64rem;
+    font-weight: 500;
+  }
 
   // Bloc métier (Skello-like) : nom de poste d'abord, horaires ensuite.
   &__body--block {
@@ -6134,15 +6405,17 @@ watch(activeTab, tab => {
   background: rgb(var(--v-theme-surface));
 }
 .plan-palette__strip {
-  max-block-size: 132px;
-  overflow-y: auto;
+  // M6.B — une seule rangée scrollable horizontalement : ne mange plus l'espace vertical de la grille.
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  overflow-x: auto;
+  padding-block-end: 4px;
 }
 .plan-palette__card {
   position: relative;
-  inline-size: 150px;
+  flex: 0 0 auto;
+  inline-size: 158px;
   padding: 8px 10px;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   border-inline-start: 3px solid var(--tc);
@@ -6168,10 +6441,9 @@ watch(activeTab, tab => {
 
 // ── Cellules sélectionnées (multi-sélection 4B.2) ──
 .plan-cell--selected { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: -2px; background: rgba(var(--v-theme-primary), 0.10) !important; }
+// M6.B — non sticky au niveau page : la grille a son propre scroll interne, donc la barre reste visible
+// au-dessus de la grille sans flotter par-dessus les cellules (sinon elle intercepte les clics de sélection).
 .plan-selbar {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 7;
   background: rgba(var(--v-theme-primary), 0.06);
   border-block-end: 1px solid rgba(var(--v-theme-primary), 0.25);
 }
