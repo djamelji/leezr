@@ -56,11 +56,15 @@ const SECTION_ICON = {
 const LEGACY_TAB_REDIRECT = {
   organization: '/company/workforce/organization/departments',
   leave: '/company/workforce/leave',
-  planning: '/company/workforce/time?tab=planning',
+  planning: '/company/workforce/planning', // ADR-729 (M6.A) — Planning = page autonome
   documents: '/company/workforce/documents?tab=templates',
   rules: '/company/workforce/settings/worktime', // merged into "worktime"
 }
-if (LEGACY_TAB_REDIRECT[route.params.tab]) {
+// ADR-729 (M6.A) — tant qu'une redirection legacy est en cours, on NEUTRALISE l'auto-correction d'onglet
+// (VTabs corrige le modèle vers la 1re section → son setter relancerait un replace params qui ANNULE la
+// redirection, d'où un atterrissage sur « general »). `redirecting` fige l'intention de quitter la page.
+const redirecting = ref(!!LEGACY_TAB_REDIRECT[route.params.tab])
+if (redirecting.value) {
   router.replace(LEGACY_TAB_REDIRECT[route.params.tab])
 }
 
@@ -68,7 +72,7 @@ const sections = computed(() => data.value?.sections || [])
 const ctx = computed(() => data.value?.context || {})
 const currentTab = computed({
   get: () => route.params.tab || sections.value[0]?.key || 'general',
-  set: v => router.replace({ params: { tab: v } }),
+  set: v => { if (!redirecting.value) router.replace({ params: { tab: v } }) },
 })
 
 const load = async () => {

@@ -7,10 +7,9 @@ import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
 import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 import TimeCockpit from './_TimeCockpit.vue'
-// PRODUCT-UX-2 (LOT B1) — espace « Temps de travail » UNIFIÉ : Aujourd'hui (cockpit prévu/réel) +
-// Planning + Présences + Feuilles de temps, montés en onglets. Le planning réutilise sa page
-// existante (store/logique/permissions intacts) via `embedded`. Pas de 2ᵉ moteur planning/pointage.
-import PlanningPage from '@/pages/company/workforce/planning/index.vue'
+// PRODUCT-UX-2 (LOT B1) → ADR-729 (M6.A) — espace « Temps & présences » (pointage/RÉEL) : Aujourd'hui
+// (cockpit prévu/réel) + Présences + Feuilles de temps. Le PLANNING PRÉVISIONNEL n'est plus un onglet
+// ici : il a sa propre entrée de premier niveau (company-workforce-planning). Pas de 2ᵉ moteur.
 import { useCan } from '@/composables/useCan'
 
 definePage({ meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view'] } })
@@ -23,10 +22,16 @@ const store = useTimesheetsStore()
 const employeesStore = useEmployeesStore()
 const { can } = useCan()
 const canPlanning = computed(() => can('workforce.planning_view'))
-// E2 (ADR-690): tab-level gating so the space works for any of its capabilities
-// (e.g. a planning-only manager lands on Planning, not a 403 cockpit).
+// E2 (ADR-690): tab-level gating so the space works for its capabilities.
 const canTimesheet = computed(() => can('workforce.timesheet_view'))
-const tabAccess = computed(() => ({ cockpit: canTimesheet.value, planning: canPlanning.value, entries: canTimesheet.value, timesheets: canTimesheet.value }))
+const tabAccess = computed(() => ({ cockpit: canTimesheet.value, entries: canTimesheet.value, timesheets: canTimesheet.value }))
+
+// ADR-729 (M6.A) — dédoublonnage « Planning → Planning ». On REDIRIGE (synchronement, avant que VTabs
+// ne corrige vers le 1er onglet) les anciens deep-links `?tab=planning` ET les utilisateurs planning-only
+// (sans lecture pointage) vers la page Planning autonome → favoris/notifications préservés, zéro lien mort.
+if (route.query.tab === 'planning' || (canPlanning.value && !canTimesheet.value)) {
+  router.replace({ name: 'company-workforce-planning' })
+}
 
 // PRODUCT-UX-2 / LOT C2 — context preservation : when reached from the payroll
 // preparation panel (?return=…), offer a one-click way back to the SAME period.
@@ -34,13 +39,12 @@ const returnTo = computed(() => (typeof route.query.return === 'string' ? route.
 const goBackToPayroll = () => { if (returnTo.value) router.push(returnTo.value) }
 
 // ── Tab navigation (deep-link ?tab=) ─────────────────────────
-const TABS = ['cockpit', 'planning', 'entries', 'timesheets']
+const TABS = ['cockpit', 'entries', 'timesheets']
 
-// E3-B (ADR-697) — 4 activités via AppSectionNavigation (au-dessus du contenu, icônes seules mobile),
-// filtrées par les capacités réellement accessibles (tabAccess). Deep-link ?tab= conservé.
+// E3-B (ADR-697) → ADR-729 (M6.A) — 3 activités « Temps & présences » via AppSectionNavigation
+// (icônes seules mobile), filtrées par les capacités réellement accessibles. Deep-link ?tab= conservé.
 const timeSections = computed(() => [
   { value: 'cockpit', label: t('timeWork.tabs.today'), icon: 'tabler-dashboard', show: tabAccess.value.cockpit },
-  { value: 'planning', label: t('timeWork.tabs.planning'), icon: 'tabler-calendar', show: tabAccess.value.planning },
   { value: 'entries', label: t('timeWork.tabs.presence'), icon: 'tabler-clock-record', show: tabAccess.value.entries },
   { value: 'timesheets', label: t('timeTracking.tabs.timesheets'), icon: 'tabler-file-analytics', show: tabAccess.value.timesheets },
 ].filter(s => s.show))
@@ -510,7 +514,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 4 activités : Aujourd'hui · Planning · Présences · Feuilles de temps (navigation supérieure) -->
+    <!-- 3 activités : Aujourd'hui · Présences · Feuilles de temps (navigation supérieure) -->
     <AppSectionNavigation
       v-model="activeTab"
       :sections="timeSections"
@@ -523,11 +527,6 @@ onMounted(() => {
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="cockpit">
         <TimeCockpit v-if="activeTab === 'cockpit'" @navigate="p => { activeTab = p.tab }" />
-      </VWindowItem>
-
-      <!-- TAB: PLANNING (réutilise la page existante, en-tête masqué) -->
-      <VWindowItem v-if="canPlanning" value="planning">
-        <PlanningPage v-if="activeTab === 'planning'" embedded />
       </VWindowItem>
 
       <!-- ═══════════════════════════════════════════════════════ -->

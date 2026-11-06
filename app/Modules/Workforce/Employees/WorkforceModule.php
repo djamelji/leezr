@@ -26,11 +26,11 @@ class WorkforceModule implements ModuleDefinition
                     // la route company-workforce redirige vers /dashboard (deep-link compat).
                     // E2 (ADR-690) : espace « Ressources humaines » (group workforce), gating fin par activité.
                     ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 10],
-                    // E2 : « Temps de travail » n'apparaît que si l'utilisateur peut RÉELLEMENT lire un onglet
-                    // de l'espace : timesheet_view (cockpit/pointages/feuilles) OU planning_view (planning).
-                    // Les permissions de gestion seules (time_manage, *_approve, planning_manage) ne donnent
-                    // PAS accès en lecture (l'index route exige la permission de lecture) → pas de menu mort.
-                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'anyPermission' => ['workforce.timesheet_view', 'workforce.planning_view'], 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
+                    // E2 / ADR-729 (M6.A) : « Temps & présences » = pointage/réel (cockpit, pointages, feuilles),
+                    // DISTINCT du planning prévisionnel désormais porté par l'entrée « Planning » dédiée.
+                    // N'apparaît que si l'utilisateur peut LIRE le pointage (timesheet_view) → pas de menu mort
+                    // (time_manage/*_approve seuls ne donnent pas la lecture ; l'index route exige timesheet_view).
+                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 60],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).

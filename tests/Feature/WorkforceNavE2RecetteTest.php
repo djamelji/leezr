@@ -41,7 +41,9 @@ class WorkforceNavE2RecetteTest extends TestCase
     private const SPACES = [
         'employees' => ['workforce-employees', '/workforce/employees', 'workforce.view'],
         'time' => ['workforce-time', '/workforce/time-entries', 'workforce.timesheet_view'],
-        'planning' => [null, '/workforce/planning/locations', 'workforce.planning_view'],
+        // ADR-729 (M6.A) — « Planning » est une entrée de nav de premier niveau (page autonome), plus un
+        // deep-link vers l'onglet de « Temps & présences » → on vérifie désormais sa visibilité en menu.
+        'planning' => ['workforce-planning', '/workforce/planning/locations', 'workforce.planning_view'],
         'leave' => ['workforce-leave', '/workforce/leaves', 'workforce.leave_request'],
         'documents' => ['workforce-documents', '/workforce/documents', 'workforce_documents.view'],
         'payroll' => ['workforce-payroll', '/workforce/payroll', 'workforce.payroll_prepare'],

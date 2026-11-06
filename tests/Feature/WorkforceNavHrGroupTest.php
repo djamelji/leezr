@@ -153,10 +153,12 @@ class WorkforceNavHrGroupTest extends TestCase
         $g = NavBuilder::forCompany($company, ['workforce.leave_request'], 'management');
         $this->assertNull($this->groupOf($g, 'workforce-leave'), 'leave_request seul → pas de menu management');
 
-        // (b) Responsable d'exploitation correctement configuré (planning_view + planning_manage) :
-        // voit Temps (lecture planning réelle), pas Paie ni Employés.
+        // (b) Responsable d'exploitation (planning_view + planning_manage) : ADR-729 (M6.A) — le planning
+        // PRÉVISIONNEL a sa propre entrée « Planning » (distincte de « Temps & présences » = pointage réel).
+        // Il voit donc « Planning », PAS « Temps » (qui exige désormais timesheet_view), ni Paie ni Employés.
         $g = NavBuilder::forCompany($company, ['workforce.planning_view', 'workforce.planning_manage'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'), 'anyPermission temps satisfait par planning_view');
+        $this->assertSame('workforce', $this->groupOf($g, 'workforce-planning'), 'planning_view → entrée Planning dédiée');
+        $this->assertNull($this->groupOf($g, 'workforce-time'), 'planning_view seul n’ouvre plus « Temps & présences »');
         $this->assertNull($this->groupOf($g, 'workforce-payroll'));
         $this->assertNull($this->groupOf($g, 'workforce-employees'));
 

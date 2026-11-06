@@ -17,14 +17,15 @@ class WorkforcePlanningModule implements ModuleDefinition
             surface: 'hr',
             sortOrder: 210,
             capabilities: new Capabilities(
-                // ADR-712 — item de nav dédié « Planning » (accessibilité Company demandée), pointant vers
-                // l'espace unifié « Temps de travail » onglet Planning (deep-link), gated par planning_view.
-                // i18n auto via nav.company.workforce-planning. Respecte le mécanisme manifest (non hardcodé).
+                // ADR-729 (M6.A) — « Planning » est une ENTRÉE DE PREMIER NIVEAU : elle ouvre directement
+                // la page calendrier autonome (`company-workforce-planning`), plus l'onglet d'un autre espace.
+                // Fin de la redondance « Planning → Planning » (ADR-712) : le planning PRÉVISIONNEL est distinct
+                // de « Temps & présences » (pointage/réel). i18n auto via nav.company.workforce-planning.
                 navItems: [
                     [
                         'key' => 'workforce-planning',
                         'title' => 'Planning',
-                        'to' => ['name' => 'company-workforce-time', 'query' => ['tab' => 'planning']],
+                        'to' => ['name' => 'company-workforce-planning'],
                         'icon' => 'tabler-calendar-week',
                         'permission' => 'workforce.planning_view',
                         'surface' => 'hr',

@@ -47,7 +47,7 @@ test('M2 — tâche type : créer, insérer dans un modèle, appliquer, modifier
   expect(pRes.status()).toBe(201)
   const preset = await pRes.json()
   createdPresetIds.add(preset.id)
-  await expect(page.locator('[data-test="preset-row"]')).toContainText(pname)
+  await expect(page.locator('[data-test="preset-row"]').filter({ hasText: pname })).toHaveCount(1)
   await page.locator('.v-navigation-drawer__scrim').first().click()
   await expect(page.locator('.v-navigation-drawer__scrim')).toHaveCount(0)
 
@@ -149,5 +149,5 @@ test('M2 — bibliothèque mobile : créer une tâche type, bouton accessible', 
   ])
   expect(pRes.status()).toBe(201)
   createdPresetIds.add((await pRes.json()).id)
-  await expect(page.locator('[data-test="preset-row"]')).toContainText(pname)
+  await expect(page.locator('[data-test="preset-row"]').filter({ hasText: pname })).toHaveCount(1)
 })
