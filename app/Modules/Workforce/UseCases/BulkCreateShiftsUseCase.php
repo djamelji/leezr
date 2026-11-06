@@ -60,7 +60,7 @@ class BulkCreateShiftsUseCase
             $timezone = $location?->timezone;
         }
         if (! $timezone) {
-            $company = \App\Platform\Models\Company::find($companyId);
+            $company = \App\Core\Models\Company::withoutGlobalScopes()->find($companyId);
             $timezone = $company?->timezone ?? config('app.timezone');
         }
 
@@ -157,6 +157,12 @@ class BulkCreateShiftsUseCase
                         'status' => Shift::STATUS_DRAFT,
                         'metadata' => ['night_work' => $ruleCheck['night_work']],
                     ]);
+
+                    // M1.b (ADR-724) — ce chemin applique TOUJOURS un modèle : matérialise ses activités
+                    // préconfigurées (via le service unique, validées, atomiques dans cette transaction).
+                    // Pas de double-matérialisation : aucune copie ici (snapshot direct du modèle).
+                    app(\App\Modules\Workforce\Services\CompositionMaterializer::class)
+                        ->materializeFromSnapshot($companyId, $shift);
 
                     $created->push($shift);
                 }

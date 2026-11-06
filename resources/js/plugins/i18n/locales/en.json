@@ -7725,6 +7725,22 @@
         "department": "Department",
         "departmentHint": "Leave empty for a company-wide template.",
         "categoryHint": "Coverage category this template contributes to"
+      },
+      "composition": {
+        "title": "Composition — activities & breaks",
+        "activities": "Planned activities",
+        "breaks": "Positioned breaks",
+        "addActivity": "Add an activity",
+        "addBreak": "Add a break",
+        "preview": "Day preview",
+        "total": "Duration",
+        "worked": "Planned work",
+        "horairesOnly": "No activity — hours only.",
+        "issueZero": "\"{label}\": zero duration.",
+        "issueBounds": "\"{label}\" exceeds the shift hours.",
+        "issueOverlap": "Two activities overlap.",
+        "issueBreakOverlap": "\"{label}\" overlaps a break.",
+        "issueBreakBounds": "A break exceeds the shift hours."
       }
     },
     "locations": {

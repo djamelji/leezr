@@ -7725,6 +7725,22 @@
         "department": "Département",
         "departmentHint": "Laisser vide pour un modèle disponible dans toute l'entreprise.",
         "categoryHint": "Catégorie de couverture à laquelle ce modèle contribue"
+      },
+      "composition": {
+        "title": "Composition — activités & pauses",
+        "activities": "Activités prévues",
+        "breaks": "Pauses positionnées",
+        "addActivity": "Ajouter une activité",
+        "addBreak": "Ajouter une pause",
+        "preview": "Aperçu de la journée",
+        "total": "Durée",
+        "worked": "Travail prévu",
+        "horairesOnly": "Aucune activité — horaires seuls.",
+        "issueZero": "« {label} » : durée nulle.",
+        "issueBounds": "« {label} » dépasse les horaires du shift.",
+        "issueOverlap": "Deux activités se chevauchent.",
+        "issueBreakOverlap": "« {label} » chevauche une pause.",
+        "issueBreakBounds": "Une pause dépasse les horaires du shift."
       }
     },
     "locations": {

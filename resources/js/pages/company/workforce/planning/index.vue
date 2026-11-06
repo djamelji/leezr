@@ -1795,6 +1795,81 @@ const templateFormData = ref({
   department_id: null,
 })
 
+// M1.b (ADR-724) — composition éditée en HH:MM côté UI, convertie en offsets relatifs (contrat
+// composition.schema_version=1) à la soumission. Zone avancée : facultative, repliée par défaut.
+const showComposition = ref(false)
+const compositionActivities = ref([]) // { label, activity_type, start, end } en HH:MM
+const compositionBreaks = ref([])     // { start, end } en HH:MM
+
+const _hhmm = v => (v || '').slice(0, 5)
+const _toMin = v => { const [h, m] = _hhmm(v).split(':').map(Number); return (h || 0) * 60 + (m || 0) }
+const _fromMin = min => { const m = ((min % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0') }
+const _offset = (base, t0) => (((_toMin(t0) - base) % 1440) + 1440) % 1440
+const _dur = (a, b) => { let d = _toMin(b) - _toMin(a); if (d <= 0) d += 1440; return d }
+
+const shiftDurationMin = computed(() => {
+  const s = _toMin(templateFormData.value.start_time), e = _toMin(templateFormData.value.end_time)
+  let d = e - s; if (d <= 0) d += 1440
+  return d
+})
+const compositionActivitiesSorted = computed(() => {
+  const s0 = _toMin(templateFormData.value.start_time)
+  return [...compositionActivities.value].filter(a => a.start && a.end)
+    .sort((x, y) => _offset(s0, x.start) - _offset(s0, y.start))
+})
+const compositionWorkedMin = computed(() => {
+  const brk = compositionBreaks.value.filter(b => b.start && b.end).reduce((s, b) => s + _dur(b.start, b.end), 0)
+  const fallback = Number(templateFormData.value.break_duration_minutes) || 0
+  return Math.max(0, shiftDurationMin.value - (brk || fallback))
+})
+// Incohérences immédiates (retour UX) — l'autorité reste la validation serveur M1.
+const compositionIssues = computed(() => {
+  const issues = []; const dur = shiftDurationMin.value; const s0 = _toMin(templateFormData.value.start_time)
+  const rng = (st, en) => { const o = _offset(s0, st); return [o, o + _dur(st, en)] }
+  const acts = compositionActivities.value.filter(a => a.start && a.end).map(a => ({ ...a, r: rng(a.start, a.end) }))
+  const brks = compositionBreaks.value.filter(b => b.start && b.end).map(b => ({ ...b, r: rng(b.start, b.end) }))
+  const ov = (x, y) => x.r[0] < y.r[1] && y.r[0] < x.r[1]
+  for (const a of acts) {
+    if (_toMin(a.end) === _toMin(a.start)) issues.push(t('planning.templates.composition.issueZero', { label: a.label || '—' }))
+    if (a.r[1] > dur) issues.push(t('planning.templates.composition.issueBounds', { label: a.label || '—' }))
+  }
+  for (const b of brks) if (b.r[1] > dur) issues.push(t('planning.templates.composition.issueBreakBounds'))
+  for (let i = 0; i < acts.length; i++) for (let j = i + 1; j < acts.length; j++) if (ov(acts[i], acts[j])) issues.push(t('planning.templates.composition.issueOverlap'))
+  for (const a of acts) for (const b of brks) if (ov(a, b)) issues.push(t('planning.templates.composition.issueBreakOverlap', { label: a.label || '—' }))
+  return [...new Set(issues)]
+})
+const addCompositionActivity = () => compositionActivities.value.push({ label: '', activity_type: '', start: _hhmm(templateFormData.value.start_time), end: '' })
+const removeCompositionActivity = i => compositionActivities.value.splice(i, 1)
+const addCompositionBreak = () => compositionBreaks.value.push({ start: '', end: '' })
+const removeCompositionBreak = i => compositionBreaks.value.splice(i, 1)
+const buildComposition = () => {
+  const acts = compositionActivities.value.filter(a => a.start && a.end)
+  const brks = compositionBreaks.value.filter(b => b.start && b.end)
+  if (!acts.length && !brks.length) return null
+  const s0 = _toMin(templateFormData.value.start_time)
+  return {
+    schema_version: 1,
+    activities: acts.map(a => ({ label: a.label || null, activity_type: a.activity_type || null, offset_minutes: _offset(s0, a.start), duration_minutes: _dur(a.start, a.end) })),
+    breaks: brks.map(b => ({ offset_minutes: _offset(s0, b.start), duration_minutes: _dur(b.start, b.end) })),
+  }
+}
+const loadComposition = tpl => {
+  compositionActivities.value = []
+  compositionBreaks.value = []
+  showComposition.value = false
+  const comp = tpl?.metadata?.composition
+  if (!comp) return
+  const s0 = _toMin(tpl.start_time)
+  compositionActivities.value = (comp.activities || []).map(a => ({
+    label: a.label || '', activity_type: a.activity_type || '',
+    start: _fromMin(s0 + (a.offset_minutes || 0)), end: _fromMin(s0 + (a.offset_minutes || 0) + (a.duration_minutes || 0)),
+  }))
+  compositionBreaks.value = (comp.breaks || []).map(b => ({
+    start: _fromMin(s0 + (b.offset_minutes || 0)), end: _fromMin(s0 + (b.offset_minutes || 0) + (b.duration_minutes || 0)),
+  }))
+  if (compositionActivities.value.length || compositionBreaks.value.length) showComposition.value = true
+}
+
 const isTemplateEditMode = computed(() => !!editingTemplate.value)
 
 const colorPresets = [
@@ -1810,7 +1885,6 @@ const resetTemplateForm = () => {
     code: '',
     activity_type: '',
     coverage_category_id: null,
-  coverage_category_id: null,
     start_time: '',
     end_time: '',
     break_duration_minutes: 0,
@@ -1819,6 +1893,9 @@ const resetTemplateForm = () => {
     work_location_id: null,
     department_id: null,
   }
+  compositionActivities.value = []
+  compositionBreaks.value = []
+  showComposition.value = false
 }
 
 const openCreateTemplate = () => {
@@ -1833,14 +1910,15 @@ const openEditTemplate = tpl => {
     code: tpl.code || '',
     activity_type: tpl.activity_type || '',
     coverage_category_id: tpl.coverage_category_id || null,
-    start_time: tpl.start_time || '',
-    end_time: tpl.end_time || '',
+    start_time: (tpl.start_time || '').slice(0, 5), // API renvoie HH:MM:SS → l'input time + la validation veulent HH:MM
+    end_time: (tpl.end_time || '').slice(0, 5),
     break_duration_minutes: tpl.break_duration_minutes ?? 0,
     color: tpl.color || '#1976D2',
     icon: tpl.icon || '',
     work_location_id: tpl.work_location_id || null,
     department_id: tpl.department_id || null,
   }
+  loadComposition(tpl)
   isTemplateDrawerOpen.value = true
 }
 
@@ -1848,6 +1926,8 @@ const submitTemplate = async () => {
   templateFormLoading.value = true
   try {
     const payload = { ...templateFormData.value }
+    // M1.b — composition (null = modèle horaire pur / efface une composition existante).
+    payload.composition = buildComposition()
     if (isTemplateEditMode.value) {
       await store.updateTemplate(editingTemplate.value.id, payload)
       toast(t('planning.templates.updated'), 'success')
@@ -2103,6 +2183,7 @@ watch(activeTab, tab => {
           v-can="'workforce.planning_manage'"
           color="primary"
           prepend-icon="tabler-plus"
+          data-test="template-new"
           @click="openCreateTemplate"
         >
           {{ $t('planning.templates.newTemplate') }}
@@ -3459,6 +3540,7 @@ watch(activeTab, tab => {
                   variant="text"
                   size="x-small"
                   color="primary"
+                  :data-test="`template-edit-${item.id}`"
                   @click.stop="openEditTemplate(item)"
                 >
                   <VIcon
@@ -3766,6 +3848,7 @@ watch(activeTab, tab => {
               <AppTextField
                 v-model="templateFormData.name"
                 :label="$t('planning.templates.fields.name')"
+                data-test="template-name"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -3796,6 +3879,7 @@ watch(activeTab, tab => {
                 v-model="templateFormData.start_time"
                 :label="$t('planning.templates.fields.startTime')"
                 type="time"
+                data-test="template-start"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -3804,6 +3888,7 @@ watch(activeTab, tab => {
                 v-model="templateFormData.end_time"
                 :label="$t('planning.templates.fields.endTime')"
                 type="time"
+                data-test="template-end"
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
@@ -3818,6 +3903,164 @@ watch(activeTab, tab => {
                 step="5"
               />
             </VCol>
+
+            <!-- M1.b (ADR-724) — Composition : activités & pauses positionnées (zone avancée facultative) -->
+            <VCol cols="12">
+              <VBtn
+                variant="tonal"
+                size="small"
+                block
+                :append-icon="showComposition ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+                data-test="template-toggle-composition"
+                @click="showComposition = !showComposition"
+              >
+                {{ $t('planning.templates.composition.title') }}
+                <VChip
+                  v-if="compositionActivities.length || compositionBreaks.length"
+                  size="x-small"
+                  class="ms-2"
+                >
+                  {{ compositionActivities.length }}
+                </VChip>
+              </VBtn>
+            </VCol>
+            <template v-if="showComposition">
+              <VCol cols="12">
+                <div class="text-caption text-medium-emphasis mb-1">
+                  {{ $t('planning.templates.composition.activities') }}
+                </div>
+                <div
+                  v-for="(a, i) in compositionActivities"
+                  :key="'act' + i"
+                  class="d-flex gap-1 mb-2 align-center flex-wrap"
+                  data-test="template-activity-row"
+                >
+                  <AppTextField
+                    v-model="a.label"
+                    :placeholder="$t('planning.activities.fields.label')"
+                    density="compact"
+                    hide-details
+                    style="min-inline-size: 110px; flex: 1 1 110px;"
+                  />
+                  <AppTextField
+                    v-model="a.start"
+                    type="time"
+                    density="compact"
+                    hide-details
+                    data-test="template-activity-start"
+                    style="inline-size: 120px;"
+                  />
+                  <AppTextField
+                    v-model="a.end"
+                    type="time"
+                    density="compact"
+                    hide-details
+                    data-test="template-activity-end"
+                    style="inline-size: 120px;"
+                  />
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    data-test="template-activity-remove"
+                    @click="removeCompositionActivity(i)"
+                  >
+                    <VIcon icon="tabler-trash" size="16" />
+                  </VBtn>
+                </div>
+                <VBtn
+                  variant="text"
+                  size="small"
+                  prepend-icon="tabler-plus"
+                  data-test="template-add-activity"
+                  @click="addCompositionActivity"
+                >
+                  {{ $t('planning.templates.composition.addActivity') }}
+                </VBtn>
+              </VCol>
+              <VCol cols="12">
+                <div class="text-caption text-medium-emphasis mb-1">
+                  {{ $t('planning.templates.composition.breaks') }}
+                </div>
+                <div
+                  v-for="(b, i) in compositionBreaks"
+                  :key="'brk' + i"
+                  class="d-flex gap-1 mb-2 align-center flex-wrap"
+                  data-test="template-break-row"
+                >
+                  <AppTextField
+                    v-model="b.start"
+                    type="time"
+                    density="compact"
+                    hide-details
+                    data-test="template-break-start"
+                    style="inline-size: 120px;"
+                  />
+                  <AppTextField
+                    v-model="b.end"
+                    type="time"
+                    density="compact"
+                    hide-details
+                    data-test="template-break-end"
+                    style="inline-size: 120px;"
+                  />
+                  <VBtn
+                    icon
+                    variant="text"
+                    size="x-small"
+                    data-test="template-break-remove"
+                    @click="removeCompositionBreak(i)"
+                  >
+                    <VIcon icon="tabler-trash" size="16" />
+                  </VBtn>
+                </div>
+                <VBtn
+                  variant="text"
+                  size="small"
+                  prepend-icon="tabler-plus"
+                  data-test="template-add-break"
+                  @click="addCompositionBreak"
+                >
+                  {{ $t('planning.templates.composition.addBreak') }}
+                </VBtn>
+              </VCol>
+              <VCol v-if="compositionIssues.length" cols="12">
+                <VAlert
+                  v-for="(issue, i) in compositionIssues"
+                  :key="'iss' + i"
+                  type="warning"
+                  density="compact"
+                  variant="tonal"
+                  class="mb-1 text-caption"
+                  data-test="template-composition-issue"
+                >
+                  {{ issue }}
+                </VAlert>
+              </VCol>
+              <VCol cols="12">
+                <div class="rounded border pa-3" data-test="template-composition-preview">
+                  <div class="text-caption font-weight-medium mb-1">
+                    {{ $t('planning.templates.composition.preview') }}
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ (templateFormData.start_time || '').slice(0, 5) }}–{{ (templateFormData.end_time || '').slice(0, 5) }}
+                    · {{ $t('planning.templates.composition.total') }}
+                    {{ Math.floor(shiftDurationMin / 60) }}h{{ String(shiftDurationMin % 60).padStart(2, '0') }}
+                    · {{ $t('planning.templates.composition.worked') }}
+                    {{ Math.floor(compositionWorkedMin / 60) }}h{{ String(compositionWorkedMin % 60).padStart(2, '0') }}
+                  </div>
+                  <div v-if="!compositionActivitiesSorted.length" class="text-caption text-disabled mt-1">
+                    {{ $t('planning.templates.composition.horairesOnly') }}
+                  </div>
+                  <ul v-else class="text-caption mt-1" style="padding-inline-start: 16px;">
+                    <li v-for="(a, i) in compositionActivitiesSorted" :key="'pv' + i">
+                      {{ a.start }}–{{ a.end }} — {{ a.label || $t('planning.activities.fields.label') }}
+                    </li>
+                  </ul>
+                </div>
+              </VCol>
+            </template>
+
             <VCol cols="12">
               <div class="mb-2 text-body-2 font-weight-medium">
                 {{ $t('planning.templates.fields.color') }}
@@ -3864,6 +4107,7 @@ watch(activeTab, tab => {
               <div class="d-flex gap-3 justify-end">
                 <VBtn
                   variant="outlined"
+                  data-test="template-cancel"
                   @click="isTemplateDrawerOpen = false"
                 >
                   {{ $t('common.cancel') }}

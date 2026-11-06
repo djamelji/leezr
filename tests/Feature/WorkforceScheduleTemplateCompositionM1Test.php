@@ -16,6 +16,8 @@ use App\Core\Workforce\Shift;
 use App\Core\Workforce\TimeEntry;
 use App\Modules\Workforce\Services\ScheduleTemplateCompositionValidator;
 use App\Modules\Workforce\UseCases\BulkApplyTemplateUseCase;
+use App\Modules\Workforce\UseCases\BulkCreateShiftsUseCase;
+use App\Modules\Workforce\UseCases\CopyShiftsUseCase;
 use App\Modules\Workforce\UseCases\CreateScheduleTemplateUseCase;
 use App\Modules\Workforce\UseCases\CreateShiftUseCase;
 use Illuminate\Database\Eloquent\Model;
@@ -352,5 +354,40 @@ class WorkforceScheduleTemplateCompositionM1Test extends TestCase
         $this->assertSame(1, $res['created_count']);
         $shiftId = $res['created'][0];
         $this->assertSame(3, ScheduledActivity::withoutGlobalScopes()->where('shift_id', $shiftId)->count());
+    }
+
+    // --- 17. Chemin shifts/bulk (BulkCreateShiftsUseCase) matérialise aussi (M1.b alignement) ---
+    public function test_bulk_create_path_materializes_activities(): void
+    {
+        $tpl = $this->template('09:00', '17:00', $this->threeActivityComposition());
+        $emp = $this->emp();
+        $created = app(BulkCreateShiftsUseCase::class)->execute(
+            companyId: $this->company->id, scheduleTemplateId: $tpl->id,
+            employeeIds: [$emp->id], dateFrom: '2026-11-03', dateTo: '2026-11-03',
+        );
+        $this->assertCount(1, $created);
+        $this->assertSame(3, ScheduledActivity::withoutGlobalScopes()->where('shift_id', $created->first()->id)->count());
+    }
+
+    // --- 18. Copie ne double pas les activités (CopyShiftsUseCase recopie une seule fois) ---
+    public function test_copy_does_not_double_materialize_activities(): void
+    {
+        $tpl = $this->template('09:00', '17:00', $this->threeActivityComposition());
+        $emp = $this->emp();
+        $source = $this->apply($tpl, $emp->id, '2026-11-03');
+        $this->assertSame(3, ScheduledActivity::withoutGlobalScopes()->where('shift_id', $source->id)->count());
+
+        $res = app(CopyShiftsUseCase::class)->commit(
+            $this->company->id,
+            [['source_shift_id' => $source->id, 'target_employee_id' => $emp->id, 'target_date' => '2026-11-04']],
+            null, null, null, null,
+        );
+        $this->assertSame(1, $res['created_count']);
+
+        $target = Shift::withoutGlobalScopes()->where('employee_id', $emp->id)->whereDate('date', '2026-11-04')->first();
+        $this->assertNotNull($target);
+        // Exactement 3 (copie des vraies activités), PAS 6 (pas de re-matérialisation via la composition).
+        $this->assertSame(3, ScheduledActivity::withoutGlobalScopes()->where('shift_id', $target->id)->count());
+        $this->assertSame(3, ScheduledActivity::withoutGlobalScopes()->where('shift_id', $source->id)->count(), 'Source inchangée.');
     }
 }
