@@ -2,6 +2,7 @@
 
 namespace App\Core\Billing\Dunning;
 
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\Invoice;
 use App\Core\Billing\PlanChangeIntent;
 use App\Core\Billing\PlatformBillingPolicy;
@@ -107,6 +108,28 @@ class DunningTransitioner
                 DunningNotifier::notifyAccountSuspended($company);
             }
         }
+
+        // P0-C (ADR-734): once the company is escalated to suspension, tie addon
+        // rights to a valid commercial state — deactivate any still-active addon
+        // subscription so an unpaid addon cannot keep granting its paid feature
+        // (EntitlementResolver Gate 5 then cuts it). Idempotent on re-run.
+        if ($company->status === 'suspended') {
+            static::deactivateActiveAddons($company);
+        }
+    }
+
+    /**
+     * Deactivate every active addon subscription of a company (P0-C).
+     *
+     * Explicit company_id filter + withoutGlobalScopes so this is correct
+     * whether or not a tenant context is bound (dunning batch runs per-invoice).
+     */
+    private static function deactivateActiveAddons(Company $company): void
+    {
+        CompanyAddonSubscription::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->active()
+            ->update(['deactivated_at' => now()]);
     }
 
     /**

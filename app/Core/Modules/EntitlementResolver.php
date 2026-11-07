@@ -2,6 +2,7 @@
 
 namespace App\Core\Modules;
 
+use App\Core\Billing\CompanyAddonSubscription;
 use App\Core\Billing\CompanyEntitlements;
 use App\Core\Models\Company;
 use App\Core\Plans\PlanRegistry;
@@ -21,8 +22,9 @@ class EntitlementResolver
      * Check if a company is entitled to a module.
      *
      * @return array{entitled: bool, source: ?string, reason: ?string}
-     *   source: 'core' | 'jobdomain' | null
-     *   reason: 'unknown_module' | 'plan_required' | 'incompatible_jobdomain' | 'not_available' | null
+     *   source: 'core' | 'jobdomain' | 'jobdomain_dependency' | 'addon' | null
+     *   reason: 'unknown_module' | 'plan_required' | 'incompatible_jobdomain'
+     *           | 'addon_inactive' | 'not_available' | null
      */
     public static function check(Company $company, string $moduleKey, ?PlatformModule $platformModule = null): array
     {
@@ -70,10 +72,31 @@ class EntitlementResolver
             }
         }
 
-        // Gate 5 (ADR-212): Module with addon_pricing is purchasable
-        // Compatible jobdomain + plan met → entitled via addon
+        // Gate 5 (ADR-212 + P0-C/ADR-734): Module with addon_pricing is *purchasable*.
+        // addon_pricing alone no longer grants the paid feature — the effective right
+        // depends on a valid commercial state (an active CompanyAddonSubscription).
+        //
+        // Conservative coupling, to avoid cutting legitimate rights:
+        //   - no commercial record at all → PRESERVED (admin grant / legacy / free exception)
+        //   - at least one ACTIVE addon subscription → entitled
+        //   - only DEACTIVATED subscription(s) remain → cut (reason 'addon_inactive')
+        //
+        // Deactivation is driven by the dunning escalation (DunningTransitioner), so a
+        // first payment incident under grace does NOT cut the addon — only final suspension does.
         if ($pm && $pm->addon_pricing !== null) {
-            return ['entitled' => true, 'source' => 'addon', 'reason' => null];
+            $base = CompanyAddonSubscription::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where('module_key', $moduleKey);
+
+            if (!$base->clone()->exists()) {
+                return ['entitled' => true, 'source' => 'addon', 'reason' => null];
+            }
+
+            $hasActive = $base->clone()->active()->exists();
+
+            return $hasActive
+                ? ['entitled' => true, 'source' => 'addon', 'reason' => null]
+                : ['entitled' => false, 'source' => null, 'reason' => 'addon_inactive'];
         }
 
         return ['entitled' => false, 'source' => null, 'reason' => 'not_available'];
