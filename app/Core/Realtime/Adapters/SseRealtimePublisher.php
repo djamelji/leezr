@@ -100,6 +100,18 @@ class SseRealtimePublisher implements RealtimePublisher
     }
 
     /**
+     * ADR-733.2 (P0-D.2) — Confidentialité intra-tenant : une envelope CIBLÉE (user_id non nul, ex.
+     * notification personnelle avec titre/corps/lien) n'est délivrable qu'à son destinataire. Les
+     * événements DIFFUSÉS (user_id nul : invalidations de cache, broadcasts company) vont à tous les membres.
+     */
+    public static function deliverableTo(array $data, int $userId): bool
+    {
+        $target = $data['user_id'] ?? null;
+
+        return $target === null || (int) $target === $userId;
+    }
+
+    /**
      * ADR-128: Build the Redis PubSub channel for dual-write PUBLISH.
      */
     public static function pubsubChannelFor(?int $companyId): string

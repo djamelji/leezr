@@ -53,12 +53,7 @@ class RealtimeStreamController
             return response()->json(['message' => 'Too many connections.'], 429);
         }
 
-        Log::debug('[realtime] connect', [
-            'user_id' => $userId,
-            'company_id' => $companyId,
-            'categories' => $categoryFilter,
-            'topics' => $topicFilter,
-        ]);
+        Log::debug('[realtime] connect', ['user_id' => $userId, 'company_id' => $companyId, 'categories' => $categoryFilter, 'topics' => $topicFilter]);
 
         $response = new StreamedResponse(function () use ($transport, $redisKey, $heartbeatInterval, $streamTimeout, $companyId, $userId, $categoryFilter, $topicFilter) {
             // Disable output buffering for real-time streaming
@@ -106,6 +101,11 @@ class RealtimeStreamController
                         if (!$this->matchesFilters($data, $categoryFilter, $topicFilter)) {
                             $lastTimestamp = $event['score'];
 
+                            continue;
+                        }
+
+                        if (! SseRealtimePublisher::deliverableTo($data, $userId)) { // ADR-733.2 confidentialité intra-tenant
+                            $lastTimestamp = $event['score'];
                             continue;
                         }
 

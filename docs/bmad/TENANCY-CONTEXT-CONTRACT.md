@@ -74,6 +74,15 @@ DEV : queue **`sync`** (`phpunit.xml:35`), **pas d'Horizon/Redis**. L'hygiène `
 4. Forcer un échec + retry : vérifier l'absence de réutilisation du tenant précédent.
 5. Activer `CompanyContext::$strict=true` en staging et rejouer : repérer les jobs/commandes qui lèvent (chemins à migrer).
 
+## 5sexies. P0-D.2 — Preuves de clôture (ADR-733.2)
+
+- **Worker async RÉEL** : `php artisan tenancy:worker-proof` (DEV) → isolation PROUVÉE sur queue `database` (A/B isolés, échec intermédiaire sans contamination, tenant inexistant fail-closed, nettoyage auto).
+- **SSE inter-tenant** : PROUVÉ sûr (`SetCompanyContext` `isMemberOf` → 403 ; un user de A ne peut pas ouvrir le flux de B). **R1 corrigé** : `SseRealtimePublisher::deliverableTo()` filtre les envelopes ciblées par destinataire (confidentialité intra-tenant). **R2 résiduel** : membership non re-vérifié en boucle → fenêtre ≤300 s (intra-tenant, pas d'escalade).
+- **EmailBulkActionService** : surface ADMIN PLATFORM (gated `manage_email`), `company_id` = filtre optionnel → PAS de frontière tenant (flag P0-D.1 = faux positif). Frontière = RBAC platform (prouvée).
+- **Agrégats billing** : PROUVÉS SÛRS (company toujours re-dérivée de la Subscription/Invoice, jamais d'un payload client).
+- **24 chemins legacy** : A=0 (aucune fuite), B=18 (encapsulation runFor requise pour strict), C=3 (CLI).
+- **Garde CI** : étendu à `find/findOrFail/first/firstOrFail/whereKey`. **Gap** : `DB::table('<tenant>')` (règle CI à ajouter).
+
 ## 6. Activation du mode strict (recommandation)
 
 `CompanyContext::$strict = true` interdit toute requête tenant sans contexte (hors `runGlobal`). **Non activable en production** tant que les jobs legacy qui s'appuient sur le no-op (`ProcessDunningBatchJob:45` `Invoice::find` scopé) ne sont pas migrés vers `CompanyContext::runFor` / `runGlobal` / `withoutGlobalScopes`. Chantier de **migration graduelle** recommandé : (1) migrer les jobs tenant vers `InteractsWithTenant`, (2) envelopper les commandes globales dans `runGlobal`, (3) activer le strict en staging puis prod. D'ici là, le strict sert de **filet CI** dans les tests dédiés.
