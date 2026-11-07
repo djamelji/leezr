@@ -26534,5 +26534,5 @@ Boutons **Annuler / Rétablir** dans la barre (désactivés si pile vide, libell
   - **§16 — dette e2e ambiante toujours OUVERTE** (NON réparée en M6.C, non masquée) : `workforce-sp1a1-grid-timeline`, `workforce-phaseA-planning-ux`, `workforce-lotA-qualified-coverage` (inline), `workforce-lot4b3-copy` échouent sur **données/dates DEV accumulées** (`.first()` arbitraires / 422 résiduels / copie no-op), indépendamment de M6.C. **Correctif = fixtures isolées + fin des `.first()` → M6.E.** Matrice : *réussis* = m6a/m6b/m6c/m2/m3/m4/m5/lot4a/lot4b2 ; *échoués (ambiants)* = sp1a1/phaseA/lotA-inline/lot4b3-copy ; *ignorés* = scénarios skip conditionnels (cellule non planifiable) ; *non exécutés* = suite e2e complète (coût).
   - **Limitations** : modes temporels non unifiés (Semaine/Agenda = 2 vues encore, D2/D3/Mois = M6.D) ; picker rapide = vue desktop (la vue jour mobile garde ses parcours `mobile-*`) ; `fetchTemplates({all})` encore au montage (palette) ; 100 salariés non mesuré (tenant isolé, M6.E).
   - **M6.D/E NON engagés.**
-- **Build DEV** : `__M6C_SHA__`.
+- **Build DEV** : `b40439b`.
 - **Portée** : DEV + `origin/dev`. Aucune migration. Aucun 2e moteur Workforce. Aucun changement `main`/PROD, Billing, Payroll, Signature. `RepeatWeekTemplateUseCase` et tous les UseCases/stores **inchangés**. M1→M5 préservés.
