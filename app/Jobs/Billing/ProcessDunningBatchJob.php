@@ -4,6 +4,7 @@ namespace App\Jobs\Billing;
 
 use App\Core\Billing\DunningEngine;
 use App\Core\Billing\Invoice;
+use App\Core\Tenancy\CompanyContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -41,15 +42,17 @@ class ProcessDunningBatchJob implements ShouldQueue
             'count' => $this->invoiceIds->count(),
         ]);
 
+        // ADR-733.1 (P0-D.1) : batch MULTI-TENANT. On récupère chaque facture hors-scope (lot inter-company
+        // légitime), puis on traite SOUS le contexte de SA company → isolation par ligne en worker async.
         foreach ($this->invoiceIds as $invoiceId) {
-            $invoice = Invoice::find($invoiceId);
+            $invoice = Invoice::withoutGlobalScopes()->find($invoiceId);
 
             if (! $invoice || $invoice->status !== 'overdue') {
                 continue;
             }
 
             try {
-                DunningEngine::retrySingleInvoice($invoice);
+                CompanyContext::runFor($invoice->company_id, fn () => DunningEngine::retrySingleInvoice($invoice));
             } catch (\Throwable $e) {
                 Log::channel('billing')->error('[dunning-job] Failed to retry invoice', [
                     'invoice_id' => $invoiceId,

@@ -6,6 +6,7 @@ use App\Core\Automation\ActionExecutor;
 use App\Core\Automation\ConditionEvaluator;
 use App\Core\Automation\WorkflowExecutionLog;
 use App\Core\Automation\WorkflowRule;
+use App\Core\Tenancy\CompanyContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -44,55 +45,59 @@ class ProcessWorkflowJob implements ShouldQueue
             return;
         }
 
-        $conditionsMet = ConditionEvaluator::evaluate(
-            $rule->conditions ?? [],
-            $this->payload,
-        );
+        // ADR-733.1 (P0-D.1) : job MONO-TENANT. Après résolution de la règle (PK du payload, hors scope),
+        // tout le traitement s'exécute SOUS le contexte de SA company → isolation en worker async.
+        CompanyContext::runFor($rule->company_id, function () use ($rule, $startTime) {
+            $conditionsMet = ConditionEvaluator::evaluate(
+                $rule->conditions ?? [],
+                $this->payload,
+            );
 
-        if (! $conditionsMet) {
+            if (! $conditionsMet) {
+                WorkflowExecutionLog::create([
+                    'workflow_rule_id' => $rule->id,
+                    'company_id' => $rule->company_id,
+                    'trigger_topic' => $this->triggerTopic,
+                    'trigger_payload' => $this->payload,
+                    'conditions_met' => false,
+                    'actions_executed' => [],
+                    'status' => 'skipped',
+                    'duration_ms' => (int) ((hrtime(true) - $startTime) / 1e6),
+                ]);
+
+                return;
+            }
+
+            $context = [
+                'company_id' => $rule->company_id,
+                'trigger_topic' => $this->triggerTopic,
+                'payload' => $this->payload,
+                'rule_id' => $rule->id,
+            ];
+
+            $results = ActionExecutor::execute($rule->actions ?? [], $context);
+
+            $hasFailure = collect($results)->contains('status', 'failed');
+
+            $rule->recordExecution();
+
             WorkflowExecutionLog::create([
                 'workflow_rule_id' => $rule->id,
                 'company_id' => $rule->company_id,
                 'trigger_topic' => $this->triggerTopic,
                 'trigger_payload' => $this->payload,
-                'conditions_met' => false,
-                'actions_executed' => [],
-                'status' => 'skipped',
+                'conditions_met' => true,
+                'actions_executed' => $results,
+                'status' => $hasFailure ? 'partial' : 'success',
                 'duration_ms' => (int) ((hrtime(true) - $startTime) / 1e6),
             ]);
 
-            return;
-        }
-
-        $context = [
-            'company_id' => $rule->company_id,
-            'trigger_topic' => $this->triggerTopic,
-            'payload' => $this->payload,
-            'rule_id' => $rule->id,
-        ];
-
-        $results = ActionExecutor::execute($rule->actions ?? [], $context);
-
-        $hasFailure = collect($results)->contains('status', 'failed');
-
-        $rule->recordExecution();
-
-        WorkflowExecutionLog::create([
-            'workflow_rule_id' => $rule->id,
-            'company_id' => $rule->company_id,
-            'trigger_topic' => $this->triggerTopic,
-            'trigger_payload' => $this->payload,
-            'conditions_met' => true,
-            'actions_executed' => $results,
-            'status' => $hasFailure ? 'partial' : 'success',
-            'duration_ms' => (int) ((hrtime(true) - $startTime) / 1e6),
-        ]);
-
-        Log::info('[workflow] rule executed', [
-            'rule_id' => $rule->id,
-            'company_id' => $rule->company_id,
-            'topic' => $this->triggerTopic,
-            'status' => $hasFailure ? 'partial' : 'success',
-        ]);
+            Log::info('[workflow] rule executed', [
+                'rule_id' => $rule->id,
+                'company_id' => $rule->company_id,
+                'topic' => $this->triggerTopic,
+                'status' => $hasFailure ? 'partial' : 'success',
+            ]);
+        });
     }
 }

@@ -41,6 +41,39 @@
 - **Audité statiquement** : tous les jobs/commands/listeners/notifications (verdict SÛR par re-filtre explicite).
 - **Non couvert (consigné)** : worker async réel (Horizon) ; Reverb/broadcasting channels ; les ~39 tables sans trait ; durcissement paie/documents.
 
+## 5bis. P0-D.1 — Matrice d'adoption des jobs (ADR-733.1)
+
+| Job | Scope | Mécanisme appliqué |
+|---|---|---|
+| `ReconcileCompanyJob` | MONO | **`InteractsWithTenant`** (`onTenant($companyId)` + `runInTenant`) |
+| `ProcessWorkflowJob` | MONO | **`runFor($rule->company_id)`** après résolution hors-scope de la règle |
+| `ProcessDocumentAiJob` | MONO | contexte établi (chargement `withoutGlobalScopes` + binding du tenant du document) |
+| `ProcessDunningBatchJob` | MULTI | **`runFor($invoice->company_id)` par facture** (fetch `withoutGlobalScopes`) |
+| `RenewSubscriptionBatchJob` | MULTI | **`runGlobal`** (délègue à `billing:renew`, re-filtré par-ligne) |
+| `RunScheduledTaskJob` | PLATFORM | non-tenant (scope no-op ; hygiène garantit le démarrage propre) |
+| `FxRateFetchJob` | PLATFORM | non-tenant (modèles `Market`/`FxRate` sans scope) |
+
+**Notifications (13) queued** : lisent un modèle injecté (Invoice/Payment/…) → risque bas ; `CriticalAlertNotification`/`BillingCriticalAlert` sont cross-company par nature (globales). **Listeners (4)** : synchrones (pas `ShouldQueue`) → contexte HTTP présent.
+
+## 5ter. Modèles sans trait — décisions P0-D.1
+
+- **Trait ajouté (TENANT sûrs)** : `WorkforceFavorite`, `CompanyDashboardLayout`, `CompanyDashboardWidgetSuggestion`.
+- **NON durcis (volontaire)** : agrégats billing (`BillingCoveredInterval/Watermark/RunRecord/InvoiceLineAnalytic`, confinés par `subscription_id`) ; `UsageSnapshot`/`WorkflowExecutionLog` (lectures agrégat/journal → migration requête-par-requête) ; hybrides nullable (`DocumentType/FieldDefinition/FieldActivation/EmailLog/EmailThread/NotificationEvent` — `company_id=NULL` platform, auto-fill incompatible) ; PLATFORM (`AiRequestLog/PlatformAlert/SecurityAlert/RegistrationFunnelEvent`).
+- **Risque résiduel à traiter** : `EmailBulkActionService` (`EmailThread::whereIn('id', $ids)` **sans** `company_id`) — HTTP présumé, à confiner défensivement (lot dédié).
+
+## 5quater. Broadcasting / Reverb (§7)
+
+**INEXISTANT dans ce projet** : pas de `routes/channels.php`, pas de `config/broadcasting.php`, aucun `ShouldBroadcast`/`PrivateChannel`, `BROADCAST_CONNECTION=log`. **§7 sans objet** aujourd'hui. Le temps-réel in-app = **SSE** (`NotificationDispatcher:85`) → autorisation du flux SSE à auditer **séparément** (hors P0-D.1). Si Reverb est introduit : autoriser les canaux par `Membership` (company_id dans le canal + vérification serveur).
+
+## 5quinquies. Worker réel / procédure staging (§6)
+
+DEV : queue **`sync`** (`phpunit.xml:35`), **pas d'Horizon/Redis**. L'hygiène `Queue::before/after` est testée en sync (elle fait démarrer le job sur une ardoise vierge, comme en async) MAIS **ne prouve pas** le cycle d'un worker persistant. **Procédure de validation staging** :
+1. Configurer `QUEUE_CONNECTION=redis` (+ Horizon) en staging.
+2. Dispatcher 2 jobs tenant-aware (companies A et B) + 1 batch dunning multi-tenant.
+3. Vérifier logs/DB : chaque job n'a touché que SA company ; aucun contexte résiduel entre jobs (`CompanyContext::has()` = false au `JobProcessing`).
+4. Forcer un échec + retry : vérifier l'absence de réutilisation du tenant précédent.
+5. Activer `CompanyContext::$strict=true` en staging et rejouer : repérer les jobs/commandes qui lèvent (chemins à migrer).
+
 ## 6. Activation du mode strict (recommandation)
 
 `CompanyContext::$strict = true` interdit toute requête tenant sans contexte (hors `runGlobal`). **Non activable en production** tant que les jobs legacy qui s'appuient sur le no-op (`ProcessDunningBatchJob:45` `Invoice::find` scopé) ne sont pas migrés vers `CompanyContext::runFor` / `runGlobal` / `withoutGlobalScopes`. Chantier de **migration graduelle** recommandé : (1) migrer les jobs tenant vers `InteractsWithTenant`, (2) envelopper les commandes globales dans `runGlobal`, (3) activer le strict en staging puis prod. D'ici là, le strict sert de **filet CI** dans les tests dédiés.

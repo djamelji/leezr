@@ -55,7 +55,8 @@ class ProcessDocumentAiJob implements ShouldQueue
     public function handle(DocumentAiAnalysisService $service): void
     {
         /** @var MemberDocument|CompanyDocument $document */
-        $document = ($this->documentClass)::find($this->documentId);
+        // ADR-733.1 (P0-D.1) : chargement hors-scope (PK du payload, lot inter-company légitime), strict-safe.
+        $document = ($this->documentClass)::withoutGlobalScopes()->find($this->documentId);
 
         if (! $document) {
             Log::info('ProcessDocumentAiJob: document not found, skipping', [
@@ -67,6 +68,14 @@ class ProcessDocumentAiJob implements ShouldQueue
         }
 
         $companyId = $document->company_id ?? null;
+
+        // ADR-733.1 (P0-D.1) : job MONO-TENANT → on établit le contexte de la company du document pour que
+        // tout le traitement en aval soit filtré par SON tenant (filet systémique en worker async). Le
+        // contexte est nettoyé en fin de job par QueueTenancyHygiene (pas de fuite vers le job suivant).
+        if ($companyId) {
+            \App\Core\Tenancy\CompanyContext::clear();
+            app()->instance('company.context', $document->company ?? Company::withoutGlobalScopes()->find($companyId));
+        }
 
         // ADR-422: Set ai_status = processing at start
         $document->update(['ai_status' => 'processing']);

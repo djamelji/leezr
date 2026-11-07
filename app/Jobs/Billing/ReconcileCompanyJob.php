@@ -3,6 +3,7 @@
 namespace App\Jobs\Billing;
 
 use App\Core\Billing\ReconciliationEngine;
+use App\Core\Tenancy\InteractsWithTenant;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,10 +17,13 @@ use Illuminate\Support\Facades\Log;
  *
  * Dispatched by `billing:reconcile --async`.
  * Rate limited to avoid hitting Stripe API limits.
+ *
+ * ADR-733.1 (P0-D.1) : job MONO-TENANT → s'exécute sous le contexte de SA company (InteractsWithTenant),
+ * garantissant l'isolation en worker même si la logique interne oublie un filtre explicite.
  */
 class ReconcileCompanyJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, InteractsWithTenant, Queueable, SerializesModels;
 
     public int $tries = 3;
 
@@ -30,6 +34,7 @@ class ReconcileCompanyJob implements ShouldQueue
         public readonly bool $autoRepair = false,
     ) {
         $this->onQueue('billing-slow');
+        $this->onTenant($companyId);
     }
 
     public function middleware(): array
@@ -44,11 +49,11 @@ class ReconcileCompanyJob implements ShouldQueue
         ]);
 
         try {
-            ReconciliationEngine::reconcile(
+            $this->runInTenant(fn () => ReconciliationEngine::reconcile(
                 companyId: $this->companyId,
                 dryRun: false,
                 autoRepair: $this->autoRepair,
-            );
+            ));
         } catch (\Throwable $e) {
             Log::channel('billing')->error('[reconcile-job] Failed for company', [
                 'company_id' => $this->companyId,

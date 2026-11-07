@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Billing;
 
+use App\Core\Tenancy\CompanyContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -40,9 +41,11 @@ class RenewSubscriptionBatchJob implements ShouldQueue
             'count' => $this->subscriptionIds->count(),
         ]);
 
-        Artisan::call('billing:renew', [
+        // ADR-733.1 (P0-D.1) : orchestrateur GLOBAL explicite (la commande billing:renew balaye plusieurs
+        // companies et re-filtre par-ligne). runGlobal documente l'intention cross-tenant (exempt du strict).
+        CompanyContext::runGlobal(fn () => Artisan::call('billing:renew', [
             '--ids' => $this->subscriptionIds->implode(','),
-        ]);
+        ]));
     }
 
     public function failed(\Throwable $exception): void

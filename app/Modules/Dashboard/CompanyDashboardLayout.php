@@ -4,11 +4,14 @@ namespace App\Modules\Dashboard;
 
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyDashboardLayout extends Model
 {
+    use BelongsToCompany; // ADR-733.1 (P0-D.1) : scope auto + auto-fill company_id
+
     protected $fillable = ['company_id', 'user_id', 'company_role_id', 'layout_json'];
 
     protected function casts(): array

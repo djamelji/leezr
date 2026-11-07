@@ -147,6 +147,15 @@ class TenantIsolationP0DTest extends TestCase
         });
     }
 
+    // 13. STRICT-READY : un job tenant-aware (runFor) fonctionne SOUS mode strict (filet activable en CI).
+    public function test_tenant_aware_job_is_strict_safe(): void
+    {
+        CompanyContext::$strict = true;
+        P0DProbeJob::$seen = null;
+        dispatch_sync((new P0DProbeJob)->onTenant($this->b));
+        $this->assertSame([$this->b->id], P0DProbeJob::$seen, 'le job migré isole même en mode strict');
+    }
+
     // 12. HYGIÈNE : pas de contamination entre deux jobs successifs (le 2e ne voit pas le tenant du 1er).
     public function test_no_contamination_between_successive_jobs(): void
     {
