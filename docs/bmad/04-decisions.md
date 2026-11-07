@@ -26608,3 +26608,61 @@ Boutons **Annuler / Rétablir** dans la barre (désactivés si pile vide, libell
   - **Risques résiduels délimités** : R2 SSE (≤300 s, intra-tenant) ; `DB::table` tenant (garde CI à étendre) ; 18 chemins « B » (strict) ; worker Horizon staging ; `EmailThread` platform (hors tenant). **Aucune fuite inter-tenant prouvée.**
 - **Build DEV** : `9b903a7`.
 - **Portée** : DEV + `origin/dev`. Aucune migration, aucune mutation, aucune règle billing/Stripe/dunning/Gate5. Aucun P0-B/C/E, M6, refonte Workforce. `tenancy:worker-proof` = DEV-only (interdit en production).
+
+## ADR-734 : Master Plan BMAD V2 — P0-COMMERCE · Finalisation du socle commercial (suspension, entitlements, encaissement)
+
+- **Date** : 2026-11-07
+- **Contexte** : GO **P0-COMMERCE** (consolidé P0-E suspension + P0-C entitlements/grâce + P0-B Stripe/encaissement + recette résiduelle P0-D). Objectif : qu'une Company puisse **s'inscrire, choisir un abonnement, payer en test, obtenir les droits correspondants, utiliser les fonctionnalités achetées, être gérée correctement en cas d'impayé, se régulariser et récupérer l'accès** — sans vente de module fictif, sans revenu fantôme, sans fuite inter-tenant. Exécution autonome A→E, **checkpoint final unique**. Garde-fous : DEV uniquement, pas de `main`/PROD, pas de Stripe live, pas de vrai moyen de paiement, pas de migration destructive, pas de modif Workforce/autres modules, M6.D/E suspendus.
+
+### Audit préalable (FAIT, conventions : FAIT / HYPOTHÈSE)
+Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné ; 3 failles concrètes retenues et corrigées + 1 gap de couverture fermé. Le reste du socle (machine à états `Subscription`, dunning grâce [1,3,7]+3j, webhooks signature fail-closed + idempotence `UNIQUE(provider_key,event_id)` + DLQ, triple recovery) est **déjà solide** — non retouché.
+
+### A — Suspension Company (P0-E) — `5cb7c3d`
+- **Constat (FAIT)** : la suspension **est** enforced en synchrone HTTP par `SetCompanyContext` (403 si `company.status='suspended'`, AVANT `EnsureBusinessAccess` et `company.access`). Mais le bypass `isSuspendedBypass` ne whitelistait QUE `api/billing/invoices/outstanding` + `api/billing/invoices/pay` → une Company suspendue **ne pouvait ni voir sa facture, ni ajouter une carte, ni changer de plan, ni contacter le support** pour se régulariser (piège sans issue), alors que `EnsureBusinessAccess` autorise déjà 8 préfixes de régularisation (incohérence entre les deux gates).
+- **Décision** : élargir le bypass à la **surface de régularisation** via `SUSPENDED_BYPASS_PREFIXES = ['api/billing/', 'api/company/plan', 'api/support/']`, en miroir de `EnsureBusinessAccess`. La **réactivation administrative** reste sur le guard **Platform** (`platform.php` suspend/reactivate). Tout le reste (métier) demeure **403**.
+- **Données** : une suspension ne touche QUE `company.status` — **aucune donnée supprimée** (préservation prouvée par `CompanySuspensionTest`).
+- **Async (HYPOTHÈSE → consigné)** : la suspension est un **gate HTTP** ; aucun job ne consulte `isSuspended()`. Un job déjà en file traite une Company suspendue. **Risque résiduel délimité** (travail déjà en file, borné) → durcissement async = lot ultérieur, hors P0-COMMERCE.
+
+### B — Entitlements & état commercial (P0-C) — `4a66f36`
+- **Constat (FAIT)** : `EntitlementResolver` **Gate 5** accordait le droit sur la **seule présence** de `addon_pricing`, sans jamais consulter `CompanyAddonSubscription` → un **addon impayé conservait son droit indéfiniment** jusqu'à suspension globale (confondait « achetable » et « payé/actif »).
+- **Décision (couplage conservateur)** : le droit effectif dépend d'un **état commercial valide**. Gate 5 interroge `CompanyAddonSubscription` (filtre explicite `company_id` + `withoutGlobalScopes`, agnostique au contexte) :
+  - **aucun enregistrement** → **PRÉSERVÉ** (grant admin / legacy / exception gratuite) ;
+  - **≥1 souscription active** (`scopeActive` : `deactivated_at` null ou futur) → **entitled** ;
+  - **uniquement des souscriptions désactivées** → **coupé** (`reason='addon_inactive'`).
+- **Fermeture de la boucle** : `DunningTransitioner::applyFailureAction` **désactive les addons actifs** quand la Company est escaladée en suspension → un addon impayé ne peut plus accorder sa fonctionnalité une fois la suspension atteinte. La grâce étant gérée en amont (phase `past_due` conserve l'accès), **aucune coupure au premier incident** ; seule la suspension finale coupe.
+- **Non-destructif** : choix conservateur **pour ne pas couper des droits légitimes existants** (sans enregistrement = préservé) ; zéro régression sur `ModuleEntitlementEnforcementTest`.
+
+### C — Stripe / encaissement (P0-B) — `c735b1a`
+- **Constat (FAIT, CRITIQUE)** : `ConfirmRegistrationPaymentController` (inscription payante embarquée, ADR-302) passait la sub `pending_payment → active` **dès l'enregistrement de la carte** (SetupIntent), **indépendamment** du succès du charge (la boucle de charge ne faisait que logger les échecs) → **abonnement actif avec facture plan `open` impayée = phantom-paid** (revenu sans encaissement). La facture `paid` était déjà conditionnée au succès (pas de fausse facture payée), mais **la sub mentait sur l'encaissement**.
+- **Décision** : **activer la sub UNIQUEMENT après encaissement réel du terme plan**. On émet la facture plan, on tente le charge, et on n'active (`active` + périodes) que si le plan est **réellement réglé** (charge `succeeded`, ou rien à encaisser = gratuit/coupon 100 %). Sinon la sub **reste `pending_payment`**, la facture **reste `open`** (jamais marquée payée), l'endpoint renvoie **402** (message explicite) pour que le client **re-tente**. Le retry **réutilise la facture ouverte** existante (pas de doublon).
+- **Secrets / recette** : aucune clé en repo (config/DB fallback) ; tests via **seam maison** (sous-classe anonyme overridant `callStripe*` + HMAC réel pour les webhooks). **Aucun vrai moyen de paiement**, aucun Stripe live. Les providers `internal`/`null` activent sans encaissement **by design** (modes manuel/approbation) — hors périmètre (documenté).
+
+### D — Recette intégrée — `b9be282`
+- **Backend (PHPUnit, stack HTTP réelle)** : parcours couverts — inscription free/trial/**payante embarquée** (nouveau), paiement confirmé/refusé/rejeu/signature invalide, essai expiré, overdue→dunning, **grâce `past_due` conserve l'accès** (nouveau contrat), suspension (403 + surface de régularisation, nouveau) + **business bloqué**, régularisation/réactivation, annulation, remboursement, SEPA 1er échec, concurrence, transitions interdites, **addon : actif→droit / désactivé→coupé / suspension→coupe** (nouveau).
+- **E2E Playwright (stack live Valet)** : `commercial-catalog-p0a` (2), `security-suspend-recette` (boucle suspend→403→restore→200), `company-payments-journeys` (3) → **6 verts**.
+- **Contrat états commerciaux → droits (formalisé, `SubscriptionBusinessAccessContractTest`)** :
+
+| État sub | Accès métier | Note |
+|---|---|---|
+| `active`, `trialing` (vivant) | ✅ | droits pleins |
+| `past_due` | ✅ | **grâce dunning** (pas coupé au 1ᵉʳ incident) |
+| `pending`, `pending_payment` | ✅ (ce gate) | gouverné par l'onboarding ; **C** empêche l'activation `active` sans encaissement |
+| `expired`, `suspended`, `cancelled` | ❌ | coupé (`restrictsBusinessAccess`) |
+| `trialing` fenêtre écoulée | ❌ | coupé à la requête (`isExpiredTrial`) |
+| `company.status='suspended'` | ❌ sauf régularisation | gate distinct (`SetCompanyContext`) |
+
+- **Contrat entitlement addon (formalisé)** : `addon_pricing` = **achetable** (≠ droit). Droit effectif = aucun enregistrement (préservé) **OU** souscription active ; coupé si uniquement désactivée.
+
+### E — Verdict GO/NO-GO commercial
+- **GO (DEV)** sur le socle corrigé : (1) suspension cohérente avec issue de régularisation + données préservées ; (2) droit addon couplé à l'état commercial + addon impayé coupé à la suspension ; (3) **plus de phantom-paid** à l'inscription (activation après encaissement réel) ; (4) **1425 tests du périmètre commercial verts**, **6 e2e verts** ; (5) P0-A (catalogue, pas de module fictif vendable) + P0-D (isolation) préservés.
+- **NO-GO PROD tant que (risques bloquants documentés)** :
+  - **(a) Stripe non recetté en sandbox réelle** : validé par seam maison (HMAC réel + `constructFrom`), **pas** par un compte Stripe sandbox de bout en bout (capture carte Stripe Elements = hors garde-fou « pas de vrai moyen de paiement »). **Prérequis staging** : clés sandbox hors repo + parcours carte test 4242 / échec / 3DS.
+  - **(b) pending_payment accorde encore l'accès métier** (ce gate ne coupe pas `pending_payment`) : décision d'accès distincte à trancher (couper `pending_payment` impacterait l'onboarding) — **consigné, non modifié** (hors responsabilité de ce lot).
+  - **(c) Suspension non étanche en async** : jobs en file non gardés par `isSuspended()`.
+  - **(d) Dunning par-addon** : un addon impayé isolé suit le dunning **company-level** (sa facture participe au même cycle → suspension globale) ; **pas** de grâce/coupe per-addon dédiée (amélioration future).
+  - **(e) Résiduels P0-D** : mode strict non activable PROD (18 chemins « B »), R2 SSE (≤300 s, intra-tenant), gap CI `DB::table` — inchangés, documentés en ADR-733.2.
+- **Conséquences** :
+  - **Fichiers (modifiés)** : `SetCompanyContext` (bypass régularisation), `EntitlementResolver` (Gate 5 commercial), `DunningTransitioner` (désactivation addons à la suspension), `ConfirmRegistrationPaymentController` (activation post-encaissement). **(tests neufs)** : `AddonEntitlementCommercialStateTest` (5), `RegistrationPaymentActivationTest` (3), `SubscriptionBusinessAccessContractTest` (4) + extension `CompanySuspensionTest` (2). **Aucune migration, aucune mutation destructive.**
+  - **Recette** : périmètre commercial **1425 verts** (`Billing|Dunning|Stripe|Subscription|Entitlement|Addon|Suspension|Membership|Trial|Payment|Webhook|Checkout|Invoice|Commercial|Module|Tenant|Realtime`) + **6 e2e Playwright verts**. Échecs pré-existants `ControllerSizeInvariantTest` = **baseline inchangée** (aucun fichier P0-COMMERCE n'y entre).
+- **Builds DEV** : A `5cb7c3d` · B `4a66f36` · C `c735b1a` · D `b9be282` · ADR (ce doc) = SHA de ce commit.
+- **Portée** : DEV + `origin/dev`. **Pas de PROD, pas de `main`, pas de Stripe live, pas de vrai paiement/remboursement, pas de migration destructive.** M6.D/E restent suspendus.
