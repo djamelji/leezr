@@ -793,11 +793,12 @@ const duplicateShiftAction = async shift => {
   }
 }
 
-// Clic sur cellule vide : si un modèle est « armé », affecte directement ; sinon ouvre le drawer.
-const onEmptyCell = (employeeId, date) => {
+// Clic sur cellule vide : modèle « armé » → affecte directement ; sinon → M6.C picker rapide
+// (favoris / modèles pertinents / recherche / création avancée) ancré sur la cellule.
+const onEmptyCell = (employeeId, date, event = null) => {
   if (armedTemplateId.value) return quickAssign(employeeId, date)
 
-  return openCreateShift(employeeId, date)
+  return openQuickPick(employeeId, date, event)
 }
 const quickAssign = (employeeId, date) => {
   const tpl = store.allTemplates.find(t => t.id === armedTemplateId.value)
@@ -815,6 +816,78 @@ const applyTemplateToCell = (tpl, employeeId, date, ack = null, reason = null) =
     timezone: 'Europe/Paris', schedule_template_id: tpl.id, work_location_id: tpl.work_location_id,
     overstaffing_ack: ack, overstaffing_reason: reason,
   })
+
+// ── M6.C (ADR-731) — PICKER RAPIDE depuis une cellule vide : favoris → modèles pertinents → recherche
+// → création avancée. Réutilise applyTemplateToCell/performWrite (règles serveur). Aucun créneau codé en dur.
+const quickPickOpen = ref(false)
+const quickPickTarget = ref([0, 0])
+const quickPickCtx = ref(null)
+const quickPickSearch = ref('')
+const openQuickPick = (employeeId, date, event = null) => {
+  quickPickCtx.value = { employeeId, date }
+  quickPickSearch.value = ''
+  quickPickTarget.value = event ? [event.clientX, event.clientY] : [window.innerWidth / 2, 200]
+  if (!(store.favorites || []).length) store.fetchFavorites().catch(() => {})
+  quickPickOpen.value = true
+}
+const quickPickFavorites = computed(() =>
+  store.allTemplates.filter(t => t.enabled !== false && store.isFavorite('schedule_template', t.id)))
+const quickPickModels = computed(() => {
+  const q = (quickPickSearch.value || '').trim().toLowerCase()
+  const favIds = new Set(quickPickFavorites.value.map(t => t.id))
+  let list = store.allTemplates.filter(t => t.enabled !== false && !favIds.has(t.id))
+  if (q) list = list.filter(t => (t.name || '').toLowerCase().includes(q))
+
+  return list.slice(0, q ? 25 : 8)
+})
+const quickPickApply = tpl => {
+  const ctx = quickPickCtx.value
+  quickPickOpen.value = false
+  if (ctx && tpl) performWrite((ack, reason) => applyTemplateToCell(tpl, ctx.employeeId, ctx.date, ack, reason), t('planning.quickAssign.done'))
+}
+const quickPickAdvanced = () => {
+  const ctx = quickPickCtx.value
+  quickPickOpen.value = false
+  if (ctx) openCreateShift(ctx.employeeId, ctx.date)
+}
+
+// ── M6.C — « PRÉPARER MA SEMAINE » : point d'entrée UNIQUE vers les parcours de construction existants
+// (copie, semaine type, répétition, modèles). N'introduit aucun moteur : oriente vers les handlers/dialogs
+// déjà livrés (M3/M4/M5). Chargement à la demande des semaines types (§13).
+const prepareOpen = ref(false)
+const prepareLoading = ref(false)
+const openPrepareWeek = async () => {
+  quickPickOpen.value = false
+  prepareOpen.value = true
+  prepareLoading.value = true
+  try { await store.fetchWeekTemplates() } catch (e) { /* non bloquant */ } finally { prepareLoading.value = false }
+}
+const hasWeekShifts = computed(() => Array.isArray(store.weekShifts) && store.weekShifts.length > 0)
+const hasWeekTemplates = computed(() => (store.weekTemplates || []).length > 0)
+// Recommandation contextuelle (proposition, pas contrainte — §4/§9) : semaine type si disponible,
+// sinon reprendre la semaine précédente si la semaine courante est vide, sinon partir des modèles.
+const prepareRecommended = computed(() => {
+  if (hasWeekTemplates.value) return 'weektpl'
+  if (!hasWeekShifts.value) return 'copyprev'
+
+  return 'templates'
+})
+const prepareChoose = async key => {
+  prepareOpen.value = false
+  await nextTick()
+  if (key === 'copyprev') return copyPreviousWeek()
+  if (key === 'copyweek') return openCopyWeek()
+  if (key === 'weektpl') return openWeekLibrary()
+  if (key === 'templates') { activeTab.value = 'planning'; paletteOpen.value = true }
+  // 'scratch' → rien : l'utilisateur construit à la main dans la grille.
+}
+const prepareOptions = [
+  { key: 'copyprev', icon: 'tabler-copy', color: 'primary', title: 'planning.prepare.copyPrev', desc: 'planning.prepare.copyPrevDesc' },
+  { key: 'copyweek', icon: 'tabler-calendar-share', color: 'info', title: 'planning.prepare.copyWeek', desc: 'planning.prepare.copyWeekDesc' },
+  { key: 'weektpl', icon: 'tabler-calendar-check', color: 'success', title: 'planning.prepare.weekTpl', desc: 'planning.prepare.weekTplDesc' },
+  { key: 'templates', icon: 'tabler-layout-grid-add', color: 'warning', title: 'planning.prepare.templatesStart', desc: 'planning.prepare.templatesStartDesc' },
+  { key: 'scratch', icon: 'tabler-pencil', color: 'secondary', title: 'planning.prepare.scratch', desc: 'planning.prepare.scratchDesc' },
+]
 
 // ── Contrat SUREFFECTIF (Lot 4B.1, ADR-719) : 422 overstaffing → dialog → retry avec ack serveur ──
 const overstaffingDialog = ref(false)
@@ -1066,7 +1139,7 @@ const onCellClick = (employeeId, date, dayIdx, rowIdx, event) => {
   }
   // Comportement existant (création / affectation rapide) uniquement sur cellule libre sans sélection active.
   if (!selectedCells.value.size && !row_hasShiftOrAbsence(employeeId, dayIdx)) {
-    return onEmptyCell(employeeId, date)
+    return onEmptyCell(employeeId, date, event)
   }
   // Clic simple avec sélection active → démarre une nouvelle sélection d'une cellule.
   selectedCells.value = new Set([cellKey(employeeId, date)])
@@ -2522,19 +2595,31 @@ watch(activeTab, tab => {
 
     <!-- E3-B/B2 (réserve B1 #2) — sélecteur de PRÉSENTATION compact et LIBELLÉ (segmented control, pas
          une 2ᵉ barre de navigation à icônes sous les 4 activités). Les libellés lèvent toute ambiguïté. -->
-    <div class="d-inline-flex rounded-lg border pa-1 mb-5 planning-view-switch">
+    <div class="d-flex align-center flex-wrap gap-3 mb-5">
+      <div class="d-inline-flex rounded-lg border pa-1 planning-view-switch">
+        <VBtn
+          v-for="s in planningSections"
+          :key="s.value"
+          :variant="activeTab === s.value ? 'flat' : 'text'"
+          :color="activeTab === s.value ? 'primary' : 'medium-emphasis'"
+          size="small"
+          class="text-none"
+          :prepend-icon="s.icon"
+          :data-test="`plan-view-${s.value}`"
+          @click="activeTab = s.value"
+        >
+          {{ s.label }}
+        </VBtn>
+      </div>
+      <!-- M6.C — action PRINCIPALE de construction : un seul point d'entrée vers tous les parcours. -->
       <VBtn
-        v-for="s in planningSections"
-        :key="s.value"
-        :variant="activeTab === s.value ? 'flat' : 'text'"
-        :color="activeTab === s.value ? 'primary' : 'medium-emphasis'"
-        size="small"
-        class="text-none"
-        :prepend-icon="s.icon"
-        :data-test="`plan-view-${s.value}`"
-        @click="activeTab = s.value"
+        v-can="'workforce.planning_manage'"
+        color="primary"
+        prepend-icon="tabler-wand"
+        data-test="prepare-week-open"
+        @click="openPrepareWeek"
       >
-        {{ s.label }}
+        {{ $t('planning.prepare.open') }}
       </VBtn>
     </div>
 
@@ -5046,6 +5131,122 @@ watch(activeTab, tab => {
       </VCard>
     </VDialog>
 
+    <!-- M6.C (ADR-731) — « Préparer ma semaine » : point d'entrée unique vers les parcours existants -->
+    <VDialog v-model="prepareOpen" max-width="620" scrollable>
+      <VCard>
+        <VCardTitle class="d-flex align-center">
+          <VIcon icon="tabler-wand" class="me-2" />
+          {{ $t('planning.prepare.title') }}
+          <VSpacer />
+          <VBtn icon variant="text" size="small" @click="prepareOpen = false">
+            <VIcon icon="tabler-x" />
+          </VBtn>
+        </VCardTitle>
+        <VCardText>
+          <p class="text-body-2 text-medium-emphasis mb-4">
+            {{ $t('planning.prepare.intro') }}
+          </p>
+          <VProgressLinear v-if="prepareLoading" indeterminate color="primary" class="mb-3" />
+          <div class="d-flex flex-column gap-2">
+            <button
+              v-for="opt in prepareOptions"
+              :key="opt.key"
+              type="button"
+              class="plan-prepare-card d-flex align-center gap-3 pa-3"
+              :data-test="`prepare-${opt.key}`"
+              @click="prepareChoose(opt.key)"
+            >
+              <VAvatar :color="opt.color" variant="tonal" size="40">
+                <VIcon :icon="opt.icon" />
+              </VAvatar>
+              <div class="flex-grow-1 text-start" style="min-inline-size: 0;">
+                <div class="d-flex align-center gap-2">
+                  <span class="font-weight-medium">{{ $t(opt.title) }}</span>
+                  <VChip v-if="prepareRecommended === opt.key" size="x-small" color="primary" label>
+                    {{ $t('planning.prepare.recommended') }}
+                  </VChip>
+                </div>
+                <div class="text-caption text-medium-emphasis">{{ $t(opt.desc) }}</div>
+              </div>
+              <VIcon icon="tabler-chevron-right" class="text-disabled" />
+            </button>
+          </div>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- M6.C — Picker rapide de modèle depuis une cellule vide (favoris → modèles → recherche → avancé) -->
+    <VMenu
+      v-model="quickPickOpen"
+      :target="quickPickTarget"
+      :close-on-content-click="false"
+      location="bottom start"
+    >
+      <VCard min-width="270" max-width="320" class="plan-quickpick" data-test="quickpick">
+        <AppTextField
+          v-model="quickPickSearch"
+          :placeholder="$t('planning.quickPick.search')"
+          density="compact"
+          hide-details
+          prepend-inner-icon="tabler-search"
+          class="ma-2"
+          data-test="quickpick-search"
+        />
+        <VList density="compact" class="py-0" max-height="320">
+          <template v-if="quickPickFavorites.length && !quickPickSearch">
+            <VListSubheader>{{ $t('planning.quickPick.favorites') }}</VListSubheader>
+            <VListItem
+              v-for="tpl in quickPickFavorites"
+              :key="`f-${tpl.id}`"
+              :data-test="`quickpick-template-${tpl.id}`"
+              @click="quickPickApply(tpl)"
+            >
+              <template #prepend>
+                <span class="plan-quickpick__dot" :style="{ background: templateHex(tpl) }" />
+              </template>
+              <VListItemTitle>{{ tpl.name }}</VListItemTitle>
+              <VListItemSubtitle>{{ (tpl.start_time || '').slice(0, 5) }}–{{ (tpl.end_time || '').slice(0, 5) }}</VListItemSubtitle>
+              <template #append>
+                <VIcon icon="tabler-star-filled" color="warning" size="14" />
+              </template>
+            </VListItem>
+            <VDivider />
+          </template>
+          <VListSubheader v-if="quickPickModels.length">{{ $t('planning.quickPick.models') }}</VListSubheader>
+          <VListItem
+            v-for="tpl in quickPickModels"
+            :key="`m-${tpl.id}`"
+            :data-test="`quickpick-template-${tpl.id}`"
+            @click="quickPickApply(tpl)"
+          >
+            <template #prepend>
+              <span class="plan-quickpick__dot" :style="{ background: templateHex(tpl) }" />
+            </template>
+            <VListItemTitle>{{ tpl.name }}</VListItemTitle>
+            <VListItemSubtitle>{{ (tpl.start_time || '').slice(0, 5) }}–{{ (tpl.end_time || '').slice(0, 5) }}</VListItemSubtitle>
+          </VListItem>
+          <VListItem v-if="!quickPickFavorites.length && !quickPickModels.length">
+            <VListItemTitle class="text-caption text-disabled">{{ $t('planning.quickPick.empty') }}</VListItemTitle>
+          </VListItem>
+          <VDivider />
+          <VListItem
+            v-can="'workforce.planning_manage'"
+            prepend-icon="tabler-wand"
+            :title="$t('planning.quickPick.prepareWeek')"
+            data-test="quickpick-prepare"
+            @click="openPrepareWeek"
+          />
+          <VListItem
+            v-can="'workforce.planning_manage'"
+            prepend-icon="tabler-edit"
+            :title="$t('planning.quickPick.advanced')"
+            data-test="quickpick-advanced"
+            @click="quickPickAdvanced"
+          />
+        </VList>
+      </VCard>
+    </VMenu>
+
     <!-- M5 (ADR-728) — Import des modèles métier (presets JobDomain) -->
     <VDialog v-model="importOpen" max-width="720" scrollable>
       <VCard>
@@ -6082,6 +6283,28 @@ watch(activeTab, tab => {
   inline-size: 10px;
   block-size: 10px;
   border-radius: 50%;
+}
+
+// ── M6.C — « Préparer ma semaine » (cartes de point de départ) + picker rapide ──
+.plan-prepare-card {
+  inline-size: 100%;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 10px;
+  background: rgb(var(--v-theme-surface));
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    border-color: rgb(var(--v-theme-primary));
+    background: rgba(var(--v-theme-primary), 0.04);
+  }
+}
+.plan-quickpick__dot {
+  display: inline-block;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 3px;
+  margin-inline-end: 10px;
 }
 
 // ── M6.B (ADR-730) — Barre d'outils compacte du calendrier ──

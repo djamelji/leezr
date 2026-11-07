@@ -7567,10 +7567,10 @@
     "to": "to",
     "today": "Today",
     "tabs": {
-      "planning": "Planning",
+      "planning": "Week",
       "templates": "Templates",
       "locations": "Locations",
-      "calendar": "Calendar"
+      "calendar": "Agenda"
     },
     "filters": {
       "department": "Department",
@@ -7919,6 +7919,31 @@
       "groupNone": "Flat list",
       "density": "Display density",
       "noTeam": "No team"
+    },
+    "prepare": {
+      "open": "Prepare my week",
+      "title": "Prepare my week",
+      "intro": "Pick a starting point. Everything lands in the same calendar — you can adjust afterwards.",
+      "recommended": "Recommended",
+      "copyPrev": "Reuse the previous week",
+      "copyPrevDesc": "Copies last week's shifts as drafts.",
+      "copyWeek": "Copy another week",
+      "copyWeekDesc": "Choose the source week and the colleagues.",
+      "weekTpl": "Apply a week template",
+      "weekTplDesc": "One or several weeks — nominative, by needs or mixed.",
+      "templatesStart": "Start from shift templates",
+      "templatesStartDesc": "Arm a template then click the cells to fill.",
+      "scratch": "Start from scratch",
+      "scratchDesc": "Build manually, cell by cell."
+    },
+    "quickPick": {
+      "title": "Apply a template",
+      "favorites": "Favorites",
+      "models": "Templates",
+      "search": "Search a template…",
+      "advanced": "Advanced create…",
+      "empty": "No template — create one",
+      "prepareWeek": "Prepare the whole week"
     },
     "absence": {
       "generic": "Absence",

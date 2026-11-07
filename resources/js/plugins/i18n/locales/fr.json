@@ -7567,10 +7567,10 @@
     "to": "au",
     "today": "Aujourd'hui",
     "tabs": {
-      "planning": "Planning",
+      "planning": "Semaine",
       "templates": "Modèles",
       "locations": "Lieux",
-      "calendar": "Calendrier"
+      "calendar": "Agenda"
     },
     "filters": {
       "department": "Département",
@@ -7919,6 +7919,31 @@
       "groupNone": "Liste simple",
       "density": "Densité d'affichage",
       "noTeam": "Sans équipe"
+    },
+    "prepare": {
+      "open": "Préparer ma semaine",
+      "title": "Préparer ma semaine",
+      "intro": "Choisissez un point de départ. Tout aboutit au même calendrier — vous pourrez ajuster ensuite.",
+      "recommended": "Recommandé",
+      "copyPrev": "Reprendre la semaine précédente",
+      "copyPrevDesc": "Recopie les shifts de la semaine passée en brouillons.",
+      "copyWeek": "Copier une autre semaine",
+      "copyWeekDesc": "Choisir la semaine source et les collaborateurs.",
+      "weekTpl": "Appliquer une semaine type",
+      "weekTplDesc": "Une ou plusieurs semaines — nominatif, par besoins ou mixte.",
+      "templatesStart": "Partir des modèles de shift",
+      "templatesStartDesc": "Armez un modèle puis cliquez les cellules à remplir.",
+      "scratch": "Partir de zéro",
+      "scratchDesc": "Construire manuellement, cellule par cellule."
+    },
+    "quickPick": {
+      "title": "Appliquer un modèle",
+      "favorites": "Favoris",
+      "models": "Modèles",
+      "search": "Rechercher un modèle…",
+      "advanced": "Création avancée…",
+      "empty": "Aucun modèle — créez-en un",
+      "prepareWeek": "Préparer toute la semaine"
     },
     "absence": {
       "generic": "Absence",
