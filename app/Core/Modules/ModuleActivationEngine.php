@@ -46,6 +46,24 @@ class ModuleActivationEngine
             ];
         }
 
+        // ADR-732 (P0-A) — AUTORITÉ COMMERCIALE : un module PAYANT (addon_pricing) dont le STATUT déclaré
+        // n'autorise pas la vente (preview/internal/demo/deprecated) ne peut PAS être activé/acheté, même
+        // si le frontend est contourné. Bloque l'achat d'une coquille vendable (logistics_fleet/tracking/
+        // analytics). Ne bloque PAS un module 'available' simplement non self-service (contact_sales), ni
+        // les activations déjà en place (chemin d'activation uniquement) ni les droits déjà acquis (§6).
+        $pm = PlatformModule::where('key', $key)->first();
+        if ($pm && $pm->addon_pricing !== null
+            && ! in_array(ModuleCommercialPolicy::statusFor($key), ModuleCommercialPolicy::SELLABLE_STATUSES, true)) {
+            return [
+                'success' => false,
+                'status' => 422,
+                'data' => [
+                    'message' => 'This module is not available for purchase.',
+                    'reason' => 'not_commercialisable',
+                ],
+            ];
+        }
+
         $entitlement = EntitlementResolver::check($company, $key);
 
         if (!$entitlement['entitled']) {

@@ -3964,6 +3964,7 @@
     "stateLocked": "Upgrade Required",
     "stateLockedAddon": "Add-on Required",
     "stateContactSales": "Contact Sales",
+    "statePreparing": "In preparation",
     "upgradeDescription": "Upgrade your plan to unlock this module.",
     "addonDescription": "This module is available as a paid add-on.",
     "contactDescription": "Contact our sales team to access this module.",

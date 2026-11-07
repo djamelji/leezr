@@ -3964,6 +3964,7 @@
     "stateLocked": "Mise à niveau requise",
     "stateLockedAddon": "Extension requise",
     "stateContactSales": "Contacter les ventes",
+    "statePreparing": "En préparation",
     "upgradeDescription": "Mettez à niveau votre plan pour débloquer ce module.",
     "addonDescription": "Ce module est disponible en tant qu'extension payante.",
     "contactDescription": "Contactez notre équipe commerciale pour accéder à ce module.",

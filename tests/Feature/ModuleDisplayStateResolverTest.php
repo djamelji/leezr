@@ -332,15 +332,19 @@ class ModuleDisplayStateResolverTest extends TestCase
         foreach ($catalog as $module) {
             $this->assertArrayHasKey('purchase_mode', $module);
 
-            $expected = match ($module['display_state']) {
-                'locked_plan' => 'plan',
-                'locked_addon' => 'addon',
-                'contact_sales' => 'sales',
-                default => null,
-            };
+            // ADR-732 (P0-A) : un module au statut commercial non vendable (preview/internal/demo/deprecated)
+            // n'expose AUCUN mode d'achat, quel que soit son display_state.
+            $expected = ($module['commercial_status'] ?? 'available') !== 'available'
+                ? null
+                : match ($module['display_state']) {
+                    'locked_plan' => 'plan',
+                    'locked_addon' => 'addon',
+                    'contact_sales' => 'sales',
+                    default => null,
+                };
 
             $this->assertSame($expected, $module['purchase_mode'],
-                "Module {$module['key']} ({$module['display_state']}) purchase_mode mismatch");
+                "Module {$module['key']} ({$module['display_state']}, {$module['commercial_status']}) purchase_mode mismatch");
         }
     }
 

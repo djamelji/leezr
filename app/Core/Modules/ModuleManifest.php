@@ -10,6 +10,17 @@ namespace App\Core\Modules;
  *
  * scope: 'admin' (platform admin portal) | 'company' (tenant portal).
  * surface: 'structure' (governance UI) | 'operations' (business UI).
+ *
+ * commercialStatus (ADR-732, P0-A) — DÉCLARATION maintenable de l'état produit, source de vérité
+ * de la commercialisation (indépendante du prix en base). Valeurs :
+ *   'available'    — fonctionnalité livrée, commercialisable ;
+ *   'beta'         — livrée en bêta ; NON vendue sans politique explicite (jamais achetable par défaut) ;
+ *   'preview'      — « En préparation », déclarée mais non livrée → JAMAIS proposable à l'achat ;
+ *   'internal'     — outillage interne, hors commerce ;
+ *   'demo'         — démonstration ;
+ *   'deprecated'   — obsolète/legacy.
+ * Un prix (`addon_pricing`) ne rend JAMAIS un module achetable : seule l'autorité serveur
+ * `ModuleCommercialPolicy` (statut 'available' + règles) l'autorise.
  */
 final class ModuleManifest
 {
@@ -33,5 +44,6 @@ final class ModuleManifest
         public readonly ?string $settingsRoute = null,
         public readonly bool $hidden = false,
         public readonly array $marketplace = [],
+        public readonly string $commercialStatus = 'available',
     ) {}
 }

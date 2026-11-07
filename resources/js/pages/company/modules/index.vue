@@ -193,7 +193,11 @@ onBeforeUnmount(() => {
 
 // --- Display state helpers ---
 
+// ADR-732 (P0-A) — module « En préparation » : déclaré mais non commercialisable → jamais d'achat/prix.
+const isPreview = module => module?.commercial_status === 'preview'
+
 const stateChip = module => {
+  if (isPreview(module)) return { text: t('companyModules.statePreparing'), color: 'secondary' }
   const map = {
     included: { text: t('companyModules.stateIncluded'), color: 'primary' },
     active: { text: t('companyModules.stateActive'), color: 'success' },
@@ -223,6 +227,7 @@ const isLocked = module =>
 // --- Pricing helpers (ADR-210) ---
 
 const modulePriceLabel = mod => {
+  if (isPreview(mod)) return null // ADR-732 : aucun prix commandable pour un module en préparation
   if (['included', 'active'].includes(mod.display_state)) return null
   if (!mod.addon_pricing) return t('companyModules.pricingContactSales')
 
@@ -647,9 +652,24 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">
+                      <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat -->
+                      <VBtn
+                        v-if="isPreview(mod)"
+                        variant="tonal"
+                        color="secondary"
+                        class="flex-grow-1"
+                        disabled
+                        data-test="module-preview-cta"
+                      >
+                        <template #prepend>
+                          <VIcon icon="tabler-tools" />
+                        </template>
+                        {{ t('companyModules.statePreparing') }}
+                      </VBtn>
+
                       <!-- Available → Activate -->
                       <VBtn
-                        v-if="mod.display_state === 'available' && canManage"
+                        v-else-if="mod.display_state === 'available' && canManage"
                         v-can="'modules.manage'"
                         color="primary"
                         variant="tonal"
@@ -1133,9 +1153,24 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                     </VCardText>
 
                     <VCardActions class="px-4 pb-4 pt-0">
+                      <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat, chip informatif -->
+                      <VBtn
+                        v-if="isPreview(mod)"
+                        variant="tonal"
+                        color="secondary"
+                        class="flex-grow-1"
+                        disabled
+                        data-test="module-preview-cta"
+                      >
+                        <template #prepend>
+                          <VIcon icon="tabler-tools" />
+                        </template>
+                        {{ t('companyModules.statePreparing') }}
+                      </VBtn>
+
                       <!-- Included / Active → Configure (only if settings panels exist) -->
                       <VBtn
-                        v-if="(mod.display_state === 'included' || mod.display_state === 'active') && mod.capabilities?.settings_panels?.length"
+                        v-else-if="(mod.display_state === 'included' || mod.display_state === 'active') && mod.capabilities?.settings_panels?.length"
                         variant="tonal"
                         class="flex-grow-1"
                         :to="{ name: 'company-modules-key', params: { key: mod.key } }"
@@ -1746,9 +1781,23 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
         <!-- CTA -->
         <div class="pa-6 pt-2">
+          <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat -->
+          <VBtn
+            v-if="isPreview(selectedModule)"
+            color="secondary"
+            variant="tonal"
+            block
+            disabled
+          >
+            <template #prepend>
+              <VIcon icon="tabler-tools" />
+            </template>
+            {{ t('companyModules.statePreparing') }}
+          </VBtn>
+
           <!-- Already active -->
           <VBtn
-            v-if="['included', 'active'].includes(selectedModule.display_state)"
+            v-else-if="['included', 'active'].includes(selectedModule.display_state)"
             color="success"
             variant="tonal"
             block

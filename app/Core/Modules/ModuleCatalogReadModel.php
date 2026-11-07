@@ -95,6 +95,17 @@ class ModuleCatalogReadModel
                     return null;
                 }
 
+                // ADR-732 (P0-A) — autorité commerciale unique : un module non commercialisable n'expose
+                // AUCUN prix commandable (addon_pricing/purchase_mode neutralisés) et porte son statut
+                // (« preview » → « En préparation »). Les abonnements déjà contractés restent visibles
+                // (is_subscribed) — aucune révocation.
+                $commercialStatus = ModuleCommercialPolicy::statusFor($pm->key);
+                $purchasable = ModuleCommercialPolicy::isPurchasable($company, $pm->key);
+                // Neutralisation du prix commandable UNIQUEMENT pour les statuts non vendables (preview/
+                // internal/demo/deprecated). Un module 'available' non self-service (contact_sales) garde
+                // son CTA et son mode d'achat — seul le prix « acheter maintenant » est retiré aux non-vendables.
+                $sellableStatus = in_array($commercialStatus, ModuleCommercialPolicy::SELLABLE_STATUSES, true);
+
                 return [
                     'key' => $pm->key,
                     'name' => $pm->display_name_override ?? $pm->name,
@@ -112,8 +123,10 @@ class ModuleCatalogReadModel
                     'requires' => $manifest->requires,
                     'dependents' => $dependentsMap[$pm->key] ?? [],
                     'min_plan' => $minPlan,
-                    'pricing_mode' => $pm->effectivePricingModeFor($company),
-                    'addon_pricing' => $pm->addon_pricing,
+                    'commercial_status' => $commercialStatus,
+                    'purchasable' => $purchasable,
+                    'pricing_mode' => $sellableStatus ? $pm->effectivePricingModeFor($company) : 'unavailable',
+                    'addon_pricing' => $sellableStatus ? $pm->addon_pricing : null,
                     'icon_type' => $pm->icon_type ?? $manifest->iconType ?? 'tabler',
                     'icon_name' => $pm->icon_name ?? $manifest->iconRef ?? 'tabler-puzzle',
                     'activation_reasons' => ($activationReasons->get($pm->key) ?? collect())
@@ -127,7 +140,7 @@ class ModuleCatalogReadModel
                     // ADR-163: Display state engine fields
                     'display_state' => $displayState->value,
                     'upgrade_target_plan' => $displayState === ModuleDisplayState::LOCKED_PLAN ? $minPlan : null,
-                    'purchase_mode' => self::derivePurchaseMode($displayState),
+                    'purchase_mode' => $sellableStatus ? self::derivePurchaseMode($displayState) : null,
                     'is_featured' => $manifest->marketplace['featured'] ?? false,
                     'is_included' => $displayState === ModuleDisplayState::INCLUDED,
 

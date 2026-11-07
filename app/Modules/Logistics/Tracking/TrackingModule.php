@@ -26,6 +26,8 @@ class TrackingModule implements ModuleDefinition
             type: 'addon',
             requires: ['logistics_shipments'],
             compatibleJobdomains: ['logistique'],
+            // ADR-732 (P0-A) : déclaré mais NON livré (aucune capacité) → « En préparation », jamais vendable.
+            commercialStatus: 'preview',
         );
     }
 }

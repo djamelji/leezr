@@ -27,6 +27,8 @@ class FleetModule implements ModuleDefinition
             requires: ['logistics_shipments'],
             minPlan: 'pro',
             compatibleJobdomains: ['logistique'],
+            // ADR-732 (P0-A) : déclaré mais NON livré (aucune capacité) → « En préparation », jamais vendable.
+            commercialStatus: 'preview',
         );
     }
 }
