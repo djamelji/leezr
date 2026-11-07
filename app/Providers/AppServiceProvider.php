@@ -89,6 +89,13 @@ class AppServiceProvider extends ServiceProvider
             'platform_user' => PlatformUser::class,
         ]);
 
+        // ADR-733 (P0-D): hygiène du contexte tenant autour de chaque job (worker ou sync) — ardoise
+        // vierge avant, restauration du contexte ambiant après. Empêche la contamination/résidu entre
+        // jobs et les retries réutilisant un ancien tenant.
+        \Illuminate\Support\Facades\Queue::before(fn () => \App\Core\Tenancy\QueueTenancyHygiene::before());
+        \Illuminate\Support\Facades\Queue::after(fn () => \App\Core\Tenancy\QueueTenancyHygiene::after());
+        \Illuminate\Support\Facades\Queue::exceptionOccurred(fn () => \App\Core\Tenancy\QueueTenancyHygiene::after());
+
         // ADR-469: Observe platform alerts for critical notification + escalation
         PlatformAlert::observe(PlatformAlertObserver::class);
 
