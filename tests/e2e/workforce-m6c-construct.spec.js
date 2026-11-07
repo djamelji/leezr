@@ -69,8 +69,8 @@ test('M6.C F — navigation clarifiée : Agenda/Semaine/Modèles + bibliothèque
   await page.goto('/company/workforce/planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
 
-  // Les 3 modes existent ; le libellé « Semaine » remplace l'ancien « Planning » (fin du Planning→Planning).
-  await expect(page.locator('[data-test="plan-view-calendar"]')).toContainText(/Agenda/i)
+  // M6.D — sous-nav unifiée (Semaine/Jour/Postes/Mois) : le hook legacy plan-view-calendar = mode « Jour ».
+  await expect(page.locator('[data-test="plan-view-calendar"]')).toContainText(/Jour/i)
   await expect(page.locator('[data-test="plan-view-planning"]')).toContainText(/Semaine/i)
   await expect(page.locator('[data-test="plan-view-templates"]')).toContainText(/Modèles|Templates/i)
   // L'action principale de construction est visible.

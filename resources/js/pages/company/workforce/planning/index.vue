@@ -48,10 +48,11 @@ const sharedFilters = computed(() => ({
 // Sous-navigation UNIQUE (4 modes opérationnels — pas de « Planning → Planning »).
 // « Modèles » reste accessible via une entrée secondaire (gestion contextuelle).
 const planningModes = computed(() => [
-  { value: 'week', label: t('planning.modes.week', 'Semaine'), icon: 'tabler-layout-grid' },
-  { value: 'day', label: t('planning.modes.day', 'Jour'), icon: 'tabler-calendar-time' },
-  { value: 'posts', label: t('planning.modes.posts', 'Postes'), icon: 'tabler-users-group' },
-  { value: 'month', label: t('planning.modes.month', 'Mois'), icon: 'tabler-calendar-month' },
+  // `testid` = alias de hook e2e LEGACY conservé (compat M6.A/B/C) ; il ne suit pas la valeur viewMode.
+  { value: 'week', testid: 'plan-view-planning', label: t('planning.modes.week', 'Semaine'), icon: 'tabler-layout-grid' },
+  { value: 'day', testid: 'plan-view-calendar', label: t('planning.modes.day', 'Jour'), icon: 'tabler-calendar-time' },
+  { value: 'posts', testid: 'plan-view-posts', label: t('planning.modes.posts', 'Postes'), icon: 'tabler-users-group' },
+  { value: 'month', testid: 'plan-view-month', label: t('planning.modes.month', 'Mois'), icon: 'tabler-calendar-month' },
 ])
 
 // La fenêtre interne (VWindow) et la GRILLE D1 restent INTACTES : viewMode y est projeté.
@@ -2671,7 +2672,7 @@ watch(activeTab, tab => {
           size="small"
           class="text-none"
           :prepend-icon="s.icon"
-          :data-test="`plan-view-${s.value}`"
+          :data-test="s.testid"
           @click="viewMode = s.value"
         >
           {{ s.label }}
