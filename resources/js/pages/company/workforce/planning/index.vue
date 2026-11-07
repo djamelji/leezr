@@ -7,6 +7,8 @@ import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import PlanningCalendar from './_PlanningCalendar.vue'
 import ActivityDay from './_ActivityDay.vue'
+import PostsView from './_PostsView.vue'
+import MonthView from './_MonthView.vue'
 
 definePage({ meta: { module: 'workforce_planning', permission: 'workforce.planning_view' } })
 
@@ -20,25 +22,64 @@ const store = usePlanningStore()
 const employeesStore = useEmployeesStore()
 const { can } = useCan()
 
-// ── Tab navigation ───────────────────────────────────────────
-const activeTab = ref('calendar')
 const { smAndDown } = useDisplay()
 
-// E3-B (ADR-697) — sous-navigation planning. La GRILLE hebdo (lignes=collaborateurs × 7 jours, ~1110px)
-// n'est pas lisible sur mobile : on la réserve au desktop ; le mobile utilise l'AGENDA (onglet Calendrier).
-// §8 — l'onglet Planning est désormais TOUJOURS disponible ; sur mobile il affiche une vue JOUR dédiée
-// (pas de grille desktop compressée).
-const planningSections = computed(() => [
-  { value: 'calendar', label: t('planning.tabs.calendar'), icon: 'tabler-calendar-week' },
-  { value: 'planning', label: t('planning.tabs.planning'), icon: 'tabler-layout-grid' },
-  { value: 'templates', label: t('planning.tabs.templates'), icon: 'tabler-template' },
+// ── M6.D — ÉTAT DE VUE PARTAGÉ : une seule expérience Planning, 4 modes ──────
+// Un unique ancrage de date (planningAnchor) + des filtres partagés alimentent
+// les modes Semaine / Jour / Postes / Mois. Changer de mode NE réinitialise PAS
+// le travail du manager : date, site, équipe, recherche, statut sont conservés.
+const viewMode = useCookie('planningViewMode', { default: () => 'week' }) // week|day|posts|month|templates
+const planningAnchor = ref(new Date())
+
+// Filtres partagés (source unique ; les anciens noms grille/agenda y sont ré-aliasés plus bas).
+const fTeam = ref(null)      // département / équipe
+const fSite = ref(null)      // lieu de travail (site)
+const fStatus = ref(null)    // statut shift
+const fActivity = ref(null)  // type d'activité (grille)
+const fSearch = ref('')      // recherche texte
+const fEmployee = ref(null)  // collaborateur ciblé (agenda/jour)
+
+const sharedFilters = computed(() => ({
+  departmentId: fTeam.value || undefined,
+  locationId: fSite.value || undefined,
+  status: fStatus.value || undefined,
+}))
+
+// Sous-navigation UNIQUE (4 modes opérationnels — pas de « Planning → Planning »).
+// « Modèles » reste accessible via une entrée secondaire (gestion contextuelle).
+const planningModes = computed(() => [
+  { value: 'week', label: t('planning.modes.week', 'Semaine'), icon: 'tabler-layout-grid' },
+  { value: 'day', label: t('planning.modes.day', 'Jour'), icon: 'tabler-calendar-time' },
+  { value: 'posts', label: t('planning.modes.posts', 'Postes'), icon: 'tabler-users-group' },
+  { value: 'month', label: t('planning.modes.month', 'Mois'), icon: 'tabler-calendar-month' },
 ])
+
+// La fenêtre interne (VWindow) et la GRILLE D1 restent INTACTES : viewMode y est projeté.
+// activeTab = computed inscriptible → tous les usages existants (v-model, assignations) continuent.
+const activeTab = computed({
+  get() {
+    if (viewMode.value === 'templates') return 'templates'
+    if (viewMode.value === 'day') return 'calendar'
+    if (viewMode.value === 'month') return 'month'
+    if (viewMode.value === 'posts') return 'posts'
+
+    return 'planning' // week
+  },
+  set(v) {
+    if (v === 'templates') viewMode.value = 'templates'
+    else if (v === 'calendar') viewMode.value = 'day'
+    else if (v === 'month') viewMode.value = 'month'
+    else if (v === 'posts') viewMode.value = 'posts'
+    else viewMode.value = 'week'
+  },
+})
 
 // ── Calendrier Planning (W-G4A : scope + filtres serveur, absences + conflits) ──
 const calRef = ref()
-const calEmployee = ref(null)
-const calDepartment = ref(null)
-const calStatus = ref(null)
+// M6.D — ré-aliasés sur l'état partagé (même ref ⇒ filtres cohérents entre tous les modes).
+const calEmployee = fEmployee
+const calDepartment = fTeam
+const calStatus = fStatus
 const calConflicts = ref([])
 const calFilters = computed(() => ({
   employeeId: calEmployee.value || undefined,
@@ -239,10 +280,9 @@ function getWeekStart(d, firstDay = 1) {
   return date
 }
 
-const currentWeekStart = ref(getWeekStart(new Date(), 1))
-
-// Quand la préférence Company est résolue (ou change), on recale la semaine affichée sur ce premier jour.
-watch(effectiveFirstDay, fd => { currentWeekStart.value = getWeekStart(currentWeekStart.value, fd) })
+// M6.D — dérivée de l'ancrage partagé : la semaine affichée contient TOUJOURS planningAnchor,
+// alignée sur le premier jour de semaine Company. Plus de source de date séparée pour la grille.
+const currentWeekStart = computed(() => getWeekStart(planningAnchor.value, effectiveFirstDay.value))
 
 const weekEnd = computed(() => {
   const d = new Date(currentWeekStart.value)
@@ -272,20 +312,45 @@ const weekDates = computed(() => {
 
 const weekDateIso = computed(() => currentWeekStart.value.toISOString().slice(0, 10))
 
-const prevWeek = () => {
-  const d = new Date(currentWeekStart.value)
-  d.setDate(d.getDate() - 7)
-  currentWeekStart.value = d
+// M6.D — toute navigation mute l'ancrage partagé (jamais currentWeekStart, désormais dérivé).
+const stepAnchor = days => {
+  const d = new Date(planningAnchor.value)
+  d.setDate(d.getDate() + days)
+  planningAnchor.value = d
 }
+const prevWeek = () => stepAnchor(-7)
+const nextWeek = () => stepAnchor(7)
+const goToToday = () => { planningAnchor.value = new Date() }
 
-const nextWeek = () => {
-  const d = new Date(currentWeekStart.value)
-  d.setDate(d.getDate() + 7)
-  currentWeekStart.value = d
+// Navigateur partagé (Jour/Postes/Mois) : le pas s'adapte au mode. La grille Semaine garde sa propre nav hebdo.
+const planningNav = dir => {
+  if (dir === 0) { planningAnchor.value = new Date(); return }
+  const d = new Date(planningAnchor.value)
+  if (viewMode.value === 'day') d.setDate(d.getDate() + dir)
+  else if (viewMode.value === 'month') d.setMonth(d.getMonth() + dir)
+  else d.setDate(d.getDate() + dir * 7)
+  planningAnchor.value = d
 }
+// ISO civil TZ-safe de l'ancrage (props des vues Jour/Postes/Mois).
+const anchorIso = computed(() => {
+  const d = planningAnchor.value
+  const p = n => String(n).padStart(2, '0')
 
-const goToToday = () => {
-  currentWeekStart.value = getWeekStart(new Date(), effectiveFirstDay.value)
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+})
+const anchorLabel = computed(() => {
+  const d = planningAnchor.value
+  if (viewMode.value === 'day') return d.toLocaleDateString(locale.value, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  if (viewMode.value === 'month') return d.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
+
+  return weekLabel.value
+})
+
+// M6.D — depuis Postes/Mois : aller à la vue Jour sur une date donnée (ancrage partagé conservé).
+const goToDay = iso => {
+  if (!iso) return
+  planningAnchor.value = new Date(`${iso}T00:00:00`)
+  viewMode.value = 'day'
 }
 
 // ── Data loading ────────────────────────────────────────────
@@ -561,10 +626,11 @@ const mobileUncovered = computed(() => coverageReqs.value.filter(r => r.date ===
   .map(r => ({ label: r.category_name || r.label || t('planning.coverage.anyPresence'), window: `${(r.start_time || '').slice(0, 5)}–${(r.end_time || '').slice(0, 5)}`, assigned: r.assigned, headcount: r.headcount })))
 
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
-const gridDepartment = ref(null)
-const gridLocation = ref(null)
-const gridActivity = ref(null)
-const gridStatus = ref(null)
+// M6.D — ré-aliasés sur l'état partagé (filtres communs à Semaine/Jour/Postes/Mois).
+const gridDepartment = fTeam
+const gridLocation = fSite
+const gridActivity = fActivity
+const gridStatus = fStatus
 
 const departmentItems = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
 const coverageCategoryItems = computed(() => store.coverageCategories.filter(c => c.enabled !== false).map(c => ({ title: c.name, value: c.id })))
@@ -599,7 +665,7 @@ const filteredGridRows = computed(() => {
 
 // ── M6.B (ADR-730) — lisibilité 50-100 collaborateurs : recherche, regroupement par équipe, densité ──
 // Purement présentationnel : repose sur filteredGridRows (même moteur de données), ne mute rien.
-const rowSearch = ref('')
+const rowSearch = fSearch // M6.D — recherche partagée entre modes
 const groupBy = useCookie('planningGroupBy', { default: () => 'team' }) // 'team' | 'none'
 const density = useCookie('planningDensity', { default: () => 'comfortable' }) // 'comfortable' | 'compact'
 const collapsedGroups = ref(new Set())
@@ -2593,24 +2659,60 @@ watch(activeTab, tab => {
       </div>
     </div>
 
-    <!-- E3-B/B2 (réserve B1 #2) — sélecteur de PRÉSENTATION compact et LIBELLÉ (segmented control, pas
-         une 2ᵉ barre de navigation à icônes sous les 4 activités). Les libellés lèvent toute ambiguïté. -->
+    <!-- M6.D — SOUS-NAVIGATION UNIQUE : 4 modes opérationnels partageant date + filtres + contexte.
+         « Modèles » = entrée secondaire (gestion contextuelle). Pas de « Planning → Planning ». -->
     <div class="d-flex align-center flex-wrap gap-3 mb-5">
       <div class="d-inline-flex rounded-lg border pa-1 planning-view-switch">
         <VBtn
-          v-for="s in planningSections"
+          v-for="s in planningModes"
           :key="s.value"
-          :variant="activeTab === s.value ? 'flat' : 'text'"
-          :color="activeTab === s.value ? 'primary' : 'medium-emphasis'"
+          :variant="viewMode === s.value ? 'flat' : 'text'"
+          :color="viewMode === s.value ? 'primary' : 'medium-emphasis'"
           size="small"
           class="text-none"
           :prepend-icon="s.icon"
           :data-test="`plan-view-${s.value}`"
-          @click="activeTab = s.value"
+          @click="viewMode = s.value"
         >
           {{ s.label }}
         </VBtn>
       </div>
+
+      <!-- Navigateur de date PARTAGÉ (Jour/Postes/Mois) — la grille Semaine garde sa nav hebdo intégrée. -->
+      <div
+        v-if="viewMode !== 'week' && viewMode !== 'templates'"
+        class="d-flex align-center gap-1"
+        data-test="plan-shared-nav"
+      >
+        <VBtn icon variant="text" size="small" data-test="plan-nav-prev" @click="planningNav(-1)">
+          <VIcon icon="tabler-chevron-left" />
+        </VBtn>
+        <span class="text-body-1 font-weight-medium text-capitalize" style="min-inline-size: 180px; text-align: center" data-test="plan-nav-label">
+          {{ anchorLabel }}
+        </span>
+        <VBtn icon variant="text" size="small" data-test="plan-nav-next" @click="planningNav(1)">
+          <VIcon icon="tabler-chevron-right" />
+        </VBtn>
+        <VBtn variant="tonal" size="small" class="ms-1" data-test="plan-nav-today" @click="planningNav(0)">
+          {{ $t('planning.today', "Aujourd'hui") }}
+        </VBtn>
+      </div>
+
+      <VSpacer />
+
+      <!-- Modèles — entrée secondaire (gestion contextuelle), pas un mode opérationnel de 1er niveau. -->
+      <VBtn
+        :variant="viewMode === 'templates' ? 'flat' : 'tonal'"
+        :color="viewMode === 'templates' ? 'primary' : 'secondary'"
+        size="small"
+        class="text-none"
+        prepend-icon="tabler-template"
+        data-test="plan-view-templates"
+        @click="viewMode = 'templates'"
+      >
+        {{ $t('planning.modes.templates', 'Modèles') }}
+      </VBtn>
+
       <!-- M6.C — action PRINCIPALE de construction : un seul point d'entrée vers tous les parcours. -->
       <VBtn
         v-can="'workforce.planning_manage'"
@@ -2679,11 +2781,14 @@ watch(activeTab, tab => {
 
           <VDivider />
           <VCardText>
+            <!-- M6.D — mode Jour : timeline horaire (timeGridDay) ancrée sur la date partagée. -->
             <PlanningCalendar
               ref="calRef"
               :filters="calFilters"
               :first-day="weekStartDay"
               :editable="canEditShifts"
+              view="timeGridDay"
+              :anchor-date="anchorIso"
               @select="onSelectEvent"
               @conflicts="calConflicts = $event"
               @move="onShiftMove"
@@ -4115,6 +4220,34 @@ watch(activeTab, tab => {
             </template>
           </VDataTableServer>
         </VCard>
+      </VWindowItem>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- M6.D — MODE POSTES (D3) : besoins de couverture (autorité CoverageReadModel) -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <VWindowItem value="posts">
+        <PostsView
+          :from-iso="weekDates[0]"
+          :to-iso="weekDates[6]"
+          :filters="sharedFilters"
+          :first-day="effectiveFirstDay"
+          :can-manage="canEditShifts"
+          @go-to-day="goToDay"
+          @open-coverage="openCoverageManager"
+          @create="e => openCreateShift(null, e.date)"
+        />
+      </VWindowItem>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- M6.D — MODE MOIS : supervision mensuelle (synthèses réelles) -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <VWindowItem value="month">
+        <MonthView
+          :anchor-iso="anchorIso"
+          :filters="sharedFilters"
+          :first-day="effectiveFirstDay"
+          @go-to-day="goToDay"
+        />
       </VWindowItem>
 
     </VWindow>

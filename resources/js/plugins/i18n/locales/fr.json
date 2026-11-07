@@ -7526,6 +7526,51 @@
   "planning": {
     "title": "Planning",
     "subtitle": "Planifiez les shifts, gérez les modèles et les lieux d'intervention",
+    "today": "Aujourd'hui",
+    "modes": {
+      "week": "Semaine",
+      "day": "Jour",
+      "posts": "Postes",
+      "month": "Mois",
+      "templates": "Modèles"
+    },
+    "posts": {
+      "manage": "Gérer la couverture",
+      "viewDay": "Voir la journée",
+      "assign": "Affecter",
+      "allDay": "Journée entière",
+      "noRequirement": "Aucun besoin ce jour.",
+      "covered": "Ce créneau est couvert.",
+      "compatibleTitle": "Salariés disponibles pour ce créneau",
+      "noCompatible": "Aucun salarié disponible sur ce créneau.",
+      "roleMatch": "Rôle correspondant",
+      "totals": {
+        "needed": "Besoin",
+        "assigned": "Affecté",
+        "gap": "À pourvoir"
+      },
+      "status": {
+        "under": "Déficit",
+        "over": "Sureffectif",
+        "covered": "Couvert"
+      },
+      "priority": {
+        "critical": "Critique",
+        "high": "Haute"
+      },
+      "empty": {
+        "title": "Aucune exigence de couverture configurée",
+        "subtitle": "Définissez vos besoins par créneau et par poste pour suivre les affectations et les déficits.",
+        "configure": "Configurer la couverture"
+      }
+    },
+    "month": {
+      "published": "Publiés",
+      "drafts": "Brouillons",
+      "absences": "Absences",
+      "alerts": "Alertes",
+      "coverageGap": "Déficit de couverture"
+    },
     "favorites": {
       "toggle": "Ajouter / retirer des favoris",
       "label": "Favoris",

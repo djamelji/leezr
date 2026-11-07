@@ -15,6 +15,10 @@ const props = defineProps({
   filters: { type: Object, default: () => ({}) },
   firstDay: { type: Number, default: null }, // premier jour de semaine (préférence Company)
   editable: { type: Boolean, default: false }, // drag-drop autorisé (brouillons uniquement)
+  // M6.D — mode CONTRÔLÉ par le parent (vue + date pilotées par l'ancrage partagé) :
+  // quand `view` est fourni, on masque la toolbar interne (navigation unifiée côté parent).
+  view: { type: String, default: null },
+  anchorDate: { type: [String, Date], default: null },
 })
 const emit = defineEmits(['select', 'conflicts', 'move'])
 
@@ -27,9 +31,15 @@ const loading = ref(false)
 
 // E3-B (ADR-697) — Planning mobile = AGENDA (liste par jour), pas une grille hebdo compressée.
 // Desktop = grille semaine. Bascule la vue au changement de breakpoint (sans recharger).
+// M6.D — en mode contrôlé (`view` fourni), c'est le parent qui fixe la vue : on n'auto-bascule plus.
 watch(smAndDown, isMobile => {
+  if (props.view) return
   refCalendar.value?.getApi()?.changeView(isMobile ? 'listWeek' : 'timeGridWeek')
 })
+
+// M6.D — synchronisation vue + date depuis le parent (ancrage partagé).
+watch(() => props.view, v => { if (v) refCalendar.value?.getApi()?.changeView(v) })
+watch(() => props.anchorDate, d => { if (d) refCalendar.value?.getApi()?.gotoDate(d) })
 
 const SHIFT_COLOR = { draft: '#a8aaae', published: '#7367f0', completed: '#28c76f' }
 const CONFLICT = '#ea5455'
@@ -97,7 +107,8 @@ const onEventChange = info => {
 
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-  initialView: smAndDown.value ? 'listWeek' : 'timeGridWeek',
+  initialView: props.view || (smAndDown.value ? 'listWeek' : 'timeGridWeek'),
+  ...(props.anchorDate ? { initialDate: props.anchorDate } : {}),
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
   timeZone: world.timezone || 'local',
   // Premier jour de semaine : préférence Company (W-G4B) si fournie, sinon déduit de la locale par
@@ -107,9 +118,12 @@ const calendarOptions = computed(() => ({
   nowIndicator: true,
   editable: props.editable,
   eventDurationEditable: props.editable,
-  headerToolbar: smAndDown.value
-    ? { start: 'prev,next', center: 'title', end: 'listWeek,timeGridDay' }
-    : { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' },
+  // M6.D — mode contrôlé : toolbar interne masquée (navigation unifiée côté parent).
+  headerToolbar: props.view
+    ? false
+    : (smAndDown.value
+      ? { start: 'prev,next', center: 'title', end: 'listWeek,timeGridDay' }
+      : { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' }),
   buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Agenda' },
   events: fetchEvents,
   eventClick({ event }) { emit('select', event.extendedProps) },

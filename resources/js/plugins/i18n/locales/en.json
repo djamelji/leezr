@@ -7526,6 +7526,51 @@
   "planning": {
     "title": "Planning",
     "subtitle": "Schedule shifts, manage templates and intervention sites",
+    "today": "Today",
+    "modes": {
+      "week": "Week",
+      "day": "Day",
+      "posts": "Posts",
+      "month": "Month",
+      "templates": "Templates"
+    },
+    "posts": {
+      "manage": "Manage coverage",
+      "viewDay": "View day",
+      "assign": "Assign",
+      "allDay": "All day",
+      "noRequirement": "No requirement this day.",
+      "covered": "This slot is covered.",
+      "compatibleTitle": "Employees available for this slot",
+      "noCompatible": "No employee available for this slot.",
+      "roleMatch": "Matching role",
+      "totals": {
+        "needed": "Needed",
+        "assigned": "Assigned",
+        "gap": "To fill"
+      },
+      "status": {
+        "under": "Understaffed",
+        "over": "Overstaffed",
+        "covered": "Covered"
+      },
+      "priority": {
+        "critical": "Critical",
+        "high": "High"
+      },
+      "empty": {
+        "title": "No coverage requirement configured",
+        "subtitle": "Define your needs per slot and per post to track assignments and gaps.",
+        "configure": "Configure coverage"
+      }
+    },
+    "month": {
+      "published": "Published",
+      "drafts": "Drafts",
+      "absences": "Absences",
+      "alerts": "Alerts",
+      "coverageGap": "Coverage gap"
+    },
     "favorites": {
       "toggle": "Add / remove from favorites",
       "label": "Favorites",
