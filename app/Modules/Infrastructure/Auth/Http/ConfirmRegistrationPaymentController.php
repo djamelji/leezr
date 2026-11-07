@@ -114,54 +114,69 @@ class ConfirmRegistrationPaymentController extends Controller
             ],
         );
 
-        // Only activate if pending_payment (not trialing — trial stays as-is)
-        if ($subscription->status === 'pending_payment') {
-            $periodStart = $subscription->current_period_start ?? now();
-            $periodEnd = $subscription->current_period_end
-                ?? ($subscription->interval === 'yearly' ? now()->addYear() : now()->addMonth());
+        // P0-B (ADR-734): the subscription must NOT become `active` on a saved card
+        // alone. We prepare the plan invoice, attempt the charge, and only activate
+        // once the plan term is really collected — otherwise we stay pending_payment
+        // with an OPEN (unpaid) invoice, so there is never a paid-looking state
+        // without a proven encaissement.
+        $isPendingActivation = $subscription->status === 'pending_payment';
+        $planInvoice = null;
+        $periodStart = $subscription->current_period_start ?? now();
+        $periodEnd = $subscription->current_period_end
+            ?? ($subscription->interval === 'yearly' ? now()->addYear() : now()->addMonth());
 
-            $subscription->update([
-                'status' => 'active',
-                'current_period_start' => $periodStart,
-                'current_period_end' => $periodEnd,
-            ]);
+        if ($isPendingActivation) {
+            // Reuse an already-open plan invoice (retry after a failed charge) instead
+            // of creating a duplicate; otherwise issue it now.
+            $planInvoice = Invoice::where('company_id', $company->id)
+                ->where('subscription_id', $subscription->id)
+                ->where('status', 'open')
+                ->first();
 
-            // Create initial invoice for the subscription
-            $plan = Plan::where('key', $subscription->plan_key)->first();
+            if (! $planInvoice) {
+                $plan = Plan::where('key', $subscription->plan_key)->first();
 
-            if ($plan) {
-                $price = $subscription->interval === 'yearly'
-                    ? $plan->price_yearly
-                    : $plan->price_monthly;
+                if ($plan) {
+                    $price = $subscription->interval === 'yearly'
+                        ? $plan->price_yearly
+                        : $plan->price_monthly;
 
-                if ($price > 0) {
-                    $invoice = InvoiceIssuer::createDraft(
-                        $company,
-                        $subscription->id,
-                        $periodStart->toDateString(),
-                        $periodEnd->toDateString(),
-                    );
+                    if ($price > 0) {
+                        $invoice = InvoiceIssuer::createDraft(
+                            $company,
+                            $subscription->id,
+                            $periodStart->toDateString(),
+                            $periodEnd->toDateString(),
+                        );
 
-                    $desc = InvoiceLineDescriptor::resolve($company->market?->locale ?? 'fr-FR');
+                        $desc = InvoiceLineDescriptor::resolve($company->market?->locale ?? 'fr-FR');
 
-                    InvoiceIssuer::addLine($invoice, 'plan', $desc->plan($plan->name), $price, 1);
+                        InvoiceIssuer::addLine($invoice, 'plan', $desc->plan($plan->name), $price, 1);
 
-                    // Apply coupon if attached to subscription
-                    if ($subscription->coupon_id) {
-                        $coupon = BillingCoupon::find($subscription->coupon_id);
+                        // Apply coupon if attached to subscription
+                        if ($subscription->coupon_id) {
+                            $coupon = BillingCoupon::find($subscription->coupon_id);
 
-                        if ($coupon) {
-                            InvoiceIssuer::applyCoupon($invoice, $coupon, $company);
+                            if ($coupon) {
+                                InvoiceIssuer::applyCoupon($invoice, $coupon, $company);
+                            }
                         }
-                    }
 
-                    InvoiceIssuer::finalize($invoice);
+                        InvoiceIssuer::finalize($invoice);
+                        $planInvoice = $invoice->fresh();
+                    }
                 }
             }
         }
 
-        // ADR-302: Charge any open addon invoices immediately
+        // Charge every open invoice (plan + addons). Track whether the PLAN term settled.
+        // Nothing to collect (free / fully-couponed → no open plan invoice, or already
+        // paid) counts as settled.
+        $planSettled = ! $isPendingActivation
+            || $planInvoice === null
+            || $planInvoice->status === 'paid';
         $addonInvoicesPaid = 0;
+
         $openInvoices = Invoice::where('company_id', $company->id)
             ->where('status', 'open')
             ->get();
@@ -179,10 +194,15 @@ class ConfirmRegistrationPaymentController extends Controller
                         'paid_at' => now(),
                         'provider_payment_id' => $result['provider_payment_id'] ?? null,
                     ]);
-                    $addonInvoicesPaid++;
+
+                    if ($planInvoice && $invoice->id === $planInvoice->id) {
+                        $planSettled = true;
+                    } else {
+                        $addonInvoicesPaid++;
+                    }
                 }
             } catch (\Throwable $e) {
-                Log::warning('[billing] Failed to charge addon invoice at registration', [
+                Log::warning('[billing] Failed to charge invoice at registration', [
                     'invoice_id' => $invoice->id,
                     'company_id' => $company->id,
                     'error' => $e->getMessage(),
@@ -190,19 +210,41 @@ class ConfirmRegistrationPaymentController extends Controller
             }
         }
 
+        // Activate ONLY after the plan term is really collected (ADR-734).
+        if ($isPendingActivation && $planSettled) {
+            $subscription->update([
+                'status' => 'active',
+                'current_period_start' => $periodStart,
+                'current_period_end' => $periodEnd,
+            ]);
+        } elseif ($isPendingActivation) {
+            Log::warning('[billing] Registration activation deferred — plan charge not settled', [
+                'company_id' => $company->id,
+                'subscription_id' => $subscription->id,
+                'plan_invoice_id' => $planInvoice?->id,
+            ]);
+        }
+
+        $subscription->refresh();
+        $planPaid = $isPendingActivation ? $planSettled : null;
+
         Log::info('[billing] Registration payment method confirmed', [
             'company_id' => $company->id,
             'subscription_id' => $subscription->id,
             'plan_key' => $subscription->plan_key,
             'method_type' => $type,
-            'was_trial' => $subscription->status === 'trialing',
+            'subscription_status' => $subscription->status,
+            'plan_settled' => $planPaid,
             'addon_invoices_paid' => $addonInvoicesPaid,
         ]);
 
         return response()->json([
-            'message' => 'Payment method saved.',
+            'message' => $isPendingActivation && ! $planSettled
+                ? 'Payment could not be collected. Please try another payment method.'
+                : 'Payment method saved.',
             'subscription_status' => $subscription->status,
+            'plan_settled' => $planPaid,
             'addon_invoices_paid' => $addonInvoicesPaid,
-        ]);
+        ], $isPendingActivation && ! $planSettled ? 402 : 200);
     }
 }
