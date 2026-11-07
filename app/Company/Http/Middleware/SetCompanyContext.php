@@ -81,10 +81,6 @@ class SetCompanyContext
     }
 
     /**
-     * ADR-257: Billing payment routes must remain accessible for suspended
-     * companies — that's how they pay outstanding invoices to reactivate.
-     */
-    /**
      * ADR-432: Clear company context after request to prevent bleed
      * between requests (important for tests and queue workers).
      */
@@ -93,11 +89,36 @@ class SetCompanyContext
         app()->forgetInstance('company.context');
     }
 
+    /**
+     * ADR-257 / P0-COMMERCE (ADR-734): routes a SUSPENDED company must still reach
+     * so it can regularize and recover access — never business features.
+     *
+     *   - api/billing/      : see what is owed, pay, add a card, change plan (regularization)
+     *   - api/company/plan  : upgrade/downgrade to a payable plan to regularize
+     *   - api/support/      : contact support about the suspension
+     *
+     * Administrative reactivation runs on the Platform guard (routes/platform.php),
+     * not this company stack. Everything else stays 403 while suspended.
+     *
+     * This deliberately mirrors EnsureBusinessAccess::ALLOWED_MUTATION_PREFIXES for
+     * billing/plan so the two gates agree on the regularization surface.
+     */
+    private const SUSPENDED_BYPASS_PREFIXES = [
+        'api/billing/',
+        'api/company/plan',
+        'api/support/',
+    ];
+
     private static function isSuspendedBypass(Request $request): bool
     {
         $path = $request->path();
 
-        return str_starts_with($path, 'api/billing/invoices/outstanding')
-            || str_starts_with($path, 'api/billing/invoices/pay');
+        foreach (self::SUSPENDED_BYPASS_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

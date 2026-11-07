@@ -172,6 +172,56 @@ class CompanySuspensionTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
+    // 4bis. P0-COMMERCE (ADR-734): a suspended company can reach the FULL
+    //       regularization surface — see what it owes, add a card, change plan,
+    //       pay now, contact support — not just the batch-pay endpoint.
+    // ═══════════════════════════════════════════════════════
+
+    public function test_suspended_company_can_reach_regularization_surface(): void
+    {
+        $this->company->update(['status' => 'suspended']);
+
+        // Each of these must NOT be blocked by the suspension gate. Downstream
+        // middleware/validation may return other statuses (404/422/402), but
+        // never the "currently suspended" 403 — otherwise the company is trapped.
+        $regularizationRoutes = [
+            ['get',  '/api/billing/overview'],
+            ['get',  '/api/billing/subscription'],
+            ['get',  '/api/billing/saved-cards'],
+            ['post', '/api/billing/setup-intent'],
+            ['post', '/api/company/plan'],
+            ['get',  '/api/support/tickets'],
+        ];
+
+        foreach ($regularizationRoutes as [$method, $uri]) {
+            $response = $this->actAsCompanyOwner()->json(strtoupper($method), $uri);
+
+            $this->assertNotSame(
+                'This company is currently suspended.',
+                $response->json('message'),
+                "Regularization route {$method} {$uri} must bypass the suspension gate"
+            );
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // 4ter. P0-COMMERCE (ADR-734): business features stay blocked while suspended —
+    //       the bypass widens only the regularization surface, nothing else.
+    // ═══════════════════════════════════════════════════════
+
+    public function test_suspended_company_business_features_stay_blocked(): void
+    {
+        $this->company->update(['status' => 'suspended']);
+
+        foreach (['/api/nav', '/api/workforce/conventions', '/api/dashboard/layout'] as $uri) {
+            $this->actAsCompanyOwner()
+                ->getJson($uri)
+                ->assertStatus(403)
+                ->assertJsonFragment(['message' => 'This company is currently suspended.']);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
     // 5. Platform admin can reactivate a suspended company
     // ═══════════════════════════════════════════════════════
 
