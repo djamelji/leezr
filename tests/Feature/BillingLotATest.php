@@ -457,6 +457,12 @@ class BillingLotATest extends TestCase
                 $this->capture = $capture;
             }
 
+            // ADR-737: collectInvoice passe désormais par ...WithMethod (PM explicite) → on capture ici.
+            protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = [])
+            {
+                return $this->callStripeCreatePaymentIntent($amount, $currency, $customerId, $metadata, $opts);
+            }
+
             protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = [])
             {
                 $this->capture['opts'] = $opts;
@@ -489,6 +495,17 @@ class BillingLotATest extends TestCase
             'company_id' => $this->company->id,
             'provider_key' => 'stripe',
             'provider_customer_id' => 'cus_test_idempotent',
+        ]);
+
+        // ADR-737: collectInvoice exige une PM par défaut explicite.
+        \App\Core\Billing\CompanyPaymentProfile::create([
+            'company_id' => $this->company->id,
+            'provider_key' => 'stripe',
+            'provider_payment_method_id' => 'pm_test_idempotent',
+            'method_key' => 'card',
+            'label' => 'Test card',
+            'is_default' => true,
+            'metadata' => [],
         ]);
 
         $sub = Subscription::create([

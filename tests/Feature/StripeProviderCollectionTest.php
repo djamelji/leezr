@@ -18,6 +18,7 @@ use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Billing\CompanyPaymentProfile;
 use App\Core\Plans\PlanRegistry;
 use App\Platform\Models\PlatformRole;
 use App\Platform\Models\PlatformUser;
@@ -97,6 +98,17 @@ class StripeProviderCollectionTest extends TestCase
             'provider_customer_id' => 'cus_test_collection',
         ]);
 
+        // ADR-737: collectInvoice exige désormais une PM par défaut explicite (off_session).
+        CompanyPaymentProfile::create([
+            'company_id' => $this->company->id,
+            'provider_key' => 'stripe',
+            'provider_payment_method_id' => 'pm_test_default',
+            'method_key' => 'card',
+            'label' => 'Test card',
+            'is_default' => true,
+            'metadata' => [],
+        ]);
+
         // Finalized invoice
         $draft = InvoiceIssuer::createDraft($this->company, $this->subscription->id);
         InvoiceIssuer::addLine($draft, 'plan', 'Pro plan', 2900);
@@ -128,6 +140,12 @@ class StripeProviderCollectionTest extends TestCase
                 public function __construct($testRef)
                 {
                     $this->testRef = $testRef;
+                }
+
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = []): \Stripe\PaymentIntent
+                {
+                    // ADR-737: collectInvoice passe désormais une PM explicite → on délègue au même stub.
+                    return $this->callStripeCreatePaymentIntent($amount, $currency, $customerId, $metadata, $opts);
                 }
 
                 protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
@@ -326,6 +344,12 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = []): \Stripe\PaymentIntent
+                {
+                    // ADR-737: collectInvoice passe désormais une PM explicite → on délègue au même stub.
+                    return $this->callStripeCreatePaymentIntent($amount, $currency, $customerId, $metadata, $opts);
+                }
+
                 protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     $this->amountRef = $amount;
@@ -377,6 +401,12 @@ class StripeProviderCollectionTest extends TestCase
                     $this->testRef = $testRef;
                 }
 
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = []): \Stripe\PaymentIntent
+                {
+                    // ADR-737: collectInvoice passe désormais une PM explicite → on délègue au même stub.
+                    return $this->callStripeCreatePaymentIntent($amount, $currency, $customerId, $metadata, $opts);
+                }
+
                 protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent
                 {
                     $this->metaRef = $metadata;
@@ -417,6 +447,9 @@ class StripeProviderCollectionTest extends TestCase
     {
         // Change subscription to internal provider
         $this->subscription->update(['provider' => 'internal']);
+        // Ce scénario teste le repli WALLET sans PM Stripe : on retire le profil par défaut (ADR-737)
+        // pour qu'il n'y ait AUCun repli vers Stripe.
+        CompanyPaymentProfile::where('company_id', $this->company->id)->delete();
 
         $invoice = $this->makeOverdue($this->invoice);
 
@@ -598,6 +631,12 @@ class StripeProviderCollectionTest extends TestCase
                 {
                     $this->refundAmountRef = &$refundAmountRef;
                     $this->testRef = $testRef;
+                }
+
+                protected function callStripeCreatePaymentIntentWithMethod(int $amount, string $currency, string $customerId, string $paymentMethodId, array $metadata, array $opts = []): \Stripe\PaymentIntent
+                {
+                    // ADR-737: collectInvoice passe désormais une PM explicite → on délègue au même stub.
+                    return $this->callStripeCreatePaymentIntent($amount, $currency, $customerId, $metadata, $opts);
                 }
 
                 protected function callStripeCreatePaymentIntent(int $amount, string $currency, string $customerId, array $metadata, array $opts = []): \Stripe\PaymentIntent

@@ -200,11 +200,30 @@ class StripePaymentAdapter implements PaymentProviderAdapter
             ];
         }
 
+        // ADR-737: off_session charge MUST carry an explicit payment_method — a PaymentIntent does NOT
+        // inherit `invoice_settings.default_payment_method`. Resolve the company's default stripe PM and
+        // pass it explicitly (sans PM → échec propre, jamais de PI sans moyen de paiement).
+        $paymentMethodId = ($defaultPm && $defaultPm->provider_key === 'stripe')
+            ? $defaultPm->provider_payment_method_id
+            : null;
+
+        if (! $paymentMethodId) {
+            return [
+                'provider_payment_id' => null,
+                'amount' => $invoice->amount_due,
+                'status' => 'failed',
+                'raw_response' => ['error' => 'No default payment method for customer.'],
+            ];
+        }
+
         try {
-            $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntent(
+            // Idempotency key stable (collect_invoice_{id}) → un retry réutilise le même PaymentIntent
+            // côté Stripe : pas de double encaissement.
+            $intent = $this->callWithRetry(fn () => $this->callStripeCreatePaymentIntentWithMethod(
                 $invoice->amount_due,
                 strtoupper($invoice->currency ?? config('billing.default_currency', 'EUR')),
                 $stripeCustomerId,
+                $paymentMethodId,
                 array_merge([
                     'invoice_id' => (string) $invoice->id,
                     'company_id' => (string) $company->id,
@@ -236,6 +255,29 @@ class StripePaymentAdapter implements PaymentProviderAdapter
                 'amount' => $invoice->amount_due,
                 'status' => 'rate_limited',
                 'raw_response' => ['error' => $e->getMessage()],
+            ];
+        } catch (\Stripe\Exception\CardException $e) {
+            // ADR-737: off_session peut exiger une authentification (SCA). On NE marque JAMAIS payé ;
+            // si un PaymentIntent en requires_action existe, on le trace pour la confirmation ultérieure
+            // (webhook / relance on-session). Les autres déclins retombent aussi en 'failed' (→ dunning).
+            $err = $e->getError();
+            $piId = $err->payment_intent->id ?? null;
+            $authRequired = ($err->code ?? null) === 'authentication_required';
+            if ($piId) {
+                BillingExpectedConfirmation::create([
+                    'company_id' => $company->id,
+                    'provider_key' => 'stripe',
+                    'expected_event_type' => 'payment_intent.succeeded',
+                    'provider_reference' => $piId,
+                    'expected_by' => now()->addMinutes(30),
+                ]);
+            }
+
+            return [
+                'provider_payment_id' => $piId,
+                'amount' => $invoice->amount_due,
+                'status' => $authRequired ? 'requires_action' : 'failed',
+                'raw_response' => ['error' => $e->getMessage(), 'code' => $err->code ?? null],
             ];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             return [
