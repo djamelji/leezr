@@ -69,6 +69,14 @@ class ProcessDocumentAiJob implements ShouldQueue
 
         $companyId = $document->company_id ?? null;
 
+        // RELEASE-READINESS-V1 (ADR-737) : garde d'exécution — pas de traitement IA/métier pour une
+        // Company suspendue (barrière jusqu'ici HTTP uniquement). No-op propre (pas d'échec de job).
+        if (\App\Core\Tenancy\SuspensionGuard::companySuspended($companyId)) {
+            $document->update(['ai_status' => 'completed']);
+
+            return;
+        }
+
         // ADR-733.1 (P0-D.1) : job MONO-TENANT → on établit le contexte de la company du document pour que
         // tout le traitement en aval soit filtré par SON tenant (filet systémique en worker async). Le
         // contexte est nettoyé en fin de job par QueueTenancyHygiene (pas de fuite vers le job suivant).

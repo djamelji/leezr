@@ -306,10 +306,19 @@ class Subscription extends Model
      * Does this subscription cut off business operations (restricted access)?
      *
      * Restricted when the trial window has elapsed (request-time, see
-     * isExpiredTrial) OR the subscription has reached a terminal/ended state.
+     * isExpiredTrial) OR the subscription has reached a terminal/ended state
+     * OR a PAID plan has not been collected yet.
+     *
+     * RELEASE-READINESS-V1: `pending_payment` (paid plan, first term not yet
+     * collected) and `rejected` (declined) now RESTRICT business features — a
+     * paid account must not use paid features before a verified payment (ADR-734
+     * already prevents the active transition without collection; this closes the
+     * remaining access window). Onboarding + regularization stay reachable via
+     * EnsureBusinessAccess's allow-list (billing/plan/onboarding) and reads (GET).
+     * Free plans register directly as `active` → never affected.
+     *
      * NOT restricted for active, past_due (dunning grace handles it), a live
-     * trial, or pre-activation states (pending / pending_payment / rejected)
-     * which are governed by the onboarding flow, not by this gate.
+     * trial, or `pending` (internal admin-approval onboarding flow).
      *
      * This is intentionally distinct from Company suspension
      * (company.status = 'suspended'), which is handled separately.
@@ -320,6 +329,6 @@ class Subscription extends Model
             return true;
         }
 
-        return in_array($this->status, ['expired', 'suspended', 'cancelled'], true);
+        return in_array($this->status, ['expired', 'suspended', 'cancelled', 'pending_payment', 'rejected'], true);
     }
 }

@@ -45,6 +45,12 @@ class ProcessWorkflowJob implements ShouldQueue
             return;
         }
 
+        // RELEASE-READINESS-V1 (ADR-737) : garde d'exécution — ne pas exécuter un automatisme métier
+        // pour une Company suspendue (la suspension n'était qu'un gate HTTP). Billing/dunning exemptés.
+        if (\App\Core\Tenancy\SuspensionGuard::companySuspended($rule->company_id)) {
+            return;
+        }
+
         // ADR-733.1 (P0-D.1) : job MONO-TENANT. Après résolution de la règle (PK du payload, hors scope),
         // tout le traitement s'exécute SOUS le contexte de SA company → isolation en worker async.
         CompanyContext::runFor($rule->company_id, function () use ($rule, $startTime) {

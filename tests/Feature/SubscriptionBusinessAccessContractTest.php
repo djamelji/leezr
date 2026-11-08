@@ -52,7 +52,9 @@ class SubscriptionBusinessAccessContractTest extends TestCase
 
     public function test_access_preserving_states_do_not_restrict(): void
     {
-        foreach (['active', 'trialing', 'past_due', 'pending', 'pending_payment'] as $status) {
+        // RELEASE-READINESS-V1 (ADR-737) : `pending_payment` et `rejected` NE préservent PLUS l'accès
+        // (compte payant non encaissé). `pending` (approbation admin interne) reste permissif.
+        foreach (['active', 'trialing', 'past_due', 'pending'] as $status) {
             $this->assertFalse(
                 $this->sub($status)->restrictsBusinessAccess(),
                 "status '{$status}' must NOT cut business access"
@@ -76,6 +78,18 @@ class SubscriptionBusinessAccessContractTest extends TestCase
             $this->assertTrue(
                 $this->sub($status)->restrictsBusinessAccess(),
                 "status '{$status}' must cut business access"
+            );
+        }
+    }
+
+    // RELEASE-READINESS-V1 (ADR-737) : un plan PAYANT non encore encaissé (ou refusé) ne doit pas
+    // donner accès aux fonctionnalités payantes (onboarding/régularisation restent via la whitelist).
+    public function test_unpaid_paid_plan_states_restrict_access(): void
+    {
+        foreach (['pending_payment', 'rejected'] as $status) {
+            $this->assertTrue(
+                $this->sub($status)->restrictsBusinessAccess(),
+                "status '{$status}' (paid plan not collected) must cut business access"
             );
         }
     }
