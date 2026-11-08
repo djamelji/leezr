@@ -85,14 +85,20 @@ test('édition directe d\'un besoin depuis la grille (inline)', async ({ page })
 
   const stamp = Date.now().toString().slice(-5)
   const dow = new Date(weekDate + 'T00:00:00').getDay()
-  await api(page, 'POST', '/workforce/planning/coverage', { day_of_week: dow, start_time: '09:00', end_time: '17:00', headcount: 4, priority: 'normal', label: `Besoin ${stamp}` })
+  // M6.E — fenêtre horaire UNIQUE : `coverageLines` groupe par (catégorie,horaires) ; un créneau unique
+  // garantit une LIGNE de couverture isolée (étiquetée par notre libellé), insensible aux besoins résiduels.
+  const mm = String((Number(stamp) % 55) + 1).padStart(2, '0')
+  await api(page, 'POST', '/workforce/planning/coverage', { day_of_week: dow, start_time: `08:${mm}`, end_time: `16:${mm}`, headcount: 4, priority: 'normal', label: `Besoin ${stamp}` })
 
   await page.reload({ waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
 
-  // Clique un chip de couverture → édition inline du besoin.
-  await page.locator('.coverage-row .v-chip').first().click()
+  // M6.E — cible la LIGNE du besoin créé (libellé unique) puis SON chip → édition déterministe
+  // (plus de `.first()` global qui tombait sur un besoin résiduel).
+  const covRow = page.locator('tr.coverage-row', { hasText: `Besoin ${stamp}` })
+  await expect(covRow).toBeVisible({ timeout: 10000 })
+  await covRow.locator('.v-chip').first().click()
   await page.waitForTimeout(400)
   const dialog = page.locator('.v-dialog').last()
   await dialog.getByLabel(/Effectif requis|Required headcount/i).fill('7')

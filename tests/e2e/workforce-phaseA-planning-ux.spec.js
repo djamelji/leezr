@@ -1,7 +1,7 @@
 // Phase A/B — recette : item de nav « Planning », bandeau de couverture rétractable + boutons « + »
 // visibles, bug d'ajout de tâche corrigé (préremplissage créneau libre → 201). Parcours UI réels.
 import { test, expect } from '@playwright/test'
-import { loginCompany } from './helpers.js'
+import { loginCompany, isolateInGrid, capableEmployee } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -50,9 +50,24 @@ test('ajout de tâche : préremplissage créneau libre, pas d\'erreur (bug corri
   test.setTimeout(120000)
   await loginCompany(page)
   await page.setViewportSize({ width: 1512, height: 982 })
+
+  let weekDate = null
+  page.on('request', r => { const mm = r.url().match(/\/shifts\/week\?date=([\d-]+)/); if (mm) weekDate = mm[1] })
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
+  expect(weekDate).toBeTruthy()
+
+  // Précondition DÉTERMINISTE (M6.E) : employé capable d'un shift 09:00–12:00 (durée conforme) + shift propre
+  // SANS activité → créneaux libres garantis pour le préremplissage.
+  const employee = await capableEmployee(page, weekDate, '09:00:00', '12:00:00')
+  test.skip(!employee, 'Aucun employé capable sur la base E2E.')
+  const mk = await api(page, 'POST', '/workforce/planning/shifts', { employee_id: employee.id, date: weekDate, start_at: `${weekDate} 09:00:00`, end_at: `${weekDate} 12:00:00`, timezone: 'Europe/Paris' })
+  expect(mk.status).toBe(201)
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.locator('[data-test="plan-view-planning"]').click()
+  await page.waitForTimeout(1000)
+  await isolateInGrid(page, employee.name)
 
   await page.locator('.plan-shift__body').first().click({ force: true })
   await page.waitForTimeout(700)

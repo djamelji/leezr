@@ -1,7 +1,7 @@
 // SP1a.1 — recette E2E : grille → timeline journalière → activité persistée (parcours UI réel), copie de
 // semaine. Le fix ShiftReadModel::forWeek (whereDate) rend le shift fraîchement créé visible dans la grille.
 import { test, expect } from '@playwright/test'
-import { loginCompany } from './helpers.js'
+import { loginCompany, isolateInGrid, capableEmployee } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -34,26 +34,24 @@ test('grille → timeline → activité persistée (parcours UI)', async ({ page
   await page.waitForTimeout(1000)
   expect(weekDate).toBeTruthy()
 
-  const emp = await api(page, 'GET', '/workforce/employees?per_page=1')
-  const employeeId = (emp.json.data ?? emp.json)[0].id
+  // Précondition DÉTERMINISTE (M6.E) : employé capable d'un shift 09:00–12:00 (durée CONFORME au temps de
+  // travail — un 9 h est légitimement rejeté 422 par la règle métier) + jour nettoyé.
+  const employee = await capableEmployee(page, weekDate, '09:00:00', '12:00:00')
+  test.skip(!employee, 'Aucun employé capable sur la base E2E.')
+  const employeeId = employee.id
 
-  // Shift dans la semaine affichée (réutilise si résidu).
   const shift = await api(page, 'POST', '/workforce/planning/shifts', {
     employee_id: employeeId, date: weekDate,
-    start_at: `${weekDate} 09:00:00`, end_at: `${weekDate} 18:00:00`, timezone: 'Europe/Paris',
+    start_at: `${weekDate} 09:00:00`, end_at: `${weekDate} 12:00:00`, timezone: 'Europe/Paris',
   })
-  if (shift.status === 422) {
-    const ex = await api(page, 'GET', `/workforce/planning/shifts?from=${weekDate}&to=${weekDate}&employee_id=${employeeId}`)
-    const s = (ex.json.data ?? ex.json)[0]
-    const acts = await api(page, 'GET', `/workforce/planning/activities?shift_id=${s.id}`)
-    for (const a of (acts.json ?? [])) await api(page, 'DELETE', `/workforce/planning/activities/${a.id}`)
-  }
+  expect(shift.status).toBe(201)
 
   await page.reload({ waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
 
-  // Le shift est visible dans la grille (fix forWeek) → ouvrir le détail journalier (clic sur le shift).
+  // Isole la ligne de CET employé (→ `.first()` déterministe, plus de dépendance à l'ordre) puis ouvre le détail.
+  await isolateInGrid(page, employee.name)
   await expect(page.locator('.plan-shift__body').first()).toBeVisible({ timeout: 10000 })
   await page.locator('.plan-shift__body').first().click({ force: true })
   await page.waitForTimeout(500)
@@ -81,6 +79,7 @@ test('grille → timeline → activité persistée (parcours UI)', async ({ page
   await page.reload({ waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1200)
+  await isolateInGrid(page, employee.name)
   await page.locator('.plan-shift__body').first().click({ force: true })
   await page.waitForTimeout(600)
   await expect(page.locator('.v-dialog').filter({ hasText: /Timeline|activité/i }).getByText('Coupe', { exact: false }).first()).toBeVisible()

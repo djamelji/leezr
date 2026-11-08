@@ -1,7 +1,7 @@
 // Smart Planning Lot 4B.3-A (ADR-721) — copier-coller & copie de semaine (UI réelle).
 // Prouve : copier un shift (menu) → coller (persistance) ; copier la semaine (preview → commit → persistance).
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts } from './helpers.js'
+import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts, cleanEmployeeRange } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -52,7 +52,9 @@ test('copier un shift (menu) puis coller dans une autre cellule → persistance'
   const [srcEmp, dstEmp] = cap.emps
   const date = cap.date
 
-  // Fixture : un shift source pour srcEmp.
+  // M6.E — précondition DÉTERMINISTE : source = EXACTEMENT un shift (srcEmp), cible = cellule VIDE (dstEmp).
+  await cleanEmployeeRange(page, srcEmp, date, date)
+  await cleanEmployeeRange(page, dstEmp, date, date)
   const mk = await apiRequest(page, { method: 'POST', path: '/api/workforce/planning/shifts', body: { employee_id: srcEmp, date, start_at: `${date} 05:05:00`, end_at: `${date} 05:35:00`, timezone: 'Europe/Paris' } })
   expect(mk.status).toBe(201)
 
@@ -64,13 +66,16 @@ test('copier un shift (menu) puis coller dans une autre cellule → persistance'
   await page.locator('[data-test="copy-shift"]').click()
   await expect(page.locator('[data-test="clipboard-chip"]')).toBeVisible()
 
-  // Colle sur la cellule libre de dstEmp (même jour, autre salarié).
+  // Colle sur la cellule libre de dstEmp (même jour, autre salarié). Attend la révélation du bouton (hover)
+  // avant le clic → plus de course « bouton pas encore monté » (force: pointer-events hover-only).
   const dst = cell(page, dstEmp, date)
   await dst.scrollIntoViewIfNeeded()
   await dst.hover()
+  const pasteBtn = dst.locator('[data-test="paste-cell"]')
+  await pasteBtn.waitFor({ state: 'visible', timeout: 10000 })
   const [resp] = await Promise.all([
     page.waitForResponse(r => /\/planning\/shifts\/copy$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20000 }),
-    dst.locator('[data-test="paste-cell"]').click(),
+    pasteBtn.click({ force: true }),
   ])
   expect(resp.status()).toBe(201)
 
@@ -98,6 +103,17 @@ test('copier la semaine : prévisualisation → confirmation → persistance', a
   })
   const mk = await apiRequest(page, { method: 'POST', path: '/api/workforce/planning/shifts', body: { employee_id: emp, date: prevMonday, start_at: `${prevMonday} 05:05:00`, end_at: `${prevMonday} 05:35:00`, timezone: 'Europe/Paris' } })
   test.skip(mk.status !== 201, 'Impossible de créer la source en semaine précédente (capacité).')
+
+  // M6.E — précondition DÉTERMINISTE : vide la semaine COURANTE (cible de la copie) pour CET employé,
+  // afin que le shift source (lun. préc. 05:05) soit RÉELLEMENT recréé (created_count ≥ 1, plus de « tout skippé »).
+  const curMonday = await page.evaluate(() => {
+    const d = new Date(); const day = (d.getDay() + 6) % 7
+    d.setDate(d.getDate() - day)
+
+    return d.toISOString().slice(0, 10)
+  })
+  const curSunday = await page.evaluate(m => { const d = new Date(m + 'T00:00:00'); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10) }, curMonday)
+  await cleanEmployeeRange(page, emp, curMonday, curSunday)
 
   await gotoGrid(page)
   await page.locator('[data-test="copy-week"]').click()

@@ -133,6 +133,57 @@ export async function cleanupShifts(page, ids) {
   ids.clear()
 }
 
+// ── M6.E (ADR-736) — fiabilisation E2E : préconditions déterministes, indépendantes des données partagées.
+// Nettoie les shifts (brouillons) + leurs activités d'un employé sur une plage → point de départ connu.
+export async function cleanEmployeeRange(page, employeeId, from, to) {
+  const list = await apiRequest(page, { method: 'GET', path: `/api/workforce/planning/shifts?from=${from}&to=${to}&employee_id=${employeeId}&per_page=100` })
+  let shifts = list.json
+  if (shifts && !Array.isArray(shifts)) shifts = shifts.data ?? shifts.shifts ?? []
+  if (!Array.isArray(shifts)) shifts = []
+  for (const s of shifts) {
+    const acts = await apiRequest(page, { method: 'GET', path: `/api/workforce/planning/activities?shift_id=${s.id}` })
+    for (const a of (acts.json ?? [])) await apiRequest(page, { method: 'DELETE', path: `/api/workforce/planning/activities/${a.id}` })
+    if (s.status === 'draft') await apiRequest(page, { method: 'DELETE', path: `/api/workforce/planning/shifts/${s.id}` })
+    else await apiRequest(page, { method: 'POST', path: `/api/workforce/planning/shifts/${s.id}/cancel`, body: { reason: 'e2e precondition' } })
+  }
+}
+
+// Isole UNE ligne de la grille via la recherche (→ `.first()` déterministe, plus de dépendance à l'ordre).
+export async function isolateInGrid(page, name) {
+  const search = page.locator('[data-test="grid-search"] input').first()
+  await search.waitFor({ state: 'visible', timeout: 10000 })
+  await search.fill(name)
+  await page.waitForTimeout(500)
+}
+
+// Premier employé disposant d'un contrat (créable → a de la capacité). Renvoie { id, name }.
+export async function firstEmployee(page) {
+  const emp = await apiRequest(page, { method: 'GET', path: '/api/workforce/employees?per_page=1' })
+  const e = (emp.json?.data ?? emp.json ?? [])[0]
+
+  return e ? { id: e.id, name: `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() } : null
+}
+
+// Employé RÉELLEMENT capable d'accueillir un shift [start,end] le `date` donné — contrat actif, pas
+// d'absence, pas d'overlap ET conforme aux règles temps de travail (durée/repos). On sonde avec LA FENÊTRE
+// RÉELLE (create/delete) pour ne pas confondre « capable » et « règle métier qui rejette une durée ».
+// Nettoie d'abord la journée de chaque candidat. Renvoie { id, name } ou null.
+export async function capableEmployee(page, date, start = '09:00:00', end = '12:00:00') {
+  const emp = await apiRequest(page, { method: 'GET', path: '/api/workforce/employees?per_page=50' })
+  const list = emp.json?.data ?? emp.json ?? []
+  for (const e of list) {
+    await cleanEmployeeRange(page, e.id, date, date)
+    const r = await apiRequest(page, { method: 'POST', path: '/api/workforce/planning/shifts', body: { employee_id: e.id, date, start_at: `${date} ${start}`, end_at: `${date} ${end}`, timezone: 'Europe/Paris' } })
+    if (r.status === 201) {
+      await apiRequest(page, { method: 'DELETE', path: `/api/workforce/planning/shifts/${r.json.id}` })
+
+      return { id: e.id, name: `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() }
+    }
+  }
+
+  return null
+}
+
 // Pick an option in a Vuetify VSelect identified by its label.
 export async function selectVuetifyOption(page, selectLabel, optionIndex = 0) {
   await page.getByLabel(selectLabel, { exact: false }).first().click()
