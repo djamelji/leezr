@@ -6,6 +6,9 @@ use App\Company\RBAC\CompanyRole;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Markets\Market;
 use App\Core\Models\Company;
+use App\Core\Automation\Jobs\ProcessWorkflowJob;
+use App\Core\Automation\WorkflowExecutionLog;
+use App\Core\Automation\WorkflowRule;
 use App\Core\Tenancy\TenantContextProbeJob;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
@@ -63,6 +66,20 @@ class TenancyWorkerProofCommand extends Command
             TenantContextProbeJob::dispatch($bogusId, "$tag:bogus");
             TenantContextProbeJob::dispatch($b->id, $keyB);
 
+            // ADR-737 §1 — garde de suspension + exemption billing SUR LA BOUCLE WORKER RÉELLE.
+            // Company S suspendue ; un job MÉTIER (automation) queué doit être SKIPPÉ à l'exécution ;
+            // un job EXEMPT (probe = représente billing/plateforme, n'appelle pas le garde) doit S'EXÉCUTER.
+            Model::unguard();
+            $s = Company::create(['name' => "$tag-S", 'slug' => "$tag-s", 'jobdomain_key' => $jobdomain->key, 'market_key' => $market->key, 'status' => 'suspended']);
+            $created[] = $s->id;
+            CompanyRole::create(['company_id' => $s->id, 'key' => "$tag-rs", 'name' => 'RS', 'is_system' => false, 'is_administrative' => false]);
+            $rule = WorkflowRule::create(['company_id' => $s->id, 'name' => 'wp', 'trigger_topic' => 't', 'conditions' => [], 'actions' => [], 'enabled' => true]);
+            Model::reguard();
+            $keyS = "$tag:S";
+            Cache::forget($keyS);
+            ProcessWorkflowJob::dispatch($rule->id, 't', [])->onQueue('p0d2-proof');
+            TenantContextProbeJob::dispatch($s->id, $keyS);
+
             $this->info("Worker réel (queue database, file dédiée p0d2-proof)…");
             Artisan::call('queue:work', [
                 '--queue' => 'p0d2-proof',
@@ -84,6 +101,8 @@ class TenancyWorkerProofCommand extends Command
                 'B ne voit QUE sa company' => $resB && $resB['seen'] === [$b->id],
                 'B démarre sans contexte résiduel (pas de contamination)' => $resB && $resB['context_at_start'] === false,
                 'Tenant inexistant : job échoué, pas de résultat (fail-closed)' => $resBogus === null,
+                'Job MÉTIER après suspension : SKIPPÉ sur le worker (garde §3)' => WorkflowExecutionLog::withoutGlobalScopes()->where('workflow_rule_id', $rule->id)->exists() === false,
+                'Job EXEMPT (billing/plateforme) : EXÉCUTÉ malgré suspension' => ($resS = Cache::get($keyS)) !== null && $resS['seen'] === [$s->id],
             ];
 
             $ok = true;
@@ -106,6 +125,8 @@ class TenancyWorkerProofCommand extends Command
             // Nettoyage : companies/roles fictifs + jobs échoués de la sonde + cache.
             Model::unguard();
             if ($created) {
+                WorkflowExecutionLog::withoutGlobalScopes()->whereIn('company_id', $created)->delete();
+                WorkflowRule::withoutGlobalScopes()->whereIn('company_id', $created)->delete();
                 CompanyRole::withoutGlobalScopes()->whereIn('company_id', $created)->delete();
                 Company::whereIn('id', $created)->delete();
             }
@@ -114,6 +135,7 @@ class TenancyWorkerProofCommand extends Command
             Cache::forget("$tag:A");
             Cache::forget("$tag:B");
             Cache::forget("$tag:bogus");
+            Cache::forget("$tag:S");
             Model::reguard();
             $this->comment('Nettoyage effectué (données fictives supprimées).');
         }
