@@ -187,6 +187,46 @@ fi
 # DEV (web3) : base réinitialisable + données de démo (pas de clients réels).
 cd "$RELEASE_DIR"
 if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "production" ]; then
+  # ─── [4.9] Sauvegarde DB VÉRIFIÉE avant migration (PROD uniquement) — ADR-737 ───
+  # Échec backup ⇒ abort AVANT migrate : base PROD intacte, `current` reste live.
+  log "→ [4.9] Backup DB vérifié (avant migrations)"
+  set -o pipefail
+  _envval() { grep -E "^$1=" "$SHARED_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/[[:space:]]*#.*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/" -e 's/[[:space:]]*$//'; }
+  DB_H=$(_envval DB_HOST); DB_P=$(_envval DB_PORT); DB_N=$(_envval DB_DATABASE); DB_U=$(_envval DB_USERNAME); DB_W=$(_envval DB_PASSWORD)
+  if [ -z "$DB_N" ] || [ -z "$DB_U" ]; then log "ERROR: credentials DB introuvables dans .env — ABORT avant migrate"; exit 1; fi
+  BK_DIR="$SHARED_DIR/backups"; mkdir -p "$BK_DIR"; chmod 700 "$BK_DIR"   # hors webroot
+  MYCNF="$(mktemp "${TMPDIR:-/tmp}/leezr-my.XXXXXX")"; chmod 600 "$MYCNF"
+  trap 'rm -f "$MYCNF" 2>/dev/null || true' EXIT                          # pas de creds résiduels
+  printf '[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n' "$DB_H" "${DB_P:-3306}" "$DB_U" "$DB_W" > "$MYCNF"
+  BK_FILE="$BK_DIR/pre-deploy_${TIMESTAMP}_${SHORT_SHA}.sql.gz"
+  if ! mysqldump --defaults-extra-file="$MYCNF" --single-transaction --quick --routines --no-tablespaces "$DB_N" | gzip -c > "$BK_FILE"; then
+    log "ERROR: mysqldump a échoué — ABORT avant toute migration (base PROD intacte)"; exit 1
+  fi
+  chmod 600 "$BK_FILE"
+  gzip -t "$BK_FILE" || { log "ERROR: backup gzip corrompu — ABORT"; exit 1; }
+  # Preuve de structure SQL EXPLOITABLE (pas un simple gzip non vide) : en-tête dump + ≥1 CREATE TABLE.
+  if ! gunzip -c "$BK_FILE" | head -c 200000 | grep -q "CREATE TABLE"; then
+    log "ERROR: backup sans structure SQL attendue (aucun CREATE TABLE) — ABORT"; exit 1
+  fi
+  log "  Backup vérifié: $(basename "$BK_FILE") ($(du -h "$BK_FILE" | cut -f1)) — rétention 10 (hors webroot, chmod 600)"
+  ls -1t "$BK_DIR"/pre-deploy_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
+
+  # ─── [4.95] Pré-check UNIQUE workforce_timesheet_periods — abort si doublons (ADR-699/737) ───
+  log "→ [4.95] Pré-check doublons (company_id, employee_id, period_start, period_end)"
+  TBL_EXISTS=$(mysql --defaults-extra-file="$MYCNF" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_N' AND table_name='workforce_timesheet_periods';" 2>/dev/null || echo 0)
+  if [ "${TBL_EXISTS:-0}" -ge 1 ]; then
+    DUP=$(mysql --defaults-extra-file="$MYCNF" -N -B "$DB_N" -e "SELECT COUNT(*) FROM (SELECT 1 FROM workforce_timesheet_periods GROUP BY company_id,employee_id,period_start,period_end HAVING COUNT(*)>1) d;" 2>/dev/null || echo ERR)
+    if [ "$DUP" = "ERR" ]; then log "ERROR: pré-check doublons a échoué (requête) — ABORT par prudence"; exit 1; fi
+    if [ "${DUP:-0}" -gt 0 ]; then
+      log "ARRÊT: $DUP groupe(s) en doublon sur workforce_timesheet_periods — la contrainte UNIQUE échouerait (aucune migration lancée)."
+      log "Tuples concernés (identifiants + bornes, sans donnée personnelle) :"
+      mysql --defaults-extra-file="$MYCNF" "$DB_N" -e "SELECT company_id,employee_id,period_start,period_end,COUNT(*) AS n FROM workforce_timesheet_periods GROUP BY company_id,employee_id,period_start,period_end HAVING n>1 LIMIT 50;" 2>&1 | tee -a "$LOG_FILE"
+      log "→ Dédupliquer MANUELLEMENT avant redéploiement (aucune suppression/fusion automatique)."
+      exit 1
+    fi
+  fi
+  log "  Pré-check OK (0 doublon) — migrations additives sûres"
+
   log "→ [5/9] migrate --force (production — aucun reset destructif)"
   $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
   log "→ [5.5] db:seed SystemSeeder (données de référence idempotentes)"
