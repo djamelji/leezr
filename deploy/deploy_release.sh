@@ -274,14 +274,17 @@ VHOST_USER=$(stat -c '%U' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
 VHOST_GROUP=$(stat -c '%G' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
 
 # One-time migration: remove legacy NON-namespaced units that let web2
-# and web3 overwrite each other (the P0 isolation defect). Safe + idempotent.
+# and web3 overwrite each other (the P0 isolation defect). Done
+# UNCONDITIONALLY (stop/disable/rm/reset-failed) so it also catches a
+# loaded-but-fileless unit that a grep on list-unit-files would miss.
 for legacy in leezr-queue-ai leezr-queue-default; do
-  if systemctl list-unit-files 2>/dev/null | grep -q "^${legacy}\.service"; then
-    sudo systemctl stop "$legacy" 2>/dev/null || true
-    sudo systemctl disable "$legacy" 2>/dev/null || true
-    sudo rm -f "/etc/systemd/system/${legacy}.service" 2>/dev/null || true
-    log "  Removed legacy shared unit: ${legacy}.service"
-  fi
+  EXISTED=""
+  systemctl cat "${legacy}.service" &>/dev/null && EXISTED=1
+  sudo systemctl stop "$legacy" 2>/dev/null || true
+  sudo systemctl disable "$legacy" 2>/dev/null || true
+  sudo rm -f "/etc/systemd/system/${legacy}.service" 2>/dev/null || true
+  sudo systemctl reset-failed "$legacy" 2>/dev/null || true
+  [ -n "$EXISTED" ] && log "  Removed legacy shared unit: ${legacy}.service"
 done
 sudo systemctl daemon-reload 2>/dev/null || true
 
