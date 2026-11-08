@@ -19,7 +19,7 @@ class SuspensionGuard
 {
     /**
      * La Company est-elle suspendue ? (lecture directe du statut, contexte-agnostique).
-     * `Company::` est la racine tenant (jamais auto-scopée) → lookup sûr hors contexte.
+     * `Company` est le modèle RACINE tenant (pas de CompanyScope) → pas de withoutGlobalScopes nécessaire.
      */
     public static function companySuspended(?int $companyId): bool
     {
@@ -27,6 +27,6 @@ class SuspensionGuard
             return false;
         }
 
-        return Company::withoutGlobalScopes()->whereKey($companyId)->value('status') === 'suspended';
+        return Company::whereKey($companyId)->value('status') === 'suspended';
     }
 }
