@@ -5,8 +5,9 @@ namespace App\Core\Email;
 use App\Core\Realtime\Contracts\RealtimePublisher;
 use App\Core\Realtime\EventEnvelope;
 use App\Platform\Models\PlatformSetting;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class ImapFetcher
 {
@@ -92,6 +93,7 @@ class ImapFetcher
             : now()->subDays(30)->format('d-M-Y');
 
         $fetched = 0;
+        $account = (string) ($this->settings['imap_username'] ?? '');
 
         foreach ($folders as $folder) {
             // Reopen connection for each folder
@@ -104,6 +106,12 @@ class ImapFetcher
                 }
             }
 
+            // UIDVALIDITY — part of the persistent message identity (ADR-740). If the
+            // server resets it, UIDs are renumbered; a new uidvalidity yields new
+            // identities, so messages re-import once under the new key (bounded, safe).
+            $status = @imap_status($this->connection, $mailboxBase.$folder, SA_UIDVALIDITY);
+            $uidValidity = (int) ($status->uidvalidity ?? 0);
+
             $messageNums = @imap_search($this->connection, "SINCE \"{$since}\"", SE_UID);
 
             if (! $messageNums) {
@@ -115,7 +123,7 @@ class ImapFetcher
 
             foreach ($messageNums as $uid) {
                 try {
-                    if ($this->processMessage($uid, $folder)) {
+                    if ($this->processMessage((int) $uid, $folder, $uidValidity, $account)) {
                         $fetched++;
                     }
                 } catch (\Throwable $e) {
@@ -134,48 +142,36 @@ class ImapFetcher
         return $fetched;
     }
 
-    private function processMessage(int $uid, string $imapFolder = 'INBOX'): bool
+    private function processMessage(int $uid, string $imapFolder, int $uidValidity, string $account): bool
     {
         $headers = imap_fetchheader($this->connection, $uid, FT_UID);
         $headerObj = imap_rfc822_parse_headers($headers);
 
-        $messageId = isset($headerObj->message_id)
-            ? trim($headerObj->message_id, '<>')
-            : null;
-
-        // Skip if already fetched (dedup by message_id)
-        if ($messageId && EmailLog::where('message_id', $messageId)->exists()) {
-            return false;
-        }
+        $messageId = isset($headerObj->message_id) ? trim($headerObj->message_id, '<>') : null;
+        $messageId = ($messageId === '') ? null : $messageId;
 
         // Parse sender
         $from = $headerObj->from[0] ?? null;
         $fromEmail = $from ? "{$from->mailbox}@{$from->host}" : 'unknown@unknown.com';
-        $fromName = isset($from->personal) ? imap_utf8($from->personal) : null;
+        $fromName = isset($from->personal) ? $this->decodeMimeHeader($from->personal) : null;
 
         // Parse recipient
         $to = $headerObj->to[0] ?? null;
         $toEmail = $to ? "{$to->mailbox}@{$to->host}" : ($this->settings['imap_username'] ?? '');
 
-        // Parse subject
-        $subject = isset($headerObj->subject) ? imap_utf8($headerObj->subject) : '(no subject)';
+        // Parse subject (RFC 2047 → clean UTF-8)
+        $subject = isset($headerObj->subject) ? $this->decodeMimeHeader($headerObj->subject) : '(no subject)';
 
         // Parse date
         $date = isset($headerObj->date) ? \Carbon\Carbon::parse($headerObj->date) : now();
 
         // Parse In-Reply-To and References for threading
-        $inReplyTo = isset($headerObj->in_reply_to)
-            ? trim($headerObj->in_reply_to, '<>')
-            : null;
+        $inReplyTo = isset($headerObj->in_reply_to) ? trim($headerObj->in_reply_to, '<>') : null;
+        $references = $headerObj->references ?? null;
 
-        $references = isset($headerObj->references)
-            ? $headerObj->references
-            : null;
-
-        // Get body and attachments
+        // Get body
         $body = $this->getBody($uid);
 
-        // Find or create thread
         // Map IMAP folder to app folder: Junk → spam, default → inbox
         $appFolder = match ($imapFolder) {
             'Junk' => 'spam',
@@ -183,51 +179,40 @@ class ImapFetcher
             default => 'inbox',
         };
 
-        $thread = $this->findOrCreateThread($fromEmail, $fromName, $subject, $inReplyTo, $references, $appFolder);
-
-        // Create EmailLog
-        $log = EmailLog::create([
-            'message_id' => $messageId ?? Str::uuid()->toString().'@imap-fetched',
+        $log = $this->storeMessage([
+            'account' => $account,
+            'uidvalidity' => $uidValidity,
+            'uid' => $uid,
+            'imap_folder' => $imapFolder,
+            'app_folder' => $appFolder,
+            'message_id' => $messageId,
             'in_reply_to' => $inReplyTo,
-            'company_id' => $thread->company_id,
-            'recipient_email' => $toEmail,
-            'recipient_name' => null,
+            'references' => $references,
             'from_email' => $fromEmail,
+            'from_name' => $fromName,
+            'to_email' => $toEmail,
             'subject' => $subject,
             'body_html' => $body['html'],
             'body_text' => $body['text'],
-            'template_key' => 'inbound',
-            'notification_class' => 'ImapFetch',
-            'status' => 'sent',
-            'direction' => 'received',
-            'thread_id' => $thread->id,
-            'is_read' => false,
-            'headers' => [
-                'Message-ID' => $messageId ? "<{$messageId}>" : null,
-                'In-Reply-To' => $inReplyTo ? "<{$inReplyTo}>" : null,
-                'References' => $references,
-            ],
-            'metadata' => ['source' => 'imap', 'imap_folder' => $imapFolder],
-            'sent_at' => $date,
+            'date' => $date,
         ]);
 
-        // Extract attachments
-        $this->extractAttachments($uid, $log);
-
-        // Update thread counters
-        $thread->refreshCounts();
-
-        // Reopen thread if closed
-        if ($thread->status === 'closed') {
-            $thread->update(['status' => 'open']);
+        if ($log === null) {
+            return false; // already imported (idempotent) or lost a concurrency race
         }
 
-        // Emit SSE event for real-time inbox updates (ADR-453)
+        // Attachments + counters + SSE run AFTER the atomic thread+log commit.
+        $this->extractAttachments($uid, $log);
+
+        if ($log->thread) {
+            $log->thread->refreshCounts();
+        }
+
         try {
             app(RealtimePublisher::class)->publish(
                 EventEnvelope::domain('email.updated', null, [
                     'action' => 'new_message',
-                    'thread_id' => $thread->id,
+                    'thread_id' => $log->thread_id,
                 ])
             );
         } catch (\Throwable $e) {
@@ -235,6 +220,167 @@ class ImapFetcher
         }
 
         return true;
+    }
+
+    /**
+     * Persist a parsed inbound message as (thread + log) ATOMICALLY and IDEMPOTENTLY.
+     * Returns the created EmailLog, or null if the message was already imported.
+     *
+     * ADR-740 — the identity is (imap_account, uidvalidity, folder, uid), NOT the
+     * Message-ID (which may be absent, or shared across accounts). The thread+log are
+     * created in a transaction so a failing log insert never leaves an orphan thread.
+     * Pure DB + string work → unit-testable without an IMAP connection.
+     */
+    public function storeMessage(array $m): ?EmailLog
+    {
+        $account = (string) ($m['account'] ?? '');
+        $uidValidity = (int) ($m['uidvalidity'] ?? 0);
+        $uid = (int) ($m['uid'] ?? 0);
+        $imapFolder = (string) ($m['imap_folder'] ?? 'INBOX');
+        $realMessageId = ($m['message_id'] ?? null) ?: null;
+
+        // Deterministic stored id — NEVER random. Real Message-ID if present, else derived
+        // from the persistent IMAP identity so re-processing the same message dedups.
+        $storedMessageId = $realMessageId
+            ?? 'imap-'.sha1($account.'|'.$uidValidity.'|'.$imapFolder.'|'.$uid).'@imap.inbound';
+
+        // 1. Fast idempotence — already imported under this IMAP identity?
+        if (EmailLog::query()
+            ->where('imap_account', $account)
+            ->where('imap_uidvalidity', $uidValidity)
+            ->where('imap_folder', $imapFolder)
+            ->where('imap_uid', $uid)
+            ->exists()
+        ) {
+            return null;
+        }
+
+        // 2. UIDVALIDITY-change safety — same real Message-ID already stored for this
+        //    account (prevents re-duplicating everything when the server renumbers UIDs).
+        if ($realMessageId !== null
+            && EmailLog::query()
+                ->where('imap_account', $account)
+                ->where('message_id', $realMessageId)
+                ->exists()
+        ) {
+            return null;
+        }
+
+        $subject = $this->sanitizeUtf8((string) ($m['subject'] ?? '')) ?: '(no subject)';
+        $fromName = $this->sanitizeUtf8($m['from_name'] ?? null);
+        $bodyHtml = $this->sanitizeUtf8($m['body_html'] ?? null);
+        $bodyText = $this->sanitizeUtf8($m['body_text'] ?? null);
+
+        try {
+            return DB::transaction(function () use ($m, $account, $uidValidity, $uid, $imapFolder, $storedMessageId, $realMessageId, $subject, $fromName, $bodyHtml, $bodyText) {
+                $thread = $this->findOrCreateThread(
+                    (string) ($m['from_email'] ?? 'unknown@unknown.com'),
+                    $fromName,
+                    $subject,
+                    $m['in_reply_to'] ?? null,
+                    $m['references'] ?? null,
+                    (string) ($m['app_folder'] ?? 'inbox')
+                );
+
+                if ($thread->status === 'closed') {
+                    $thread->update(['status' => 'open']);
+                }
+
+                return EmailLog::create([
+                    'message_id' => $storedMessageId,
+                    'in_reply_to' => $m['in_reply_to'] ?? null,
+                    'imap_account' => $account,
+                    'imap_uidvalidity' => $uidValidity,
+                    'imap_uid' => $uid,
+                    'imap_folder' => $imapFolder,
+                    'company_id' => $thread->company_id,
+                    'recipient_email' => (string) ($m['to_email'] ?? ''),
+                    'recipient_name' => null,
+                    'from_email' => (string) ($m['from_email'] ?? 'unknown@unknown.com'),
+                    'subject' => $subject,
+                    'body_html' => $bodyHtml,
+                    'body_text' => $bodyText,
+                    'template_key' => 'inbound',
+                    'notification_class' => 'ImapFetch',
+                    'status' => 'sent',
+                    'direction' => 'received',
+                    'thread_id' => $thread->id,
+                    'is_read' => false,
+                    'headers' => [
+                        'Message-ID' => $realMessageId ? "<{$realMessageId}>" : null,
+                        'In-Reply-To' => ($m['in_reply_to'] ?? null) ? "<{$m['in_reply_to']}>" : null,
+                        'References' => $m['references'] ?? null,
+                    ],
+                    'metadata' => ['source' => 'imap', 'imap_folder' => $imapFolder],
+                    'sent_at' => $m['date'] ?? now(),
+                ]);
+            });
+        } catch (QueryException $e) {
+            // A concurrent import won the race on uq_email_logs_imap_identity → safe no-op.
+            // The transaction already rolled back this attempt's thread (no orphan).
+            if ($this->isUniqueViolation($e)) {
+                return null;
+            }
+
+            throw $e;
+        }
+    }
+
+    private function isUniqueViolation(QueryException $e): bool
+    {
+        return ((int) ($e->errorInfo[1] ?? 0)) === 1062   // MySQL duplicate entry
+            || (string) $e->getCode() === '23000';         // SQLSTATE integrity constraint
+    }
+
+    /**
+     * Decode an RFC 2047 MIME header to clean UTF-8 (Shift-JIS, ISO-2022-JP, …).
+     */
+    private function decodeMimeHeader(?string $raw): ?string
+    {
+        if ($raw === null || $raw === '') {
+            return $raw;
+        }
+
+        $decoded = '';
+        foreach (imap_mime_header_decode($raw) as $part) {
+            $charset = strtoupper($part->charset ?? 'default');
+            $text = $part->text ?? '';
+            if ($charset !== 'DEFAULT' && $charset !== 'UTF-8' && $charset !== 'US-ASCII') {
+                $conv = @mb_convert_encoding($text, 'UTF-8', $charset);
+                $text = ($conv !== false && $conv !== null && $conv !== '') ? $conv : $text;
+            }
+            $decoded .= $text;
+        }
+
+        return $this->sanitizeUtf8($decoded);
+    }
+
+    /**
+     * Guarantee a valid UTF-8 string — prevents MySQL "1366 Incorrect string value".
+     */
+    private function sanitizeUtf8(?string $s): ?string
+    {
+        if ($s === null || $s === '') {
+            return $s;
+        }
+
+        if (! mb_check_encoding($s, 'UTF-8')) {
+            $enc = mb_detect_encoding($s, ['UTF-8', 'ISO-2022-JP', 'SJIS-win', 'SJIS', 'EUC-JP', 'Windows-1252', 'ISO-8859-1'], true);
+            if ($enc && $enc !== 'UTF-8') {
+                $conv = @mb_convert_encoding($s, 'UTF-8', $enc);
+                if ($conv !== false && $conv !== null) {
+                    $s = $conv;
+                }
+            }
+        }
+
+        // Final safety net — drop any residual invalid byte sequences.
+        $clean = @iconv('UTF-8', 'UTF-8//IGNORE', $s);
+        if ($clean === false) {
+            $clean = mb_convert_encoding($s, 'UTF-8', 'UTF-8');
+        }
+
+        return $clean;
     }
 
     private function getBody(int $uid): array

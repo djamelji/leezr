@@ -14,6 +14,10 @@ class EmailLog extends Model
         'message_id',
         'in_reply_to',
         'external_id',
+        'imap_account',
+        'imap_uidvalidity',
+        'imap_uid',
+        'imap_folder',
         'company_id',
         'recipient_email',
         'recipient_name',
@@ -45,6 +49,8 @@ class EmailLog extends Model
         'created_at' => 'datetime',
         'is_read' => 'boolean',
         'is_draft' => 'boolean',
+        'imap_uidvalidity' => 'integer',
+        'imap_uid' => 'integer',
     ];
 
     public function company(): BelongsTo

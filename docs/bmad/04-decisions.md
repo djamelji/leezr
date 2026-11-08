@@ -26769,3 +26769,24 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 - Plus de double `schedule:run` ; le cron ISPConfig reste l'unique déclencheur, inchangé, indépendant par env.
 - Workers PROD/DEV toujours namespacés et actifs (non impactés).
 - Le prochain déploiement de chaque branche retire automatiquement les timers redondants (pas de régression, auto-nettoyant). Billing non interrompu, aucune donnée client modifiée, aucun paiement.
+
+## ADR-740 — Idempotence & robustesse du moteur d'import IMAP (email:fetch-inbox)
+
+**Date** : 2026-11-08
+**Contexte** : Audit terrain (lecture seule) → **22 091 threads créés à partir de ~14 messages réels** (17 173 DMARC + 4 918 spam ezweb). Cause racine prouvée dans `ImapFetcher` :
+1. Dédup **uniquement par Message-ID**, et **enregistrée seulement si l'insert du log réussissait** ;
+2. Thread créé (`findOrCreateThread`) **avant** l'insert du log, **hors transaction** → sur échec d'insert = **thread orphelin** ; la dédup ne s'enregistrait jamais → **nouveau thread à chaque cycle de 15 s** ;
+3. Échec d'insert = **`SQLSTATE 1366 Incorrect string value`** (octets non-UTF-8 : Shift-JIS japonais / corps DMARC mal décodé) ;
+4. Messages **sans Message-ID** → **UUID aléatoire** (`@imap-fetched`) → ré-import complet chaque cycle (6 950 logs ezweb, 100 % en fallback).
+**Décision** :
+- **Identité persistante & déterministe** par `(imap_account, imap_uidvalidity, imap_folder, imap_uid)` — nouvelle contrainte **UNIQUE `uq_email_logs_imap_identity`** (garde de concurrence). `message_id` n'est **plus globalement unique** (un même Message-ID peut arriver sur deux comptes) mais reste indexé pour le threading In-Reply-To/References.
+- **Transaction atomique** autour de `findOrCreateThread` + `EmailLog::create` → **zéro thread orphelin** (rollback complet si l'insert échoue).
+- **Sanitisation UTF-8** (`sanitizeUtf8` + `decodeMimeHeader` : RFC 2047, Shift-JIS/ISO-2022-JP/EUC-JP, `iconv //IGNORE` filet de sécurité) **avant insertion** en colonnes utf8mb4 → plus de 1366, contenu préservé au mieux.
+- **Pas de Message-ID** → id synthétique **déterministe** `imap-sha1(identité)@imap.inbound` (jamais aléatoire).
+- **UIDVALIDITY** : intégré à l'identité + garde secondaire (même Message-ID déjà présent dans le compte) → un reset serveur ne re-duplique pas.
+- Logique de stockage extraite en `ImapFetcher::storeMessage()` **testable sans IMAP**. Threading réel (In-Reply-To/References/reply-subject, ADR-602/612) **préservé**.
+**Conséquences** :
+- Fichiers : `app/Core/Email/ImapFetcher.php`, `app/Core/Email/EmailLog.php`, migration `2026_11_08_120000_add_imap_identity_to_email_logs.php`, test `tests/Feature/ImapIdempotenceTest.php`.
+- Tests : 8 nouveaux (même message ×2, sans Message-ID, isolation 2 comptes, non-UTF-8, rollback SQL, garde unique DB, changement UIDVALIDITY, réexécution scheduler) + 6 threading existants = **14/14 verts** ; suite Email **51/51**.
+- Déploiement : DEV → staging → PROD (GitHub Actions) avec backup vérifié ; **aucune purge** des emails/threads existants. Nettoyage des orphelins historiques = opération séparée (hors de cet ADR).
+- Risque résiduel : les threads orphelins **déjà** supprimés ne reviennent pas (Dovecot vide) ; un éventuel reliquat d'orphelins antérieurs non lié à un fetch reste à nettoyer manuellement si présent.
