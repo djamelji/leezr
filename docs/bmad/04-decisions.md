@@ -26759,3 +26759,13 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 - Workers PROD et DEV **indépendants et persistants** ; aucun traitement de jobs DEV en PROD ni l'inverse (isolation renforcée au niveau process, en plus de l'isolation base).
 - Le scheduler PROD **active l'automatisation facturation/renouvellement** (jobs quotidiens) : comportement produit attendu. Aucun paiement réel déclenché par cette livraison ; vérification faite via `schedule:list` (lecture seule), exécution réelle testée uniquement sur staging (Stripe sandbox).
 - Testé sur **staging (web3)** avant **PROD (web2)**, via le pipeline GitHub Actions existant.
+
+## ADR-739 — Source unique de scheduler : cron ISPConfig (retrait du timer systemd ADR-738)
+
+**Date** : 2026-11-08
+**Contexte** : L'ajout d'un scheduler systemd par env (ADR-738) reposait sur un **faux négatif d'audit** (« scheduler PROD absent » — le glob `/etc/cron.d/*leezr*/*schedule*` avait manqué `/etc/cron.d/ispconfig`). En réalité, un **cron ISPConfig par site** existait déjà et exécutait `schedule:run` indépendamment pour web2 (PROD) et web3 (DEV) : `* * * * * web2 /usr/bin/php8.4 /var/www/clients/client1/web2/current/artisan schedule:run` (+ web3), prouvé par les logs `billing:renew` quotidiens (renewed:0, deferred:1, aucun prélèvement). Le timer systemd créait donc une **seconde** source de `schedule:run`/minute → risque de double exécution (double facturation/dunning), atténué mais non garanti par les `->withoutOverlapping()`.
+**Décision** : **une seule source de `schedule:run` par environnement = le cron ISPConfig**. Retirer de `deploy/deploy_release.sh` la création des timers systemd scheduler et, à la place, **supprimer idempotemment** les unités `leezr-scheduler-web2/web3` (.timer + .service) à chaque déploiement. **Le namespacing des workers (ADR-738) est conservé** (il corrigeait un vrai défaut).
+**Conséquences** :
+- Plus de double `schedule:run` ; le cron ISPConfig reste l'unique déclencheur, inchangé, indépendant par env.
+- Workers PROD/DEV toujours namespacés et actifs (non impactés).
+- Le prochain déploiement de chaque branche retire automatiquement les timers redondants (pas de régression, auto-nettoyant). Billing non interrompu, aucune donnée client modifiée, aucun paiement.

@@ -340,49 +340,23 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$QUEUE_DEFAULT_SERVICE" 2>/dev/null || true
 log "  Default queue worker service configured ($QUEUE_DEFAULT_SERVICE)"
 
-# ─── [6.7/9] Setup scheduler (systemd timer) — ADR-738 ──────────
-# Independent per-env cron driver. Runs `schedule:run` every minute
-# against THIS env's current symlink. All scheduled tasks already
-# guard with ->withoutOverlapping() (routes/console.php), so a
-# per-minute oneshot is safe. Legacy envs had NO scheduler at all.
-log "→ [6.7/9] Setup scheduler (systemd timer)"
-SCHED_SERVICE="leezr-scheduler-${ENV_TAG}"
-
-cat > /tmp/${SCHED_SERVICE}.service <<SEOF
-[Unit]
-Description=Leezr Scheduler ($ENV_TAG / $BRANCH)
-After=network.target
-
-[Service]
-Type=oneshot
-User=$VHOST_USER
-Group=$VHOST_GROUP
-WorkingDirectory=$CURRENT_LINK
-ExecStart=$PHP_BIN $CURRENT_LINK/artisan schedule:run
-StandardOutput=append:$SHARED_DIR/storage/logs/scheduler.log
-StandardError=append:$SHARED_DIR/storage/logs/scheduler.log
-SEOF
-
-cat > /tmp/${SCHED_SERVICE}.timer <<TEOF
-[Unit]
-Description=Leezr Scheduler timer ($ENV_TAG) — schedule:run every minute
-
-[Timer]
-OnCalendar=*:0/1
-AccuracySec=10s
-Persistent=false
-Unit=${SCHED_SERVICE}.service
-
-[Install]
-WantedBy=timers.target
-TEOF
-
-sudo cp /tmp/${SCHED_SERVICE}.service /etc/systemd/system/${SCHED_SERVICE}.service
-sudo cp /tmp/${SCHED_SERVICE}.timer   /etc/systemd/system/${SCHED_SERVICE}.timer
-sudo systemctl daemon-reload
-sudo systemctl enable "${SCHED_SERVICE}.timer" 2>/dev/null || true
-sudo systemctl start  "${SCHED_SERVICE}.timer" 2>/dev/null || true
-log "  Scheduler timer configured + started (${SCHED_SERVICE}.timer)"
+# ─── [6.7/9] Remove redundant systemd scheduler — ADR-739 ───────
+# schedule:run is driven by the per-site ISPConfig cron (one per env,
+# runs as the web user). The systemd scheduler timer added in ADR-738
+# DUPLICATED it (two schedule:run/min → double-run risk on billing).
+# Remove it idempotently; the namespaced WORKERS above are kept.
+# ISPConfig cron remains the SINGLE scheduler source per env.
+log "→ [6.7/9] Remove redundant systemd scheduler (ISPConfig cron = single source)"
+for sched in "leezr-scheduler-${ENV_TAG}.timer" "leezr-scheduler-${ENV_TAG}.service"; do
+  if systemctl cat "$sched" &>/dev/null; then
+    sudo systemctl stop "$sched" 2>/dev/null || true
+    sudo systemctl disable "$sched" 2>/dev/null || true
+    sudo rm -f "/etc/systemd/system/${sched}" 2>/dev/null || true
+    sudo systemctl reset-failed "$sched" 2>/dev/null || true
+    log "  Removed redundant scheduler unit: ${sched}"
+  fi
+done
+sudo systemctl daemon-reload 2>/dev/null || true
 
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"
