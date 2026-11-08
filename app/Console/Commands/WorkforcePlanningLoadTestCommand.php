@@ -3,9 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Core\Jobdomains\Jobdomain;
+use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Markets\Market;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Modules\CompanyModule;
+use App\Core\Modules\CompanyModuleActivationReason;
+use App\Core\Modules\ModuleActivationEngine;
+use App\Core\Modules\ModuleGate;
 use Database\Seeders\LeaveTypeSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
@@ -171,7 +176,7 @@ class WorkforcePlanningLoadTestCommand extends Command
         Model::unguard();
 
         // Socle structurel (comme les tests) : jobdomain + market doivent exister.
-        $jobdomain = Jobdomain::firstOrCreate(
+        Jobdomain::firstOrCreate(
             ['key' => 'logistique'],
             ['label' => 'Logistique', 'default_modules' => [], 'is_active' => true],
         );
@@ -181,7 +186,7 @@ class WorkforcePlanningLoadTestCommand extends Command
                 'vat_rate_bps' => 2000, 'dial_code' => '+33', 'flag_code' => 'fr', 'flag_svg' => ''],
         );
 
-        $recap = DB::transaction(function () use ($n, $slug, $jobdomain) {
+        $recap = DB::transaction(function () use ($n, $slug) {
             // 1) Company isolée.
             $company = Company::create([
                 'name' => "[M6E LOAD] {$n} collaborateurs",
@@ -193,8 +198,15 @@ class WorkforcePlanningLoadTestCommand extends Command
                 'address_country_code' => 'FR',
                 'week_start_day' => 1, // lundi — semaine déterministe
             ]);
-            $company->jobdomains()->syncWithoutDetaching([$jobdomain->id]);
             $cid = $company->id;
+
+            // Provisionnement IDENTIQUE à l'inscription réelle (RegisterCompanyUseCase ~L83) :
+            // active les modules par défaut du jobdomain + rôles company + presets + dashboard.
+            JobdomainGate::assignToCompany($company, 'logistique');
+
+            // Les modules Workforce ne sont PAS des défauts du jobdomain logistique → activation explicite
+            // des addons exigés par la recette perf (sinon 403 "Module not active" côté API planning).
+            $modules = $this->ensureWorkforceModules($company);
 
             // Types de congés (requis : leave_type_id NOT NULL sur les absences).
             LeaveTypeSeeder::seedForCompany($cid, 'FR');
@@ -234,6 +246,7 @@ class WorkforcePlanningLoadTestCommand extends Command
                 'coverage_requirements' => $reqCount,
                 'departments' => count($departments),
                 'locations' => count($locations),
+                'modules' => $modules,
             ];
         });
 
@@ -255,7 +268,55 @@ class WorkforcePlanningLoadTestCommand extends Command
             ['Besoins de couverture', $recap['coverage_requirements']],
         ]);
 
+        $this->line('Modules Workforce (ModuleGate::isActive) :');
+        foreach ($recap['modules'] as $key => $active) {
+            $this->line("  - {$key} : ".($active ? '<info>actif</info>' : '<error>INACTIF</error>'));
+        }
+        if (in_array(false, $recap['modules'], true)) {
+            $this->error('ATTENTION : au moins un module requis est INACTIF — la recette perf renverra 403.');
+
+            return self::FAILURE;
+        }
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Active les modules Workforce exigés par la recette (workforce, workforce_planning, workforce_leave).
+     * Chemin normal : ModuleActivationEngine::enable (cascade des `requires` + raisons). Fallback défensif
+     * (comme ModuleEntitlementEnforcementTest) si l'engine refuse. Retourne l'état isActive final par module.
+     *
+     * @return array<string,bool>
+     */
+    private function ensureWorkforceModules(Company $company): array
+    {
+        $required = ['workforce', 'workforce_planning', 'workforce_leave'];
+
+        foreach ($required as $key) {
+            $result = ModuleActivationEngine::enable($company, $key);
+            if (($result['success'] ?? false) !== true) {
+                // Fallback : activation directe (raison + cache) si l'engine refuse l'activation.
+                CompanyModuleActivationReason::firstOrCreate([
+                    'company_id' => $company->id,
+                    'module_key' => $key,
+                    'reason' => CompanyModuleActivationReason::REASON_DIRECT,
+                    'source_module_key' => null,
+                ]);
+                CompanyModule::updateOrCreate(
+                    ['company_id' => $company->id, 'module_key' => $key],
+                    ['is_enabled_for_company' => true],
+                );
+            }
+        }
+
+        // Vérification finale : la relation jobdomain peut être en cache → on la rafraîchit.
+        $company->unsetRelation('jobdomain');
+        $status = [];
+        foreach ($required as $key) {
+            $status[$key] = ModuleGate::isActive($company, $key);
+        }
+
+        return $status;
     }
 
     // ───────────────────────────────────────────────── seed helpers ──

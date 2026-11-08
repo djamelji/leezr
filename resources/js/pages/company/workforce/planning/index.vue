@@ -719,6 +719,28 @@ const groupedRows = computed(() => {
 
   return out
 })
+
+// M6.E perf — à fort effectif, le coût de rendu est la MÉGA-TABLE (100 lignes × 7 jours montées d'un bloc).
+// Les lignes d'un groupe REPLIÉ ne sont plus rendues (DOM retiré, pas un simple v-show) → rendu initial =
+// en-têtes d'équipe seulement, expansion à la demande. Sans virtualisation, actions/DnD intacts une fois déplié.
+const visibleRowsOf = group => (group.label && isGroupCollapsed(group.key)) ? [] : group.rows
+
+// Repli AUTO des équipes au-delà du seuil (défaut = replié) : rend le palier 100 collaborateurs fluide.
+// En recherche active, tout est déplié (les résultats doivent rester visibles). Respecte ensuite les
+// bascules manuelles (ne re-replie que si l'ensemble des équipes change).
+const COLLAPSE_THRESHOLD = 60
+const autoCollapsedSig = ref(null)
+watch([groupedRows, rowSearch], ([groups, q]) => {
+  if (q) { if (collapsedGroups.value.size) collapsedGroups.value = new Set(); autoCollapsedSig.value = null; return }
+  const labeled = groups.filter(g => g.label)
+  const total = labeled.reduce((n, g) => n + g.count, 0)
+  const sig = labeled.map(g => g.key).join(',')
+  if (total > COLLAPSE_THRESHOLD && labeled.length >= 2 && autoCollapsedSig.value !== sig) {
+    collapsedGroups.value = new Set(labeled.map(g => g.key))
+    autoCollapsedSig.value = sig
+  }
+}, { immediate: true })
+
 const groupHours = rows => {
   let mins = 0
   rows.forEach(r => Object.values(r.shifts || {}).forEach(list => list.filter(s => s.status !== 'cancelled').forEach(s => {
@@ -1055,6 +1077,17 @@ const templateHex = tpl => tpl?.color || '#8691a8'
 const locationName = id => store.allLocations.find(l => l.id === id)?.name
 
 // ── État du drag ──
+// M6.E perf — menu contextuel de shift PARTAGÉ (1 instance pour toute la grille). Ouvert au clic d'un
+// activateur léger ; positionné aux coordonnées du clic. Réduit massivement le coût de rendu à fort effectif.
+const shiftMenuOpen = ref(false)
+const shiftMenuTarget = ref([0, 0])
+const shiftMenuCtx = ref({ shift: null, row: null, dayIdx: null })
+const openShiftMenu = (shift, row, dayIdx, ev) => {
+  shiftMenuCtx.value = { shift, row, dayIdx }
+  shiftMenuTarget.value = [ev.clientX, ev.clientY]
+  shiftMenuOpen.value = true
+}
+
 const drag = ref(null)              // { kind:'template'|'shift', label, color, tpl?, shift?, row? }
 const dragGhost = reactive({ x: 0, y: 0 })
 const dragTarget = ref(null)        // { employeeId, date, dayIdx }
@@ -2685,13 +2718,13 @@ watch(activeTab, tab => {
         class="d-flex align-center gap-1"
         data-test="plan-shared-nav"
       >
-        <VBtn icon variant="text" size="small" data-test="plan-nav-prev" @click="planningNav(-1)">
+        <VBtn icon variant="text" size="small" data-test="plan-nav-prev" :aria-label="$t('common.previous', 'Précédent')" @click="planningNav(-1)">
           <VIcon icon="tabler-chevron-left" />
         </VBtn>
         <span class="text-body-1 font-weight-medium text-capitalize" style="min-inline-size: 180px; text-align: center" data-test="plan-nav-label">
           {{ anchorLabel }}
         </span>
-        <VBtn icon variant="text" size="small" data-test="plan-nav-next" @click="planningNav(1)">
+        <VBtn icon variant="text" size="small" data-test="plan-nav-next" :aria-label="$t('common.next', 'Suivant')" @click="planningNav(1)">
           <VIcon icon="tabler-chevron-right" />
         </VBtn>
         <VBtn variant="tonal" size="small" class="ms-1" data-test="plan-nav-today" @click="planningNav(0)">
@@ -3581,6 +3614,7 @@ watch(activeTab, tab => {
                       variant="text"
                       size="x-small"
                       data-test="cov-collapse"
+                      :aria-label="$t('planning.coverage.toggle', 'Replier/déplier la couverture')"
                       @click="coverageCollapsed = !coverageCollapsed"
                     >
                       <VIcon :icon="coverageCollapsed ? 'tabler-chevron-right' : 'tabler-chevron-down'" size="16" />
@@ -3671,6 +3705,7 @@ watch(activeTab, tab => {
                     size="x-small"
                     class="cov-add-btn"
                     :title="$t('planning.coverage.addHere')"
+                    :aria-label="$t('planning.coverage.addHere')"
                     @click="openCovEdit(null, line, date)"
                   >
                     <VIcon icon="tabler-plus" size="13" />
@@ -3749,8 +3784,7 @@ watch(activeTab, tab => {
                   </th>
                 </tr>
                 <tr
-                  v-for="row in group.rows"
-                  v-show="!group.label || !isGroupCollapsed(group.key)"
+                  v-for="row in visibleRowsOf(group)"
                   :key="row.employee_id"
                   class="plan-emp-row"
                 >
@@ -3834,6 +3868,7 @@ watch(activeTab, tab => {
                         density="compact"
                         hide-details
                         class="plan-shift__check"
+                        :aria-label="$t('planning.selectDraft', 'Sélectionner le brouillon')"
                         @update:model-value="toggleShiftSelection(shift.id)"
                         @click.stop
                       />
@@ -3877,82 +3912,22 @@ watch(activeTab, tab => {
                           ><VIcon icon="tabler-map-pin" size="9" /> {{ locationName(shift.work_location_id) }}</span>
                         </span>
                       </button>
-                      <!-- Quick actions menu -->
-                      <VMenu location="bottom end">
-                        <template #activator="{ props: menuProps }">
-                          <VBtn
-                            v-bind="menuProps"
-                            icon
-                            variant="text"
-                            size="x-small"
-                            class="plan-shift__menu"
-                            data-test="shift-menu"
-                            @click.stop
-                          >
-                            <VIcon
-                              icon="tabler-dots-vertical"
-                              size="14"
-                            />
-                          </VBtn>
-                        </template>
-                        <VList density="compact">
-                          <VListItem
-                            prepend-icon="tabler-timeline"
-                            :title="$t('planning.activities.dayDetail')"
-                            data-test="open-day-detail"
-                            @click="openActivityDay(shift, row)"
-                          />
-                          <VListItem
-                            prepend-icon="tabler-edit"
-                            :title="$t('common.edit')"
-                            @click="openEditShift(shift)"
-                          />
-                          <VListItem
-                            prepend-icon="tabler-copy"
-                            :title="$t('planning.duplicateShift.menu')"
-                            @click="duplicateShiftAction(shift)"
-                          />
-                          <VListItem
-                            prepend-icon="tabler-clipboard-plus"
-                            :title="$t('planning.copy.copyShift')"
-                            data-test="copy-shift"
-                            @click="copyShiftToClipboard(shift)"
-                          />
-                          <VListItem
-                            v-if="row.shifts[dayIdx]?.length > 1"
-                            prepend-icon="tabler-clipboard-list"
-                            :title="$t('planning.copy.copyDay')"
-                            @click="copyDayToClipboard(row, dayIdx)"
-                          />
-                          <VListItem
-                            v-if="shift.status === 'draft'"
-                            prepend-icon="tabler-send"
-                            :title="$t('planning.publish')"
-                            @click="openPublish([shift.id])"
-                          />
-                          <VListItem
-                            v-if="shift.status === 'published' && shiftHasConfirmedAbsence(row.employee_id, dayIdx)"
-                            prepend-icon="tabler-user-plus"
-                            :title="$t('planning.replacement.action')"
-                            data-test="find-replacement"
-                            class="text-warning"
-                            @click="openReplacement(shift)"
-                          />
-                          <VListItem
-                            v-if="shift.status === 'published'"
-                            prepend-icon="tabler-ban"
-                            :title="$t('common.cancel')"
-                            @click="openCancelShift(shift)"
-                          />
-                          <VListItem
-                            v-if="shift.status === 'draft'"
-                            prepend-icon="tabler-trash"
-                            :title="$t('common.delete')"
-                            class="text-error"
-                            @click="openDeleteShift(shift)"
-                          />
-                        </VList>
-                      </VMenu>
+                      <!-- M6.E perf : activateur léger → ouvre le MENU CONTEXTUEL PARTAGÉ (1 instance pour
+                           toute la grille au lieu d'un VMenu par shift ×N). data-test et actions inchangés. -->
+                      <VBtn
+                        icon
+                        variant="text"
+                        size="x-small"
+                        class="plan-shift__menu"
+                        data-test="shift-menu"
+                        :aria-label="$t('planning.shiftActions', 'Actions du créneau')"
+                        @click.stop="openShiftMenu(shift, row, dayIdx, $event)"
+                      >
+                        <VIcon
+                          icon="tabler-dots-vertical"
+                          size="14"
+                        />
+                      </VBtn>
                     </div>
                   </template>
                   <template v-else>
@@ -3966,6 +3941,7 @@ watch(activeTab, tab => {
                       class="planning-add-btn"
                       :loading="copyBusy"
                       :title="$t('planning.copy.pasteHere')"
+                      :aria-label="$t('planning.copy.pasteHere')"
                       data-test="paste-cell"
                       @click.stop="pasteOnCell(row.employee_id, date)"
                     >
@@ -3979,6 +3955,7 @@ watch(activeTab, tab => {
                       size="x-small"
                       color="secondary"
                       class="planning-add-btn"
+                      :aria-label="$t('planning.addShiftHere', 'Ajouter un créneau')"
                       @click.stop="onEmptyCell(row.employee_id, date)"
                     >
                       <VIcon
@@ -4252,6 +4229,75 @@ watch(activeTab, tab => {
       </VWindowItem>
 
     </VWindow>
+
+    <!-- M6.E perf — MENU CONTEXTUEL DE SHIFT PARTAGÉ (1 instance) : positionné au clic, piloté par shiftMenuCtx.
+         Remplace un VMenu par shift (allège massivement la grille à fort effectif). Actions/data-test inchangés. -->
+    <VMenu
+      v-model="shiftMenuOpen"
+      :target="shiftMenuTarget"
+      location="bottom end"
+    >
+      <VList
+        v-if="shiftMenuCtx.shift"
+        density="compact"
+      >
+        <VListItem
+          prepend-icon="tabler-timeline"
+          :title="$t('planning.activities.dayDetail')"
+          data-test="open-day-detail"
+          @click="openActivityDay(shiftMenuCtx.shift, shiftMenuCtx.row)"
+        />
+        <VListItem
+          prepend-icon="tabler-edit"
+          :title="$t('common.edit')"
+          @click="openEditShift(shiftMenuCtx.shift)"
+        />
+        <VListItem
+          prepend-icon="tabler-copy"
+          :title="$t('planning.duplicateShift.menu')"
+          @click="duplicateShiftAction(shiftMenuCtx.shift)"
+        />
+        <VListItem
+          prepend-icon="tabler-clipboard-plus"
+          :title="$t('planning.copy.copyShift')"
+          data-test="copy-shift"
+          @click="copyShiftToClipboard(shiftMenuCtx.shift)"
+        />
+        <VListItem
+          v-if="shiftMenuCtx.row?.shifts?.[shiftMenuCtx.dayIdx]?.length > 1"
+          prepend-icon="tabler-clipboard-list"
+          :title="$t('planning.copy.copyDay')"
+          @click="copyDayToClipboard(shiftMenuCtx.row, shiftMenuCtx.dayIdx)"
+        />
+        <VListItem
+          v-if="shiftMenuCtx.shift.status === 'draft'"
+          prepend-icon="tabler-send"
+          :title="$t('planning.publish')"
+          @click="openPublish([shiftMenuCtx.shift.id])"
+        />
+        <VListItem
+          v-if="shiftMenuCtx.shift.status === 'published' && shiftHasConfirmedAbsence(shiftMenuCtx.row.employee_id, shiftMenuCtx.dayIdx)"
+          prepend-icon="tabler-user-plus"
+          :title="$t('planning.replacement.action')"
+          data-test="find-replacement"
+          class="text-warning"
+          @click="openReplacement(shiftMenuCtx.shift)"
+        />
+        <VListItem
+          v-if="shiftMenuCtx.shift.status === 'published'"
+          prepend-icon="tabler-ban"
+          :title="$t('common.cancel')"
+          @click="openCancelShift(shiftMenuCtx.shift)"
+        />
+        <VListItem
+          v-if="shiftMenuCtx.shift.status === 'draft'"
+          prepend-icon="tabler-trash"
+          :title="$t('common.delete')"
+          class="text-error"
+          @click="openDeleteShift(shiftMenuCtx.shift)"
+        />
+      </VList>
+    </VMenu>
 
     <!-- ═══════════════════════════════════════════════════════ -->
     <!-- DRAWERS & DIALOGS                                       -->
