@@ -18,7 +18,9 @@
 | §2 | `pending_payment` donne accès au métier | **RÉSOLU** | `restrictsBusinessAccess()` coupe désormais `pending_payment`+`rejected` ; onboarding/régularisation préservés (allow-list) ; plans gratuits=`active` non impactés. Tests : `SubscriptionBusinessAccessContractTest`, suite commerciale 1347 verts. |
 | §3 | Jobs métier exécutés après suspension | **RÉSOLU** | `SuspensionGuard` appliqué en tête de `ProcessWorkflowJob` + `ProcessDocumentAiJob` ; billing/dunning/plateforme exemptés. Test : `SuspendedJobExecutionGuardTest` (job en file avant suspension → refusé après). |
 | §7 | Repli auto grille à 100 collab | **RÉSOLU** | Vérifié : n'empêche aucune opération (expansion à la demande, recherche déplie ; M1-M5/M6 e2e 34+16 verts à ≤50 collab dépliés). |
-| §4 | **Recette Stripe sandbox réelle** | **BLOQUANT** | `STRIPE_KEY/SECRET/WEBHOOK_SECRET` **absents de `.env`** → checkout/webhook/ledger/réconciliation **non exécutés de bout en bout**. Les tests Stripe (fake-adapter + HMAC réel) couvrent le rail unitairement, **pas** une recette sandbox réseau. **Non simulé** (conforme §4). |
+| §4 | **Recette Stripe sandbox réelle** | **RÉSOLU** | ⚠️ **Correction ADR-737** : la config Stripe **existait déjà** (`PaymentModuleSeeder`, ADR-301) — clés **test chiffrées en base** (`platform_payment_modules.credentials`), module **actif**, compte `acct_1T7WVLDI550p59Yn` (FR, test). RR-V1 avait regardé `.env STRIPE_KEY` (fallback vide) au lieu de la source primaire (DB). **Recette RÉELLE exécutée** (API Stripe test, 13/13) : paiement accepté (PI réel `succeeded`), refusé, retry, facture/Payment/ledger, no-access-sans-paiement. Webhooks : signature/duplication/traitement verts. |
+| §4b | **Auto-charge renouvellement (`collectInvoice`)** | **BLOQUANT (découvert)** | La recette a révélé que `InvoiceAutoChargeService` pour une sub **stripe** appelle `collectInvoice` → `callStripeCreatePaymentIntent` crée un PaymentIntent off_session **sans `payment_method` explicite** (un PI n'hérite pas de `invoice_settings.default_payment_method`) → **échoue en Stripe test réel**. Le chemin PM-explicite (`chargeInvoiceWithPaymentMethod`, utilisé par l'inscription) **réussit**. ⇒ encaissement d'inscription OK, **auto-renouvellement à corriger** (passer la PM par défaut au PI). Correctif adapter hors périmètre de ce lot (recette/secrets/doc). |
+| §4c | **Secrets Stripe en dur (seeder)** | **RÉSOLU** | `PaymentModuleSeeder` ne contient plus de clés en dur (env-only + préservation de la config chiffrée existante, pas de clobber). Vérifié : re-seed conserve la config active. |
 | §5 | Isolation tenant — **worker persistant staging** | **BLOQUANT (infra)** | Prouvé sur DEV (`tenancy:worker-proof`, queue database) mais **Horizon/redis-queue persistant non validé en staging** (pas de `.env.staging` ni worker persistant accessible). Procédure consignée (ADR-733.2 §5quinquies). |
 | §5b | Isolation — SSE après révocation membership | **ACCEPTÉ AVEC JUSTIFICATION** | Inter-tenant prouvé sûr + fuite intra-tenant corrigée (ADR-733.2). Révocation en cours de flux : fenêtre ≤ `stream_timeout` 300 s, intra-tenant, pas d'escalade. Re-check périodique = amélioration future. |
 | §5c | Isolation — `DB::table('<tenant>')` direct | **ACCEPTÉ AVEC JUSTIFICATION** | Occurrences filtrées manuellement par `company_id` ; gardes CI existantes (`TenantScopeBypassGuardTest` withoutGlobalScopes, `ControllerSizeInvariantTest` no-DB-in-controller). Règle CI dédiée `DB::table` = résiduel documenté. |
@@ -28,7 +30,7 @@
 | §7c | Stall intermittent `/api/runtime-error` | **ACCEPTÉ AVEC JUSTIFICATION** | Artefact de harnais (erreur JS transitoire + report qui pend) sous bascule company rapide automatisée ; grille réellement visible ~32 ms. Non reproduit en usage réel. À investiguer hors release. |
 | §7d | Parcours mobile 12-points complet | **ACCEPTÉ AVEC JUSTIFICATION** | Couverture ciblée 390 px (m6c/m6d verts) + réserve desktop-only de la grille. Matrice 360/390/430 + tablette exhaustive = recette dédiée. |
 
-**Synthèse : 3 RÉSOLU · 7 ACCEPTÉ AVEC JUSTIFICATION · 2 BLOQUANT (dont 1 externe Stripe, 1 infra staging).**
+**Synthèse (révisée ADR-737) : 5 RÉSOLU · 7 ACCEPTÉ AVEC JUSTIFICATION · 2 BLOQUANT** — le blocage Stripe « clés absentes » était un **faux négatif** (config déjà en base, recette réelle verte) ; **nouveau blocage découvert** : auto-charge de renouvellement (`collectInvoice` sans PM). 2 BLOQUANT = §4b auto-renouvellement + §5 worker staging.
 
 ## 2. Correctifs réalisés (ce lot, DEV)
 
@@ -101,9 +103,11 @@ Cf. tableau §1 : Stripe sandbox (BLOQUANT externe), worker persistant staging (
 
 **Justification (tests verts ≠ autorisation commerciale) :** les blocages *fixables sur DEV* sont **RÉSOLUS** (accès pending_payment, jobs après suspension) et le socle est vert (3920 PHPUnit, 34+16 e2e, build clean). **MAIS** le critère final — « facturer correctement un abonnement en environnement de test » — **n'est pas prouvé de bout en bout** : la recette **Stripe sandbox réelle** n'a pas pu être exécutée (clés absentes, **non simulée** conformément à la consigne), et l'**isolation worker persistant** n'a pas été validée en staging réel. Ce sont deux prérequis **externes/infra**, pas des défauts de code.
 
-**Conditions de passage à GO PROD :**
-1. Fournir des **clés Stripe sandbox** + exécuter la recette §4 complète (checkout, carte test, accepté/refusé, webhook signé/dupliqué, facture, ledger, entitlement, réconciliation, régularisation) → verte.
-2. Valider l'**isolation worker persistant** en staging (Horizon/redis-queue) via la procédure ADR-733.2.
-3. (Recommandé) activer le mode strict en staging, traiter la règle CI `DB::table`, et la passe de contraste Postes.
+**Mise à jour ADR-737 :** la recette Stripe sandbox **a été exécutée** (clés test déjà présentes en base, valides) — accepté/refusé/retry + facture/ledger/Payment + webhooks signature/duplication/traitement = **verts**. Le blocage §4 est donc **levé**. Restent **2 blocages** :
 
-Une fois (1) et (2) verts, le verdict peut basculer **GO** : le socle commercial et produit est prêt côté code et testé sur DEV.
+**Conditions de passage à GO PROD :**
+1. **§4b — Corriger l'auto-charge de renouvellement** : `collectInvoice` doit passer la PM par défaut au PaymentIntent off_session (sinon les renouvellements automatiques échouent en Stripe réel). Fix adapter + recette renouvellement verte.
+2. **§5 — Valider l'isolation worker persistant** en staging (Horizon/redis-queue) via la procédure ADR-733.2.
+3. (Recommandé) mode strict en staging, règle CI `DB::table`, contraste Postes ; configurer les clés Stripe test en `.env` (hors source) sur les environnements recréés.
+
+Une fois (1) et (2) verts, le verdict peut basculer **GO** : le socle commercial (inscription→paiement→droits→usage→incident→régularisation) est prouvé sur DEV avec Stripe sandbox réel, hormis l'auto-renouvellement.

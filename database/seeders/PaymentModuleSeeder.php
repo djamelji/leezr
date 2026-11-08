@@ -47,23 +47,37 @@ class PaymentModuleSeeder extends Seeder
 
         // Stripe payment module (test mode for dev)
         if (app()->environment('local', 'testing')) {
-            // ADR-301: Stripe test credentials hardcoded for dev/test idempotency
+            // ADR-737: AUCUN secret Stripe en dur. Les credentials viennent de l'ENV uniquement
+            // (STRIPE_TEST_PUBLISHABLE_KEY / STRIPE_TEST_SECRET_KEY / STRIPE_WEBHOOK_SECRET).
+            // Si l'ENV est absent, on PRÉSERVE la config chiffrée déjà en base (pas de clobber) ;
+            // sur une base vierge sans ENV, le module reste installé mais non configuré (à renseigner).
+            $existing = PlatformPaymentModule::where('provider_key', 'stripe')->first();
+            $envCreds = array_filter([
+                'test_publishable_key' => env('STRIPE_TEST_PUBLISHABLE_KEY'),
+                'test_secret_key' => env('STRIPE_TEST_SECRET_KEY'),
+                'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+            ], fn ($v) => $v !== null && $v !== '');
+
+            $stripeAttrs = [
+                'name' => 'Stripe',
+                'description' => 'Stripe payment processing — cards, SEPA, Apple Pay.',
+                'is_installed' => true,
+                'is_active' => true,
+                'health_status' => 'healthy',
+                'sort_order' => 1,
+            ];
+            if (! empty($envCreds)) {
+                // ENV fourni → (re)configurer en fusionnant avec l'existant.
+                $stripeAttrs['credentials'] = array_merge(['mode' => 'test'], $existing?->credentials ?? [], $envCreds);
+            } elseif (! $existing) {
+                // Base vierge + pas d'ENV → module installé, credentials vides (misconfigured, à renseigner).
+                $stripeAttrs['credentials'] = ['mode' => 'test'];
+            }
+            // Sinon (existant + pas d'ENV) : on NE touche PAS aux credentials → préservation de la config chiffrée.
+
             $stripeModule = PlatformPaymentModule::updateOrCreate(
                 ['provider_key' => 'stripe'],
-                [
-                    'name' => 'Stripe',
-                    'description' => 'Stripe payment processing — cards, SEPA, Apple Pay.',
-                    'is_installed' => true,
-                    'is_active' => true,
-                    'credentials' => [
-                        'mode' => 'test',
-                        'test_publishable_key' => env('STRIPE_TEST_PUBLISHABLE_KEY', 'pk_test_51T7WVLDI550p59YnWzGYzASGOQvruzkxPZtfxcR7GQ4vUWFndjE8MJyOra9AcFZsaOtorPg3HPaZ9IYLjmOqq2j100fNenvCy5'),
-                        'test_secret_key' => env('STRIPE_TEST_SECRET_KEY', 'sk_test_51T7WVLDI550p59Yntb7AnyRUcPgC10oJFlbDJcMoWBtlbktV7R18OTXtfKlOsepsrjsyyK6N5Jso640MP9WN2S8b00l9tihF6X'),
-                        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET', 'whsec_y5DCO0mD6OzBbSAcUeky3eGfwHKTlsfc'),
-                    ],
-                    'health_status' => 'healthy',
-                    'sort_order' => 1,
-                ],
+                $stripeAttrs,
             );
 
             // Default rule: card via Stripe
