@@ -204,10 +204,16 @@ if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "production
   fi
   chmod 600 "$BK_FILE"
   gzip -t "$BK_FILE" || { log "ERROR: backup gzip corrompu — ABORT"; exit 1; }
-  # Preuve de structure SQL EXPLOITABLE (pas un simple gzip non vide) : en-tête dump + ≥1 CREATE TABLE.
-  if ! gunzip -c "$BK_FILE" | head -c 200000 | grep -q "CREATE TABLE"; then
-    log "ERROR: backup sans structure SQL attendue (aucun CREATE TABLE) — ABORT"; exit 1
+  # Preuve de structure SQL EXPLOITABLE (pas un simple gzip non vide), SANS early-close de pipe
+  # (grep -c lit tout le flux → pas de SIGPIPE/pipefail parasite) : ≥1 CREATE TABLE ET marqueur de fin.
+  CT_COUNT=$(gzip -dc "$BK_FILE" 2>/dev/null | grep -c 'CREATE TABLE' || true)
+  if [ "${CT_COUNT:-0}" -lt 1 ]; then
+    log "ERROR: backup sans structure SQL attendue (0 CREATE TABLE) — ABORT"; exit 1
   fi
+  if ! gzip -dc "$BK_FILE" 2>/dev/null | tail -3 | grep -q 'Dump completed'; then
+    log "ERROR: backup incomplet (marqueur mysqldump 'Dump completed' absent) — ABORT"; exit 1
+  fi
+  log "  Structure vérifiée: $CT_COUNT tables + dump complet"
   log "  Backup vérifié: $(basename "$BK_FILE") ($(du -h "$BK_FILE" | cut -f1)) — rétention 10 (hors webroot, chmod 600)"
   ls -1t "$BK_DIR"/pre-deploy_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
 
