@@ -261,15 +261,33 @@ if [ -d "$SEED_DIR" ]; then
   log "  Fixed seed document permissions"
 fi
 
-# ─── [6/9] Setup AI queue worker (systemd) — ADR-416 ─────────────
+# ─── [6/9] Setup AI queue worker (systemd) — ADR-416 / ADR-738 ───
+# P0 ISOLATION (ADR-738): systemd units are namespaced PER ENVIRONMENT
+# (web2=prod, web3=dev) so a deploy to one env NEVER clobbers the
+# other's workers/scheduler. Previously the units were shared
+# (leezr-queue-ai / leezr-queue-default) → the last deploy won and
+# PROD ended up with no worker. Each env now owns -web2 / -web3 units.
 log "→ [6/9] Setup AI queue worker (systemd)"
-QUEUE_SERVICE="leezr-queue-ai"
+ENV_TAG=$(basename "$APP_PATH")          # web2 (prod) | web3 (dev)
+QUEUE_SERVICE="leezr-queue-ai-${ENV_TAG}"
 VHOST_USER=$(stat -c '%U' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
 VHOST_GROUP=$(stat -c '%G' "$RELEASES_DIR" 2>/dev/null || echo "www-data")
 
+# One-time migration: remove legacy NON-namespaced units that let web2
+# and web3 overwrite each other (the P0 isolation defect). Safe + idempotent.
+for legacy in leezr-queue-ai leezr-queue-default; do
+  if systemctl list-unit-files 2>/dev/null | grep -q "^${legacy}\.service"; then
+    sudo systemctl stop "$legacy" 2>/dev/null || true
+    sudo systemctl disable "$legacy" 2>/dev/null || true
+    sudo rm -f "/etc/systemd/system/${legacy}.service" 2>/dev/null || true
+    log "  Removed legacy shared unit: ${legacy}.service"
+  fi
+done
+sudo systemctl daemon-reload 2>/dev/null || true
+
 cat > /tmp/${QUEUE_SERVICE}.service <<QEOF
 [Unit]
-Description=Leezr AI Queue Worker ($BRANCH)
+Description=Leezr AI Queue Worker ($ENV_TAG / $BRANCH)
 After=network.target
 
 [Service]
@@ -291,13 +309,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable "$QUEUE_SERVICE" 2>/dev/null || true
 log "  Queue worker service configured ($QUEUE_SERVICE)"
 
-# ─── [6.5/9] Setup default queue worker (systemd) — ADR-431b ────
+# ─── [6.5/9] Setup default queue worker (systemd) — ADR-431b/738 ─
 log "→ [6.5/9] Setup default queue worker (systemd)"
-QUEUE_DEFAULT_SERVICE="leezr-queue-default"
+QUEUE_DEFAULT_SERVICE="leezr-queue-default-${ENV_TAG}"
 
 cat > /tmp/${QUEUE_DEFAULT_SERVICE}.service <<QDEOF
 [Unit]
-Description=Leezr Default Queue Worker
+Description=Leezr Default Queue Worker ($ENV_TAG / $BRANCH)
 After=network.target
 
 [Service]
@@ -318,6 +336,50 @@ sudo cp /tmp/${QUEUE_DEFAULT_SERVICE}.service /etc/systemd/system/${QUEUE_DEFAUL
 sudo systemctl daemon-reload
 sudo systemctl enable "$QUEUE_DEFAULT_SERVICE" 2>/dev/null || true
 log "  Default queue worker service configured ($QUEUE_DEFAULT_SERVICE)"
+
+# ─── [6.7/9] Setup scheduler (systemd timer) — ADR-738 ──────────
+# Independent per-env cron driver. Runs `schedule:run` every minute
+# against THIS env's current symlink. All scheduled tasks already
+# guard with ->withoutOverlapping() (routes/console.php), so a
+# per-minute oneshot is safe. Legacy envs had NO scheduler at all.
+log "→ [6.7/9] Setup scheduler (systemd timer)"
+SCHED_SERVICE="leezr-scheduler-${ENV_TAG}"
+
+cat > /tmp/${SCHED_SERVICE}.service <<SEOF
+[Unit]
+Description=Leezr Scheduler ($ENV_TAG / $BRANCH)
+After=network.target
+
+[Service]
+Type=oneshot
+User=$VHOST_USER
+Group=$VHOST_GROUP
+WorkingDirectory=$CURRENT_LINK
+ExecStart=$PHP_BIN $CURRENT_LINK/artisan schedule:run
+StandardOutput=append:$SHARED_DIR/storage/logs/scheduler.log
+StandardError=append:$SHARED_DIR/storage/logs/scheduler.log
+SEOF
+
+cat > /tmp/${SCHED_SERVICE}.timer <<TEOF
+[Unit]
+Description=Leezr Scheduler timer ($ENV_TAG) — schedule:run every minute
+
+[Timer]
+OnCalendar=*:0/1
+AccuracySec=10s
+Persistent=false
+Unit=${SCHED_SERVICE}.service
+
+[Install]
+WantedBy=timers.target
+TEOF
+
+sudo cp /tmp/${SCHED_SERVICE}.service /etc/systemd/system/${SCHED_SERVICE}.service
+sudo cp /tmp/${SCHED_SERVICE}.timer   /etc/systemd/system/${SCHED_SERVICE}.timer
+sudo systemctl daemon-reload
+sudo systemctl enable "${SCHED_SERVICE}.timer" 2>/dev/null || true
+sudo systemctl start  "${SCHED_SERVICE}.timer" 2>/dev/null || true
+log "  Scheduler timer configured + started (${SCHED_SERVICE}.timer)"
 
 # ─── [7/9] Clear + optimize ─────────────────────────────────────
 log "→ [7/9] Clear caches + optimize"
