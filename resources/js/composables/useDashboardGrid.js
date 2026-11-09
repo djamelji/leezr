@@ -29,6 +29,18 @@ export function useDashboardGrid(gridRef, catalog) {
   // Canonical grid — layout is ALWAYS stored in 12-col coordinates
   const CANONICAL_COLS = 12
 
+  // Priorité d'affichage MOBILE par importance métier (ADR-745). Sur mobile, l'ordre
+  // desktop n'a pas de sens : on surface d'abord les KPI/alertes, puis les synthèses,
+  // puis les analyses lourdes. Appliqué UNIQUEMENT si la disposition contient des clés
+  // connues (dashboard company) → les dashboards plateforme gardent l'interleave existant.
+  // Aucune persistance : priorité dérivée de la clé au rendu, le layout 12-col est intact.
+  const MOBILE_PRIORITY = {
+    'workforce.headcount': 10, 'workforce.clock_live': 20, 'planning.shifts': 30, 'workforce.anomalies': 40,
+    'compliance.rate': 50, 'shipments.overview': 60, 'documents.detail': 70, 'logistics.fleet': 80,
+    'workforce.hours_trend': 90, 'compliance.roles': 100, 'compliance.types': 110,
+    'workforce.timesheet_pending': 15, 'workforce.leave_pending': 25,
+  }
+
   // Visual breakpoint — used ONLY for CSS grid rendering, never for layout mutation
   // 6 cols on mobile/tablet so S widgets (w=3) fit 2 per row on all viewports
   const cols = computed(() => {
@@ -385,8 +397,35 @@ export function useDashboardGrid(gridRef, catalog) {
       }
     }
 
-    // ── Mobile mode: interleave charts (full) and KPI pairs (half) ──
+    // ── Mobile mode: priorité métier (company) OU interleave historique (plateforme) ──
     if (forceH) {
+      // Chemin prioritaire : si la disposition contient des clés connues (company),
+      // placer par importance métier — panneaux larges (w>halfCols) en pleine largeur,
+      // petits KPI (w≤halfCols) appariés 2 par rangée, dans l'ordre de priorité strict.
+      const usePriority = sorted.some(t => MOBILE_PRIORITY[t.key] != null)
+      if (usePriority) {
+        const ordered = [...sorted].sort(
+          (a, b) => (MOBILE_PRIORITY[a.key] ?? 900) - (MOBILE_PRIORITY[b.key] ?? 900) || a.y - b.y || a.x - b.x,
+        )
+        let yy = 0
+        for (let i = 0; i < ordered.length;) {
+          const t = ordered[i]
+          if (t.w > halfCols) {
+            result.push({ ...t, x: 0, y: yy, w: viewCols, h: forceH })
+            yy += forceH; i += 1
+          }
+          else {
+            result.push({ ...t, x: 0, y: yy, w: halfCols, h: forceH })
+            const n = ordered[i + 1]
+            if (n && n.w <= halfCols) { result.push({ ...n, x: halfCols, y: yy, w: halfCols, h: forceH }); i += 2 }
+            else i += 1
+            yy += forceH
+          }
+        }
+
+        return result
+      }
+
       const charts = sorted.filter(t => t.w > 6)   // w>6 → full width (graphiques)
       const kpis = sorted.filter(t => t.w <= 6)    // w<=6 → half width (KPI, paired)
 

@@ -28,7 +28,7 @@ const nextTime = computed(() => {
     <VSkeletonLoader v-if="loading" type="text" class="bg-transparent" />
     <VAlert v-else-if="d.error" type="error" variant="tonal" density="compact" :text="t('workforce.widgets.loadError')" />
 
-    <div v-else class="flex-grow-1 d-flex flex-column gap-3">
+    <div v-else class="flex-grow-1 d-flex flex-column justify-space-between gap-3">
       <!-- Chauffeurs actifs -->
       <div class="d-flex align-center gap-3">
         <VAvatar size="34" variant="tonal" color="info" rounded><VIcon icon="tabler-users" size="18" /></VAvatar>
