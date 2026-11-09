@@ -31,8 +31,14 @@ return [
     \App\Modules\Dashboard\Widgets\ComplianceRolesWidget::class,
     \App\Modules\Dashboard\Widgets\ComplianceTypesWidget::class,
 
-    // Workforce — P1 (ADR-744), server-resolved sur read-models réels
+    // Workforce / Planning — P1 (ADR-744), server-resolved sur données réelles
     \App\Modules\Dashboard\Widgets\WorkforceClockLiveWidget::class,
+    \App\Modules\Dashboard\Widgets\WorkforceHeadcountWidget::class,
+    \App\Modules\Dashboard\Widgets\WorkforceAnomaliesWidget::class,
+    \App\Modules\Dashboard\Widgets\WorkforceTimesheetPendingWidget::class,
+    \App\Modules\Dashboard\Widgets\WorkforceLeavePendingWidget::class,
+    \App\Modules\Dashboard\Widgets\WorkforceHoursTrendWidget::class,
+    \App\Modules\Dashboard\Widgets\PlanningShiftsWidget::class,
 
     // Onboarding + Plan (ADR-372: pipeline-driven, client-resolved)
     \App\Modules\Dashboard\Widgets\OnboardingSetupWidget::class,

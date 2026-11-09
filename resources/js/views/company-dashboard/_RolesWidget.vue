@@ -85,7 +85,7 @@ const rateColor = rate => {
               <span class="font-weight-medium">
                 {{ role.role_name || t('compliance.noRole') }}
               </span>
-              <span class="text-caption text-disabled ms-2">
+              <span class="text-caption text-medium-emphasis ms-2">
                 {{ t('compliance.membersConcerned', { count: role.member_count }) }}
               </span>
             </div>

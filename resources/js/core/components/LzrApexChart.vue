@@ -2,10 +2,19 @@
 // Leezr Premium — graphique ApexCharts theme-aware (Phase 0, ADR-741).
 // Réutilise le pattern _RevenueTrendWidget (useTheme + hexToRgb) ; aucune
 // nouvelle dépendance (vue3-apexcharts déjà installé). Modes S/M/L.
-import { computed } from 'vue'
+import { computed, nextTick, onMounted } from 'vue'
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 import VueApexCharts from 'vue3-apexcharts'
+
+// ApexCharts mesure parfois une largeur nulle quand il est monté dans un conteneur
+// positionné dynamiquement (grille drag/resize) → graphe invisible. On force un
+// recalcul après le montage (ApexCharts écoute l'event resize).
+onMounted(() => {
+  nextTick(() => {
+    setTimeout(() => { try { window.dispatchEvent(new Event('resize')) } catch (e) { /* noop */ } }, 120)
+  })
+})
 
 const props = defineProps({
   type: { type: String, default: 'area' }, // area | line | bar | donut | radial

@@ -39,55 +39,49 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
    */
   function buildSmartDefaultLayout() {
     // Exclude widgets rendered outside the grid (no frontend component)
-    const EXCLUDED_KEYS = new Set(['onboarding.setup'])
+    // onboarding.setup = rendu hors grille. workforce.hours_trend = défaut résiduel
+    // (ApexCharts bar/area ne se dimensionne pas de façon fiable dans la cellule de
+    // grille ; reste disponible via « + Ajouter un widget »). ADR-744.
+    const EXCLUDED_KEYS = new Set(['onboarding.setup', 'workforce.hours_trend'])
 
     const catalog = engine._catalog.value.filter(w => !EXCLUDED_KEYS.has(w.key))
 
-    const kpis = catalog.filter(w => (w.layout?.default_w || 4) <= 4 && (w.layout?.default_h || 4) <= 2)
-    const lists = catalog.filter(w => {
-      const dw = w.layout?.default_w || 4
-      const dh = w.layout?.default_h || 4
+    // Ordre de priorité métier (ADR-744) — cockpit lisible ; clés inconnues en fin.
+    const PRIORITY = [
+      'workforce.headcount', 'workforce.clock_live', 'planning.shifts', 'workforce.timesheet_pending',
+      'workforce.leave_pending', 'workforce.anomalies', 'compliance.rate',
+      'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active',
+      'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today',
+      'compliance.pending', 'compliance.overdue',
+      'workforce.hours_trend', 'compliance.roles', 'compliance.types',
+    ]
+    const rank = k => { const i = PRIORITY.indexOf(k); return i === -1 ? 999 : i }
+    const sorted = [...catalog].sort((a, b) => rank(a.key) - rank(b.key))
 
-      return dw > 4 && dw <= 6 && dh > 2
-    })
-    const banners = catalog.filter(w => (w.layout?.default_w || 4) > 6)
+    const isKpi = w => (w.layout?.default_w || 4) <= 4 && (w.layout?.default_h || 4) <= 2
+    const isBanner = w => (w.layout?.default_w || 4) > 6
+    const isList = w => !isKpi(w) && !isBanner(w)
+
+    const kpis = sorted.filter(isKpi).slice(0, 8)                 // jusqu'à 2 rangées de 4
+    const mids = sorted.filter(w => isList(w) || isBanner(w)).slice(0, 4) // graphes + listes
 
     const layout = []
     let y = 0
-
-    // Row 1: KPIs (up to 4 across)
-    const kpiPicks = kpis.slice(0, 4)
     let x = 0
-
-    for (const w of kpiPicks) {
-      const dw = w.layout?.default_w || 3
+    let rowH = 0
+    const place = w => {
+      const dw = Math.min(w.layout?.default_w || 3, 12)
       const dh = w.layout?.default_h || 2
-
+      if (x + dw > 12) { x = 0; y += rowH; rowH = 0 }
       layout.push({ key: w.key, x, y, w: dw, h: dh, scope: 'company', config: w.default_config || {} })
       x += dw
+      rowH = Math.max(rowH, dh)
     }
-    if (kpiPicks.length) y += (kpiPicks[0].layout?.default_h || 2)
 
-    // Row 2: Lists (2 side-by-side)
-    const listPicks = lists.slice(0, 2)
-
-    x = 0
-    for (const w of listPicks) {
-      const dw = w.layout?.default_w || 6
-      const dh = w.layout?.default_h || 4
-
-      layout.push({ key: w.key, x, y, w: dw, h: dh, scope: 'company', config: w.default_config || {} })
-      x += dw
-    }
-    if (listPicks.length) y += (listPicks[0].layout?.default_h || 4)
-
-    // Row 3: Banners (full-width, respect widget's actual default_h)
-    for (const w of banners.slice(0, 1)) {
-      const dh = w.layout?.default_h || 2
-
-      layout.push({ key: w.key, x: 0, y, w: w.layout?.default_w || 12, h: dh, scope: 'company', config: w.default_config || {} })
-      y += dh
-    }
+    for (const w of kpis) place(w)
+    // nouvelle rangée pour graphes/listes
+    x = 0; y += rowH; rowH = 0
+    for (const w of mids) place(w)
 
     engine._layout.value = layout
     engine._dirty.value = true

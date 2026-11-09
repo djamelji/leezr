@@ -6734,6 +6734,22 @@
       "payrollRun": "Cycle de paie",
       "payrollRunNoResult": "Aucun cycle de paie disponible",
       "employeesShort": "salariés"
+    },
+    "widgets": {
+      "clockLive": "Pointage en direct",
+      "clockLiveDesc": "Présents, en pause et non pointés (aujourd’hui)",
+      "WorkforceHeadcount": "Effectifs actifs",
+      "WorkforceHeadcountDesc": "Collaborateurs actifs, en congé et total",
+      "WorkforceAnomalies": "Anomalies de pointage",
+      "WorkforceAnomaliesDesc": "Anomalies et pointages incomplets du jour",
+      "WorkforceTimesheetPending": "Feuilles de temps à valider",
+      "WorkforceTimesheetPendingDesc": "Feuilles de temps soumises en attente de validation",
+      "WorkforceLeavePending": "Congés à approuver",
+      "WorkforceLeavePendingDesc": "Demandes de congé en attente d’approbation",
+      "WorkforceHoursTrend": "Heures travaillées (7 jours)",
+      "WorkforceHoursTrendDesc": "Tendance des heures travaillées sur 7 jours",
+      "PlanningShifts": "Planning de la semaine",
+      "PlanningShiftsDesc": "Shifts planifiés et créneaux non couverts"
     }
   },
   "workforceDashboard": {
@@ -7538,34 +7554,8 @@
       "templates": "Modèles"
     },
     "posts": {
-      "manage": "Gérer la couverture",
-      "viewDay": "Voir la journée",
-      "assign": "Affecter",
-      "allDay": "Journée entière",
-      "noRequirement": "Aucun besoin ce jour.",
-      "covered": "Ce créneau est couvert.",
-      "compatibleTitle": "Salariés disponibles pour ce créneau",
-      "noCompatible": "Aucun salarié disponible sur ce créneau.",
-      "roleMatch": "Rôle correspondant",
-      "totals": {
-        "needed": "Besoin",
-        "assigned": "Affecté",
-        "gap": "À pourvoir"
-      },
-      "status": {
-        "under": "Déficit",
-        "over": "Sureffectif",
-        "covered": "Couvert"
-      },
-      "priority": {
-        "critical": "Critique",
-        "high": "Haute"
-      },
-      "empty": {
-        "title": "Aucune exigence de couverture configurée",
-        "subtitle": "Définissez vos besoins par créneau et par poste pour suivre les affectations et les déficits.",
-        "configure": "Configurer la couverture"
-      }
+      "uncategorized": "Non catégorisé",
+      "empty": "Aucune affectation cette semaine."
     },
     "month": {
       "published": "Publiés",
@@ -7614,7 +7604,6 @@
     "bulkHint": "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs shifts en une fois.",
     "weekOf": "Semaine du",
     "to": "au",
-    "today": "Aujourd'hui",
     "tabs": {
       "planning": "Semaine",
       "templates": "Modèles",
@@ -8081,10 +8070,6 @@
         "regulatory": "Règle de temps de travail",
         "unknown": "Non applicable"
       }
-    },
-    "posts": {
-      "uncategorized": "Non catégorisé",
-      "empty": "Aucune affectation cette semaine."
     },
     "rowSummary": "{hours}h · {days} j",
     "shift": {

@@ -56,8 +56,8 @@ const showUpgrade = computed(() => planKey.value !== 'business')
       <VBtn
         v-if="showUpgrade"
         size="small"
-        variant="tonal"
-        color="primary"
+        variant="flat"
+        class="lzr-cta"
         :to="{ name: 'company-plan' }"
       >
         {{ t('dashboard.upgrade') }}

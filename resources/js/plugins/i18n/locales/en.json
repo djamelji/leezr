@@ -6734,6 +6734,22 @@
       "payrollRun": "Payroll run",
       "payrollRunNoResult": "No payroll run available",
       "employeesShort": "employees"
+    },
+    "widgets": {
+      "clockLive": "Live clock-in",
+      "clockLiveDesc": "Working, on break and not clocked in (today)",
+      "WorkforceHeadcount": "Active headcount",
+      "WorkforceHeadcountDesc": "Active, on-leave and total employees",
+      "WorkforceAnomalies": "Clock-in anomalies",
+      "WorkforceAnomaliesDesc": "Today’s anomalies and incomplete entries",
+      "WorkforceTimesheetPending": "Timesheets to approve",
+      "WorkforceTimesheetPendingDesc": "Submitted timesheets awaiting approval",
+      "WorkforceLeavePending": "Leave to approve",
+      "WorkforceLeavePendingDesc": "Leave requests awaiting approval",
+      "WorkforceHoursTrend": "Hours worked (7 days)",
+      "WorkforceHoursTrendDesc": "Worked-hours trend over 7 days",
+      "PlanningShifts": "This week’s planning",
+      "PlanningShiftsDesc": "Planned shifts and uncovered slots"
     }
   },
   "workforceDashboard": {
@@ -7538,34 +7554,8 @@
       "templates": "Templates"
     },
     "posts": {
-      "manage": "Manage coverage",
-      "viewDay": "View day",
-      "assign": "Assign",
-      "allDay": "All day",
-      "noRequirement": "No requirement this day.",
-      "covered": "This slot is covered.",
-      "compatibleTitle": "Employees available for this slot",
-      "noCompatible": "No employee available for this slot.",
-      "roleMatch": "Matching role",
-      "totals": {
-        "needed": "Needed",
-        "assigned": "Assigned",
-        "gap": "To fill"
-      },
-      "status": {
-        "under": "Understaffed",
-        "over": "Overstaffed",
-        "covered": "Covered"
-      },
-      "priority": {
-        "critical": "Critical",
-        "high": "High"
-      },
-      "empty": {
-        "title": "No coverage requirement configured",
-        "subtitle": "Define your needs per slot and per post to track assignments and gaps.",
-        "configure": "Configure coverage"
-      }
+      "uncategorized": "Uncategorized",
+      "empty": "No assignment this week."
     },
     "month": {
       "published": "Published",
@@ -7614,7 +7604,6 @@
     "bulkHint": "Pick a template, a period and the employees concerned to generate several shifts at once.",
     "weekOf": "Week of",
     "to": "to",
-    "today": "Today",
     "tabs": {
       "planning": "Week",
       "templates": "Templates",
@@ -8081,10 +8070,6 @@
         "regulatory": "Work-time rule",
         "unknown": "Not applicable"
       }
-    },
-    "posts": {
-      "uncategorized": "Uncategorized",
-      "empty": "No assignment this week."
     },
     "rowSummary": "{hours}h · {days}d",
     "shift": {
