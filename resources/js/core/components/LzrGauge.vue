@@ -1,6 +1,6 @@
 <script setup>
-// Leezr Premium — jauge radiale avec seuils sémantiques (Phase 0, ADR-741).
-import { computed } from 'vue'
+// Leezr Premium — jauge radiale avec seuils sémantiques (Phase 0, ADR-741 ; fiabilisée ADR-745).
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useTheme } from 'vuetify'
 import VueApexCharts from 'vue3-apexcharts'
 
@@ -13,6 +13,22 @@ const props = defineProps({
   warn: { type: Number, default: 80 },
   invert: { type: Boolean, default: false },   // true : un score BAS est mauvais (taux de conformité)
 })
+
+// Rendu stable en cellule de grille (ADR-745) : monter quand la largeur est mesurable,
+// piloter par prop réactif, pas d'animation (évite le clignotement blanc au resize/capture).
+const hostRef = ref(null)
+const measuredW = ref(0)
+let ro = null
+const ready = computed(() => measuredW.value > 0)
+onMounted(() => {
+  if (!hostRef.value) return
+  ro = new ResizeObserver(entries => {
+    const w = Math.round(entries[0]?.contentRect?.width || 0)
+    if (w) measuredW.value = w
+  })
+  ro.observe(hostRef.value)
+})
+onBeforeUnmount(() => { if (ro) ro.disconnect() })
 
 const vuetifyTheme = useTheme()
 const tc = computed(() => vuetifyTheme.current.value.colors)
@@ -34,7 +50,7 @@ const severity = computed(() => {
 const color = computed(() => tc.value[severity.value])
 
 const options = computed(() => ({
-  chart: { sparkline: { enabled: true }, fontFamily: 'inherit' },
+  chart: { sparkline: { enabled: true }, fontFamily: 'inherit', animations: { enabled: false } },
   colors: [color.value],
   plotOptions: {
     radialBar: {
@@ -54,5 +70,7 @@ const series = computed(() => [Math.max(0, Math.min(100, props.value))])
 </script>
 
 <template>
-  <VueApexCharts type="radialBar" :height="height" :options="options" :series="series" />
+  <div ref="hostRef" class="lzr-gauge-host" :style="{ inlineSize: '100%', blockSize: typeof height === 'number' ? height + 'px' : height }">
+    <VueApexCharts v-if="ready" type="radialBar" :width="measuredW" :height="height" :options="options" :series="series" />
+  </div>
 </template>

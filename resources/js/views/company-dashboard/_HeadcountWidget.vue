@@ -1,19 +1,23 @@
 <script setup>
+// ADR-745 — KPI compact Effectifs. Données réelles (active/on_leave/total).
 import { computed } from 'vue'
+import KpiShell from './_KpiShell.vue'
+
 const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
+const { t } = useI18n()
 const d = computed(() => props.data || {})
+const active = computed(() => d.value.active ?? 0)
+const onLeave = computed(() => d.value.on_leave ?? 0)
+const caption = computed(() => onLeave.value > 0
+  ? t('workforce.widgets.headcountCaption', { n: onLeave.value })
+  : t('workforce.widgets.headcountAllPresent'))
 </script>
+
 <template>
-  <div class="widget-root d-flex flex-column h-100">
-    <div class="d-flex align-center gap-2 mb-2 flex-shrink-0">
-      <VAvatar color="primary" variant="tonal" size="34" rounded><VIcon icon="tabler-users" size="20" /></VAvatar>
-      <span class="text-medium-emphasis text-body-2 text-truncate">Effectifs actifs</span>
-    </div>
-    <VSkeletonLoader v-if="loading" type="text" class="bg-transparent" />
-    <VAlert v-else-if="d.error" type="error" variant="tonal" density="compact" text="Erreur de chargement" />
-    <template v-else>
-      <div class="text-h4 text-high-emphasis font-weight-medium">{{ d.active ?? 0 }}</div>
-      <div class="text-caption text-medium-emphasis">{{ d.on_leave ?? 0 }} en congé · {{ d.total ?? 0 }} au total</div>
-    </template>
-  </div>
+  <KpiShell
+    icon="tabler-users-group" color="primary"
+    :label="t('workforce.widgets.headcountLabel')"
+    :value="active" :caption="caption"
+    :loading="loading" :error="d.error"
+  />
 </template>

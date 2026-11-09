@@ -1,22 +1,31 @@
 <script setup>
+// ADR-745 — KPI compact Planning (shifts de la semaine). Données réelles (total/unassigned).
 import { computed } from 'vue'
+import KpiShell from './_KpiShell.vue'
+
 const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
+const { t } = useI18n()
 const d = computed(() => props.data || {})
+const total = computed(() => d.value.total ?? 0)
+const unassigned = computed(() => d.value.unassigned ?? 0)
+const caption = computed(() => total.value === 0
+  ? t('workforce.widgets.planningNone')
+  : unassigned.value > 0
+    ? t('workforce.widgets.planningUnassignedLine', { n: unassigned.value })
+    : t('workforce.widgets.planningAllAssigned'))
 </script>
+
 <template>
-  <div class="widget-root d-flex flex-column h-100">
-    <div class="d-flex align-center justify-space-between gap-2 mb-2 flex-shrink-0">
-      <div class="d-flex align-center gap-2 overflow-hidden">
-        <VAvatar color="primary" variant="tonal" size="34" rounded><VIcon icon="tabler-calendar-stats" size="20" /></VAvatar>
-        <span class="text-medium-emphasis text-body-2 text-truncate">Planning (semaine)</span>
-      </div>
-      <VChip v-if="(d.unassigned ?? 0) > 0" color="warning" size="x-small" variant="tonal" label>{{ d.unassigned }} non couvert{{ d.unassigned > 1 ? 's' : '' }}</VChip>
-    </div>
-    <VSkeletonLoader v-if="loading" type="text" class="bg-transparent" />
-    <VAlert v-else-if="d.error" type="error" variant="tonal" density="compact" text="Erreur de chargement" />
-    <template v-else>
-      <div class="text-h4 text-high-emphasis font-weight-medium">{{ d.total ?? 0 }}</div>
-      <div class="text-caption text-medium-emphasis">shifts planifiés cette semaine</div>
+  <KpiShell
+    icon="tabler-calendar-stats" :color="unassigned > 0 ? 'warning' : 'primary'"
+    :label="t('workforce.widgets.planningTitle')"
+    :value="total" :caption="caption"
+    :loading="loading" :error="d.error"
+  >
+    <template #action>
+      <VBtn v-if="total === 0" :to="{ name: 'company-workforce-planning' }" variant="flat" size="x-small" class="lzr-cta">
+        {{ t('workforce.widgets.actionPlan') }}
+      </VBtn>
     </template>
-  </div>
+  </KpiShell>
 </template>

@@ -1,8 +1,10 @@
 <script setup>
-// ADR-744 (P1) — Pointage en direct (donut). Server-resolved : reçoit `data`
-// du batch dashboard. Données réelles (TimeCockpitReadModel). Drill-down → cockpit temps.
+// ADR-744/745 — Pointage en direct. Adaptatif : KPI compact dans le strip (densité S
+// ou sans données), donut de répartition quand il y a des présences ET de l'espace.
+// Données réelles (TimeCockpitReadModel).
 import { computed } from 'vue'
 import LzrApexChart from '@/core/components/LzrApexChart.vue'
+import KpiShell from './_KpiShell.vue'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -11,38 +13,47 @@ const props = defineProps({
   viewport: { type: Object, default: () => ({ density: 'L' }) },
 })
 
+const { t } = useI18n()
 const d = computed(() => props.data || {})
-const series = computed(() => [d.value.working ?? 0, d.value.on_break ?? 0, d.value.not_clocked ?? 0])
+const working = computed(() => d.value.working ?? 0)
+const onBreak = computed(() => d.value.on_break ?? 0)
+const notClocked = computed(() => d.value.not_clocked ?? 0)
+const series = computed(() => [working.value, onBreak.value, notClocked.value])
 const total = computed(() => series.value.reduce((a, b) => a + b, 0) + (d.value.completed ?? 0))
 const hasData = computed(() => total.value > 0)
-const height = computed(() => (props.viewport?.density === 'S' ? 140 : props.viewport?.density === 'M' ? 170 : 200))
+const showDonut = computed(() => hasData.value && props.viewport?.density !== 'S')
+const height = computed(() => (props.viewport?.density === 'M' ? 170 : 200))
+const caption = computed(() => hasData.value
+  ? t('workforce.widgets.clockCaption', { onBreak: onBreak.value, notClocked: notClocked.value })
+  : t('workforce.widgets.clockEmpty'))
 </script>
 
 <template>
-  <div class="widget-root d-flex flex-column h-100">
+  <!-- Mode compact (strip) -->
+  <KpiShell
+    v-if="!showDonut"
+    icon="tabler-clock-hour-4" :color="hasData ? 'success' : 'secondary'"
+    :label="t('workforce.widgets.clockLabel')"
+    :value="working" :caption="caption"
+    :loading="loading" :error="d.error"
+  />
+
+  <!-- Mode riche (donut) -->
+  <div v-else class="widget-root d-flex flex-column pa-5">
     <div class="d-flex align-center justify-space-between gap-2 mb-1 flex-shrink-0">
-      <div class="d-flex align-center gap-2 overflow-hidden">
-        <VAvatar color="primary" variant="tonal" size="34" rounded>
-          <VIcon icon="tabler-clock-hour-4" size="20" />
-        </VAvatar>
-        <span class="text-medium-emphasis text-body-2 text-truncate">Pointage en direct</span>
-      </div>
-      <VChip v-if="hasData && (d.anomalies ?? 0) > 0" color="error" size="x-small" variant="tonal" label>
-        {{ d.anomalies }} anomalie{{ d.anomalies > 1 ? 's' : '' }}
+      <div class="text-body-1 font-weight-medium text-high-emphasis">{{ t('workforce.widgets.clockTitle') }}</div>
+      <VChip v-if="(d.anomalies ?? 0) > 0" color="error" size="x-small" variant="tonal" label>
+        {{ t('workforce.widgets.clockAnomalies', { n: d.anomalies }) }}
       </VChip>
     </div>
-
     <div class="flex-grow-1 d-flex align-center justify-center">
-      <VSkeletonLoader v-if="loading" type="image" width="150" class="bg-transparent" />
-      <div v-else-if="!hasData" class="text-medium-emphasis text-body-2 text-center">Aucun pointage aujourd'hui</div>
       <LzrApexChart
-        v-else
-        type="donut"
-        :series="series"
-        :labels="['Présents', 'En pause', 'Non pointés']"
-        :colors="['success', 'warning', 'secondary']"
-        :height="height"
+        type="donut" :series="series"
+        :labels="[t('workforce.widgets.clockPresent'), t('workforce.widgets.clockOnBreak'), t('workforce.widgets.clockNotClocked')]"
+        :colors="['success', 'warning', 'secondary']" :height="height"
       />
     </div>
   </div>
 </template>
+
+<style scoped>.widget-root { block-size: 100%; }</style>

@@ -38,50 +38,61 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
    * the grid per ADR-383) are excluded.
    */
   function buildSmartDefaultLayout() {
-    // Exclude widgets rendered outside the grid (no frontend component)
-    // onboarding.setup = rendu hors grille. workforce.hours_trend = défaut résiduel
-    // (ApexCharts bar/area ne se dimensionne pas de façon fiable dans la cellule de
-    // grille ; reste disponible via « + Ajouter un widget »). ADR-744.
-    const EXCLUDED_KEYS = new Set(['onboarding.setup', 'workforce.hours_trend'])
-
+    // onboarding.setup = rendu hors grille (ADR-383).
+    // timesheet_pending / leave_pending = déjà portés par la bande « À traiter »
+    // (HomePrioritiesSection) → exclus du défaut pour éviter la duplication ; restent
+    // au catalogue (« + Ajouter un widget »). ADR-745.
+    const EXCLUDED_KEYS = new Set(['onboarding.setup', 'workforce.timesheet_pending', 'workforce.leave_pending'])
     const catalog = engine._catalog.value.filter(w => !EXCLUDED_KEYS.has(w.key))
+    const byKey = new Map(catalog.map(w => [w.key, w]))
 
-    // Ordre de priorité métier (ADR-744) — cockpit lisible ; clés inconnues en fin.
-    const PRIORITY = [
-      'workforce.headcount', 'workforce.clock_live', 'planning.shifts', 'workforce.timesheet_pending',
-      'workforce.leave_pending', 'workforce.anomalies', 'compliance.rate',
+    // ── Composition éditoriale Workforce (ADR-745) ──
+    // Unité de conception = la PAGE, pas le widget. Tailles délibérément variées pour
+    // créer un rythme (strip compact → hero analytique → exploitation), pas une grille
+    // uniforme. Chaque slot tombe gracieusement si le widget est absent (permission /
+    // module / archétype).
+    //   Rangée 1 — KPI strip (h2) : 4 stats compactes (sans doublon de « À traiter »)
+    //   Rangée 2 — Analyse (h4)    : grand graphe heures + conformité (jauge enrichie)
+    // timesheet_pending / leave_pending sont volontairement HORS défaut : la bande
+    // fixe « À traiter » (HomePrioritiesSection) les porte déjà comme actions → pas de
+    // duplication visuelle. Ils restent au catalogue (« + Ajouter un widget »).
+    const EDITORIAL = [
+      { key: 'workforce.headcount', w: 3, h: 2 },
+      { key: 'workforce.clock_live', w: 3, h: 2 },
+      { key: 'planning.shifts', w: 3, h: 2 },
+      { key: 'workforce.anomalies', w: 3, h: 2 },
+      { key: 'workforce.hours_trend', w: 8, h: 4 },
+      { key: 'compliance.rate', w: 4, h: 4 },
+    ]
+
+    // Slots présents dans le catalogue (autorisation/module/archétype déjà filtrés serveur).
+    const slots = EDITORIAL.filter(s => byKey.has(s.key))
+
+    // Repli : tout widget du catalogue hors template (autres archétypes : logistique,
+    // listes conformité…) est ajouté ensuite à sa taille déclarée, ordre priorité.
+    const templated = new Set(EDITORIAL.map(s => s.key))
+    const FALLBACK_PRIORITY = [
       'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active',
       'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today',
-      'compliance.pending', 'compliance.overdue',
-      'workforce.hours_trend', 'compliance.roles', 'compliance.types',
+      'compliance.pending', 'compliance.overdue', 'compliance.roles', 'compliance.types',
     ]
-    const rank = k => { const i = PRIORITY.indexOf(k); return i === -1 ? 999 : i }
-    const sorted = [...catalog].sort((a, b) => rank(a.key) - rank(b.key))
+    const frank = k => { const i = FALLBACK_PRIORITY.indexOf(k); return i === -1 ? 999 : i }
+    const extras = catalog
+      .filter(w => !templated.has(w.key))
+      .sort((a, b) => frank(a.key) - frank(b.key))
+      .map(w => ({ key: w.key, w: Math.min(w.layout?.default_w || 3, 12), h: w.layout?.default_h || 2 }))
 
-    const isKpi = w => (w.layout?.default_w || 4) <= 4 && (w.layout?.default_h || 4) <= 2
-    const isBanner = w => (w.layout?.default_w || 4) > 6
-    const isList = w => !isKpi(w) && !isBanner(w)
-
-    const kpis = sorted.filter(isKpi).slice(0, 8)                 // jusqu'à 2 rangées de 4
-    const mids = sorted.filter(w => isList(w) || isBanner(w)).slice(0, 4) // graphes + listes
-
+    // Flow row-packing (12 col) — respecte la taille de chaque slot, retour à la ligne.
+    const all = [...slots, ...extras]
     const layout = []
-    let y = 0
-    let x = 0
-    let rowH = 0
-    const place = w => {
-      const dw = Math.min(w.layout?.default_w || 3, 12)
-      const dh = w.layout?.default_h || 2
-      if (x + dw > 12) { x = 0; y += rowH; rowH = 0 }
-      layout.push({ key: w.key, x, y, w: dw, h: dh, scope: 'company', config: w.default_config || {} })
-      x += dw
-      rowH = Math.max(rowH, dh)
+    let x = 0; let y = 0; let rowH = 0
+    for (const s of all) {
+      const w = Math.min(s.w, 12)
+      if (x + w > 12) { x = 0; y += rowH; rowH = 0 }
+      layout.push({ key: s.key, x, y, w, h: s.h, scope: 'company', config: byKey.get(s.key)?.default_config || {} })
+      x += w
+      rowH = Math.max(rowH, s.h)
     }
-
-    for (const w of kpis) place(w)
-    // nouvelle rangée pour graphes/listes
-    x = 0; y += rowH; rowH = 0
-    for (const w of mids) place(w)
 
     engine._layout.value = layout
     engine._dirty.value = true

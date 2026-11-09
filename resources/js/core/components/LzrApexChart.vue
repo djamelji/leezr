@@ -1,20 +1,11 @@
 <script setup>
-// Leezr Premium — graphique ApexCharts theme-aware (Phase 0, ADR-741).
+// Leezr Premium — graphique ApexCharts theme-aware (Phase 0, ADR-741 ; refonte ADR-745).
 // Réutilise le pattern _RevenueTrendWidget (useTheme + hexToRgb) ; aucune
 // nouvelle dépendance (vue3-apexcharts déjà installé). Modes S/M/L.
-import { computed, nextTick, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 import VueApexCharts from 'vue3-apexcharts'
-
-// ApexCharts mesure parfois une largeur nulle quand il est monté dans un conteneur
-// positionné dynamiquement (grille drag/resize) → graphe invisible. On force un
-// recalcul après le montage (ApexCharts écoute l'event resize).
-onMounted(() => {
-  nextTick(() => {
-    setTimeout(() => { try { window.dispatchEvent(new Event('resize')) } catch (e) { /* noop */ } }, 120)
-  })
-})
 
 const props = defineProps({
   type: { type: String, default: 'area' }, // area | line | bar | donut | radial
@@ -25,7 +16,32 @@ const props = defineProps({
   colors: { type: Array, default: null },
   mode: { type: String, default: 'full' }, // spark | standard | full
   formatY: { type: Function, default: null },
+  // Bar uniquement : met une barre en relief (jour pic), les autres atténuées — pattern Vuexy EarningReports.
+  highlightIndex: { type: Number, default: -1 },
 })
+
+// ── Fiabilisation du rendu en cellule de grille (ADR-745) ──
+// Les graphes area/bar mesuraient une largeur nulle au montage (cellule
+// positionnée dynamiquement) → graphe invisible. On monte le graphe UNIQUEMENT
+// quand le conteneur a une largeur mesurable, puis on pilote la largeur par un
+// prop RÉACTIF (VueApexCharts se redimensionne sans remonter → pas de clignotement
+// blanc lors d'un resize, ex. capture fullPage).
+const hostRef = ref(null)
+const measuredW = ref(0)
+let ro = null
+
+const ready = computed(() => measuredW.value > 0)
+
+onMounted(() => {
+  if (!hostRef.value) return
+  ro = new ResizeObserver(entries => {
+    const w = Math.round(entries[0]?.contentRect?.width || 0)
+    if (w) measuredW.value = w
+  })
+  ro.observe(hostRef.value)
+})
+
+onBeforeUnmount(() => { if (ro) ro.disconnect() })
 
 const vuetifyTheme = useTheme()
 const tc = computed(() => vuetifyTheme.current.value.colors)
@@ -52,7 +68,9 @@ const options = computed(() => {
       toolbar: { show: false },
       sparkline: { enabled: isSpark.value },
       fontFamily: 'inherit',
-      animations: { enabled: true, speed: 500 },
+      // Animations désactivées : rendu instantané et stable (évite le clignotement
+      // blanc lors d'un resize / d'une capture fullPage). ADR-745.
+      animations: { enabled: false },
     },
     colors: palette.value,
     tooltip: { enabled: !isSpark.value, theme: vuetifyTheme.current.value.dark ? 'dark' : 'light' },
@@ -83,9 +101,19 @@ const options = computed(() => {
   }
 
   if (props.type === 'bar') {
+    const hl = props.highlightIndex
+    const n = (props.series?.[0]?.data || []).length
+    const distributed = hl >= 0 && n > 0
+    const primaryHex = tc.value.primary
+    const distColors = distributed
+      ? Array.from({ length: n }, (_, i) => i === hl ? primaryHex : `rgba(${hexToRgb(primaryHex)},0.16)`)
+      : palette.value
     return {
       ...base,
-      plotOptions: { bar: { borderRadius: 6, columnWidth: '42%', borderRadiusApplication: 'end' } },
+      colors: distColors,
+      plotOptions: { bar: { borderRadius: 6, columnWidth: distributed ? '38%' : '42%', borderRadiusApplication: 'end', distributed } },
+      legend: { show: false },
+      tooltip: { ...base.tooltip, enabled: true, y: { formatter: props.formatY || undefined } },
       xaxis: {
         categories: props.categories,
         labels: { show: !isSpark.value, style: { colors: labelColor.value, fontSize: '12px' } },
@@ -106,10 +134,18 @@ const options = computed(() => {
 </script>
 
 <template>
-  <VueApexCharts
-    :type="type === 'radial' ? 'radialBar' : type"
-    :height="height"
-    :options="options"
-    :series="series"
-  />
+  <div
+    ref="hostRef"
+    class="lzr-apexchart-host"
+    :style="{ inlineSize: '100%', blockSize: typeof height === 'number' ? height + 'px' : height }"
+  >
+    <VueApexCharts
+      v-if="ready"
+      :type="type === 'radial' ? 'radialBar' : type"
+      :width="measuredW"
+      :height="height"
+      :options="options"
+      :series="series"
+    />
+  </div>
 </template>

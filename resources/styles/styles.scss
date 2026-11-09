@@ -185,3 +185,8 @@
 .lzr-link:hover { text-decoration: underline; }
 .v-theme--dark .lzr-link { color: #a9a2ff; }
 .lzr-cta.v-btn { background-color: #5d50e6 !important; color: #fff !important; }
+
+// Contraste AA des grands KPI « warning » sur fond clair (ADR-745) : l'amber Vuetify
+// par défaut échoue sur blanc. On fonce uniquement en thème clair ; en dark l'amber
+// vif passe déjà. Identité sémantique (amber) préservée.
+.v-theme--light .widget-kpi.text-warning { color: #8a5a00 !important; }

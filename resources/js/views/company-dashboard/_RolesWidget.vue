@@ -75,7 +75,7 @@ const rateColor = rate => {
 
       <!-- Density M/L: list -->
       <template v-else>
-        <div class="widget-list">
+        <div class="widget-list" tabindex="0" role="group" :aria-label="$t('compliance.roles')">
           <div
             v-for="role in store.byRole"
             :key="role.role_key || '_none'"

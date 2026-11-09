@@ -278,5 +278,6 @@ declare module 'vue-router/auto-routes' {
     'reset-password': RouteRecordInfo<'reset-password', '/reset-password', Record<never, never>, Record<never, never>>,
     'shared-permission-matrix': RouteRecordInfo<'shared-permission-matrix', '/shared/_PermissionMatrix', Record<never, never>, Record<never, never>>,
     'sign-token': RouteRecordInfo<'sign-token', '/sign/:token', { token: ParamValue<true> }, { token: ParamValue<false> }>,
+    'ui-lab': RouteRecordInfo<'ui-lab', '/ui-lab', Record<never, never>, Record<never, never>>,
   }
 }

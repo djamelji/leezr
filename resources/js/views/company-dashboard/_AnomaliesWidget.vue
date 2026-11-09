@@ -1,20 +1,26 @@
 <script setup>
+// ADR-745 — KPI compact Anomalies de pointage. Données réelles (anomalies/incomplete/not_clocked).
 import { computed } from 'vue'
+import KpiShell from './_KpiShell.vue'
+
 const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
+const { t } = useI18n()
 const d = computed(() => props.data || {})
-const color = computed(() => (d.value.anomalies ?? 0) > 0 ? 'error' : 'success')
+const anomalies = computed(() => d.value.anomalies ?? 0)
+const incomplete = computed(() => d.value.incomplete ?? 0)
+const notClocked = computed(() => d.value.not_clocked ?? 0)
+const ok = computed(() => anomalies.value === 0)
+const caption = computed(() => ok.value
+  ? t('workforce.widgets.anomaliesNone')
+  : t('workforce.widgets.anomaliesBreakdown', { incomplete: incomplete.value, notClocked: notClocked.value }))
 </script>
+
 <template>
-  <div class="widget-root d-flex flex-column h-100">
-    <div class="d-flex align-center gap-2 mb-2 flex-shrink-0">
-      <VAvatar :color="color" variant="tonal" size="34" rounded><VIcon icon="tabler-alert-triangle" size="20" /></VAvatar>
-      <span class="text-medium-emphasis text-body-2 text-truncate">Anomalies de pointage</span>
-    </div>
-    <VSkeletonLoader v-if="loading" type="text" class="bg-transparent" />
-    <VAlert v-else-if="d.error" type="error" variant="tonal" density="compact" text="Erreur de chargement" />
-    <template v-else>
-      <div class="text-h4 text-high-emphasis font-weight-medium">{{ d.anomalies ?? 0 }}</div>
-      <div class="text-caption text-medium-emphasis">{{ d.incomplete ?? 0 }} incomplet(s) · {{ d.not_clocked ?? 0 }} non pointé(s)</div>
-    </template>
-  </div>
+  <KpiShell
+    icon="tabler-alert-triangle" :color="ok ? 'success' : 'error'"
+    :label="t('workforce.widgets.anomaliesTitle')"
+    :value="anomalies" :tone="ok ? 'positive' : ''"
+    :caption="caption"
+    :loading="loading" :error="d.error"
+  />
 </template>

@@ -303,6 +303,7 @@ onUnmounted(() => {
                   size="x-small"
                   disabled
                   class="toolbar-action"
+                  :aria-label="t('dashboardGrid.minWidgetRequired')"
                   v-bind="tooltipProps"
                 >
                   <VIcon
@@ -320,6 +321,7 @@ onUnmounted(() => {
               size="x-small"
               color="error"
               class="toolbar-action"
+              :aria-label="t('dashboardGrid.removeWidget')"
               @click.stop="handleRemoveWidget(tile.key)"
             >
               <VIcon
