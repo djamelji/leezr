@@ -80,12 +80,8 @@ const goTo = to => router.push(to)
         </VCard>
       </VCol>
     </VRow>
-
-    <!-- Compact situation strip -->
-    <div v-if="situation" class="d-flex flex-wrap gap-4 mt-3 text-body-2">
-      <span><VIcon icon="tabler-users" size="16" class="me-1" />{{ $t('home.situation.activeEmployees') }}: <strong>{{ situation.active_employees ?? 0 }}</strong></span>
-      <span v-if="situation.present_today !== null"><VIcon icon="tabler-user-check" size="16" class="me-1" color="success" />{{ $t('home.situation.presentToday') }}: <strong>{{ situation.present_today ?? 0 }}</strong></span>
-      <span v-if="situation.not_clocked_today"><VIcon icon="tabler-user-x" size="16" class="me-1" color="warning" />{{ $t('home.situation.notClocked') }}: <strong>{{ situation.not_clocked_today }}</strong></span>
-    </div>
+    <!-- Bandeau « situation » retiré (ADR-745) : Effectifs/Présents sont déjà des KPI
+         dédiés de la grille → suppression de la redondance. Les cartes d'action « À traiter »
+         (congés, feuilles, signatures, intégrations) restent la seule valeur de cette bande. -->
   </div>
 </template>

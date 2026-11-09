@@ -6805,7 +6805,7 @@
       "PlanningShiftsDesc": "Shifts planifiés et créneaux non couverts",
       "headcountLabel": "Effectifs",
       "headcountCaption": "{n} en congé",
-      "headcountAllPresent": "Tous présents",
+      "headcountAllPresent": "Aucun en congé",
       "clockLabel": "Présents aujourd'hui",
       "clockCaption": "{onBreak} en pause · {notClocked} attendus",
       "clockEmpty": "Aucun pointage",

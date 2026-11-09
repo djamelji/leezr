@@ -16,10 +16,11 @@ const STATUS_META = {
   canceled: { color: 'secondary', label: 'shipments.status.canceled' },
   draft: { color: 'secondary', label: 'shipments.status.draft' },
 }
-// Segments du donut = statuts « vivants » non nuls (on masque draft/canceled si 0).
+// Segments du donut = TOUS les statuts non nuls (brouillon inclus) → la somme du donut
+// est strictement égale au « total » affiché (cohérence header ↔ graphe). ADR-745.
 const segments = computed(() => {
   const bs = d.value.by_status || {}
-  return ['planned', 'in_transit', 'delivered', 'canceled'].map(s => ({ s, c: Number(bs[s] || 0) })).filter(x => x.c > 0)
+  return ['draft', 'planned', 'in_transit', 'delivered', 'canceled'].map(s => ({ s, c: Number(bs[s] || 0) })).filter(x => x.c > 0)
 })
 const donutSeries = computed(() => segments.value.map(x => x.c))
 const donutLabels = computed(() => segments.value.map(x => t(STATUS_META[x.s].label)))

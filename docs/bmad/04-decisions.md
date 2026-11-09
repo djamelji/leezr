@@ -26862,4 +26862,20 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 
 **Constat validation (utilisateur à permissions limitées, driver)** : le **filtrage RBAC + archétype du catalogue est prouvé** (le driver reçoit 8 widgets, **aucun des composites `management`/`operations_center`** — `documents.detail`/`shipments.overview`/`logistics.fleet` correctement masqués). **Défaut pré-existant observé** (indépendant de cette refonte, couche persistance/auth) : un utilisateur non-admin peut voir un **layout par défaut obsolète** (widgets que le composeur éditorial exclut) + un toast **403 « Administrative role required »** (incohérence `is_administrative` front vs gate `manage-structure` back lors d'une tentative de save). **Non corrigé ici** (hors scope « ne pas reconstruire le moteur » ; relève de l'auth/persistance) — à traiter séparément.
 
-**Planche comparative AVANT/APRÈS** : artifact hébergé (desktop light/dark, tablette, mobile, company vide + presets Vuexy). **DEV uniquement, aucun push main, aucune PROD, P2 non démarré.**
+**Planche comparative AVANT/APRÈS** : artifact hébergé (desktop light/dark, tablette, mobile, company vide + presets Vuexy).
+
+### ADR-745 (recette) — Corrections métier ciblées (cohérence · non-admin · redondance)
+
+**Date** : 2026-11-09
+**Contexte** : design validé ; corrections d'incohérences relevées sur captures avant clôture P1.
+
+1. **Cohérence des indicateurs** (cause réelle corrigée, pas masquée) :
+   - **« Tous présents » sous Effectifs 50** vs « Présents aujourd'hui : 0 » → le libellé `headcount` conflait *statut d'emploi* et *présence*. Corrigé : libellé centré sur les congés (« Aucun en congé » / « N en congé »), découplé du pointage.
+   - **« 4 expéditions au total » vs donut « Total 3 »** → le header comptait tous les statuts (dont `draft`) mais le donut excluait `draft`. Corrigé : donut **exhaustif** (tous statuts non nuls, brouillon inclus) → somme du donut = total affiché (vérifié : draft=1, planned=1, in_transit=1, delivered=1 ⇒ **4 = 4**).
+   - Autres KPI audités (dénominateurs/dates/fuseaux) : cohérents (planning 3 tous assignés, conformité 2/66, heures 84.9 h, today=0).
+
+2. **Parcours non-admin fiabilisé** (cause racine) : un **driver est redirigé vers `/home`** (surface opérationnelle compacte, ADR-357), PAS `/dashboard` (RBAC correct). Le **403 « Administrative role required »** venait du store `/home` (`useOperationalHomeStore.loadDashboard`) qui appelait `saveLayout()` **sans guard** → `PUT /dashboard/layout` (gated `manage-structure`) refusé pour les rôles non-administratifs. **Corrigé** : save guardé par `isAdministrative` (= gate backend) + try/catch non bloquant ; sinon disposition compacte rendue en mémoire. **Aucune permission ouverte.** Permissions exactes confirmées : *consulter* `GET /dashboard/layout` (tout membre) · *personnaliser* en mémoire (tout membre) · *enregistrer* `PUT /dashboard/layout` (`manage-structure`). Validation management à droits réduits : **dispatcher** → `/dashboard` éditorial **filtré** (sections Logistique + Documents, **pas de Workforce** faute de permissions) sans erreur.
+
+3. **Redondance éliminée** : le bandeau « Collaborateurs actifs / Présents aujourd'hui » de `HomePrioritiesSection` **supprimé** (dupliquait les KPI Effectifs + Présents de la grille) ; les cartes d'action « À traiter » (congés, feuilles, signatures, intégrations) conservées. La déduplication timesheet/leave (hors défaut) restait acquise.
+
+**Validation** : build vert · **PHPUnit `Dashboard|Widget|Operations|Home` 130 verts** · **axe 0 serious/critical** light+dark · driver `/home` **0 × 403** · dispatcher `/dashboard` filtré · **perf réelle** : interactif **~870 ms**, batch widgets **~65 ms**, layout ~95 ms (11 tuiles). **DEV uniquement, aucun push main, aucune PROD, P2 non démarré.**

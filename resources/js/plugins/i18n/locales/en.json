@@ -6805,7 +6805,7 @@
       "PlanningShiftsDesc": "Planned shifts and uncovered slots",
       "headcountLabel": "Headcount",
       "headcountCaption": "{n} on leave",
-      "headcountAllPresent": "All present",
+      "headcountAllPresent": "No one on leave",
       "clockLabel": "Present today",
       "clockCaption": "{onBreak} on break · {notClocked} expected",
       "clockEmpty": "No clock-in",

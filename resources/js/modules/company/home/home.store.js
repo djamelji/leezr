@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 import { createSurfaceEngine } from '@/core/surface-engine/useSurfaceEngine'
+import { useAuthStore } from '@/core/stores/auth'
 
 export const useOperationalHomeStore = defineStore('operationalHome', () => {
   const engine = createSurfaceEngine({
@@ -48,7 +49,19 @@ export const useOperationalHomeStore = defineStore('operationalHome', () => {
     //   4. Compact builder (frontend, fallback when no DB layout at all)
     if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
       buildCompactDefaultLayout()
-      await engine.saveLayout()
+
+      // N'enregistrer QUE si l'utilisateur a réellement le droit (PUT /dashboard/layout
+      // est gated `manage-structure`). Sans ce guard, un rôle non-administratif (ex. driver)
+      // déclenchait un 403 parasite à chaque chargement. Sinon : disposition compacte rendue
+      // en mémoire (reconstruite au besoin), aucune erreur. ADR-745.
+      if (useAuthStore().isAdministrative) {
+        try {
+          await engine.saveLayout()
+        }
+        catch {
+          // Échec d'enregistrement (403/validation/réseau) — non bloquant, layout en mémoire.
+        }
+      }
     }
 
     await engine.resolveWidgets()
