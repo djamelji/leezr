@@ -78,12 +78,13 @@ class DashboardLayoutController extends Controller
         ]);
     }
 
+    /**
+     * ADR-746 (P2) : défaut vide → le frontend compose une disposition éditoriale
+     * filtrée par le catalogue (lui-même gated par permissions). Même modèle que le
+     * dashboard Company (le backend renvoie [], le smart-default compose côté client).
+     */
     private static function defaultLayout(): array
     {
-        return [
-            ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'global', 'config' => ['period' => '30d']],
-            ['key' => 'billing.refund_ratio', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'global', 'config' => ['period' => '30d']],
-            ['key' => 'billing.ar_outstanding', 'x' => 0, 'y' => 4, 'w' => 4, 'h' => 2, 'scope' => 'global', 'config' => []],
-        ];
+        return [];
     }
 }

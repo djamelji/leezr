@@ -26879,3 +26879,35 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 3. **Redondance éliminée** : le bandeau « Collaborateurs actifs / Présents aujourd'hui » de `HomePrioritiesSection` **supprimé** (dupliquait les KPI Effectifs + Présents de la grille) ; les cartes d'action « À traiter » (congés, feuilles, signatures, intégrations) conservées. La déduplication timesheet/leave (hors défaut) restait acquise.
 
 **Validation** : build vert · **PHPUnit `Dashboard|Widget|Operations|Home` 130 verts** · **axe 0 serious/critical** light+dark · driver `/home` **0 × 403** · dispatcher `/dashboard` filtré · **perf réelle** : interactif **~870 ms**, batch widgets **~65 ms**, layout ~95 ms (11 tuiles). **DEV uniquement, aucun push main, aucune PROD, P2 non démarré.**
+
+## ADR-746 — Phase 2 : refonte premium du dashboard Platform (composition éditoriale adaptative)
+
+**Date** : 2026-11-09
+**Contexte** : P1 (dashboard Company) validée/clôturée. GO Phase 2 : appliquer le même niveau de composition au **dashboard Platform** (onglet `overview`, surface super-admin/staff), **adapté aux permissions** de chaque utilisateur Platform. Contraintes : réutiliser le moteur (surface engine, batch, RBAC platform, read-models), **aucune donnée fictive**, aucun élargissement de permission, pas de reconstruction du moteur.
+
+**Décision / Livraison** :
+- **7 widgets composites Platform** (server-resolved, données réelles, scopés, try/catch) dans `app/Modules/Dashboard/Widgets/` + composants `resources/js/views/platform-dashboard/_Platform*.vue` (Lzr*) :
+  - `platform.commercial_overview` (`view_billing`) — MRR/ARR + évolution MRR 12 mois (`BillingMetricsCalculationService`, montants en cents) + abonnements/essais/churn/conversion. Hero w8.
+  - `platform.plan_distribution` (`view_billing`) — donut companies par plan (`Company.plan_key`).
+  - `platform.companies_overview` (`view_companies`) — actives/suspendues/nouvelles + tendance 7 j.
+  - `platform.system_health` (`view_system_health`) — `SystemHealthService::check()` (files/email/IA/scheduler).
+  - `platform.support_overview` (`manage_support`) — `SupportTicket` (ouverts/non assignés/résolus), empty-state.
+  - `platform.security_overview` (`security.alerts.view`) — `SecurityAlert` (ouvertes/critiques/sévérité).
+  - `platform.catalog_overview` (`manage_modules`) — adoption modules (`CompanyModule`) + jobdomains.
+- **Composeur éditorial Platform** (`modules/platform-admin/dashboard/dashboard.store.js` → `buildSmartDefaultLayout`) : 3 sections adaptatives (Commercial / Opérationnel / Support-Sécurité-Catalogue), émises selon le **catalogue permissionné** (`catalogForUser`) ; largeurs sommant à 12 → pas de trous ; billing individuels exclus du défaut (couverts) mais conservés au catalogue ; AI en repli. **Backend `defaultLayout()` platform → `[]`** (le frontend compose, comme Company). PUT layout platform = `view_dashboard` → save sans risque de 403.
+- **Cockpit permission-aware** (`_DashboardOverview.vue`) : les cards de stats (Companies/Users/Rôles/Modules) ne sont **fetchées et affichées que si l'utilisateur détient la permission** → fin du bandeau « N statistiques non chargées » et des cards à 0 pour les rôles limités.
+- **Permissions** : 100 % RBAC existant (clés réelles du `PlatformPermissionCatalog`), aucune permission inventée. Chaque API reste gated serveur (batch `forbidden` par widget, endpoints stats).
+
+**Validation permission-adaptative** (scénarios de test DEV, grants réversibles — reverted après recette) :
+
+| Scénario | Permission(s) | Widgets rendus |
+|---|---|---|
+| Admin global | super_admin | toutes les sections |
+| Finance | `view_billing` | commercial + plan |
+| Support | `manage_support` | support |
+| Operations | `view_companies`+`view_system_health` | companies + santé |
+| Catalogue | `manage_modules` | catalogue |
+
+**Tests** : **PHPUnit 996 verts** (compteurs catalogue 12→19, défaut layout vide par design — tests mis à jour) · **axe 0 serious/critical** light+dark sur le contenu P2 (exclusions = chrome `@core` : nav + `TheCustomizer`, non modifiable, pré-existant) · 4 scénarios capturés sans erreur · **perf** batch widgets ~65 ms. Données réelles (MRR 174 €, ARR 6000 €, 20 companies, 4 alertes, support 0 → empty, adoption modules). Moteur/drag&drop/persistance et `@core`/`@layouts` **intacts**.
+
+**Défauts résiduels** : (1) 3 violations a11y restantes dans `@core/TheCustomizer` + perfect-scrollbar (chrome Vuexy, interdit de modifier, app-wide, hors P2). (2) Le churn/conversion sont des proxys (statut courant, fenêtres figées 30/90 j) — valeurs réelles mais approximatives. (3) Mobile platform utilise l'interleave historique (pas la priorité métier P1). **DEV uniquement, aucune PROD, P3 non démarré.**

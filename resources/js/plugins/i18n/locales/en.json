@@ -8725,5 +8725,51 @@
     "theme": "Theme",
     "shortcuts": "Shortcuts",
     "help": "Help"
+  },
+  "platform": {
+    "widgets": {
+      "commercialOverview": "Commercial overview",
+      "commercialOverviewDesc": "MRR, ARR, subscriptions and trend",
+      "commercialSub": "Recurring revenue",
+      "planDistribution": "Plan distribution",
+      "planDistributionDesc": "Companies by subscription plan",
+      "companiesOverview": "Companies & sign-ups",
+      "companiesOverviewDesc": "Active, suspended and new companies",
+      "systemHealth": "System health",
+      "systemHealthDesc": "Queues, email, AI, scheduler status",
+      "supportOverview": "Support",
+      "supportOverviewDesc": "Support tickets",
+      "securityOverview": "Security",
+      "securityOverviewDesc": "Security alerts",
+      "catalogOverview": "Catalog & adoption",
+      "catalogOverviewDesc": "Module adoption and jobdomains",
+      "loadError": "Loading error",
+      "noData": "No data",
+      "noHistory": "No history available",
+      "noNewThisWeek": "No sign-up this week",
+      "activeSubs": "{n} active subscriptions",
+      "trials": "{n} trials in progress",
+      "churn": "Churn",
+      "conversion": "Conversion",
+      "companiesTotal": "{n} companies",
+      "companiesActive": "Active companies",
+      "new30d": "{n} new (30d)",
+      "suspendedN": "{n} suspended",
+      "supportEmpty": "No open ticket",
+      "ticketsOpen": "Open tickets",
+      "unassignedN": "{n} unassigned",
+      "resolvedN": "{n} resolved",
+      "securityClear": "No open alert",
+      "alertsOpen": "Open alerts",
+      "criticalN": "{n} critical",
+      "highMediumN": "{high} high · {medium} medium",
+      "topModules": "Most adopted modules",
+      "companiesN": "{n} companies",
+      "health": {
+        "healthy": "Healthy",
+        "warning": "Degraded",
+        "critical": "Critical"
+      }
+    }
   }
 }

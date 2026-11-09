@@ -109,6 +109,16 @@ class DashboardGridV2Test extends TestCase
 
     public function test_platform_layout_get_returns_grid_format(): void
     {
+        // ADR-746 : le défaut backend est désormais vide (le frontend compose la
+        // disposition éditoriale). On enregistre d'abord un layout pour vérifier le
+        // format x/y/w/h réellement renvoyé par l'API.
+        $this->actAsPlatform($this->platformAdmin)
+            ->putJson('/api/platform/dashboard/layout', [
+                'layout' => [
+                    ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'global', 'config' => ['period' => '30d']],
+                ],
+            ])->assertOk();
+
         $response = $this->actAsPlatform($this->platformAdmin)
             ->getJson('/api/platform/dashboard/layout');
 

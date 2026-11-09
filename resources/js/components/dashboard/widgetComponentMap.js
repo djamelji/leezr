@@ -68,6 +68,15 @@ const map = {
   AiDetections: defineAsyncComponent(() => import('@/pages/platform/ai/_AiDetectionsWidget.vue')),
   AiAutoActions: defineAsyncComponent(() => import('@/pages/platform/ai/_AiAutoActionsWidget.vue')),
   AiConfidence: defineAsyncComponent(() => import('@/pages/platform/ai/_AiConfidenceWidget.vue')),
+
+  // Platform — panneaux composites éditoriaux (ADR-746, P2)
+  PlatformCommercialOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCommercialWidget.vue')),
+  PlatformPlanDistribution: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformPlanDistributionWidget.vue')),
+  PlatformCompaniesOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCompaniesWidget.vue')),
+  PlatformSystemHealth: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSystemHealthWidget.vue')),
+  PlatformSupportOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSupportWidget.vue')),
+  PlatformSecurityOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSecurityWidget.vue')),
+  PlatformCatalogOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCatalogWidget.vue')),
 }
 
 export function resolveWidgetComponent(componentKey) {

@@ -140,7 +140,7 @@ class DashboardEngineTest extends TestCase
             ->getJson('/api/platform/dashboard/widgets/catalog');
 
         $response->assertOk();
-        $this->assertCount(12, $response->json('widgets'));
+        $this->assertCount(19, $response->json('widgets')); // +7 panneaux composites platform (ADR-746)
 
         // Viewer without view_billing sees 0
         $response = $this->actingAs($this->viewer, 'platform')
@@ -259,10 +259,11 @@ class DashboardEngineTest extends TestCase
 
         $response->assertOk();
 
+        // ADR-746 : le défaut backend est désormais vide (le frontend compose la
+        // disposition éditoriale filtrée par le catalogue permissionné).
         $layout = $response->json('layout');
         $this->assertIsArray($layout);
-        $this->assertCount(3, $layout);
-        $this->assertEquals('billing.revenue_trend', $layout[0]['key']);
+        $this->assertCount(0, $layout);
     }
 
     // ── C9: layout put saves and get returns ──

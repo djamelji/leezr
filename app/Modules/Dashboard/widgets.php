@@ -66,4 +66,13 @@ return [
     \App\Modules\Dashboard\Widgets\AiDetectionsWidget::class,
     \App\Modules\Dashboard\Widgets\AiAutoActionsWidget::class,
     \App\Modules\Dashboard\Widgets\AiConfidenceWidget::class,
+
+    // Platform — panneaux composites éditoriaux (ADR-746, P2)
+    \App\Modules\Dashboard\Widgets\PlatformCommercialOverviewWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformPlanDistributionWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformCompaniesOverviewWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformSystemHealthWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformSupportOverviewWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformSecurityOverviewWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformCatalogOverviewWidget::class,
 ];

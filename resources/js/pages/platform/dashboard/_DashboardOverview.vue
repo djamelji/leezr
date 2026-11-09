@@ -33,15 +33,19 @@ const stats = ref({
 
 async function loadStats() {
   try {
-    const results = await Promise.allSettled([
-      companiesStore.fetchCompanies(),
-      usersStore.fetchPlatformUsers(),
-      usersStore.fetchCompanyUsers(),
-      rolesStore.fetchRoles(),
-      settingsStore.fetchModules(),
-    ])
+    // ADR-746 (P2) : ne charger QUE les statistiques que l'utilisateur peut consulter
+    // (chaque endpoint est permission-gated serveur). Évite les 403 parasites et le
+    // bandeau « N non chargées » pour un utilisateur à droits limités.
+    const tasks = []
+    if (auth.hasPermission('view_companies')) tasks.push(companiesStore.fetchCompanies())
+    if (auth.hasPermission('manage_platform_users')) tasks.push(usersStore.fetchPlatformUsers())
+    if (auth.hasPermission('view_company_users')) tasks.push(usersStore.fetchCompanyUsers())
+    if (auth.hasPermission('manage_roles')) tasks.push(rolesStore.fetchRoles())
+    if (auth.hasPermission('manage_modules')) tasks.push(settingsStore.fetchModules())
 
-    // Count failures for user feedback
+    const results = await Promise.allSettled(tasks)
+
+    // Count failures for user feedback (permission-denied stats are not even requested)
     const failures = results.filter(r => r.status === 'rejected')
 
     if (failures.length) {
@@ -121,43 +125,15 @@ onMounted(() => {
   dashboardStore.loadDashboard()
 })
 
+// ADR-746 (P2) : chaque card porte sa permission et n'est affichée que si l'utilisateur
+// la détient → cockpit cohérent pour les rôles limités (pas de cards à 0 non autorisées).
 const cards = computed(() => [
-  {
-    title: t('Companies'),
-    value: stats.value.companies,
-    icon: 'tabler-building',
-    color: 'primary',
-    to: { name: 'platform-companies' },
-  },
-  {
-    title: t('Platform Users'),
-    value: stats.value.platformUsers,
-    icon: 'tabler-user-shield',
-    color: 'error',
-    to: { name: 'platform-access-tab', params: { tab: 'users' } },
-  },
-  {
-    title: t('Company Users'),
-    value: stats.value.companyUsers,
-    icon: 'tabler-users-group',
-    color: 'info',
-    to: { name: 'platform-companies' },
-  },
-  {
-    title: t('Roles'),
-    value: stats.value.roles,
-    icon: 'tabler-shield-lock',
-    color: 'success',
-    to: { name: 'platform-access-tab', params: { tab: 'roles' } },
-  },
-  {
-    title: t('Modules'),
-    value: stats.value.modules,
-    icon: 'tabler-puzzle',
-    color: 'warning',
-    to: { name: 'platform-catalog-tab', params: { tab: 'modules' } },
-  },
-])
+  { title: t('Companies'), value: stats.value.companies, icon: 'tabler-building', color: 'primary', perm: 'view_companies', to: { name: 'platform-companies' } },
+  { title: t('Platform Users'), value: stats.value.platformUsers, icon: 'tabler-user-shield', color: 'error', perm: 'manage_platform_users', to: { name: 'platform-access-tab', params: { tab: 'users' } } },
+  { title: t('Company Users'), value: stats.value.companyUsers, icon: 'tabler-users-group', color: 'info', perm: 'view_company_users', to: { name: 'platform-companies' } },
+  { title: t('Roles'), value: stats.value.roles, icon: 'tabler-shield-lock', color: 'success', perm: 'manage_roles', to: { name: 'platform-access-tab', params: { tab: 'roles' } } },
+  { title: t('Modules'), value: stats.value.modules, icon: 'tabler-puzzle', color: 'warning', perm: 'manage_modules', to: { name: 'platform-catalog-tab', params: { tab: 'modules' } } },
+].filter(c => auth.hasPermission(c.perm)))
 
 // ── Dashboard Engine (D4e.3) ──
 const showCatalogDrawer = ref(false)
@@ -349,8 +325,11 @@ const saveAndResolve = async () => {
       {{ statsError }}
     </VAlert>
 
-    <!-- ═══ KPI STAT CARDS ═══ -->
-    <VRow class="card-grid card-grid-xs">
+    <!-- ═══ KPI STAT CARDS (masqué si aucune card autorisée — ADR-746) ═══ -->
+    <VRow
+      v-if="cards.length"
+      class="card-grid card-grid-xs"
+    >
       <VCol
         v-for="card in cards"
         :key="card.title"

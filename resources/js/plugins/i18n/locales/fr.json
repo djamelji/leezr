@@ -8725,5 +8725,51 @@
     "theme": "Thème",
     "shortcuts": "Raccourcis",
     "help": "Aide"
+  },
+  "platform": {
+    "widgets": {
+      "commercialOverview": "Pilotage commercial",
+      "commercialOverviewDesc": "MRR, ARR, abonnements et évolution",
+      "commercialSub": "Revenus récurrents",
+      "planDistribution": "Répartition par plan",
+      "planDistributionDesc": "Companies par plan d'abonnement",
+      "companiesOverview": "Companies & inscriptions",
+      "companiesOverviewDesc": "Companies actives, suspendues et nouvelles",
+      "systemHealth": "Santé des services",
+      "systemHealthDesc": "État des files, email, IA, planificateur",
+      "supportOverview": "Support",
+      "supportOverviewDesc": "Tickets de support",
+      "securityOverview": "Sécurité",
+      "securityOverviewDesc": "Alertes de sécurité",
+      "catalogOverview": "Catalogue & adoption",
+      "catalogOverviewDesc": "Adoption des modules et jobdomains",
+      "loadError": "Erreur de chargement",
+      "noData": "Aucune donnée",
+      "noHistory": "Pas d'historique disponible",
+      "noNewThisWeek": "Aucune inscription cette semaine",
+      "activeSubs": "{n} abonnements actifs",
+      "trials": "{n} essais en cours",
+      "churn": "Churn",
+      "conversion": "Conversion",
+      "companiesTotal": "{n} companies",
+      "companiesActive": "Companies actives",
+      "new30d": "{n} nouvelles (30 j)",
+      "suspendedN": "{n} suspendues",
+      "supportEmpty": "Aucun ticket en cours",
+      "ticketsOpen": "Tickets ouverts",
+      "unassignedN": "{n} non assignés",
+      "resolvedN": "{n} résolus",
+      "securityClear": "Aucune alerte ouverte",
+      "alertsOpen": "Alertes ouvertes",
+      "criticalN": "{n} critiques",
+      "highMediumN": "{high} élevées · {medium} moyennes",
+      "topModules": "Modules les plus adoptés",
+      "companiesN": "{n} companies",
+      "health": {
+        "healthy": "Opérationnel",
+        "warning": "Dégradé",
+        "critical": "Critique"
+      }
+    }
   }
 }
