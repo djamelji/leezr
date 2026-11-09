@@ -26945,3 +26945,29 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Fiabilité** : widget **3/3 sur le vrai dashboard** (contexte production). La flakiness observée venait **du harness** (navigations fraîches répétées → accumulation d'état ApexCharts dans une même page) ; capture par **page fraîche + attente des données** → stable. **axe 0 serious** sur le widget. **PHPUnit 648 verts.**
 
 **Généralisation** : le mécanisme (`viewport.mode` + `resolvePresentationMode`) est **disponible pour tous les widgets** (platform & company) sans transformation forcée — validé sur le widget commercial + réutilisable (prochain : répartition par plan, heures travaillées, etc.). **DEV uniquement, aucun push main, aucune PROD, P3 non démarré.**
+
+## ADR-748b — Correction P0 de la régression resize : le graphe du widget ne disparaît plus (jamais)
+
+**Date** : 2026-11-09
+**Contexte** : ADR-748 refusé en recette. Sur le **vrai dashboard**, redimensionner le widget commercial faisait **disparaître le graphe** (« regression quand je redimensionne le graphique disparait! ») — définitivement, sans récupération. Les 7 captures statiques d'ADR-748 ne prouvaient pas la fiabilité d'un resize **dynamique**. Interdiction explicite de masquer (remount forcé aveugle, timeout cosmétique, empty state).
+
+**Cause racine — PROUVÉE par mesure (pas une hypothèse)** : deux bugs cumulés, indépendants d'ApexCharts.
+1. **Boucle de rétroaction hauteur-absolue ↔ flex.** Le graphe recevait `:height="chartPx"` (px absolu). Cette hauteur gonflait le contenu d'un flex-item, déclenchant une cascade de `flex-shrink` : mesure de la chaîne réelle = `root=272 → body=136 → .cw-chart=0 ❌ → host=80(min) → lzr/svg=188(déborde, clippé)`. Le `.cw-chart` s'effondrait à **0px**, le graphe débordait puis mourait au passage micro.
+2. **`v-show` inopérant sous `d-flex`.** Les en-têtes/stats portaient la classe Vuetify `d-flex` = `display:flex !important`, qui **écrase le `display:none` inline de `v-show`**. Mesure : `microDisp:"flex"` **ET** `headDisp:"flex"` → **les deux en-têtes s'affichaient ensemble**, saturant le `body` et laissant 0px au graphe.
+
+**Correction — lifecycle-correcte (aucun masquage)** :
+- **Graphe sorti du flux flex** : `.cw-chart-fill { position:absolute; inset:0 }` → sa hauteur ne rétro-agit **jamais** sur le layout (fin de la cascade shrink). Hauteur du graphe = **zone disponible RÉELLE mesurée** (`ResizeObserver` sur `.cw-chart-host`, `min-block-size:0`), figée de façon contrôlée (immédiate au 1er rendu, débouncée 180 ms ensuite).
+- **`v-show` → `v-if` sur le CHROME uniquement** (en-têtes + 4 blocs stats) : contourne le `!important`, un seul en-tête affiché par mode. Le graphe (`.cw-chart`) n'a **aucun** `v-if/v-show` → **identité stable, jamais détruit** lors d'un changement de mode.
+- **Résilience centralisée dans `LzrApexChart`** (composant partagé) : à la **stabilisation** d'un resize (ResizeObserver débouncé 240 ms), un **remount propre** via une clé `instanceKey` **compteur** (PAS une fonction des dimensions → identité stable pendant le drag, un seul remount à l'arrêt). Garantit la **récupération** du canvas pour TOUS les consommateurs si ApexCharts l'a perdu (passage mobile de la grille, re-layout). Conserve `width:'100%'` + event `resize` fenêtre débouncé (remesure native pendant le drag).
+
+**Recette resize DYNAMIQUE (test Playwright réel)** : `tests/e2e/presentation-resize.spec.js` redimensionne un vrai conteneur de widget via la trajectoire imposée **1200×600 → 700×500 → 350×180 → 1000×220 → 500×350 → 1200×600** + **8 cycles** réduction/agrandissement. Échantillon **PENDANT** la transition (90 ms) ET après stabilisation. Assertions par étape : mode valide, dims positives, canvas présent, `svg≥20px`, **1 seul en-tête**, 0 overflow X/Y, **0 chevauchement** en-tête/graphe, pas de loading permanent, donnée MRR présente, **0 erreur JS**. **Résultat : PENDANT 0/14 perdu · APRÈS 0/14 échec · 0 erreur JS · PASSED.**
+
+**Rendu adaptatif vérifié (captures)** : micro 350×180 (en-tête titre+MRR+menu, graphe lisible) · compact · standard · wide panoramique · expanded 1200×600 (en-tête complet + grand graphe + stats aside). Zone graphe désormais **56–67 % de la tuile** (vs 60px effondré avant). Proportions correctes à toutes tailles.
+
+**2ᵉ widget + types de graphe + non-régression historique** : sur le vrai dashboard, trajectoire viewport 1600→600→1600 : **donut (plan distribution) + area (commercial) + bar** → `canvas=3` **constant** à chaque palier, `jsErr=0`. **Baseline (459a7d3)** mesurée en comparaison : le donut mourait **dès vw1200 sans jamais revenir** → la correction est une **amélioration stricte**, les widgets historiques fonctionnent **mieux sans migration forcée** (bénéfice gratuit de la résilience centralisée).
+
+**Résultats non-régression** : `pnpm build` **clean**. **PHPUnit `PlatformCommercialSeriesTest` 6/6** (24 assertions). **axe 0 critical/serious** sur le widget. Aucun fichier backend modifié.
+
+**Défauts résiduels** : (1) le donut `_PlatformPlanDistributionWidget` garde une **hauteur fixe** (150/200 px) — il ne disparaît plus mais n'exploite pas encore le Presentation Engine adaptatif (hors périmètre P0, candidat P2 ultérieur) ; (2) `/platform/presentation-lab` reste un **harness DEV** (matrice 7 tailles contention-sensible ; le mode `?live=1` isolé est fiable).
+
+**Règles respectées** : **DEV uniquement, aucun push main, aucune PROD, aucune reconstruction du moteur, aucune modification des données financières, P3 non démarré, pas d'audit global.**

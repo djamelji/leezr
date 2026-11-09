@@ -20,11 +20,20 @@ const only = computed(() => {
   return (w && h) ? { w, h } : null
 })
 const shown = computed(() => only.value ? [only.value] : matrix)
+// ?live=1 : n'affiche QUE le conteneur live (une seule instance de graphe → zéro contention
+// ApexCharts) pour la recette de resize dynamique Playwright (ADR-748b).
+const liveOnly = computed(() => String(route.query.live || '') === '1')
 const live = ref({ w: 760, h: 420 })
+// Hook de test (DEV) — permet à Playwright d'animer le resize du conteneur live et de
+// valider que le graphe ne disparaît jamais pendant/après le redimensionnement (ADR-748b).
+onMounted(() => { if (typeof window !== 'undefined') window.__setLive = (w, h) => { live.value = { w, h } } })
 </script>
 
 <template>
   <div class="pa-6">
+    <!-- Mode recette resize isolé : un seul conteneur piloté par window.__setLive -->
+    <div v-if="liveOnly" class="lab-box" data-live="1" :style="{ inlineSize: live.w + 'px', blockSize: live.h + 'px' }"><PlatformCommercial /></div>
+    <template v-else>
     <template v-if="!only">
       <h4 class="text-h4 mb-1">Presentation Engine — recette adaptative</h4>
       <p class="text-body-2 text-medium-emphasis mb-6">Widget <code>platform.commercial_overview</code> rendu à chaque taille. Mode via <code>resolvePresentationMode(largeur, hauteur)</code>.</p>
@@ -49,6 +58,7 @@ const live = ref({ w: 760, h: 420 })
         <div class="lab-box" :data-size="`${m.w}x${m.h}`" :style="{ inlineSize: m.w + 'px', blockSize: m.h + 'px' }"><PlatformCommercial /></div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 

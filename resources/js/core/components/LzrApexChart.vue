@@ -28,9 +28,22 @@ const props = defineProps({
 // quand le conteneur a une largeur mesurable, puis on pilote la largeur par un
 // prop RÉACTIF (VueApexCharts se redimensionne sans remonter → pas de clignotement
 // blanc lors d'un resize, ex. capture fullPage).
+// ADR-748b — RESIZE fiable : le graphe a `width:'100%'` (ApexCharts mesure son parent)
+// et on lui demande de se remesurer en émettant un event `resize` fenêtre DÉBOUNCÉ à
+// chaque changement de conteneur (ApexCharts l'écoute nativement). On ne pilote plus la
+// largeur par un prop réactif (source des disparitions de canvas). `measuredW` ne sert
+// qu'à GATER le 1er montage (une fois le conteneur mesurable) et ne retombe jamais à 0.
 const hostRef = ref(null)
 const measuredW = ref(0)
-let ro = null
+// instanceKey : remount PROPRE du graphe à la STABILISATION d'un resize (ADR-748b).
+// ApexCharts perd parfois son canvas quand son conteneur change fortement (passage
+// mobile de la grille, re-layout) et ne le recrée pas de lui-même → récupération jamais
+// garantie. On remonte donc une seule fois, APRÈS stabilisation (débouncé), ce qui
+// garantit la récupération pour TOUS les consommateurs (donut/bar/area) sans migration.
+// La clé est un COMPTEUR (pas une fonction des dimensions) → identité stable pendant le
+// drag, un seul remount à l'arrêt.
+const instanceKey = ref(0)
+let ro = null; let rTimer = null; let settleTimer = null
 
 const ready = computed(() => measuredW.value > 0)
 
@@ -38,12 +51,21 @@ onMounted(() => {
   if (!hostRef.value) return
   ro = new ResizeObserver(entries => {
     const w = Math.round(entries[0]?.contentRect?.width || 0)
-    if (w) measuredW.value = w
+    if (!w) return
+    const first = !measuredW.value
+    measuredW.value = w
+    if (first) return
+    // Conteneur redimensionné → (1) remesure native ApexCharts (débouncé, pendant le drag),
+    clearTimeout(rTimer)
+    rTimer = setTimeout(() => { try { window.dispatchEvent(new Event('resize')) } catch (e) { /* noop */ } }, 130)
+    // (2) remount propre à la stabilisation → récupération garantie si le canvas a été perdu.
+    clearTimeout(settleTimer)
+    settleTimer = setTimeout(() => { instanceKey.value++ }, 240)
   })
   ro.observe(hostRef.value)
 })
 
-onBeforeUnmount(() => { if (ro) ro.disconnect() })
+onBeforeUnmount(() => { if (ro) ro.disconnect(); clearTimeout(rTimer); clearTimeout(settleTimer) })
 
 const vuetifyTheme = useTheme()
 const tc = computed(() => vuetifyTheme.current.value.colors)
@@ -158,8 +180,9 @@ const options = computed(() => {
   >
     <VueApexCharts
       v-if="ready"
+      :key="instanceKey"
       :type="type === 'radial' ? 'radialBar' : type"
-      :width="measuredW"
+      width="100%"
       :height="height"
       :options="options"
       :series="series"

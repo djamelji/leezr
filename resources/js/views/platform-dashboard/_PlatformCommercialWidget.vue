@@ -2,7 +2,7 @@
 // ADR-747/748 (P2) — hero « Pilotage commercial » : grand graphique immersif MRR (niveau),
 // période (Semaine/Mois/Année) + navigation + comparatif N-1, RENDU ADAPTATIF par surface
 // réelle (largeur ET hauteur) via le Presentation Engine partagé (resolvePresentationMode).
-import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 import LzrApexChart from '@/core/components/LzrApexChart.vue'
@@ -17,21 +17,36 @@ const theme = useTheme()
 // stable), donc un resize ne fait varier que :width/:height (resize natif ApexCharts) :
 // la mesure peut donc être immédiate sans provoquer de churn d'options ni de race.
 const root = ref(null)
+const chartHost = ref(null)
 const rootW = ref(0); const rootH = ref(0)
-let rootRo = null
+// Hauteur DISPONIBLE réelle de la zone graphe, mesurée directement (le graphe est en
+// position absolue → sa hauteur ne rétro-agit JAMAIS sur le flux flex ; cf. styles).
+const hostH = ref(0)
+let rootRo = null; let hostRo = null
+// Le remount propre du graphe à la stabilisation d'un resize est désormais CENTRALISÉ dans
+// LzrApexChart (bénéficie à tous les widgets). Ici on ne mesure que la surface (mode + zone
+// graphe disponible).
 onMounted(() => {
-  if (!root.value) return
-  rootRo = new ResizeObserver(es => { const r = es[0]?.contentRect; if (r) { rootW.value = Math.round(r.width); rootH.value = Math.round(r.height) } })
-  rootRo.observe(root.value)
+  if (root.value) {
+    rootRo = new ResizeObserver(es => {
+      const r = es[0]?.contentRect; if (!r) return
+      rootW.value = Math.round(r.width); rootH.value = Math.round(r.height)
+    })
+    rootRo.observe(root.value)
+  }
+  if (chartHost.value) {
+    hostRo = new ResizeObserver(es => { const r = es[0]?.contentRect; if (r) hostH.value = Math.round(r.height) })
+    hostRo.observe(chartHost.value)
+  }
 })
-onBeforeUnmount(() => { if (rootRo) rootRo.disconnect() })
+onBeforeUnmount(() => { if (rootRo) rootRo.disconnect(); if (hostRo) hostRo.disconnect() })
 const mode = computed(() => (rootW.value > 0 && rootH.value > 0) ? resolvePresentationMode(rootW.value, rootH.value) : (props.viewport?.mode || 'standard'))
 const isMicro = computed(() => mode.value === 'micro')
 const isCompact = computed(() => mode.value === 'compact')
 const isWide = computed(() => mode.value === 'wide')
 const isExpanded = computed(() => mode.value === 'expanded')
-// Disposition des stats : aside (expanded) | strip (wide/standard) | min (compact)
-const statsLayout = computed(() => isExpanded.value ? 'aside' : isCompact.value ? 'min' : 'strip')
+// Disposition des stats : aside (expanded) | strip (wide/standard) | min (compact) | none (micro)
+const statsLayout = computed(() => isMicro.value ? 'none' : isExpanded.value ? 'aside' : isCompact.value ? 'min' : 'strip')
 // Contrôles : menu déroulant si compact, segmenté sinon
 const selectorKind = computed(() => isCompact.value ? 'select' : 'segmented')
 
@@ -80,16 +95,19 @@ const currency = computed(() => series.value?.currency || d.value.currency || 'E
 const money = cents => ((Number(cents) || 0) / 100).toLocaleString('fr-FR', { style: 'currency', currency: currency.value, maximumFractionDigits: 0 })
 const pct = v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`
 
-// ── Hauteur du graphe DÉRIVÉE de la hauteur de racine mesurée (rootH, fiable — elle pilote
-// déjà le mode) moins les offsets connus (en-tête + bandeau stats par mode). LzrApexChart
-// gère sa largeur. Aucune mesure flaky du host → rendu stable à toutes les tailles.
-const chartPx = computed(() => {
-  const h = rootH.value
-  if (h < 40) return 0
-  const header = isCompact.value ? 46 : isWide.value ? 44 : 56
-  const strip = isExpanded.value ? 0 : isWide.value ? 32 : isCompact.value ? 38 : 40
-  return Math.max(60, Math.round(h - header - strip))
-})
+// ── Hauteur du graphe = hauteur DISPONIBLE mesurée (hostH), pas un calcul dérivé de rootH
+// (fragile : l'en-tête peut wrapper et consommer la moitié de la tuile). Le graphe étant en
+// position absolue, cette mesure est stable (pas de rétroaction). On la fige quand même de
+// façon CONTRÔLÉE (immédiate au 1er rendu, débouncée ensuite) pour éviter tout churn de
+// :height pendant un resize continu — seule la largeur suit (resize natif ApexCharts).
+const chartPx = ref(0)
+let hTimer = null
+watch(hostH, v => {
+  if (v < 40) return
+  if (chartPx.value < 40) { chartPx.value = v; return }   // 1er rendu : immédiat
+  clearTimeout(hTimer); hTimer = setTimeout(() => { chartPx.value = v }, 180) // resize : contrôlé
+}, { immediate: true })
+onBeforeUnmount(() => clearTimeout(hTimer))
 const ready = computed(() => chartPx.value > 40)
 
 // ── Séries & options ApexCharts ──
@@ -122,107 +140,100 @@ const kpis = computed(() => [
 </script>
 
 <template>
+  <!-- UNE SEULE instance de graphe (ADR-748b) : seul le CHROME (en-têtes, stats) est basculé
+       par v-if selon le mode — PAS par v-show, car la classe Vuetify `d-flex` pose
+       `display:flex !important` qui écrase le `display:none` inline de v-show (les deux
+       en-têtes s'affichaient alors ensemble, écrasant le graphe à 0). Le graphe (.cw-chart)
+       n'a AUCUN v-if/v-show → jamais détruit lors d'un changement de mode. -->
   <div ref="root" class="widget-root commercial-widget d-flex flex-column" :class="`mode-${mode}`">
-    <!-- ══ MICRO : KPI principal + sparkline + accès détail ══ -->
-    <template v-if="isMicro">
-      <div class="cw-micro d-flex flex-column pa-3">
-        <div class="d-flex align-center justify-space-between gap-2 flex-shrink-0">
-          <span class="text-caption text-medium-emphasis text-truncate">{{ t('platform.widgets.commercialOverview') }}</span>
-          <VMenu>
-            <template #activator="{ props: mp }"><VBtn v-bind="mp" icon variant="text" size="x-small" :aria-label="t('platform.widgets.commercial.month')"><VIcon icon="tabler-calendar" size="16" /></VBtn></template>
-            <VList density="compact"><VListItem v-for="p in periodItems" :key="p.value" :title="p.title" @click="setPeriod(p.value)" /></VList>
-          </VMenu>
-        </div>
-        <div class="d-flex align-baseline gap-2">
-          <span class="text-h6 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span>
-          <span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span>
-        </div>
-        <div class="flex-grow-1 d-flex align-end">
-          <LzrApexChart v-if="hasData" class="w-100" type="area" mode="spark" :series="[{ name: 'MRR', data: curData }]" :height="36" />
-        </div>
+    <!-- En-tête MICRO (compact : titre + MRR + menu) -->
+    <div v-if="isMicro" class="cw-microhead d-flex flex-column px-3 pt-3 flex-shrink-0">
+      <div class="d-flex align-center justify-space-between gap-2">
+        <span class="text-caption text-medium-emphasis text-truncate">{{ t('platform.widgets.commercialOverview') }}</span>
+        <VMenu>
+          <template #activator="{ props: mp }"><VBtn v-bind="mp" icon variant="text" size="x-small" :aria-label="t('platform.widgets.commercial.month')"><VIcon icon="tabler-calendar" size="16" /></VBtn></template>
+          <VList density="compact"><VListItem v-for="p in periodItems" :key="p.value" :title="p.title" @click="setPeriod(p.value)" /></VList>
+        </VMenu>
       </div>
-    </template>
+      <div class="d-flex align-baseline gap-2">
+        <span class="text-h6 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span>
+        <span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span>
+      </div>
+    </div>
 
-    <!-- ══ EXPANDED / WIDE / STANDARD / COMPACT ══ -->
-    <template v-else>
-      <!-- En-tête adaptatif (sans chevauchement) -->
-      <div class="cw-head d-flex align-center flex-wrap gap-x-3 gap-y-2" :class="isCompact ? 'px-3 pt-3' : 'px-5 pt-4'">
-        <div class="cw-title me-auto">
-          <div class="font-weight-medium text-high-emphasis text-truncate" :class="isCompact ? 'text-body-2' : 'text-body-1'">{{ t('platform.widgets.commercialOverview') }}</div>
-          <div v-if="!isWide" class="text-caption text-medium-emphasis text-truncate">{{ series?.label || t('platform.widgets.commercialSub') }}<span v-if="series?.partial"> · {{ t('platform.widgets.commercial.partial') }}</span></div>
-        </div>
+    <!-- En-tête COMPLET (expanded/wide/standard/compact) -->
+    <div v-if="!isMicro" class="cw-head d-flex align-center flex-wrap gap-x-3 gap-y-2" :class="isCompact ? 'px-3 pt-3' : 'px-5 pt-4'">
+      <div class="cw-title me-auto">
+        <div class="font-weight-medium text-high-emphasis text-truncate" :class="isCompact ? 'text-body-2' : 'text-body-1'">{{ t('platform.widgets.commercialOverview') }}</div>
+        <div v-if="!isWide" class="text-caption text-medium-emphasis text-truncate">{{ series?.label || t('platform.widgets.commercialSub') }}<span v-if="series?.partial"> · {{ t('platform.widgets.commercial.partial') }}</span></div>
+      </div>
+      <VBtnToggle v-if="selectorKind === 'segmented'" :model-value="period" density="compact" variant="outlined" divided mandatory class="cw-periods flex-shrink-0" @update:model-value="setPeriod">
+        <VBtn v-for="p in periods" :key="p.key" :value="p.key" size="small">{{ t(p.label) }}</VBtn>
+      </VBtnToggle>
+      <VSelect v-else :model-value="period" :items="periodItems" density="compact" variant="outlined" hide-details class="cw-select flex-shrink-0" @update:model-value="setPeriod" />
+      <div class="d-flex align-center flex-shrink-0">
+        <VBtn icon variant="text" size="x-small" :aria-label="t('platform.widgets.commercial.prev')" @click="nav(-1)"><VIcon icon="tabler-chevron-left" size="18" /></VBtn>
+        <VBtn v-if="!isCompact" variant="text" size="x-small" :disabled="!anchor" @click="today">{{ t('platform.widgets.commercial.today') }}</VBtn>
+        <VBtn v-else icon variant="text" size="x-small" :disabled="!anchor" :aria-label="t('platform.widgets.commercial.today')" @click="today"><VIcon icon="tabler-target" size="16" /></VBtn>
+        <VBtn icon variant="text" size="x-small" :disabled="!series?.can_next" :aria-label="t('platform.widgets.commercial.next')" @click="nav(1)"><VIcon icon="tabler-chevron-right" size="18" /></VBtn>
+      </div>
+      <VBtn v-if="!isCompact" :variant="compare ? 'tonal' : 'text'" :color="compare ? 'primary' : undefined" size="small" prepend-icon="tabler-git-compare" class="flex-shrink-0" @click="toggleCompare">{{ t('platform.widgets.commercial.compareN1') }}</VBtn>
+      <VBtn v-else icon :variant="compare ? 'tonal' : 'text'" :color="compare ? 'primary' : undefined" size="x-small" :aria-label="t('platform.widgets.commercial.compareN1')" class="flex-shrink-0" @click="toggleCompare"><VIcon icon="tabler-git-compare" size="16" /></VBtn>
+    </div>
 
-        <!-- Sélecteur de période : segmenté OU menu déroulant (compact) -->
-        <VBtnToggle v-if="selectorKind === 'segmented'" :model-value="period" density="compact" variant="outlined" divided mandatory class="cw-periods flex-shrink-0" @update:model-value="setPeriod">
-          <VBtn v-for="p in periods" :key="p.key" :value="p.key" size="small">{{ t(p.label) }}</VBtn>
-        </VBtnToggle>
-        <VSelect v-else :model-value="period" :items="periodItems" density="compact" variant="outlined" hide-details class="cw-select flex-shrink-0" @update:model-value="setPeriod" />
-
-        <div class="d-flex align-center flex-shrink-0">
-          <VBtn icon variant="text" size="x-small" :aria-label="t('platform.widgets.commercial.prev')" @click="nav(-1)"><VIcon icon="tabler-chevron-left" size="18" /></VBtn>
-          <VBtn v-if="!isCompact" variant="text" size="x-small" :disabled="!anchor" @click="today">{{ t('platform.widgets.commercial.today') }}</VBtn>
-          <VBtn v-else icon variant="text" size="x-small" :disabled="!anchor" :aria-label="t('platform.widgets.commercial.today')" @click="today"><VIcon icon="tabler-target" size="16" /></VBtn>
-          <VBtn icon variant="text" size="x-small" :disabled="!series?.can_next" :aria-label="t('platform.widgets.commercial.next')" @click="nav(1)"><VIcon icon="tabler-chevron-right" size="18" /></VBtn>
-        </div>
-
-        <VBtn v-if="!isCompact" :variant="compare ? 'tonal' : 'text'" :color="compare ? 'primary' : undefined" size="small" prepend-icon="tabler-git-compare" class="flex-shrink-0" @click="toggleCompare">{{ t('platform.widgets.commercial.compareN1') }}</VBtn>
-        <VBtn v-else icon :variant="compare ? 'tonal' : 'text'" :color="compare ? 'primary' : undefined" size="x-small" :aria-label="t('platform.widgets.commercial.compareN1')" class="flex-shrink-0" @click="toggleCompare"><VIcon icon="tabler-git-compare" size="16" /></VBtn>
+    <!-- Corps -->
+    <div class="cw-body d-flex flex-grow-1" :class="statsLayout === 'aside' ? 'flex-row' : 'flex-column'">
+      <!-- Bandeau KPI AU-DESSUS (wide) -->
+      <div v-if="statsLayout === 'strip' && isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-1 flex-shrink-0">
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
+        <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
       </div>
 
-      <!-- Corps : aside (expanded) | bandeau (wide/standard) | minimal (compact) -->
-      <div class="cw-body d-flex flex-grow-1" :class="statsLayout === 'aside' ? 'flex-row' : 'flex-column'">
-        <!-- Bandeau KPI AU-DESSUS en mode wide (peu haut → stats compactes, graphe dominant) -->
-        <div v-if="statsLayout === 'strip' && isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-1 flex-shrink-0">
-          <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
-          <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
-        </div>
-
-        <!-- Zone graphique (remplit la surface restante) -->
-        <div class="cw-chart">
-          <div ref="chartHost" class="cw-chart-host">
-            <VProgressCircular v-if="(loading || fetching) && !series" indeterminate size="26" class="cw-center" />
-            <div v-else-if="fetchError || series?.error" class="cw-center text-center"><VIcon icon="tabler-alert-circle" color="error" size="24" class="mb-1" /><div class="text-body-2 text-medium-emphasis">{{ t('platform.widgets.loadError') }}</div></div>
-            <div v-else-if="!hasData" class="cw-center text-center"><VIcon icon="tabler-chart-line" size="26" class="text-disabled mb-2" /><div class="text-body-2 text-medium-emphasis">{{ t('platform.widgets.commercial.noData') }}</div></div>
-            <!-- Graphe (LzrApexChart, wrapper éprouvé) : double-série N-1 en standard/wide/expanded,
-                 série unique en compact. Rendu fiable quelle que soit la taille. -->
-            <LzrApexChart v-else-if="ready" class="w-100" type="area"
-              :series="isCompact ? [{ name: 'MRR', data: curData }] : apexSeries"
-              :categories="labels" :height="chartPx" :colors="['primary']"
-              :compare="!isCompact && showPrev" :format-y="v => money(v * 100)" />
-            <div v-if="compare && !series?.has_history && hasData" class="cw-note text-caption text-medium-emphasis"><VIcon icon="tabler-info-circle" size="14" /> {{ t('platform.widgets.commercial.noHistoryN1') }}</div>
+      <!-- Zone graphique — le graphe est en position ABSOLUE (.cw-chart-fill) : sa hauteur ne
+           rétro-agit jamais sur le flux flex (fin de la cascade de shrink → chart=0). -->
+      <div class="cw-chart">
+        <div ref="chartHost" class="cw-chart-host">
+          <VProgressCircular v-if="(loading || fetching) && !series" indeterminate size="26" class="cw-center" />
+          <div v-else-if="fetchError || series?.error" class="cw-center text-center"><VIcon icon="tabler-alert-circle" color="error" size="24" class="mb-1" /><div class="text-body-2 text-medium-emphasis">{{ t('platform.widgets.loadError') }}</div></div>
+          <div v-else-if="!hasData" class="cw-center text-center"><VIcon icon="tabler-chart-line" size="26" class="text-disabled mb-2" /><div class="text-body-2 text-medium-emphasis">{{ t('platform.widgets.commercial.noData') }}</div></div>
+          <div v-else-if="ready" class="cw-chart-fill">
+            <LzrApexChart class="w-100" type="area" mode="full"
+              :series="apexSeries" :categories="labels" :height="chartPx" :colors="['primary']"
+              :compare="showPrev" :format-y="v => money(v * 100)" />
           </div>
-        </div>
-
-        <!-- Stats : ASIDE (expanded) -->
-        <div v-if="statsLayout === 'aside'" class="cw-aside flex-shrink-0 d-flex flex-column gap-3 px-5 py-4">
-          <div>
-            <div class="d-flex align-baseline gap-2"><span class="text-h5 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
-            <div class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.mrrNow') }}</div>
-          </div>
-          <VDivider />
-          <div class="d-flex flex-column gap-3">
-            <div v-for="k in kpis" :key="k.key" class="d-flex align-center gap-2">
-              <VAvatar :color="k.c" variant="tonal" size="30" rounded><VIcon :icon="k.i" size="16" /></VAvatar>
-              <div class="overflow-hidden"><div class="text-body-2 font-weight-medium text-high-emphasis text-truncate">{{ k.val }}</div><div class="text-caption text-medium-emphasis text-truncate">{{ k.l }}</div></div>
-            </div>
-          </div>
-          <div v-if="showPrev && summary.mrr_prev_equiv !== null" class="mt-auto"><VDivider class="mb-2" /><div class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.vsN1') }}</div><div class="text-body-2 text-high-emphasis">{{ money(summary.mrr_prev_equiv) }}</div></div>
-        </div>
-
-        <!-- Stats : BANDEAU sous le graphe (standard) -->
-        <div v-else-if="statsLayout === 'strip' && !isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-2 flex-shrink-0">
-          <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
-          <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
-        </div>
-
-        <!-- Stats : MINIMAL (compact) -->
-        <div v-else-if="statsLayout === 'min'" class="cw-min d-flex align-center gap-3 px-3 py-2 flex-shrink-0">
-          <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span></div>
-          <div class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ money(arr) }}</span><span class="text-caption text-medium-emphasis">ARR</span></div>
-          <span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-auto" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span>
+          <div v-if="compare && !series?.has_history && hasData && !isMicro" class="cw-note text-caption text-medium-emphasis"><VIcon icon="tabler-info-circle" size="14" /> {{ t('platform.widgets.commercial.noHistoryN1') }}</div>
         </div>
       </div>
-    </template>
+
+      <!-- Stats ASIDE (expanded) -->
+      <div v-if="statsLayout === 'aside'" class="cw-aside flex-shrink-0 d-flex flex-column gap-3 px-5 py-4">
+        <div>
+          <div class="d-flex align-baseline gap-2"><span class="text-h5 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
+          <div class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.mrrNow') }}</div>
+        </div>
+        <VDivider />
+        <div class="d-flex flex-column gap-3">
+          <div v-for="k in kpis" :key="k.key" class="d-flex align-center gap-2">
+            <VAvatar :color="k.c" variant="tonal" size="30" rounded><VIcon :icon="k.i" size="16" /></VAvatar>
+            <div class="overflow-hidden"><div class="text-body-2 font-weight-medium text-high-emphasis text-truncate">{{ k.val }}</div><div class="text-caption text-medium-emphasis text-truncate">{{ k.l }}</div></div>
+          </div>
+        </div>
+        <div v-if="showPrev && summary.mrr_prev_equiv !== null" class="mt-auto"><VDivider class="mb-2" /><div class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.vsN1') }}</div><div class="text-body-2 text-high-emphasis">{{ money(summary.mrr_prev_equiv) }}</div></div>
+      </div>
+
+      <!-- Stats BANDEAU sous le graphe (standard) -->
+      <div v-if="statsLayout === 'strip' && !isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-2 flex-shrink-0">
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
+        <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
+      </div>
+
+      <!-- Stats MINIMAL (compact) -->
+      <div v-if="statsLayout === 'min'" class="cw-min d-flex align-center gap-3 px-3 py-2 flex-shrink-0">
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span></div>
+        <div class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ money(arr) }}</span><span class="text-caption text-medium-emphasis">ARR</span></div>
+        <span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-auto" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -236,7 +247,11 @@ const kpis = computed(() => [
 .cw-select { max-inline-size: 130px; }
 .cw-body { min-block-size: 0; min-inline-size: 0; }
 .cw-chart { flex: 1 1 auto; min-inline-size: 0; min-block-size: 0; display: flex; flex-direction: column; overflow: hidden; }
-.cw-chart-host { position: relative; flex: 1 1 auto; min-block-size: 80px; min-inline-size: 0; padding-inline: 6px; overflow: hidden; }
+/* min-block-size: 0 (et NON 80) : la hauteur vient du flex disponible ; le graphe étant
+   absolu, rien ne déborde ni ne rétro-agit. 60px de garde pour rester lisible si la tuile
+   devient minuscule. */
+.cw-chart-host { position: relative; flex: 1 1 auto; min-block-size: 60px; min-inline-size: 0; padding-inline: 6px; overflow: hidden; }
+.cw-chart-fill { position: absolute; inset: 0; padding-inline: 6px; }
 .cw-chart-host :deep(.apexcharts-canvas) { max-inline-size: 100%; }
 .cw-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .cw-note { position: absolute; inset-inline: 10px; inset-block-end: 0; pointer-events: none; }
