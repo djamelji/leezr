@@ -31,6 +31,9 @@ return [
     \App\Modules\Dashboard\Widgets\ComplianceRolesWidget::class,
     \App\Modules\Dashboard\Widgets\ComplianceTypesWidget::class,
 
+    // Workforce — P1 (ADR-744), server-resolved sur read-models réels
+    \App\Modules\Dashboard\Widgets\WorkforceClockLiveWidget::class,
+
     // Onboarding + Plan (ADR-372: pipeline-driven, client-resolved)
     \App\Modules\Dashboard\Widgets\OnboardingSetupWidget::class,
     \App\Modules\Dashboard\Widgets\PlanBadgeWidget::class,

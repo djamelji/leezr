@@ -34,6 +34,9 @@ const map = {
   ComplianceRoles: defineAsyncComponent(() => import('@/views/company-dashboard/_RolesWidget.vue')),
   ComplianceTypes: defineAsyncComponent(() => import('@/views/company-dashboard/_TypesWidget.vue')),
 
+  // Workforce — P1 (ADR-744)
+  WorkforceClockLive: defineAsyncComponent(() => import('@/views/company-dashboard/_ClockLiveWidget.vue')),
+
   // Plan badge (ADR-372: pipeline-driven). Onboarding is outside grid (ADR-383).
   PlanBadge: defineAsyncComponent(() => import('@/pages/company/dashboard/_PlanBadgeWidget.vue')),
 
