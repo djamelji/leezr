@@ -178,10 +178,10 @@
   .lzr-card--raised:hover { transform: none; }
 }
 
-// Lien drill-down accessible (AA) — primary assombri sur surface claire, éclairci en dark.
-.lzr-link { color: #5a4fcf; }
+// Affordances Lzr accessibles AA indépendamment du primary de marque (ADR-743).
+// (La plomberie ADR-332 applique un primary unique aux 2 thèmes ; ces tokens
+//  garantissent le contraste des liens/CTA quel que soit le primary configuré.)
+.lzr-link { color: #5d50e6; }
 .lzr-link:hover { text-decoration: underline; }
 .v-theme--dark .lzr-link { color: #a9a2ff; }
-
-// CTA accessible (AA) — primary assombri + texte blanc (contraste ~5.8:1, light & dark).
-.lzr-cta.v-btn { background-color: #5a4fcf !important; color: #fff !important; }
+.lzr-cta.v-btn { background-color: #5d50e6 !important; color: #fff !important; }

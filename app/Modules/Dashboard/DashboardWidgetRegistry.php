@@ -52,14 +52,11 @@ final class DashboardWidgetRegistry
                     return false;
                 }
 
+                // Authorization = permissions() only (RBAC). ADR-743: capabilities()/hasCapability()
+                // sont DÉPRÉCIÉS — le stub hasCapability() renvoyait toujours true (gate inerte)
+                // et tous les widgets déclarent capabilities()=[] : aucune restriction n'y reposait.
                 foreach ($w->permissions() as $perm) {
                     if (!$user->hasPermission($perm)) {
-                        return false;
-                    }
-                }
-
-                foreach ($w->capabilities() as $cap) {
-                    if (!$user->hasCapability($cap)) {
                         return false;
                     }
                 }

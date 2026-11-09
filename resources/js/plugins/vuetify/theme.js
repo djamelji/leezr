@@ -1,14 +1,36 @@
 // ADR-332: Read platform primary color injected by Blade (application.blade.php)
-// Falls back to Vuexy default if not available (SSR, tests, etc.)
-export const staticPrimaryColor = (typeof window !== 'undefined' && window.__PLATFORM_PRIMARY__) || '#7367F0'
-export const staticPrimaryDarkenColor = '#675DD8'
+// ADR-743: primary Leezr accessible WCAG AA. Un primary unique ne peut satisfaire AA
+// en LIGHT (texte/bouton sur blanc → plus foncé) ET en DARK (texte sur fond foncé →
+// plus clair) : contraintes opposées. On garde donc un défaut PAR THÈME, identité
+// violette préservée (nuance ajustée, pas changée). Un override plateforme, s'il existe,
+// prime sur les deux (responsabilité de la plateforme).
+const platformPrimary = (typeof window !== 'undefined' && window.__PLATFORM_PRIMARY__) || null
+
+// Éclaircit un hex (0..1) — sert à dériver une variante DARK accessible à partir d'une
+// couleur de marque unique (le réglage plateforme ne stocke qu'un seul primary, qui ne
+// peut être AA en light ET dark : en dark on l'éclaircit pour le texte sur fond foncé).
+function lighten(hex, amt) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '')
+  if (!m) return hex
+  const ch = i => Math.round(parseInt(m[i], 16) + (255 - parseInt(m[i], 16)) * amt)
+  return '#' + [ch(1), ch(2), ch(3)].map(c => c.toString(16).padStart(2, '0')).join('')
+}
+
+export const staticPrimaryColor = platformPrimary || '#5D50E6'   // défaut clair (AA sur blanc)
+export const staticPrimaryDarkenColor = '#4C40D0'
+// Variante DARK accessible, dérivée du primary de marque (éclaircie pour le contraste
+// sur fond foncé). Exportée car le runtime (index.js) fait défaut le primary dark dessus.
+export const staticDarkPrimaryColor = lighten(platformPrimary || '#5D50E6', 0.45)
+export const staticDarkPrimaryDarkenColor = lighten(platformPrimary || '#5D50E6', 0.30)
+const lightPrimary = platformPrimary || '#5D50E6'
+const darkPrimary = staticDarkPrimaryColor
 export const themes = {
   light: {
     dark: false,
     colors: {
-      'primary': staticPrimaryColor,
+      'primary': lightPrimary,
       'on-primary': '#fff',
-      'primary-darken-1': '#675DD8',
+      'primary-darken-1': '#4C40D0',
       'secondary': '#808390',
       'on-secondary': '#fff',
       'secondary-darken-1': '#737682',
@@ -79,9 +101,9 @@ export const themes = {
   dark: {
     dark: true,
     colors: {
-      'primary': staticPrimaryColor,
-      'on-primary': '#fff',
-      'primary-darken-1': '#675DD8',
+      'primary': darkPrimary,
+      'on-primary': '#221F3B',
+      'primary-darken-1': '#7A6EF0',
       'secondary': '#808390',
       'on-secondary': '#fff',
       'secondary-darken-1': '#737682',

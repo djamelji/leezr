@@ -71,7 +71,10 @@ class PlatformUser extends Authenticatable
     }
 
     /**
-     * Stub — capabilities not implemented yet, always allow.
+     * @deprecated ADR-743 — mécanisme de capabilities abandonné au profit du RBAC
+     * (permissions()). Ce stub renvoyait toujours true (gate inerte) et n'est plus
+     * consommé par DashboardWidgetRegistry. Conservé pour rétrocompatibilité uniquement ;
+     * NE JAMAIS l'utiliser pour autoriser un accès. Toute restriction = permissions().
      */
     public function hasCapability(string $key): bool
     {

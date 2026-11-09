@@ -116,13 +116,13 @@ const states = [
     <!-- Démonstration des états loading / empty / error -->
     <h2 class="text-h6 mt-6 mb-3">États standardisés (loading / empty / error)</h2>
     <VBtnToggle v-model="frameState" density="comfortable" variant="outlined" divided mandatory class="mb-3">
-      <VBtn v-for="s in states" :key="s.value" :value="s.value" size="small">{{ s.label }}</VBtn>
+      <VBtn v-for="s in states" :key="s.value" :value="s.value" class="px-5 text-none">{{ s.label }}</VBtn>
     </VBtnToggle>
     <VRow>
       <VCol cols="12" md="4">
         <LzrWidgetFrame title="Widget — état loaded" icon="tabler-check" elevation="flat" :loading="frameState === 'loading'"
           :error="frameState === 'error' ? 'Impossible de charger les données' : false" :empty="frameState === 'empty'" :min-height="180">
-          <div class="text-h4 text-primary">128</div>
+          <div class="text-h4 text-high-emphasis">128</div>
           <div class="text-body-2 text-medium-emphasis">Exemple de contenu chargé</div>
         </LzrWidgetFrame>
       </VCol>

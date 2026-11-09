@@ -20,7 +20,14 @@ interface WidgetManifest
     /** @return string[] Required platform permissions */
     public function permissions(): array;
 
-    /** @return string[] Required capabilities (stub for now) */
+    /**
+     * @deprecated ADR-743 — capabilities abandonnées au profit du RBAC (permissions()).
+     * N'est plus consommé par le registre/catalogue. Conservé sur l'interface pour
+     * rétrocompatibilité (les widgets existants le déclarent, renvoient []). Toute
+     * autorisation DOIT passer par permissions(). À retirer après migration des widgets.
+     *
+     * @return string[]
+     */
     public function capabilities(): array;
 
     public function defaultConfig(): array;

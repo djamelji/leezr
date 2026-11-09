@@ -6,7 +6,7 @@ import { VVideo } from 'vuetify/labs/VVideo'
 import { createVueI18nAdapter } from 'vuetify/locale/adapters/vue-i18n'
 import defaults from './defaults'
 import { icons } from './icons'
-import { staticPrimaryColor, staticPrimaryDarkenColor, themes } from './theme'
+import { staticDarkPrimaryColor, staticDarkPrimaryDarkenColor, staticPrimaryColor, staticPrimaryDarkenColor, themes } from './theme'
 import { themeConfig } from '@themeConfig'
 import { getI18n } from '@/plugins/i18n/index'
 
@@ -29,8 +29,10 @@ export default function (app) {
       },
       dark: {
         colors: {
-          'primary': cookieRef('darkThemePrimaryColor', staticPrimaryColor).value,
-          'primary-darken-1': cookieRef('darkThemePrimaryDarkenColor', staticPrimaryDarkenColor).value,
+          // ADR-743 : défaut dark = variante accessible éclaircie (pas la valeur light),
+          // sinon le primary de marque (sombre) échoue au contraste sur fond foncé.
+          'primary': cookieRef('darkThemePrimaryColor', staticDarkPrimaryColor).value,
+          'primary-darken-1': cookieRef('darkThemePrimaryDarkenColor', staticDarkPrimaryDarkenColor).value,
         },
       },
     },
