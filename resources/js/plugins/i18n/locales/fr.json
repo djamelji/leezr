@@ -8769,6 +8769,24 @@
         "healthy": "Opérationnel",
         "warning": "Dégradé",
         "critical": "Critique"
+      },
+      "commercial": {
+        "current": "Période actuelle",
+        "previous": "N-1",
+        "week": "Semaine",
+        "month": "Mois",
+        "year": "Année",
+        "partial": "période en cours",
+        "prev": "Période précédente",
+        "next": "Période suivante",
+        "today": "Actuel",
+        "compareN1": "Comparer N-1",
+        "noData": "Pas de revenu récurrent sur la période",
+        "noHistoryN1": "Pas d'historique N-1 sur cette période (plateforme récente)",
+        "mrrNow": "MRR actuel",
+        "arr": "ARR",
+        "trials": "Essais en cours",
+        "vsN1": "Même point N-1"
       }
     }
   }

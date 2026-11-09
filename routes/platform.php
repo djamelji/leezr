@@ -335,6 +335,9 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         // Billing metrics — MRR/ARR dashboard (ADR-227)
         Route::get('/billing/metrics', PlatformBillingMetricsController::class);
 
+        // Séries « Pilotage commercial » — période + comparatif N-1 (ADR-747)
+        Route::get('/billing/commercial-series', \App\Modules\Platform\Billing\Http\PlatformCommercialSeriesController::class);
+
         // Recovery status — ADR-236
         Route::get('/billing/recovery-status', [PlatformBillingController::class, 'recoveryStatus']);
 

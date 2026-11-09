@@ -3,6 +3,7 @@
 namespace App\Modules\Dashboard\Widgets;
 
 use App\Core\Billing\BillingMetricsCalculationService;
+use App\Core\Billing\ReadModels\PlatformCommercialSeriesService;
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 
@@ -38,6 +39,7 @@ class PlatformCommercialOverviewWidget implements WidgetManifest
 
             return [
                 'currency' => $m['currency'] ?? 'EUR',
+                // KPI snapshot (photographie actuelle) — stats latérales
                 'mrr' => (int) ($m['mrr'] ?? 0),
                 'arr' => (int) ($m['arr'] ?? 0),
                 'mrr_previous' => (int) ($m['mrr_previous_month'] ?? 0),
@@ -45,10 +47,9 @@ class PlatformCommercialOverviewWidget implements WidgetManifest
                 'trialing_subscriptions' => (int) ($m['trialing_subscriptions'] ?? 0),
                 'churn_rate' => (float) ($m['churn_rate'] ?? 0),
                 'trial_conversion_rate' => (float) ($m['trial_conversion_rate'] ?? 0),
-                'mrr_history' => [
-                    'labels' => $m['mrr_history']['labels'] ?? [],
-                    'series' => $m['mrr_history']['series'] ?? [],
-                ],
+                // Série par défaut (mois courant, sans comparatif) — le front re-fetche sur
+                // changement de période / navigation / comparatif via /billing/commercial-series.
+                'series' => app(PlatformCommercialSeriesService::class)->series('month', null, false),
             ];
         } catch (\Throwable $e) {
             return ['error' => true];

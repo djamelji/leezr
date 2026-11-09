@@ -124,7 +124,7 @@ class BillingMetricsCalculationService
         return $byCurrency;
     }
 
-    private function subscriptionMonthlyAmount($sub, Collection $plans): int
+    public function subscriptionMonthlyAmount($sub, Collection $plans): int
     {
         $plan = $plans[$sub->plan_key] ?? null;
 

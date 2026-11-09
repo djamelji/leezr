@@ -8769,6 +8769,24 @@
         "healthy": "Healthy",
         "warning": "Degraded",
         "critical": "Critical"
+      },
+      "commercial": {
+        "current": "Current period",
+        "previous": "Prev. year",
+        "week": "Week",
+        "month": "Month",
+        "year": "Year",
+        "partial": "in progress",
+        "prev": "Previous period",
+        "next": "Next period",
+        "today": "Current",
+        "compareN1": "Compare YoY",
+        "noData": "No recurring revenue in the period",
+        "noHistoryN1": "No prior-year history for this period (new platform)",
+        "mrrNow": "Current MRR",
+        "arr": "ARR",
+        "trials": "Trials in progress",
+        "vsN1": "Same point last year"
       }
     }
   }
