@@ -4213,10 +4213,29 @@
       "noUpcoming": "Aucune livraison à venir",
       "completedToday": "Complétées aujourd'hui",
       "completedTodayDesc": "Vos livraisons complétées aujourd'hui",
-      "noData": "Aucune donnée disponible"
+      "noData": "Aucune donnée disponible",
+      "overview": "Synthèse expéditions",
+      "overviewDesc": "Vue d'ensemble des expéditions et de leur statut",
+      "todayLabel": "Expéditions aujourd'hui",
+      "totalN": "{n} expéditions au total",
+      "inTransitN": "{n} en transit",
+      "lateN": "{n} en retard",
+      "unassignedN": "{n} non assignées",
+      "empty": "Aucune expédition",
+      "fleet": "Flotte & livraisons",
+      "fleetDesc": "Chauffeurs actifs et livraisons du jour",
+      "deliveriesToday": "Livraisons du jour",
+      "noNextDelivery": "Aucune livraison planifiée"
     },
     "scheduledDateHelp": "Date et heure prévues pour le départ de l'expédition.",
-    "created": "Expédition créée avec succès."
+    "created": "Expédition créée avec succès.",
+    "status": {
+      "planned": "Planifiées",
+      "in_transit": "En transit",
+      "delivered": "Livrées",
+      "canceled": "Annulées",
+      "draft": "Brouillon"
+    }
   },
   "deliveries": {
     "title": "Mes livraisons",
@@ -4367,7 +4386,11 @@
       "roles": "Conformité par rôle",
       "rolesDesc": "Taux de conformité des documents groupé par rôle",
       "types": "Conformité par type",
-      "typesDesc": "Taux de conformité des documents groupé par type"
+      "typesDesc": "Taux de conformité des documents groupé par type",
+      "detail": "Documents à régulariser",
+      "detailDesc": "Documents manquants et expirés par type",
+      "allClear": "Tous les documents sont conformes",
+      "topTypes": "Types les plus exposés"
     },
     "compliant": "conformes",
     "total": "total",
@@ -4556,8 +4579,31 @@
       "contract": "Contrat de travail",
       "signature": "Signature du contrat",
       "account": "Accès à l'espace collaborateur",
-      "planning": "Programmer le premier créneau"
-    }
+      "planning": "Programmer le premier créneau",
+      "accountCreated": {
+        "label": "Compte créé"
+      },
+      "companyProfile": {
+        "label": "Compléter le profil de l'entreprise"
+      },
+      "inviteMember": {
+        "label": "Inviter un membre"
+      },
+      "activateModule": {
+        "label": "Activer un module"
+      },
+      "firstDocument": {
+        "label": "Ajouter un premier document"
+      },
+      "paymentMethod": {
+        "label": "Ajouter un moyen de paiement"
+      }
+    },
+    "welcome": "Bienvenue sur Leezr",
+    "setupPrompt": "Quelques étapes pour configurer votre espace de travail.",
+    "resumeSetup": "Reprendre la configuration",
+    "resumeHint": "Terminez la configuration de votre espace",
+    "dismiss": "Masquer"
   },
   "landing": {
     "signIn": "Se connecter",

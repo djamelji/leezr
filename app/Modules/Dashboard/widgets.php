@@ -44,6 +44,11 @@ return [
     \App\Modules\Dashboard\Widgets\OnboardingSetupWidget::class,
     \App\Modules\Dashboard\Widgets\PlanBadgeWidget::class,
 
+    // Operations — panneaux composites éditoriaux (ADR-745)
+    \App\Modules\Dashboard\Widgets\ShipmentsOverviewWidget::class,
+    \App\Modules\Dashboard\Widgets\LogisticsFleetWidget::class,
+    \App\Modules\Dashboard\Widgets\DocumentsDetailWidget::class,
+
     // Operations — shipment KPIs, server-resolved (ADR-374)
     \App\Modules\Dashboard\Widgets\ShipmentsTodayWidget::class,
     \App\Modules\Dashboard\Widgets\ShipmentsInTransitWidget::class,

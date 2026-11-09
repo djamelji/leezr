@@ -166,7 +166,7 @@ class DashboardGridV2Test extends TestCase
         $platformWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'platform');
         $this->assertEmpty($platformWidgets, 'Company catalog must exclude platform-audience widgets.');
         $companyWidgets = array_filter($widgets, fn ($w) => $w['audience'] === 'company');
-        $this->assertCount(7, $companyWidgets, 'Company catalog must include company-audience widgets: 5 compliance + onboarding + plan badge (ADR-327, ADR-372).');
+        $this->assertCount(8, $companyWidgets, 'Company catalog must include company-audience widgets: 5 compliance + documents.detail + onboarding + plan badge (ADR-327, ADR-372, ADR-745).');
     }
 
     // ── Company: batch resolve forces company scope ──
@@ -269,7 +269,7 @@ class DashboardGridV2Test extends TestCase
             ->getJson('/api/dashboard/widgets/catalog');
 
         $catalog->assertOk();
-        $this->assertCount(7, $catalog->json('widgets'), 'Company catalog must include 7 company-audience widgets (5 compliance + onboarding + plan badge).');
+        $this->assertCount(8, $catalog->json('widgets'), 'Company catalog must include 8 company-audience widgets (5 compliance + documents.detail + onboarding + plan badge). ADR-745.');
 
         // 2. Layout CRUD still works (seeded/jobdomain layouts may reference any widget)
         $layout = [

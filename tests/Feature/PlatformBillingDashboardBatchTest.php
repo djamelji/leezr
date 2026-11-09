@@ -373,7 +373,7 @@ class PlatformBillingDashboardBatchTest extends TestCase
         $this->assertEmpty($platformWidgets, 'Platform-audience billing widgets must not appear in company catalog');
         // Company-audience widgets (compliance + onboarding + plan badge) are expected (ADR-327, ADR-372)
         $companyWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'company');
-        $this->assertCount(7, $companyWidgets);
+        $this->assertCount(8, $companyWidgets); // +documents.detail (ADR-745)
     }
 
     // ── T8: Scope=company filters by company_id ──

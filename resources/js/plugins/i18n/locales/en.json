@@ -4204,19 +4204,38 @@
       "lateDesc": "In-transit shipments past scheduled time",
       "unassigned": "Unassigned",
       "unassignedDesc": "Shipments with no driver assigned",
-      "driversActive": "Active Drivers",
+      "driversActive": "Active drivers",
       "driversActiveDesc": "Drivers currently on delivery",
       "myToday": "My Deliveries Today",
       "myTodayDesc": "Your deliveries scheduled for today",
-      "nextDelivery": "Next Delivery",
+      "nextDelivery": "Next delivery",
       "nextDeliveryDesc": "Your next upcoming delivery",
       "noUpcoming": "No upcoming delivery",
       "completedToday": "Completed Today",
       "completedTodayDesc": "Your completed deliveries today",
-      "noData": "No data available"
+      "noData": "No data available",
+      "overview": "Shipments overview",
+      "overviewDesc": "Overview of shipments and their status",
+      "todayLabel": "Shipments today",
+      "totalN": "{n} shipments total",
+      "inTransitN": "{n} in transit",
+      "lateN": "{n} late",
+      "unassignedN": "{n} unassigned",
+      "empty": "No shipment",
+      "fleet": "Fleet & deliveries",
+      "fleetDesc": "Active drivers and today's deliveries",
+      "deliveriesToday": "Deliveries today",
+      "noNextDelivery": "No delivery scheduled"
     },
     "scheduledDateHelp": "Date and time scheduled for the shipment departure.",
-    "created": "Shipment created successfully."
+    "created": "Shipment created successfully.",
+    "status": {
+      "planned": "Planned",
+      "in_transit": "In transit",
+      "delivered": "Delivered",
+      "canceled": "Canceled",
+      "draft": "Draft"
+    }
   },
   "deliveries": {
     "title": "My Deliveries",
@@ -4367,7 +4386,11 @@
       "roles": "Compliance by Role",
       "rolesDesc": "Document compliance rate grouped by role",
       "types": "Compliance by Type",
-      "typesDesc": "Document compliance rate grouped by type"
+      "typesDesc": "Document compliance rate grouped by type",
+      "detail": "Documents to resolve",
+      "detailDesc": "Missing and expired documents by type",
+      "allClear": "All documents compliant",
+      "topTypes": "Most exposed types"
     },
     "compliant": "compliant",
     "total": "total",
@@ -4556,8 +4579,31 @@
       "contract": "Employment contract",
       "signature": "Contract signature",
       "account": "Employee portal access",
-      "planning": "Schedule the first shift"
-    }
+      "planning": "Schedule the first shift",
+      "accountCreated": {
+        "label": "Account created"
+      },
+      "companyProfile": {
+        "label": "Complete company profile"
+      },
+      "inviteMember": {
+        "label": "Invite a member"
+      },
+      "activateModule": {
+        "label": "Activate a module"
+      },
+      "firstDocument": {
+        "label": "Add a first document"
+      },
+      "paymentMethod": {
+        "label": "Add a payment method"
+      }
+    },
+    "welcome": "Welcome to Leezr",
+    "setupPrompt": "A few steps to set up your workspace.",
+    "resumeSetup": "Resume setup",
+    "resumeHint": "Finish setting up your workspace",
+    "dismiss": "Dismiss"
   },
   "landing": {
     "signIn": "Sign In",

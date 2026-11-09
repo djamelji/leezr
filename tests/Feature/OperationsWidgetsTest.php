@@ -191,9 +191,9 @@ class OperationsWidgetsTest extends TestCase
         $catalog = DashboardWidgetRegistry::catalogForCompany($this->company);
         $keys = collect($catalog)->map(fn ($w) => $w->key())->all();
 
-        // 7 base + 8 operations = 15 company-audience widgets
+        // 8 base (incl. documents.detail) + 10 operations (8 KPI + shipments.overview + logistics.fleet) = 18 (ADR-745)
         $companyWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'company');
-        $this->assertCount(15, $companyWidgets, 'Company catalog must include 15 widgets (7 base + 8 operations) when logistics module is active.');
+        $this->assertCount(18, $companyWidgets, 'Company catalog must include 18 widgets (8 base + 10 operations) when logistics module is active. ADR-745.');
 
         $this->assertContains('shipments.today', $keys);
         $this->assertContains('deliveries.my_today', $keys);
@@ -203,13 +203,13 @@ class OperationsWidgetsTest extends TestCase
     // CATALOG PER ROLE — archetype + permission filtering
     // ═══════════════════════════════════════════════════════
 
-    public function test_owner_sees_all_15_company_widgets_in_catalog_api(): void
+    public function test_owner_sees_all_18_company_widgets_in_catalog_api(): void
     {
         $response = $this->actAs($this->owner)->getJson('/api/dashboard/widgets/catalog');
         $response->assertOk();
 
         $widgets = $response->json('widgets');
-        $this->assertCount(15, $widgets, 'Owner (bypass) sees all 15 company widgets.');
+        $this->assertCount(18, $widgets, 'Owner (bypass) sees all 18 company widgets. ADR-745.');
     }
 
     public function test_manager_catalog_includes_shipment_widgets(): void

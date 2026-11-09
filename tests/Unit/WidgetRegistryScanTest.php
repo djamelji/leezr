@@ -77,7 +77,7 @@ class WidgetRegistryScanTest extends TestCase
         $platformWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'platform');
         $this->assertEmpty($platformWidgets, 'Platform-audience widgets must not appear in company catalog.');
         $companyWidgets = array_filter($catalog, fn ($w) => $w->audience() === 'company');
-        $this->assertCount(7, $companyWidgets, 'Company-audience widgets (5 compliance + onboarding + plan badge) must appear in company catalog.');
+        $this->assertCount(8, $companyWidgets, 'Company-audience widgets (5 compliance + documents.detail + onboarding + plan badge) must appear in company catalog. ADR-745.');
     }
 
     public function test_widgets_have_audience_field(): void

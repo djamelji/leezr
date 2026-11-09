@@ -38,60 +38,76 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
    * the grid per ADR-383) are excluded.
    */
   function buildSmartDefaultLayout() {
-    // onboarding.setup = rendu hors grille (ADR-383).
-    // timesheet_pending / leave_pending = déjà portés par la bande « À traiter »
-    // (HomePrioritiesSection) → exclus du défaut pour éviter la duplication ; restent
-    // au catalogue (« + Ajouter un widget »). ADR-745.
-    const EXCLUDED_KEYS = new Set(['onboarding.setup', 'workforce.timesheet_pending', 'workforce.leave_pending'])
+    // ── Composition éditoriale de la PAGE entière (ADR-745) ──
+    // Unité de conception = la page. Trois sections adaptatives (Workforce, Logistique,
+    // Documents), chacune émise seulement si ≥1 de ses widgets est disponible (permission /
+    // module / archétype déjà filtrés serveur). Tailles délibérément variées (strip compact
+    // h2 → panneaux composites h3/h4) ; largeurs sommant à 12 → pas de trous.
+    //
+    // EXCLUS du défaut (restent au catalogue « + Ajouter ») :
+    //  - onboarding.setup : rendu hors grille (ADR-383)
+    //  - timesheet/leave : déjà portés par la bande « À traiter » (HomePrioritiesSection)
+    //  - KPI logistiques unitaires + compliance.pending/overdue/types : REMPLACÉS par les
+    //    panneaux composites (shipments.overview, logistics.fleet, documents.detail).
+    const EXCLUDED_KEYS = new Set([
+      'onboarding.setup',
+      'workforce.timesheet_pending', 'workforce.leave_pending',
+      'shipments.today', 'shipments.in_transit', 'shipments.late', 'shipments.unassigned', 'drivers.active',
+      'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today',
+      'compliance.pending', 'compliance.overdue', 'compliance.types',
+    ])
     const catalog = engine._catalog.value.filter(w => !EXCLUDED_KEYS.has(w.key))
     const byKey = new Map(catalog.map(w => [w.key, w]))
+    const has = k => byKey.has(k)
 
-    // ── Composition éditoriale Workforce (ADR-745) ──
-    // Unité de conception = la PAGE, pas le widget. Tailles délibérément variées pour
-    // créer un rythme (strip compact → hero analytique → exploitation), pas une grille
-    // uniforme. Chaque slot tombe gracieusement si le widget est absent (permission /
-    // module / archétype).
-    //   Rangée 1 — KPI strip (h2) : 4 stats compactes (sans doublon de « À traiter »)
-    //   Rangée 2 — Analyse (h4)    : grand graphe heures + conformité (jauge enrichie)
-    // timesheet_pending / leave_pending sont volontairement HORS défaut : la bande
-    // fixe « À traiter » (HomePrioritiesSection) les porte déjà comme actions → pas de
-    // duplication visuelle. Ils restent au catalogue (« + Ajouter un widget »).
-    const EDITORIAL = [
-      { key: 'workforce.headcount', w: 3, h: 2 },
-      { key: 'workforce.clock_live', w: 3, h: 2 },
-      { key: 'planning.shifts', w: 3, h: 2 },
-      { key: 'workforce.anomalies', w: 3, h: 2 },
-      { key: 'workforce.hours_trend', w: 8, h: 4 },
-      { key: 'compliance.rate', w: 4, h: 4 },
+    const SECTIONS = [
+      // Workforce — strip (h2) + hero analyse (h4)
+      [
+        { key: 'workforce.headcount', w: 3, h: 2 },
+        { key: 'workforce.clock_live', w: 3, h: 2 },
+        { key: 'planning.shifts', w: 3, h: 2 },
+        { key: 'workforce.anomalies', w: 3, h: 2 },
+        { key: 'workforce.hours_trend', w: 8, h: 4 },
+        { key: 'compliance.rate', w: 4, h: 4 },
+      ],
+      // Logistique — synthèse expéditions (h3) + flotte & livraisons (h3)
+      [
+        { key: 'shipments.overview', w: 8, h: 3 },
+        { key: 'logistics.fleet', w: 4, h: 3 },
+      ],
+      // Documents — à régulariser (h3) + conformité par rôle (h3)
+      [
+        { key: 'documents.detail', w: 6, h: 3 },
+        { key: 'compliance.roles', w: 6, h: 3 },
+      ],
     ]
 
-    // Slots présents dans le catalogue (autorisation/module/archétype déjà filtrés serveur).
-    const slots = EDITORIAL.filter(s => byKey.has(s.key))
-
-    // Repli : tout widget du catalogue hors template (autres archétypes : logistique,
-    // listes conformité…) est ajouté ensuite à sa taille déclarée, ordre priorité.
-    const templated = new Set(EDITORIAL.map(s => s.key))
-    const FALLBACK_PRIORITY = [
-      'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active',
-      'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today',
-      'compliance.pending', 'compliance.overdue', 'compliance.roles', 'compliance.types',
-    ]
-    const frank = k => { const i = FALLBACK_PRIORITY.indexOf(k); return i === -1 ? 999 : i }
-    const extras = catalog
-      .filter(w => !templated.has(w.key))
-      .sort((a, b) => frank(a.key) - frank(b.key))
-      .map(w => ({ key: w.key, w: Math.min(w.layout?.default_w || 3, 12), h: w.layout?.default_h || 2 }))
-
-    // Flow row-packing (12 col) — respecte la taille de chaque slot, retour à la ligne.
-    const all = [...slots, ...extras]
     const layout = []
-    let x = 0; let y = 0; let rowH = 0
-    for (const s of all) {
-      const w = Math.min(s.w, 12)
-      if (x + w > 12) { x = 0; y += rowH; rowH = 0 }
-      layout.push({ key: s.key, x, y, w, h: s.h, scope: 'company', config: byKey.get(s.key)?.default_config || {} })
-      x += w
-      rowH = Math.max(rowH, s.h)
+    const placed = new Set()
+    const cur = { x: 0, y: 0, rowH: 0 }
+    const place = (key, w, h) => {
+      const ww = Math.min(w, 12)
+      if (cur.x + ww > 12) { cur.x = 0; cur.y += cur.rowH; cur.rowH = 0 }
+      layout.push({ key, x: cur.x, y: cur.y, w: ww, h, scope: 'company', config: byKey.get(key)?.default_config || {} })
+      placed.add(key)
+      cur.x += ww
+      cur.rowH = Math.max(cur.rowH, h)
+    }
+    const newRow = () => { cur.x = 0; cur.y += cur.rowH; cur.rowH = 0 }
+
+    for (const section of SECTIONS) {
+      const slots = section.filter(s => has(s.key))
+      if (!slots.length) continue
+      newRow() // chaque section démarre sur une nouvelle rangée
+      for (const s of slots) place(s.key, s.w, s.h)
+    }
+
+    // Repli : tout widget autorisé hors sections (ex. plan badge, autres modules) — jamais
+    // perdu silencieusement ; placé ensuite à sa taille déclarée.
+    newRow()
+    for (const w of catalog) {
+      if (placed.has(w.key)) continue
+      place(w.key, Math.min(w.layout?.default_w || 3, 12), w.layout?.default_h || 2)
     }
 
     engine._layout.value = layout

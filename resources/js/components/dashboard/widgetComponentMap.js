@@ -46,6 +46,11 @@ const map = {
   // Plan badge (ADR-372: pipeline-driven). Onboarding is outside grid (ADR-383).
   PlanBadge: defineAsyncComponent(() => import('@/pages/company/dashboard/_PlanBadgeWidget.vue')),
 
+  // Operations — panneaux composites éditoriaux (ADR-745)
+  ShipmentsOverview: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsOverviewWidget.vue')),
+  LogisticsFleet: defineAsyncComponent(() => import('@/views/company-dashboard/_LogisticsFleetWidget.vue')),
+  DocumentsDetail: defineAsyncComponent(() => import('@/views/company-dashboard/_DocumentsDetailWidget.vue')),
+
   // Operations — shipment KPIs (ADR-374)
   ShipmentsToday: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsTodayWidget.vue')),
   ShipmentsInTransit: defineAsyncComponent(() => import('@/views/company-dashboard/_ShipmentsInTransitWidget.vue')),
