@@ -18,6 +18,8 @@ const props = defineProps({
   formatY: { type: Function, default: null },
   // Bar uniquement : met une barre en relief (jour pic), les autres atténuées — pattern Vuexy EarningReports.
   highlightIndex: { type: Number, default: -1 },
+  // Area/line : 2ᵉ série (N-1) rendue en pointillé sans remplissage + légende (ADR-748).
+  compare: { type: Boolean, default: false },
 })
 
 // ── Fiabilisation du rendu en cellule de grille (ADR-745) ──
@@ -85,15 +87,30 @@ const options = computed(() => {
   }
 
   if (props.type === 'area' || props.type === 'line') {
+    // Comparatif N-1 : série 0 pleine (gradient), série 1 pointillée sans remplissage.
+    const dual = props.compare && (props.series?.length || 0) >= 2
+    if (dual) {
+      return {
+        ...base,
+        colors: [tc.value.primary, `rgba(${hexToRgb(tc.value['on-surface'])},0.45)`],
+        stroke: { curve: 'smooth', width: [2.5, 2], dashArray: [0, 5] },
+        fill: { type: ['gradient', 'solid'], gradient: { shadeIntensity: 0.8, opacityFrom: 0.35, opacityTo: 0.03, stops: [0, 95] }, opacity: [0.35, 0] },
+        legend: { show: !isSpark.value, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: labelColor.value }, markers: { width: 9, height: 9 }, itemMargin: { horizontal: 8 } },
+        tooltip: { ...base.tooltip, shared: true, y: { formatter: props.formatY || undefined } },
+        xaxis: { categories: props.categories, labels: { show: !isSpark.value, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        yaxis: { labels: { show: !isSpark.value, style: { colors: labelColor.value }, formatter: props.formatY || undefined } },
+      }
+    }
     return {
       ...base,
       stroke: { curve: 'smooth', width: props.type === 'line' ? 3 : 2 },
       fill: props.type === 'area'
         ? { type: 'gradient', gradient: { shadeIntensity: 0.9, opacityFrom: 0.5, opacityTo: 0.05, stops: [0, 95] } }
         : { type: 'solid', opacity: 1 },
+      tooltip: { ...base.tooltip, y: { formatter: props.formatY || undefined } },
       xaxis: {
         categories: props.categories,
-        labels: { show: !isSpark.value, style: { colors: labelColor.value, fontSize: '12px' } },
+        labels: { show: !isSpark.value, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '12px' } },
         axisBorder: { show: false }, axisTicks: { show: false },
       },
       yaxis: { labels: { show: !isSpark.value, style: { colors: labelColor.value }, formatter: props.formatY || undefined } },

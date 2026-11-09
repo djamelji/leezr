@@ -255,6 +255,7 @@ declare module 'vue-router/auto-routes' {
     'platform-organization-presets-id': RouteRecordInfo<'platform-organization-presets-id', '/platform/organization-presets/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'platform-plans-tariff-migration-wizard': RouteRecordInfo<'platform-plans-tariff-migration-wizard', '/platform/plans/_TariffMigrationWizard', Record<never, never>, Record<never, never>>,
     'platform-plans-key': RouteRecordInfo<'platform-plans-key', '/platform/plans/:key', { key: ParamValue<true> }, { key: ParamValue<false> }>,
+    'platform-presentation-lab': RouteRecordInfo<'platform-presentation-lab', '/platform/presentation-lab', Record<never, never>, Record<never, never>>,
     'platform-reset-password': RouteRecordInfo<'platform-reset-password', '/platform/reset-password', Record<never, never>, Record<never, never>>,
     'platform-settings-settings-billing': RouteRecordInfo<'platform-settings-settings-billing', '/platform/settings/_SettingsBilling', Record<never, never>, Record<never, never>>,
     'platform-settings-settings-feature-flags': RouteRecordInfo<'platform-settings-settings-feature-flags', '/platform/settings/_SettingsFeatureFlags', Record<never, never>, Record<never, never>>,

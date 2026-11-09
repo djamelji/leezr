@@ -8787,7 +8787,8 @@
         "arr": "ARR",
         "trials": "Trials in progress",
         "vsN1": "Same point last year"
-      }
+      },
+      "activeSubsShort": "active subs"
     }
   }
 }

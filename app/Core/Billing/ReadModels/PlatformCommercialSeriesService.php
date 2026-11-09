@@ -68,7 +68,18 @@ class PlatformCommercialSeriesService
 
         $summary = $this->summary($current, $previous, $compare, $hasHistory);
 
+        // KPI snapshot (photographie actuelle) pour que le widget soit autosuffisant.
+        $mrrNow = (int) $subs->filter(fn ($s) => Carbon::parse($s->created_at)->lte($now))->sum('amount');
+        $trials = (int) Subscription::where('status', 'trialing')->where('is_current', 1)->count();
+        $kpis = [
+            'mrr' => $mrrNow,
+            'arr' => $mrrNow * 12,
+            'active_subscriptions' => $subs->count(),
+            'trialing_subscriptions' => $trials,
+        ];
+
         return [
+            'kpis' => $kpis,
             'period' => $period,
             'granularity' => $period === 'year' ? 'month' : 'day',
             'anchor' => $anchorDate->toIso8601String(),

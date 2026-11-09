@@ -2,6 +2,7 @@
 import { useDashboardGrid } from '@/composables/useDashboardGrid'
 import { getWidgetProfile } from './widgetProfiles'
 import { resolveWidgetComponent } from './widgetComponentMap'
+import { resolvePresentationMode } from '@/core/surface-engine/presentationMode'
 
 const props = defineProps({
   layout: { type: Array, required: true },
@@ -134,6 +135,10 @@ function getViewport(tile) {
     pxHeight: pxH,
     density: computeDensity(tile.h),
     uiProfile: profile,
+    // Mode de présentation width+height-aware (ADR-748) — toujours fourni (dérivé des px
+    // mesurés par le ResizeObserver du tile). Rétrocompatible : les widgets qui ne lisent
+    // que `density` sont inchangés ; les widgets « presentation-aware » consomment `mode`.
+    mode: (pxW > 0 && pxH > 0) ? resolvePresentationMode(pxW, pxH) : null,
     presentationMode: ENABLE_PRESENTATION_ENGINE
       ? computePresentationMode(pxW, pxH, profile)
       : null,

@@ -8787,7 +8787,8 @@
         "arr": "ARR",
         "trials": "Essais en cours",
         "vsN1": "Même point N-1"
-      }
+      },
+      "activeSubsShort": "abos actifs"
     }
   }
 }

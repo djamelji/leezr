@@ -26928,3 +26928,20 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Tests** : **PHPUnit `PlatformCommercialSeries` 6 verts** (MRR = niveau constant, pas de somme quotidienne ; semaine = 7 buckets ISO ; année = 12 mois ; partiel = futurs `null` ; N-1 avec historique peuplé + aligné ; N-1 absent → `delta_pct` null, pas de division par zéro) ; **suite 986 verts**. **axe 0 serious** sur le widget (light+dark). **0 erreur 5xx** sur les interactions. Captures : mois/année/semaine, année+compare (N-1 absent géré), **dual-series N-1** (demo réversible backdate), dark, mobile compact.
 
 **Limites historiques** : N-1 et profondeur de courbe **bornés par la profondeur des abonnements** (plateforme récente → pas d'historique N-1 réel ; démontré par un backdate réversible). Churn/conversion = proxys (ADR-746). **DEV uniquement, aucun push main, aucune PROD, P3 non démarré.**
+
+## ADR-748 — Presentation Engine : rendu adaptatif des widgets par surface réelle (largeur ET hauteur)
+
+**Date** : 2026-11-09
+**Contexte** : le widget commercial (ADR-747) ne s'adaptait pas correctement au resize (contrôles qui se chevauchent, KPI tronqués, graphe mal dimensionné). Cause mécanique : (1) l'ancien Presentation Engine était **désactivé** (`ENABLE_PRESENTATION_ENGINE=false`) ; (2) son calcul de mode était **largeur-seule, par profil** ; (3) les widgets ne consommaient que `density` (hauteur en lignes de grille, pas les px réels). Un widget 1000×200 et un widget 500×600 recevaient le même traitement.
+
+**Décision / Livraison** :
+- **Fonction de mode PARTAGÉE** `resolvePresentationMode(w, h)` (`core/surface-engine/presentationMode.js`) — width+height-aware → **5 modes** (`expanded`, `wide` panoramique, `standard`, `compact`, `micro`). Une seule vérité, pas de moteur parallèle.
+- **Réactivation contrôlée** : `DashboardGrid.getViewport` fournit désormais `viewport.mode` (dérivé des px mesurés par le ResizeObserver de tuile déjà présent). Rétrocompatible : les widgets qui ne lisent que `density` sont inchangés.
+- **Widget commercial presentation-aware** : auto-mesure de sa racine (ResizeObserver) → mode autoritaire (fonctionne aussi hors grille). **5 compositions** : contrôles adaptatifs (segmenté → `VSelect` en compact → menu en micro, **zéro chevauchement**), stats adaptatives (aside vertical → bandeau horizontal → minimal), graphe qui remplit sa zone (**hauteur dérivée de `rootH` fiable** − offsets par mode, pas de mesure flaky), N-1 conservé. **Aucun débordement** (clip overflow + `min-inline-size:0`).
+- **Réutilisation de l'abstraction** `LzrApexChart` (wrapper éprouvé) pour TOUS les modes — **étendu** d'une prop `compare` (2ᵉ série N-1 pointillée + légende). Abandon du `VueApexCharts` brut dont le montage de canvas était instable selon la taille. Options du graphe **dérivées du mode** (bucketé) → un resize ne touche que la largeur (resize natif) : **fin des races `forceXAxisUpdate on null`**.
+
+**Recette visuelle (matrice de 7 tailles)** : harness dédié `/platform/presentation-lab` (`?only=WxH` isole une taille). Modes attendus validés : 1200×600→expanded · 900×450→expanded · 700×500→standard · 500×350→compact · 350×450→compact · 350×180→micro · 1000×220→wide. **7/7 rendus, 0 overflow, 0 erreur console**, contrôles utilisables, KPI jamais tronqués (libellés courts + réorganisation par mode).
+
+**Fiabilité** : widget **3/3 sur le vrai dashboard** (contexte production). La flakiness observée venait **du harness** (navigations fraîches répétées → accumulation d'état ApexCharts dans une même page) ; capture par **page fraîche + attente des données** → stable. **axe 0 serious** sur le widget. **PHPUnit 648 verts.**
+
+**Généralisation** : le mécanisme (`viewport.mode` + `resolvePresentationMode`) est **disponible pour tous les widgets** (platform & company) sans transformation forcée — validé sur le widget commercial + réutilisable (prochain : répartition par plan, heures travaillées, etc.). **DEV uniquement, aucun push main, aucune PROD, P3 non démarré.**
