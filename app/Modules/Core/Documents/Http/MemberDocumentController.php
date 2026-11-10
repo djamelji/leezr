@@ -5,9 +5,14 @@ namespace App\Modules\Core\Documents\Http;
 use App\Core\Documents\DocumentProcessingPipeline;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Documents\DocumentVersion;
 use App\Core\Documents\MemberDocument;
+use App\Core\Documents\Services\DocumentComplianceStateService;
+use App\Core\Documents\Services\DocumentIntegrityService;
+use App\Core\Documents\Services\DocumentVersioningService;
 use App\Core\Documents\RetryDocumentAiService;
 use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Jobs\Documents\ProcessDocumentAiJob;
@@ -109,14 +114,31 @@ class MemberDocumentController extends Controller
             $pipeline->cleanup();
         }
 
-        // Upsert (one document per type per user per company)
-        $document = MemberDocument::updateOrCreate(
-            [
-                'company_id' => $company->id,
-                'user_id' => $user->id,
-                'document_type_id' => $type->id,
-            ],
-            [
+        // ADR-756 (DMS M0): intégrité + remplacement NON destructif + idempotence.
+        $integrity = app(DocumentIntegrityService::class);
+        $versioning = app(DocumentVersioningService::class);
+        $newHash = $integrity->hashOf($path);
+
+        $keys = [
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'document_type_id' => $type->id,
+        ];
+        $existing = MemberDocument::where($keys)->first();
+
+        if ($existing && $versioning->isDuplicate($existing, $newHash)) {
+            // Contenu identique → remplacement inutile : on jette le fichier fraîchement stocké,
+            // on conserve le fichier courant et l'historique (idempotent).
+            Storage::disk('local')->delete($path);
+            $document = $existing;
+        } else {
+            // Archive la version précédente AVANT de pointer vers le nouveau fichier (non destructif :
+            // le store() génère un nouveau chemin, l'ancien fichier reste référencé par la version).
+            if ($existing && ! empty($existing->file_path)) {
+                $versioning->snapshotCurrent($existing, DocumentVersion::SOURCE_UPLOAD, $request->user()->id);
+            }
+
+            $document = MemberDocument::updateOrCreate($keys, [
                 'file_path' => $path,
                 'file_name' => $fileName,
                 'file_size_bytes' => $fileSize,
@@ -125,11 +147,15 @@ class MemberDocumentController extends Controller
                 'expires_at' => $request->input('expires_at'),
                 'ocr_text' => $ocrText,
                 'ai_status' => 'pending',
-            ],
-        );
+                'file_sha256' => $newHash,
+                'published_state' => DocumentComplianceStateService::P_PUBLISHED,
+                'document_subject_type' => DocumentSubject::TYPE_USER,
+                'document_subject_id' => $user->id,
+            ]);
 
-        // ADR-413: Dispatch AI analysis job
-        ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
+            // ADR-413: Dispatch AI analysis job (seulement si le contenu a changé)
+            ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
+        }
 
         // ADR-176: Update DocumentRequest workflow
         DocumentRequest::updateOrCreate(

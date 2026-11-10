@@ -26,11 +26,17 @@ class MemberDocument extends Model
         'ai_insights',
         'ai_suggestions',
         'ai_status',
+        // ADR-756 (DMS M0)
+        'file_sha256',
+        'published_state',
+        'document_subject_type',
+        'document_subject_id',
     ];
 
     protected $casts = [
         'file_size_bytes' => 'integer',
         'expires_at' => 'datetime',
+        'document_subject_id' => 'integer',
         'ai_analysis' => 'array',
         'ai_insights' => 'array',
         'ai_suggestions' => 'array',

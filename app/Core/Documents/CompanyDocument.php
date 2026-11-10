@@ -24,6 +24,9 @@ class CompanyDocument extends Model
         'ai_analysis',
         'ai_insights',
         'ai_status',
+        // ADR-756 (DMS M0)
+        'file_sha256',
+        'published_state',
     ];
 
     protected $casts = [
