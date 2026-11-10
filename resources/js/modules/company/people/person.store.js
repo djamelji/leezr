@@ -20,6 +20,7 @@ export const usePersonStore = defineStore('company-person', () => {
   const can = computed(() => data.value?.can || {})
   const employeeId = computed(() => data.value?.employee_id || null)
   const userId = computed(() => data.value?.user_id || null)
+  const membershipId = computed(() => data.value?.membership_id || null)
   const personRef = computed(() => data.value?.person_ref || null)
 
   async function load(ref) {
@@ -60,7 +61,7 @@ export const usePersonStore = defineStore('company-person', () => {
 
   return {
     data, loading, error,
-    identity, account, employment, sections, can, employeeId, userId, personRef,
+    identity, account, employment, sections, can, employeeId, userId, membershipId, personRef,
     history, historyLoading,
     load, loadHistory, changeRole,
   }

@@ -497,8 +497,9 @@ const handleViewerDownload = async () => {
                   :accept="doc.accepted_types.map(t => `.${t}`).join(',')"
                   @change="openUploadDialog(doc, $event.target.files); $event.target.value = ''"
                 >
+                <!-- ADR-757 (DMS M1): téléchargement gated par la policy de confidentialité -->
                 <VBtn
-                  v-if="doc.upload"
+                  v-if="doc.upload && doc.can_download !== false"
                   icon
                   variant="text"
                   size="small"
@@ -506,6 +507,17 @@ const handleViewerDownload = async () => {
                   target="_blank"
                 >
                   <VIcon icon="tabler-download" />
+                </VBtn>
+                <VBtn
+                  v-else-if="doc.upload && doc.can_download === false"
+                  icon
+                  variant="text"
+                  size="small"
+                  color="medium-emphasis"
+                  disabled
+                >
+                  <VIcon icon="tabler-lock" />
+                  <VTooltip activator="parent" location="top">{{ t('documents.confidentialRestricted') }}</VTooltip>
                 </VBtn>
                 <VBtn
                   v-if="doc.upload && canEdit"

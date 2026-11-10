@@ -5,6 +5,10 @@ namespace App\Core\Documents\UseCases;
 use App\Core\Documents\CompanyDocument;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Documents\DocumentVersion;
+use App\Core\Documents\Services\DocumentComplianceStateService;
+use App\Core\Documents\Services\DocumentIntegrityService;
+use App\Core\Documents\Services\DocumentVersioningService;
 use App\Core\Storage\StorageQuotaService;
 use App\Jobs\Documents\ProcessDocumentAiJob;
 use Illuminate\Support\Facades\Storage;
@@ -96,33 +100,45 @@ class UploadCompanyDocumentUseCase
             throw new HttpException(422, 'Storage quota exceeded. Contact your administrator.');
         }
 
-        // 8. Delete old physical file if replacing
-        if ($existing && $existing->file_path) {
-            Storage::disk('local')->delete($existing->file_path);
-        }
-
-        // 9. Store new file
+        // 8. ADR-757 (DMS M1) : remplacement NON DESTRUCTIF. Nouveau chemin (l'ancien fichier
+        // n'est jamais supprimé, il reste pointé par la version). Hash → intégrité + idempotence.
         $path = $data->file->store("documents/{$data->company->id}/company", 'local');
 
-        // 10. Upsert CompanyDocument
-        $document = CompanyDocument::updateOrCreate(
-            [
-                'company_id' => $data->company->id,
-                'document_type_id' => $type->id,
-            ],
-            [
-                'file_path' => $path,
-                'file_name' => $data->file->getClientOriginalName(),
-                'file_size_bytes' => $fileSizeBytes,
-                'mime_type' => $data->file->getMimeType(),
-                'uploaded_by' => $data->actor->id,
-                'expires_at' => $data->expiresAt,
-                'ai_status' => 'pending',
-            ],
-        );
+        $integrity = app(DocumentIntegrityService::class);
+        $versioning = app(DocumentVersioningService::class);
+        $newHash = $integrity->hashOf($path);
 
-        // ADR-411: Dispatch async AI analysis
-        ProcessDocumentAiJob::dispatch(CompanyDocument::class, $document->id, $type->id);
+        $isDuplicate = $existing && $existing->file_path && $versioning->isDuplicate($existing, $newHash);
+
+        if ($isDuplicate) {
+            Storage::disk('local')->delete($path);
+            $document = $existing;
+        } else {
+            if ($existing && $existing->file_path) {
+                $versioning->snapshotCurrent($existing, DocumentVersion::SOURCE_UPLOAD, $data->actor->id);
+            }
+
+            $document = CompanyDocument::updateOrCreate(
+                [
+                    'company_id' => $data->company->id,
+                    'document_type_id' => $type->id,
+                ],
+                [
+                    'file_path' => $path,
+                    'file_name' => $data->file->getClientOriginalName(),
+                    'file_size_bytes' => $fileSizeBytes,
+                    'mime_type' => $data->file->getMimeType(),
+                    'uploaded_by' => $data->actor->id,
+                    'expires_at' => $data->expiresAt,
+                    'ai_status' => 'pending',
+                    'file_sha256' => $newHash,
+                    'published_state' => DocumentComplianceStateService::P_PUBLISHED,
+                ],
+            );
+
+            // ADR-411: Dispatch async AI analysis (inutile si contenu identique)
+            ProcessDocumentAiJob::dispatch(CompanyDocument::class, $document->id, $type->id);
+        }
 
         return new UploadCompanyDocumentResult(
             id: $document->id,

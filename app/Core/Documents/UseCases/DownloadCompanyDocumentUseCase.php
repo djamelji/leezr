@@ -3,7 +3,9 @@
 namespace App\Core\Documents\UseCases;
 
 use App\Core\Documents\CompanyDocument;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
+use App\Core\Documents\Services\DocumentAccessPolicy;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 
@@ -34,6 +36,12 @@ class DownloadCompanyDocumentUseCase
         $document = CompanyDocument::where('company_id', $company->id)
             ->where('document_type_id', $type->id)
             ->firstOrFail();
+
+        // 5. ADR-757 (DMS M1): politique d'accès (classification + permission).
+        $policy = app(DocumentAccessPolicy::class);
+        if (! $policy->canAccess($actor, $company, DocumentSubject::company((int) $company->id), $type->code, DocumentAccessPolicy::OP_DOWNLOAD)) {
+            abort(403, 'You are not authorized to download this document.');
+        }
 
         return new DownloadCompanyDocumentResult(
             filePath: $document->file_path,

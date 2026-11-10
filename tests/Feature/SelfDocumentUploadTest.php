@@ -266,13 +266,13 @@ class SelfDocumentUploadTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // 8. Upload: replaces and cleans old file
+    // 8. Upload: NON-DESTRUCTIVE replacement (ADR-757 DMS M1)
     // ═══════════════════════════════════════════════════════
 
-    public function test_self_upload_replaces_and_cleans_old_file(): void
+    public function test_self_upload_replacement_is_non_destructive(): void
     {
-        // First upload
-        $file1 = UploadedFile::fake()->create('old.pdf', 200, 'application/pdf');
+        // Premier upload (contenu réel A — fake()->create() produit un fichier vide)
+        $file1 = UploadedFile::fake()->createWithContent('old.pdf', "%PDF-1.4\nVERSION-A\n%%EOF");
 
         $this->actAsSelf()
             ->postJson('/api/profile/documents/id_card', ['file' => $file1])
@@ -284,9 +284,10 @@ class SelfDocumentUploadTest extends TestCase
         $oldPath = $oldDoc->file_path;
 
         Storage::disk('local')->assertExists($oldPath);
+        $this->assertNotNull($oldDoc->file_sha256); // hash d'intégrité posé
 
-        // Second upload (replacement)
-        $file2 = UploadedFile::fake()->create('new.pdf', 150, 'application/pdf');
+        // Remplacement par un contenu DIFFÉRENT (B)
+        $file2 = UploadedFile::fake()->createWithContent('new.pdf', "%PDF-1.4\nVERSION-B-different\n%%EOF");
 
         $response = $this->actAsSelf()
             ->postJson('/api/profile/documents/id_card', ['file' => $file2]);
@@ -294,10 +295,21 @@ class SelfDocumentUploadTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('document.file_name', 'new.pdf');
 
-        // Old file should be deleted from disk
-        Storage::disk('local')->assertMissing($oldPath);
+        $newDoc = $oldDoc->fresh();
 
-        // Only one record should exist (upsert)
+        // NON DESTRUCTIF : l'ancien fichier reste sur le disque, le nouveau aussi
+        Storage::disk('local')->assertExists($oldPath);
+        Storage::disk('local')->assertExists($newDoc->file_path);
+        $this->assertNotSame($oldPath, $newDoc->file_path);
+
+        // Une version précédente est archivée (avec l'ancien chemin + hash)
+        $version = \App\Core\Documents\DocumentVersion::where('documentable_type', 'member_document')
+            ->where('documentable_id', $newDoc->id)
+            ->first();
+        $this->assertNotNull($version);
+        $this->assertSame($oldPath, $version->file_path);
+
+        // Toujours un seul document courant (upsert)
         $this->assertEquals(1, MemberDocument::where('company_id', $this->company->id)
             ->where('user_id', $this->user->id)
             ->count());

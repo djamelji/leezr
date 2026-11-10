@@ -87,6 +87,9 @@ class AppServiceProvider extends ServiceProvider
             'user' => User::class,
             'company' => Company::class,
             'platform_user' => PlatformUser::class,
+            // ADR-757 (DMS M1): owners polymorphes des versions documentaires
+            'member_document' => \App\Core\Documents\MemberDocument::class,
+            'company_document' => \App\Core\Documents\CompanyDocument::class,
         ]);
 
         // ADR-733 (P0-D): hygiène du contexte tenant autour de chaque job (worker ou sync) — ardoise

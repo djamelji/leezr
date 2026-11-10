@@ -3,9 +3,14 @@
 namespace App\Modules\Core\Members\UseCases;
 
 use App\Core\Documents\DocumentRequest;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
+use App\Core\Documents\DocumentVersion;
 use App\Core\Documents\MemberDocument;
+use App\Core\Documents\Services\DocumentComplianceStateService;
+use App\Core\Documents\Services\DocumentIntegrityService;
+use App\Core\Documents\Services\DocumentVersioningService;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
@@ -104,38 +109,57 @@ class UploadOwnDocumentUseCase
             throw new HttpException(422, 'Storage quota exceeded. Contact your administrator.');
         }
 
-        // 8. Delete old physical file if replacing
-        if ($existing && $existing->file_path) {
-            Storage::disk('local')->delete($existing->file_path);
-        }
-
-        // 9. Store new file
+        // 8. ADR-757 (DMS M1) : remplacement NON DESTRUCTIF. Le nouveau fichier est stocké à un
+        // NOUVEAU chemin (store() → nom aléatoire) — l'ancien fichier n'est JAMAIS supprimé, il
+        // reste pointé par la version archivée. Hash calculé pour l'intégrité + l'idempotence.
         $path = $data->file->store("documents/{$data->company->id}/{$data->user->id}", 'local');
 
-        // 10+11. Atomicité : le MemberDocument (coffre) et l'état DocumentRequest=submitted
-        // sont écrits ensemble. Le fichier est déjà stocké en amont (étape 9) — aucune écriture
-        // Storage dans la transaction. Les deux updateOrCreate sont idempotents (clés company/user/type)
-        // → un retour arrière DB laisse au pire un fichier orphelin récupérable au re-upload idempotent,
-        // mais évite la désynchro (doc stocké sans soumission visible par l'admin).
-        $document = DB::transaction(function () use ($data, $type, $path, $fileSizeBytes) {
-            $document = MemberDocument::updateOrCreate(
-                [
-                    'company_id' => $data->company->id,
-                    'user_id' => $data->user->id,
-                    'document_type_id' => $type->id,
-                ],
-                [
-                    'file_path' => $path,
-                    'file_name' => $data->file->getClientOriginalName(),
-                    'file_size_bytes' => $fileSizeBytes,
-                    'mime_type' => $data->file->getMimeType(),
-                    'uploaded_by' => $data->user->id,
-                    'expires_at' => $data->expiresAt,
-                    'ai_status' => 'pending',
-                ],
-            );
+        $integrity = app(DocumentIntegrityService::class);
+        $versioning = app(DocumentVersioningService::class);
+        $newHash = $integrity->hashOf($path);
 
-            // Update DocumentRequest workflow (ADR-176)
+        $isDuplicate = $existing && $existing->file_path && $versioning->isDuplicate($existing, $newHash);
+
+        if ($isDuplicate) {
+            // Contenu identique → on jette le fichier fraîchement stocké, on conserve le courant
+            // et l'historique (idempotent, aucune nouvelle version).
+            Storage::disk('local')->delete($path);
+        }
+
+        // 9+10. Atomicité : le MemberDocument (coffre) et l'état DocumentRequest=submitted sont
+        // écrits ensemble. Les updateOrCreate sont idempotents (clés company/user/type).
+        $document = DB::transaction(function () use ($data, $type, $path, $fileSizeBytes, $existing, $newHash, $versioning, $isDuplicate) {
+            if ($isDuplicate) {
+                $document = $existing;
+            } else {
+                // Archive la version précédente AVANT de pointer vers le nouveau fichier.
+                if ($existing && $existing->file_path) {
+                    $versioning->snapshotCurrent($existing, DocumentVersion::SOURCE_UPLOAD, $data->user->id);
+                }
+
+                $document = MemberDocument::updateOrCreate(
+                    [
+                        'company_id' => $data->company->id,
+                        'user_id' => $data->user->id,
+                        'document_type_id' => $type->id,
+                    ],
+                    [
+                        'file_path' => $path,
+                        'file_name' => $data->file->getClientOriginalName(),
+                        'file_size_bytes' => $fileSizeBytes,
+                        'mime_type' => $data->file->getMimeType(),
+                        'uploaded_by' => $data->user->id,
+                        'expires_at' => $data->expiresAt,
+                        'ai_status' => 'pending',
+                        'file_sha256' => $newHash,
+                        'published_state' => DocumentComplianceStateService::P_PUBLISHED,
+                        'document_subject_type' => DocumentSubject::TYPE_USER,
+                        'document_subject_id' => $data->user->id,
+                    ],
+                );
+            }
+
+            // Update DocumentRequest workflow (ADR-176) — un ré-upload re-soumet (ex. après refus).
             DocumentRequest::updateOrCreate(
                 [
                     'company_id' => $data->company->id,
@@ -180,8 +204,10 @@ class UploadOwnDocumentUseCase
             );
         }
 
-        // ADR-411: Dispatch async AI analysis
-        ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
+        // ADR-411: Dispatch async AI analysis (inutile si contenu identique)
+        if (! $isDuplicate) {
+            ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
+        }
 
         return new UploadOwnDocumentResult(
             id: $document->id,

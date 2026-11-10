@@ -305,6 +305,11 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.manage');
     Route::get('/company/members/{id}/documents/{code}/download', [MemberDocumentController::class, 'download'])
         ->middleware('company.access:use-permission,documents.view');
+    // ADR-757 (DMS M1): historique des versions + téléchargement d'une version archivée
+    Route::get('/company/members/{id}/documents/{code}/versions', [MemberDocumentController::class, 'versions'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/members/{id}/documents/{code}/versions/{versionId}/download', [MemberDocumentController::class, 'downloadVersion'])
+        ->middleware('company.access:use-permission,documents.view');
     Route::delete('/company/members/{id}/documents/{code}', [MemberDocumentController::class, 'destroy'])
         ->middleware('company.access:use-permission,documents.manage');
 

@@ -25,6 +25,7 @@ class DocumentsModule implements ModuleDefinition
             ),
             permissions: [
                 ['key' => 'documents.view', 'label' => 'View Documents', 'hint' => 'View documents, compliance dashboard, activity timeline, and download files.'],
+                ['key' => 'documents.view_confidential', 'label' => 'View Confidential Documents', 'is_admin' => true, 'hint' => "Access other people's highly-confidential documents (payslips, ID, bank details, judicial records). documents.view alone never grants this."],
                 ['key' => 'documents.manage', 'label' => 'Manage Documents', 'is_admin' => true, 'hint' => 'Upload, review, request, delete and upload documents on behalf of members. Preview documents before approval.'],
                 ['key' => 'documents.configure', 'label' => 'Configure Documents', 'is_admin' => true, 'hint' => 'Create, edit and archive document types. Configure activation, ordering, automation settings and expiration rules.'],
             ],
@@ -38,8 +39,8 @@ class DocumentsModule implements ModuleDefinition
                 [
                     'key' => 'documents.management',
                     'label' => 'Document Management',
-                    'hint' => 'Upload, review, preview, upload on behalf of members. Create, edit and archive document types. Configure activation, ordering and automation.',
-                    'permissions' => ['documents.manage', 'documents.configure'],
+                    'hint' => 'Upload, review, preview, upload on behalf of members. Access confidential pieces. Create, edit and archive document types. Configure activation, ordering and automation.',
+                    'permissions' => ['documents.manage', 'documents.view_confidential', 'documents.configure'],
                     'is_admin' => true,
                 ],
             ],

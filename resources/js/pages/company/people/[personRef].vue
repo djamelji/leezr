@@ -11,8 +11,11 @@ import { useCan } from '@/composables/useCan'
 import EmployeePlanningSection from '@/pages/company/workforce/employees/_EmployeePlanningSection.vue'
 import EmployeeTimeSection from '@/pages/company/workforce/employees/_EmployeeTimeSection.vue'
 import EmployeeLeaveSection from '@/pages/company/workforce/employees/_EmployeeLeaveSection.vue'
-import EmployeeDocumentsSection from '@/pages/company/workforce/employees/_EmployeeDocumentsSection.vue'
 import EmployeeAccessDialog from '@/pages/company/workforce/employees/_EmployeeAccessDialog.vue'
+// ADR-757 (DMS M1) — coffre documentaire Core (membre) branché dans la fiche : fonctionne pour
+// TOUTE personne (Employee avec/sans compte, User sans Employee) via le membership, et expose
+// le versioning, la confidentialité et l'état consolidé.
+import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
 
 definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })
 
@@ -209,7 +212,7 @@ function onAccessChanged() { reload() }
             <VWindowItem value="planning"><EmployeePlanningSection v-if="currentTab === 'planning' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
             <VWindowItem value="time"><EmployeeTimeSection v-if="currentTab === 'time' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
             <VWindowItem value="leave"><EmployeeLeaveSection v-if="currentTab === 'leave' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
-            <VWindowItem value="documents"><EmployeeDocumentsSection v-if="currentTab === 'documents' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
+            <VWindowItem value="documents"><MemberDocumentsWorkflowPanel v-if="currentTab === 'documents' && store.membershipId" :member-id="store.membershipId" :can-edit="can('documents.manage')" /></VWindowItem>
 
             <!-- Historique (réel) -->
             <VWindowItem value="history">

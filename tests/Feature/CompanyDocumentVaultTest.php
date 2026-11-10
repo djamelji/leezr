@@ -227,13 +227,13 @@ class CompanyDocumentVaultTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════════════
-    // 7. Upload: replaces and cleans old file
+    // 7. Upload: NON-DESTRUCTIVE replacement (ADR-757 DMS M1)
     // ═══════════════════════════════════════════════════════
 
-    public function test_upload_replaces_and_cleans_old_file(): void
+    public function test_upload_replacement_is_non_destructive(): void
     {
-        // First upload
-        $file1 = UploadedFile::fake()->create('old_kbis.pdf', 200, 'application/pdf');
+        // Premier upload (contenu réel A)
+        $file1 = UploadedFile::fake()->createWithContent('old_kbis.pdf', "%PDF-1.4\nKBIS-A\n%%EOF");
 
         $this->actAsOwner()
             ->postJson('/api/company/documents/kbis', ['file' => $file1])
@@ -243,9 +243,10 @@ class CompanyDocumentVaultTest extends TestCase
         $oldPath = $oldDoc->file_path;
 
         Storage::disk('local')->assertExists($oldPath);
+        $this->assertNotNull($oldDoc->file_sha256);
 
-        // Second upload (replacement)
-        $file2 = UploadedFile::fake()->create('new_kbis.pdf', 150, 'application/pdf');
+        // Remplacement (contenu B différent)
+        $file2 = UploadedFile::fake()->createWithContent('new_kbis.pdf', "%PDF-1.4\nKBIS-B-different\n%%EOF");
 
         $response = $this->actAsOwner()
             ->postJson('/api/company/documents/kbis', ['file' => $file2]);
@@ -253,7 +254,18 @@ class CompanyDocumentVaultTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('document.file_name', 'new_kbis.pdf');
 
-        Storage::disk('local')->assertMissing($oldPath);
+        $newDoc = $oldDoc->fresh();
+
+        // NON DESTRUCTIF : les deux fichiers subsistent + une version company archivée
+        Storage::disk('local')->assertExists($oldPath);
+        Storage::disk('local')->assertExists($newDoc->file_path);
+        $this->assertNotSame($oldPath, $newDoc->file_path);
+
+        $version = \App\Core\Documents\DocumentVersion::where('documentable_type', 'company_document')
+            ->where('documentable_id', $newDoc->id)
+            ->first();
+        $this->assertNotNull($version);
+        $this->assertSame($oldPath, $version->file_path);
 
         $this->assertEquals(1, CompanyDocument::where('company_id', $this->company->id)->count());
     }

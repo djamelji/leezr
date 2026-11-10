@@ -3,7 +3,7 @@
 namespace App\Core\Documents\Services;
 
 use App\Core\Documents\DocumentLifecycleService;
-use App\Core\Documents\MemberDocument;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * ADR-756 (DMS M0) — état documentaire MULTI-DIMENSIONNEL. Ne confond PAS les dimensions
@@ -36,17 +36,30 @@ class DocumentComplianceStateService
     public const P_ARCHIVED = 'archived';
 
     /**
-     * @param  MemberDocument|null  $doc  le document du coffre (null = aucun fichier)
+     * @param  Model|null  $doc  le document du coffre (MemberDocument|CompanyDocument ; null = aucun fichier)
      * @param  string|null  $requestStatus  statut de la demande associée (document_requests.status)
-     * @return array{validation:string,validity:string,request:string,publication:string,has_file:bool,satisfies_obligation:bool}
+     * @return array{validation:string,validity:string,request:string,publication:string,has_file:bool,satisfies_obligation:bool,consolidated:string}
      */
-    public static function evaluate(?MemberDocument $doc, ?string $requestStatus = null): array
+    public static function evaluate(?Model $doc, ?string $requestStatus = null): array
     {
         $hasFile = $doc !== null && ! empty($doc->file_path);
+        $lifecycle = DocumentLifecycleService::computeStatus($hasFile ? ['expires_at' => $doc->expires_at] : null);
+        $publication = $doc?->published_state ?? self::P_PUBLISHED;
 
-        // B. Validité (réutilise DocumentLifecycleService)
-        $life = DocumentLifecycleService::computeStatus($hasFile ? ['expires_at' => $doc->expires_at] : null);
-        $validity = match ($life) {
+        return self::evaluateFromParts($hasFile, $requestStatus, $lifecycle, $publication);
+    }
+
+    /**
+     * Même évaluation mais à partir de pièces déjà calculées (sans modèle Eloquent) — utilisé par
+     * les read models qui disposent du `lifecycle_status` du resolver.
+     *
+     * @param  string  $lifecycle  statut DocumentLifecycleService (missing|valid|expiring_soon|expired)
+     * @return array{validation:string,validity:string,request:string,publication:string,has_file:bool,satisfies_obligation:bool,consolidated:string}
+     */
+    public static function evaluateFromParts(bool $hasFile, ?string $requestStatus, string $lifecycle, string $publication = self::P_PUBLISHED): array
+    {
+        // B. Validité
+        $validity = match ($lifecycle) {
             DocumentLifecycleService::STATUS_VALID => self::L_VALID,
             DocumentLifecycleService::STATUS_EXPIRING_SOON => self::L_EXPIRING,
             DocumentLifecycleService::STATUS_EXPIRED => self::L_EXPIRED,
@@ -71,9 +84,6 @@ class DocumentComplianceStateService
             default => self::R_NONE,
         };
 
-        // D. Publication
-        $publication = $doc->published_state ?? self::P_PUBLISHED;
-
         // Consolidé : satisfait l'obligation ssi fichier présent, non expiré, validé (ou non
         // soumis à validation) et PUBLIÉ. Un refus ou une attente de validation NE satisfait PAS.
         $satisfies = $hasFile
@@ -88,6 +98,41 @@ class DocumentComplianceStateService
             'publication' => $publication,
             'has_file' => $hasFile,
             'satisfies_obligation' => $satisfies,
+            'consolidated' => self::consolidate($hasFile, $validation, $validity, $request),
         ];
+    }
+
+    // État CONSOLIDÉ lisible (une seule étiquette priorisée) pour le dashboard et les fiches.
+    public const C_MISSING = 'missing';
+    public const C_REQUESTED = 'requested';
+    public const C_PENDING = 'pending_validation';
+    public const C_REJECTED = 'rejected';
+    public const C_VALID = 'valid';
+    public const C_EXPIRING = 'expiring_soon';
+    public const C_EXPIRED = 'expired';
+
+    /**
+     * Réduit les 4 dimensions en UNE étiquette priorisée (un document ne peut afficher qu'un
+     * état dominant). Un refus/une attente priment sur la validité ; l'absence prime sur tout.
+     */
+    public static function consolidate(bool $hasFile, string $validation, string $validity, string $request): string
+    {
+        if (! $hasFile) {
+            return $request === self::R_REQUESTED ? self::C_REQUESTED : self::C_MISSING;
+        }
+        if ($validation === self::V_REJECTED) {
+            return self::C_REJECTED;
+        }
+        if ($validation === self::V_PENDING) {
+            return self::C_PENDING;
+        }
+        if ($validity === self::L_EXPIRED) {
+            return self::C_EXPIRED;
+        }
+        if ($validity === self::L_EXPIRING) {
+            return self::C_EXPIRING;
+        }
+
+        return self::C_VALID;
     }
 }

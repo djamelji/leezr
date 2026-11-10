@@ -5155,6 +5155,7 @@
     "myDocumentsDescription": "Upload and manage your required documents.",
     "noDocuments": "No document types available.",
     "noDocumentsForProfile": "No documents required for your profile.",
+    "confidentialRestricted": "Confidential — you are not authorized to download this document.",
     "upload": "Upload",
     "download": "Download",
     "delete": "Delete",

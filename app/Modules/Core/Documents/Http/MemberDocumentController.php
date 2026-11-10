@@ -2,6 +2,8 @@
 
 namespace App\Modules\Core\Documents\Http;
 
+use App\Core\Audit\AuditLogger;
+use App\Core\Documents\DocumentConfidentiality;
 use App\Core\Documents\DocumentProcessingPipeline;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
@@ -10,6 +12,7 @@ use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\DocumentVersion;
 use App\Core\Documents\MemberDocument;
+use App\Core\Documents\Services\DocumentAccessPolicy;
 use App\Core\Documents\Services\DocumentComplianceStateService;
 use App\Core\Documents\Services\DocumentIntegrityService;
 use App\Core\Documents\Services\DocumentVersioningService;
@@ -42,7 +45,7 @@ class MemberDocumentController extends Controller
         $roleKey = $membership->companyRole?->key;
 
         return response()->json(
-            MemberDocumentWorkflowReadModel::get($user, $company, $roleKey),
+            MemberDocumentWorkflowReadModel::get($user, $company, $roleKey, $request->user()),
         );
     }
 
@@ -188,7 +191,7 @@ class MemberDocumentController extends Controller
         ]);
     }
 
-    public function download(Request $request, int $membershipId, string $documentCode)
+    public function download(Request $request, int $membershipId, string $documentCode, DocumentAccessPolicy $policy)
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
@@ -200,7 +203,88 @@ class MemberDocumentController extends Controller
             ->where('document_type_id', $type->id)
             ->firstOrFail();
 
+        $subject = DocumentSubject::fromMemberDocument($document);
+        if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_DOWNLOAD)) {
+            abort(403, 'You are not authorized to download this document.');
+        }
+
+        $this->auditSensitiveAccess($request, $company->id, $type->code, 'member_document', (int) $document->id, (string) $subject);
+
         return Storage::disk('local')->download($document->file_path, $document->file_name);
+    }
+
+    /**
+     * ADR-757 (DMS M1): liste l'historique des versions conservées d'un document membre.
+     */
+    public function versions(Request $request, int $membershipId, string $documentCode, DocumentAccessPolicy $policy, DocumentVersioningService $versioning): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $membership = $company->memberships()->findOrFail($membershipId);
+        $type = DocumentType::where('code', $documentCode)->firstOrFail();
+
+        $document = MemberDocument::where('company_id', $company->id)
+            ->where('user_id', $membership->user_id)
+            ->where('document_type_id', $type->id)
+            ->firstOrFail();
+
+        $subject = DocumentSubject::fromMemberDocument($document);
+        if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_VERSIONS)) {
+            abort(403, 'You are not authorized to view this document history.');
+        }
+
+        $versions = $versioning->history($document)->map(fn ($v) => [
+            'id' => $v->id,
+            'version_no' => $v->version_no,
+            'file_name' => $v->file_name,
+            'file_size_bytes' => $v->file_size_bytes,
+            'source' => $v->source,
+            'archived_at' => $v->created_at?->toIso8601String(),
+        ])->values();
+
+        return response()->json(['versions' => $versions]);
+    }
+
+    /**
+     * ADR-757 (DMS M1): télécharge une version ARCHIVÉE — mêmes contrôles d'accès + confidentialité
+     * que le document courant (protection des versions historiques).
+     */
+    public function downloadVersion(Request $request, int $membershipId, string $documentCode, int $versionId, DocumentAccessPolicy $policy)
+    {
+        $company = $request->attributes->get('company');
+        $membership = $company->memberships()->findOrFail($membershipId);
+        $type = DocumentType::where('code', $documentCode)->firstOrFail();
+
+        $document = MemberDocument::where('company_id', $company->id)
+            ->where('user_id', $membership->user_id)
+            ->where('document_type_id', $type->id)
+            ->firstOrFail();
+
+        $subject = DocumentSubject::fromMemberDocument($document);
+        if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_DOWNLOAD)) {
+            abort(403, 'You are not authorized to download this document version.');
+        }
+
+        $version = DocumentVersion::where('documentable_type', 'member_document')
+            ->where('documentable_id', $document->id)
+            ->where('id', $versionId)
+            ->firstOrFail();
+
+        $this->auditSensitiveAccess($request, $company->id, $type->code, 'document_version', (int) $version->id, (string) $subject);
+
+        return Storage::disk('local')->download($version->file_path, $version->file_name);
+    }
+
+    /** Journalise l'accès aux pièces HAUTEMENT confidentielles (bulletins, ID, bancaire, casier). */
+    private function auditSensitiveAccess(Request $request, int $companyId, string $typeCode, string $targetType, int $targetId, string $subject): void
+    {
+        if (! DocumentConfidentiality::isHighlyConfidential($typeCode)) {
+            return;
+        }
+
+        app(AuditLogger::class)->logCompany($companyId, 'document.confidential_access', $targetType, (string) $targetId, [
+            'severity' => 'notice',
+            'metadata' => ['code' => $typeCode, 'subject' => $subject, 'actor_id' => $request->user()?->id],
+        ]);
     }
 
     /**

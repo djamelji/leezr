@@ -2,22 +2,27 @@
 
 namespace App\Core\Documents\ReadModels;
 
+use App\Core\Documents\DocumentConfidentiality;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
+use App\Core\Documents\Services\DocumentAccessPolicy;
+use App\Core\Documents\Services\DocumentComplianceStateService as State;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 
 /**
- * ADR-176: Enriches the admin member documents view with workflow data.
+ * ADR-176 / ADR-757 (DMS M1): Enriches the admin member documents view with workflow data.
  *
- * Wraps DocumentResolverService output and adds request_status, review
- * metadata, has_file, and can_review. Lazy-creates "requested" entries
- * for mandatory documents in the member's effective surface.
+ * Wraps DocumentResolverService output and adds request_status, review metadata, has_file,
+ * can_review, the CONSOLIDATED compliance status, the document confidentiality and — gated on
+ * the viewing ACTOR — can_download (an actor without the right never gets a download affordance
+ * for a highly-confidential piece of someone else).
  */
 class MemberDocumentWorkflowReadModel
 {
-    public static function get(User $member, Company $company, ?string $roleKey): array
+    public static function get(User $member, Company $company, ?string $roleKey, ?User $actor = null): array
     {
         // 1. Resolve documents via existing service (surface effective du membre)
         $documents = DocumentResolverService::resolve(
@@ -45,6 +50,8 @@ class MemberDocumentWorkflowReadModel
             ->get()
             ->keyBy('document_type_id');
 
+        $policy = app(DocumentAccessPolicy::class);
+
         // 4. Enrich each document with workflow data
         foreach ($documents as &$doc) {
             $type = $typesByCode->get($doc['code']);
@@ -70,6 +77,15 @@ class MemberDocumentWorkflowReadModel
             $doc['reviewed_at'] = $request?->reviewed_at?->toIso8601String();
             $doc['has_file'] = $doc['upload'] !== null;
             $doc['can_review'] = $request?->status === DocumentRequest::STATUS_SUBMITTED;
+
+            // ADR-757 (DMS M1): état consolidé + confidentialité + droit de téléchargement effectif.
+            $state = State::evaluateFromParts($doc['has_file'], $request?->status, $doc['lifecycle_status'] ?? 'missing');
+            $doc['compliance_status'] = $state['consolidated'];
+            $doc['satisfies_obligation'] = $state['satisfies_obligation'];
+            $doc['confidentiality'] = DocumentConfidentiality::forTypeCode($doc['code']);
+            $doc['is_highly_confidential'] = $doc['confidentiality'] === DocumentConfidentiality::HIGHLY_CONFIDENTIAL;
+            $doc['can_download'] = $doc['has_file'] && $actor !== null
+                && $policy->canAccess($actor, $company, DocumentSubject::user($member->id), $doc['code'], DocumentAccessPolicy::OP_DOWNLOAD);
         }
 
         unset($doc);
