@@ -4318,8 +4318,51 @@
       "resizeHint": "Drag handle to resize"
     }
   },
+  "employeeHome": {
+    "greeting": "Hi, {name}",
+    "greetingNoName": "Hi",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "days": "d",
+    "nextShift": "My next shift",
+    "noShift": "No shift scheduled yet.",
+    "moreShifts": "+{n} more upcoming shift(s)",
+    "viewPlanning": "View my planning",
+    "leaveBalances": "My leave balances",
+    "actionError": "Action unavailable right now.",
+    "clock": {
+      "title": "My clock",
+      "working": "On duty",
+      "onBreak": "On break",
+      "completed": "Done",
+      "notStarted": "Not clocked in",
+      "workedToday": "worked today",
+      "breakToday": "{n} min break",
+      "clockIn": "Clock in",
+      "clockOut": "Clock out",
+      "break": "Take a break",
+      "resume": "Resume",
+      "doneForToday": "Done for today"
+    },
+    "cards": {
+      "leavesPending": "Leave requests pending",
+      "docsToProvide": "Documents to provide",
+      "myDeliveries": "My deliveries"
+    },
+    "empty": {
+      "title": "Nothing urgent right now",
+      "hint": "Your shifts, clock-ins and requests will appear here as soon as they are available."
+    }
+  },
   "home": {
     "title": "Home",
+    "widgetsTitle": "My widgets",
+    "saveLayout": "Save",
+    "addWidget": "Add a widget",
+    "catalogTitle": "Available widgets",
+    "allWidgetsAdded": "All widgets are added.",
+    "noWidgets": "No widget available.",
+    "emptyStateHint": "Add widgets to personalize your space.",
     "subtitleTeam": "Your team — what needs your attention.",
     "subtitleAll": "Your company — what needs your attention.",
     "process": "Handle",

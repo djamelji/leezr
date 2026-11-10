@@ -4318,8 +4318,51 @@
       "resizeHint": "Glissez la poignee pour redimensionner"
     }
   },
+  "employeeHome": {
+    "greeting": "Bonjour, {name}",
+    "greetingNoName": "Bonjour",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "days": "j",
+    "nextShift": "Mon prochain créneau",
+    "noShift": "Aucun créneau planifié pour le moment.",
+    "moreShifts": "+{n} autre(s) créneau(x) à venir",
+    "viewPlanning": "Voir mon planning",
+    "leaveBalances": "Mes soldes de congés",
+    "actionError": "Action impossible pour le moment.",
+    "clock": {
+      "title": "Mon pointage",
+      "working": "En poste",
+      "onBreak": "En pause",
+      "completed": "Terminé",
+      "notStarted": "Non pointé",
+      "workedToday": "travaillées aujourd'hui",
+      "breakToday": "{n} min de pause",
+      "clockIn": "Pointer l'arrivée",
+      "clockOut": "Pointer le départ",
+      "break": "Prendre une pause",
+      "resume": "Reprendre",
+      "doneForToday": "Journée terminée"
+    },
+    "cards": {
+      "leavesPending": "Congés en attente",
+      "docsToProvide": "Documents à régulariser",
+      "myDeliveries": "Mes livraisons"
+    },
+    "empty": {
+      "title": "Rien d'urgent pour l'instant",
+      "hint": "Vos créneaux, pointages et demandes apparaîtront ici dès qu'ils seront disponibles."
+    }
+  },
   "home": {
     "title": "Accueil",
+    "widgetsTitle": "Mes widgets",
+    "saveLayout": "Enregistrer",
+    "addWidget": "Ajouter un widget",
+    "catalogTitle": "Widgets disponibles",
+    "allWidgetsAdded": "Tous les widgets sont ajoutés.",
+    "noWidgets": "Aucun widget disponible.",
+    "emptyStateHint": "Ajoutez des widgets pour personnaliser votre espace.",
     "subtitleTeam": "Votre équipe — ce qui demande votre attention.",
     "subtitleAll": "Votre entreprise — ce qui demande votre attention.",
     "process": "Traiter",

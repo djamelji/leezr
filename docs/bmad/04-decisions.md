@@ -27012,3 +27012,25 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **RBAC / modules** : inchangés — les widgets gardent leurs permissions et gating module (aucun élargissement). Seul le rendu change.
 
 **Règles** : DEV uniquement, aucun moteur parallèle, aucune donnée fictive, pas de `@core`/`@layouts` touchés.
+
+## ADR-751 — P3 : Accueil opérationnel de l'employé `/home`
+
+**Date** : 2026-11-10
+**Contexte** : `/home` (atteint par l'archétype `field_worker` via WorkspaceResolver, ADR-357) n'était qu'une grille de widgets générique — sans contenu opérationnel. L'audit a montré que des données self-service RÉELLES existent (`workforce/me/*`, `/profile/documents`, `/my-deliveries`), self-scoped et module-gated, alors qu'aucun widget workforce « employé » n'existe au catalogue (tous les widgets workforce sont des agrégats manager). Objectif : un accueil orienté ACTION, PAS une copie du dashboard de gestion `/dashboard`.
+
+**Décision / Livraison (DEV)** :
+- **Page éditoriale `/home`** (remplace la grille nue, la conserve en secondaire) composée par CAPACITÉS (modules + permissions + présence de données), jamais par rôle codé en dur :
+  - **Aujourd'hui** : « Mon prochain créneau » (`GET /workforce/me/shifts`, créneaux PUBLIÉS) + « Mon pointage » (réutilise le store `workforce-clock` : statut serveur, temps travaillé live, actions Pointer arrivée/pause/reprise/départ). Affiché seulement si module `workforce` ET l'utilisateur a un enregistrement `Employee` (`clock.employee`).
+  - **Mes demandes / activités** : cartes d'action compactes avec compteurs RÉELS + lien vers l'outil : Congés en attente (`/workforce/me/leaves?status=pending`), Documents à régulariser (`/profile/documents`), Mes livraisons (`/my-deliveries`). Chaque carte conditionnée à son module + permission (`documents.view`, `shipments.view_own`).
+  - **Mes soldes de congés** (depuis le profil self-service).
+  - **État vide intelligent** si ni salarié ni activité ; **grille de widgets personnalisable conservée** en section « Mes widgets ».
+- **Store** `employee-home.store.js` : chargeurs indépendants et tolérants (403/404/non-salarié → vide), déclenchés seulement si le module est actif. **Aucun endpoint inventé** : le trou « my timesheet planned-vs-actual » (inexistant) n'est PAS affiché.
+- **i18n** : namespace `employeeHome.*` (fr+en) ; correction d'un bug préexistant (clés `home.widgetsTitle/saveLayout/addWidget/catalogTitle/allWidgetsAdded` manquantes → affichées en brut).
+
+**Sécurité / isolation** : toutes les sources sont self-scoped côté serveur — `EmployeeSelfController::resolveEmployee` résout l'employé par `user_id = auth()->id` (jamais un id client), `MyDeliveryReadModel` filtre `assigned_to_user_id = auth id`, `SelfDocumentReadModel` par `user_id`. **Un employé ne voit QUE ses propres données** ; aucun élargissement RBAC (lecture seule d'endpoints existants). Les sections masquées côté UI le sont AUSSI côté serveur (module gate + self scope).
+
+**Tous les profils** : la composition se déduit des capacités → un admin-aussi-salarié voyant `/home` verrait ses créneaux/pointages ; un non-salarié voit l'état vide + la grille ; un opérationnel logistique voit « Mes livraisons ». Les profils administratifs restent routés vers `/dashboard` par le WorkspaceResolver (inchangé).
+
+**Recette** : testé en tant que field_worker réel (`bob@leezr.test`) → `/home` (pas de redirection), « Bonjour, Bob », hero créneau+pointage (bouton Pointer l'arrivée), 3 cartes (1 congé / 5 docs / 2 livraisons), soldes congés ; 6 appels self-service **200**, `jsErr=0`. Desktop + **mobile 390px** (cartes empilées, action-first) + composants 100 % tokens de thème Vuetify (dark-ready par construction). **axe** : 0 violation introduite par les sections éditoriales (la seule résiduelle = `text-disabled` des widgets de grille préexistants, partagés avec `/dashboard`). `pnpm build` clean. Aucun backend modifié.
+
+**Verdict** : **GO DEV**. **Règles** : DEV uniquement, aucun nouveau moteur, aucune donnée fictive, aucun élargissement RBAC, Billing/scheduler/`@core`/`@layouts` non touchés.
