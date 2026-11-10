@@ -26994,3 +26994,21 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Conséquences** : dashboard Platform moderne et cohérent, sans empilement, sans doublon, sans faux indicateur de santé, sans fuite de permissions. Les informations administratives (rôles, utilisateurs, modules) restent accessibles depuis leurs pages spécialisées. Preuves AVANT/APRÈS capturées.
 
 **Règles respectées** : **DEV uniquement, aucun push main, aucune PROD, aucune manipulation du scheduler/workers (lecture seule des signaux), aucune modification des données financières, P3 non démarré.**
+
+## ADR-750 — P2.5 : généralisation du Presentation Engine aux widgets graphiques
+
+**Date** : 2026-11-10
+**Contexte** : ADR-748b n'avait rendu adaptatif que le widget commercial. L'inventaire a identifié **5 widgets graphiques non adaptatifs** (ils ne lisaient que `viewport.density` S/M/L) : Platform `companies_overview` (barres) + `plan_distribution` (donut) ; Company `clock_live` (donut) + `hours_trend` (barres) + `shipments_overview` (donut). Les 24 autres widgets sont des KPI/listes (non concernés — « ne pas transformer un composant sans graphique »).
+
+**Décision / Livraison (DEV)** :
+- **Factorisation, pas de nouveau moteur** : deux composables dans `core/surface-engine/` réutilisant la SEULE fonction de mode `resolvePresentationMode` (ADR-748) :
+  - `useSurfacePresentation(rootRef, { viewport })` → auto-mesure racine (ResizeObserver) → `mode` + `isMicro/isCompact/isWide/…`, repli sur `viewport.mode`.
+  - `useMeasuredBlockSize(hostRef)` → hauteur disponible mesurée, stable (immédiate puis débouncée), pattern absolu d'ADR-748b (hôte `flex:1 1 auto`, graphe `absolute inset:0` → pas de rétroaction flex).
+- **5 widgets rendus adaptatifs** (5 modes) : micro = KPI + sparkline (barres) / KPI compact (donut, PAS de sparkline artificielle — donut conservé) ; compact = KPI + graphe ; wide = KPI bandeau + graphe panoramique ; standard/expanded = aside + graphe. Réutilise `LzrApexChart` (résilience resize centralisée d'ADR-749b).
+- **Bug corrigé** : l'hôte graphe vit dans une branche `v-if`/`v-else-if` (modes) absente au montage → `onMounted` observait `null`. Correction dans `useMeasuredBlockSize` : attache du ResizeObserver via `watch(hostRef, …, { flush: 'post' })` → (ré)observe dès que l'élément apparaît. Avant : donut `svg=7px`, barres `svg=0`. Après : `svg` = hauteur hôte.
+
+**Recette** : Platform resize viewport 1600→600→1600 → `canvas=3` (area+donut+bar) CONSTANT à chaque palier, `jsErr=0` ; narrow 820px → donut (Total 20 + légende) et barres rendent (svg≈host) ; commercial `presentation-resize.spec.js` PENDANT 0/14 · APRÈS 0/14. Company `/dashboard` : Heures (barres+aside), Expéditions (donut+aside), Pointage (KPI) rendus, `jsErr=0`. `pnpm build` clean. Captures avant/après examinées visuellement.
+
+**RBAC / modules** : inchangés — les widgets gardent leurs permissions et gating module (aucun élargissement). Seul le rendu change.
+
+**Règles** : DEV uniquement, aucun moteur parallèle, aucune donnée fictive, pas de `@core`/`@layouts` touchés.
