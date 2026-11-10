@@ -71,7 +71,10 @@ class CompanyNavInvariantTest extends TestCase
             foreach ($manifest->capabilities->navItems as $data) {
                 $item = NavItem::fromManifestArray($data);
 
-                if ($item->surface === 'structure' && $item->permission === null) {
+                // ADR-754 : un gate `anyPermission` (OR, ex. « Collaborateurs » = members.view|workforce.view)
+                // est une protection valide au même titre que `permission`.
+                $hasAnyPermission = ! empty($data['anyPermission']);
+                if ($item->surface === 'structure' && $item->permission === null && ! $hasAnyPermission) {
                     $violations[] = "{$key} → navItem '{$item->key}' (surface=structure, permission=null)";
                 }
             }
@@ -155,7 +158,7 @@ class CompanyNavInvariantTest extends TestCase
         $keys = $this->navKeysFor($this->owner);
 
         $this->assertContains('company-roles', $keys, 'Owner should see Roles');
-        $this->assertContains('members', $keys, 'Owner should see Members');
+        $this->assertContains('people', $keys, 'Owner should see Collaborators (ADR-754)');
         $this->assertContains('company-profile', $keys, 'Owner should see Company Profile');
     }
 

@@ -52,24 +52,29 @@ class PersonFileReadModel
         // Référence canonique : la fiche RH prime quand elle existe (parcours unifié).
         $canonical = $employee ? PersonRef::forEmployee($employee->id) : ($user ? PersonRef::forUser($user->id) : $ref);
 
-        // ── Capacités de l'acteur (gating serveur, jamais d'élargissement implicite) ──
+        // ── Capacités de l'acteur PAR FACETTE (ADR-754, P2). L'ACCÈS (compte/rôle/permissions) et
+        // les DONNÉES RH (emploi/contrat/temps/congés) sont deux facettes indépendantes : un RH
+        // (`workforce.view`) voit l'emploi sans l'accès ; un admin des accès (`members.view`) gère
+        // les comptes sans les données RH. Gating serveur strict, jamais d'élargissement implicite.
         $can = [
-            'view_access' => $actor->hasCompanyPermission($company, 'members.view'),
+            'view_access' => $actor->hasCompanyPermission($company, 'members.view'),       // facette ACCÈS
+            'view_hr' => $actor->hasCompanyPermission($company, 'workforce.view'),          // facette RH
             'manage_access' => $actor->hasCompanyPermission($company, 'members.invite') || $actor->hasCompanyPermission($company, 'members.manage'),
             'change_role' => $actor->hasCompanyPermission($company, 'members.manage'),
-            'edit_identity' => $actor->hasCompanyPermission($company, 'members.manage') || $actor->hasCompanyPermission($company, 'workforce.manage'),
+            'edit_hr' => $actor->hasCompanyPermission($company, 'workforce.manage'),
             'view_compensation' => $actor->hasCompanyPermission($company, 'workforce.compensation_read'),
             'view_history' => $actor->hasCompanyPermission($company, 'audit.view'),
         ];
 
-        // ── Identité : User prioritaire (compte), repli sur la fiche RH ──
-        $identity = self::identity($user, $employee);
+        // ── Identité : User prioritaire (compte), repli sur la fiche RH. Les champs d'origine RH
+        // (téléphone, e-mail de contact RH) ne sont exposés qu'avec la facette RH. ──
+        $identity = self::identity($user, $employee, $can['view_hr']);
 
         // ── Accès & autorisations ──
         $account = self::account($company, $user, $membership, $employee, $can['view_access']);
 
-        // ── Emploi (réutilise EmployeeFileReadModel — gated module) ──
-        $employment = ($employee && $hasWorkforce)
+        // ── Emploi (réutilise EmployeeFileReadModel — gated module ET facette RH `workforce.view`) ──
+        $employment = ($employee && $hasWorkforce && $can['view_hr'])
             ? \App\Modules\Workforce\ReadModels\EmployeeFileReadModel::overview($company, $employee, $can['view_compensation'])
             : null;
 
@@ -110,7 +115,7 @@ class PersonFileReadModel
         ];
     }
 
-    private static function identity(?User $user, ?Employee $employee): array
+    private static function identity(?User $user, ?Employee $employee, bool $canHr): array
     {
         $first = $user?->first_name ?: $employee?->first_name;
         $last = $user?->last_name ?: $employee?->last_name;
@@ -119,9 +124,9 @@ class PersonFileReadModel
             'first_name' => $first,
             'last_name' => $last,
             'display_name' => trim(($first ?? '').' '.($last ?? '')) ?: ($user?->email ?? $employee?->email ?? '—'),
-            'login_email' => $user?->email,             // identité de connexion (User)
-            'contact_email' => $employee?->email,        // e-mail RH (contact), distinct du login
-            'phone' => $employee?->phone,
+            'login_email' => $user?->email,                        // identité de connexion (User)
+            'contact_email' => $canHr ? $employee?->email : null,  // e-mail RH (contact) — facette RH
+            'phone' => $canHr ? $employee?->phone : null,          // téléphone RH — facette RH
             'avatar' => $user?->avatar,
         ];
     }

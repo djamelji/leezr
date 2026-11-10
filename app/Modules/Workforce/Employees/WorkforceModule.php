@@ -25,7 +25,9 @@ class WorkforceModule implements ModuleDefinition
                     // Company unique (/dashboard, section fixe en tête). Plus d'entrée de nav propre ;
                     // la route company-workforce redirige vers /dashboard (deep-link compat).
                     // E2 (ADR-690) : espace « Ressources humaines » (group workforce), gating fin par activité.
-                    ['key' => 'workforce-employees', 'title' => 'Employees', 'to' => ['name' => 'company-workforce-employees'], 'icon' => 'tabler-users-group', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 10],
+                    // ADR-754 (P2) — l'entrée « Employés » est remplacée par l'entrée unique
+                    // « Collaborateurs » (Core, MembersModule). La route employés reste résolvable
+                    // (deep-link / fiche RH détaillée), mais n'a plus d'entrée de nav dédiée.
                     // E2 / ADR-729 (M6.A) : « Temps & présences » = pointage/réel (cockpit, pointages, feuilles),
                     // DISTINCT du planning prévisionnel désormais porté par l'entrée « Planning » dédiée.
                     // N'apparaît que si l'utilisateur peut LIRE le pointage (timesheet_view) → pas de menu mort

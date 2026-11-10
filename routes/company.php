@@ -225,13 +225,16 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::delete('/company/members/{id}', [MembershipController::class, 'destroy'])
         ->middleware('company.access:use-permission,members.manage');
 
-    // ADR-753 (Phase 1) — fiche Collaborateur unifiée (Core, indépendante de Workforce).
-    // personRef = user-{id} | employee-{id}. Gated members.view ; données sensibles gated par section.
+    // ADR-753/754 (P1+P2) — Collaborateurs unifiés (Core, indépendant de Workforce). Entrée si AU
+    // MOINS UNE facette autorisée (accès `members.view` OU RH `workforce.view`) ; chaque facette
+    // (compte/rôle vs données RH) est ensuite gated séparément dans le read-model.
+    Route::get('/company/people', [\App\Modules\Core\People\Http\PersonController::class, 'index'])
+        ->middleware('company.access:use-any-permission,members.view|workforce.view');
     Route::get('/company/people/{personRef}', [\App\Modules\Core\People\Http\PersonController::class, 'show'])
-        ->middleware('company.access:use-permission,members.view')
+        ->middleware('company.access:use-any-permission,members.view|workforce.view')
         ->where('personRef', '(user|employee)-[0-9]+');
     Route::get('/company/people/{personRef}/history', [\App\Modules\Core\People\Http\PersonController::class, 'history'])
-        ->middleware('company.access:use-permission,members.view')
+        ->middleware('company.access:use-any-permission,members.view|workforce.view')
         ->where('personRef', '(user|employee)-[0-9]+');
 
     // Member credentials

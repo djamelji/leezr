@@ -164,6 +164,7 @@
     },
     "company": {
       "dashboard": "Home",
+      "people": "Collaborators",
       "members": "Members",
       "settings": "Settings",
       "company-roles": "Roles",
@@ -4380,6 +4381,14 @@
       "compensation": "Compensation", "manager": "Manager"
     },
     "empStatus": { "active": "Active", "inactive": "Inactive", "on_leave": "On leave", "suspended": "Suspended", "terminated": "Terminated" }
+  },
+  "peopleList": {
+    "title": "Collaborators",
+    "subtitle": "Everyone in your company — access and HR data according to your permissions.",
+    "person": "Person", "account": "Account", "role": "Role",
+    "employment": "Employment", "job": "Job", "department": "Department",
+    "new": "New", "inviteUser": "Invite a user", "createEmployee": "Create an employee file",
+    "searchPlaceholder": "Search a collaborator…", "empty": "No collaborator."
   },
   "home": {
     "title": "Home",

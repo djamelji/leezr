@@ -52,8 +52,9 @@ class PersonFilePhase1Test extends TestCase
         $this->hrRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'hr', 'name' => 'HR', 'is_administrative' => false]);
         $this->hrRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view', 'workforce.view'])->pluck('id')->all());
 
+        // Rôle SANS aucune facette (ni members.view ni workforce.view) → ne peut pas entrer.
         $this->noAccessRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'noacc', 'name' => 'NoAccess', 'is_administrative' => false]);
-        $this->noAccessRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['workforce.view'])->pluck('id')->all()); // pas members.view
+        $this->noAccessRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['support.view'])->pluck('id')->all());
 
         $this->owner = User::factory()->create();
         $this->admin = User::factory()->create();
@@ -117,7 +118,7 @@ class PersonFilePhase1Test extends TestCase
 
     // ── RBAC / masquage ──
 
-    public function test_route_requires_members_view(): void
+    public function test_route_requires_at_least_one_facet(): void
     {
         $u = User::factory()->create();
         $this->company->memberships()->create(['user_id' => $u->id, 'role' => 'user', 'company_role_id' => $this->noAccessRole->id]);

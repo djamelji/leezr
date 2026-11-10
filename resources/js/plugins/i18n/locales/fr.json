@@ -164,6 +164,7 @@
     },
     "company": {
       "dashboard": "Accueil",
+      "people": "Collaborateurs",
       "members": "Membres",
       "settings": "Paramètres",
       "company-roles": "Rôles",
@@ -4380,6 +4381,14 @@
       "compensation": "Rémunération", "manager": "Responsable"
     },
     "empStatus": { "active": "Actif", "inactive": "Inactif", "on_leave": "En congé", "suspended": "Suspendu", "terminated": "Sorti" }
+  },
+  "peopleList": {
+    "title": "Collaborateurs",
+    "subtitle": "Toutes les personnes de votre entreprise — accès et données RH selon vos permissions.",
+    "person": "Personne", "account": "Compte", "role": "Rôle",
+    "employment": "Emploi", "job": "Poste", "department": "Département",
+    "new": "Nouveau", "inviteUser": "Inviter un utilisateur", "createEmployee": "Créer une fiche salarié",
+    "searchPlaceholder": "Rechercher un collaborateur…", "empty": "Aucun collaborateur."
   },
   "home": {
     "title": "Accueil",

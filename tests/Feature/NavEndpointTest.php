@@ -220,7 +220,7 @@ class NavEndpointTest extends TestCase
         $allKeys = $this->extractItemKeysFromResponse($response);
 
         // Owner = management → sees structure items
-        $this->assertContains('members', $allKeys, 'Management should see members');
+        $this->assertContains('people', $allKeys, 'Management should see Collaborators (ADR-754)');
         $this->assertContains('company-profile', $allKeys, 'Management should see company-profile');
     }
 

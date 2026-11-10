@@ -7,6 +7,7 @@ use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Workforce\Employee;
 use App\Modules\Core\People\PersonRef;
+use App\Modules\Core\People\ReadModels\PeopleListReadModel;
 use App\Modules\Core\People\ReadModels\PersonFileReadModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,23 @@ use Illuminate\Routing\Controller;
  */
 class PersonController extends Controller
 {
+    /** Liste Collaborateurs unifiée (facettes accès/RH selon permissions). */
+    public function index(Request $request): JsonResponse
+    {
+        /** @var Company $company */
+        $company = $request->attributes->get('company');
+
+        $filters = $request->only(['search', 'employment_status', 'access_state', 'department', 'role_id', 'sort_by', 'sort_dir']);
+
+        return response()->json(PeopleListReadModel::list(
+            $company,
+            $request->user(),
+            $filters,
+            (int) $request->query('per_page', 20),
+            (int) $request->query('page', 1),
+        ));
+    }
+
     public function show(Request $request, string $personRef): JsonResponse
     {
         $ref = PersonRef::parse($personRef);

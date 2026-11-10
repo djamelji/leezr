@@ -27111,3 +27111,24 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels** : (1) les anciennes routes `members/:id` & `workforce/employees/:id` **ne redirigent pas encore** vers `/company/people` (évité pour ne pas casser les e2e Workforce — relève de **P2**, nav/liste) ; (2) onglets « Emploi/Informations » = synthèses natives du read-model (édition fine reste sur les surfaces Workforce existantes — enrichissement P2) ; (3) tension doctrine `Employee` sous `app/Core/Workforce/` (hors scope).
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucune donnée financière modifiée, **P2/P3/P4 non démarrés**.
+
+## ADR-754 — Consolidation Company, Phase 2 : liste Collaborateurs unifiée + permissions par facette
+
+**Date** : 2026-11-10
+**Contexte** : ADR-753 (fiche P1) validée. P2 fusionne les listes Members et Workforce Employees en une seule « Collaborateurs », et introduit le gating **par facette**. P3/P4 non démarrés.
+
+**Permissions PAR FACETTE (point prioritaire)** — l'ACCÈS (compte/rôle/permissions) et les DONNÉES RH (emploi/contrat/temps/congés) sont deux facettes **indépendantes** :
+- Entrée dans la liste/fiche si **au moins une** facette est autorisée (`members.view` **OU** `workforce.view`) — route `use-any-permission,members.view|workforce.view`.
+- Chaque facette gated séparément dans `PersonFileReadModel` : un **RH** (`workforce.view` sans `members.view`) voit l'emploi, les champs RH (téléphone, e-mail de contact) et PAS le rôle/l'onglet Accès ; un **admin des accès** (`members.view` sans `workforce.view`) voit le compte/rôle et PAS les données RH. Rémunération toujours gated `workforce.compensation_read`. **Aucun champ hors-facette dans les payloads.** Pas d'élargissement de permission.
+
+**Liste unifiée** (`PeopleListReadModel` + `GET /company/people`) : réunit, **DÉDUPLIQUÉE (une personne = une ligne)**, les memberships (comptes) et les employees (RH) selon les facettes de l'acteur ; une personne reliée (`employee.user_id`) apparaît **une seule fois** (référence canonique = fiche RH). Colonnes **adaptées aux facettes** (Compte/Rôle si accès ; Emploi/Poste/Département si RH). Recherche, filtres (statut compte/emploi), tri, pagination **côté serveur**. Aucune fusion de table, aucun compte auto-créé. Population bornée par company → agrégation en mémoire.
+
+**Frontend** `pages/company/people/index.vue` : liste premium (VDataTableServer, chips de statut différenciés, filtres contextuels, recherche débouncée, menu « Nouveau » vers les parcours autorisés, clic ligne → fiche unifiée P1). Responsive/mobile, dark-ready (tokens).
+
+**Navigation consolidée** : entrée **UNIQUE « Collaborateurs »** → `/company/people`, portée par le **Core** (`MembersModule`, `anyPermission` facette), remplaçant Members + Employees. L'entrée « Employés » de `WorkforceModule` est retirée (route conservée, deep-link/fiche RH détaillée). Groupes issus de `NavGroupRegistry` (inchangés), JobDomains/rôles non codés en dur.
+
+**Tests** : `PeoplePhase2Test` **7/7** (facettes fiche RH≠accès, dédup ligne unique, colonnes par facette, population par facette, recherche/pagination, entrée exige une facette) + `PersonFilePhase1Test` **9/9** (facette P1 ajustée). Non-régression nav **entièrement mise à jour** (NavEndpoint, CompanyNavInvariant — `anyPermission` = gate valide, CompanyNavPermission, WorkforceNavHrGroup — entrée Employés retirée, PageModuleAlignment) + Member/Workforce/Security = **>120 verts**. **Build clean.** Rendu vérifié : liste (66 personnes, dédup Alice/Djamel compte+emploi sur une ligne), colonnes par facette, mobile, clic ligne → `/company/people/employee-{id}`, `jsErr=0`.
+
+**Défauts résiduels / décisions** : (1) **redirections des anciennes routes** (`members`, `workforce/employees` + détails) vers `/company/people` **NON activées** — les anciennes pages restent des **implémentations internes fonctionnelles** (point 3) pour éviter boucles de redirection avec les parcours de création réutilisés ET la casse des e2e Workforce ; activation contrôlée en fin de P2/P3 une fois la parité d'édition atteinte sur la fiche. (2) **Création depuis la liste** : le menu « Nouveau » route vers les surfaces existantes (invite membres / création employé) — intégration de drawers réutilisés = enrichissement P3. (3) **Édition fine** (profil/contrat) reste sur les surfaces Workforce (la fiche réutilise les sections fonctionnelles + le dialogue d'accès ; édition profil/contrat native = P3). (4) agrégation liste en mémoire (OK population company ; SQL union si très gros tenants).
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun nouveau moteur, **P3/P4 non démarrés**.

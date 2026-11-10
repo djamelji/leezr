@@ -140,7 +140,7 @@ class CompanyNavPermissionTest extends TestCase
     {
         $keys = $this->navKeysFor($this->owner);
 
-        $this->assertContains('members', $keys, 'Owner should see members');
+        $this->assertContains('people', $keys, 'Owner should see Collaborators (ADR-754)');
         $this->assertContains('company-profile', $keys, 'Owner should see company-profile');
         $this->assertContains('shipments', $keys, 'Owner should see shipments');
     }
@@ -153,7 +153,7 @@ class CompanyNavPermissionTest extends TestCase
     {
         $keys = $this->navKeysFor($this->admin);
 
-        $this->assertContains('members', $keys, 'Admin should see members');
+        $this->assertContains('people', $keys, 'Admin should see Collaborators (ADR-754)');
         $this->assertContains('company-profile', $keys, 'Admin should see company-profile');
         $this->assertContains('shipments', $keys, 'Admin should see shipments');
     }

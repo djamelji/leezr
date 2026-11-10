@@ -27,7 +27,8 @@ class WorkforceNavHrGroupTest extends TestCase
 
     /** Mapping attendu item → groupe d'activité. Tout le management RH est consolidé dans `workforce`. */
     private const EXPECTED_GROUP = [
-        'workforce-employees' => 'workforce',
+        // ADR-754 (P2) : l'entrée « Employés » est remplacée par « Collaborateurs » (Core, groupe
+        // Entreprise) — plus d'entrée workforce-employees dans le groupe RH.
         'workforce-time' => 'workforce',
         'workforce-leave' => 'workforce',
         'workforce-payroll' => 'workforce',
@@ -108,7 +109,7 @@ class WorkforceNavHrGroupTest extends TestCase
         // L'ordre reflète le parcours d'activité : Collaborateurs → Temps → Planning → Congés → Documents → Paie → Organisation → Paramètres.
         // ADR-712 : item « Planning » dédié (sort 25) intercalé après « Temps de travail ».
         $this->assertSame(
-            ['workforce-employees', 'workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
+            ['workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
             $this->itemKeys($groups, 'workforce'),
         );
     }
@@ -177,10 +178,10 @@ class WorkforceNavHrGroupTest extends TestCase
         $g = NavBuilder::forCompany($company, ['workforce.timesheet_view'], 'management');
         $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'));
 
-        // (e) workforce.view seul (profil consultation RH) : voit Collaborateurs, Organisation, Paramètres ;
-        // PAS Temps/Congés/Paie (capacités distinctes).
+        // (e) workforce.view seul (profil consultation RH) : voit Organisation, Paramètres (et
+        // « Collaborateurs » via le Core, hors scope de ce test) ; PAS Temps/Congés/Paie.
         $g = NavBuilder::forCompany($company, ['workforce.view'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-employees'));
+        $this->assertNull($this->groupOf($g, 'workforce-employees'), 'ADR-754 : entrée Employés retirée (→ Collaborateurs)');
         $this->assertSame('workforce', $this->groupOf($g, 'workforce-organization'));
         $this->assertSame('workforce', $this->groupOf($g, 'workforce-settings'));
         $this->assertNull($this->groupOf($g, 'workforce-time'));
@@ -204,9 +205,7 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        $expectedRoutes = [
-            'workforce-employees' => 'company-workforce-employees',
-            'workforce-leave' => 'company-workforce-leave',
+        $expectedRoutes = [            'workforce-leave' => 'company-workforce-leave',
             'workforce-time' => 'company-workforce-time',
             'workforce-documents' => 'company-workforce-documents',
             'workforce-payroll' => 'company-workforce-payroll',
