@@ -165,7 +165,19 @@ const kpis = computed(() => [
     <div v-if="!isMicro" class="cw-head d-flex align-center flex-wrap gap-x-3 gap-y-2" :class="isCompact ? 'px-3 pt-3' : 'px-5 pt-4'">
       <div class="cw-title me-auto">
         <div class="font-weight-medium text-high-emphasis text-truncate" :class="isCompact ? 'text-body-2' : 'text-body-1'">{{ t('platform.widgets.commercialOverview') }}</div>
-        <div v-if="!isWide" class="text-caption text-medium-emphasis text-truncate">{{ series?.label || t('platform.widgets.commercialSub') }}<span v-if="series?.partial"> · {{ t('platform.widgets.commercial.partial') }}</span></div>
+        <div v-if="!isWide" class="text-caption text-medium-emphasis d-flex align-center gap-1" style="min-inline-size: 0">
+          <span class="text-truncate">{{ series?.label || t('platform.widgets.commercialSub') }}<span v-if="series?.partial"> · {{ t('platform.widgets.commercial.partial') }}</span></span>
+          <!-- ADR-749 : l'historique MRR est RECONSTRUIT depuis les abonnements actifs (pas de
+               snapshot) → indicateur « estimé » visible pour ne pas annoncer un N-1 comme exact. -->
+          <VTooltip v-if="hasData" location="bottom" max-width="260">
+            <template #activator="{ props: ep }">
+              <VChip v-bind="ep" size="x-small" label variant="tonal" color="secondary" class="flex-shrink-0">
+                <VIcon start icon="tabler-info-circle" size="12" />{{ t('platform.widgets.commercial.estimated') }}
+              </VChip>
+            </template>
+            <span>{{ t('platform.widgets.commercial.estimatedHistory') }}</span>
+          </VTooltip>
+        </div>
       </div>
       <VBtnToggle v-if="selectorKind === 'segmented'" :model-value="period" density="compact" variant="outlined" divided mandatory class="cw-periods flex-shrink-0" @update:model-value="setPeriod">
         <VBtn v-for="p in periods" :key="p.key" :value="p.key" size="small">{{ t(p.label) }}</VBtn>
@@ -187,6 +199,14 @@ const kpis = computed(() => [
       <div v-if="statsLayout === 'strip' && isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-1 flex-shrink-0">
         <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
         <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
+        <VTooltip v-if="hasData" location="bottom" max-width="260">
+          <template #activator="{ props: ep }">
+            <VChip v-bind="ep" size="x-small" label variant="tonal" color="secondary" class="ms-auto flex-shrink-0">
+              <VIcon start icon="tabler-info-circle" size="12" />{{ t('platform.widgets.commercial.estimated') }}
+            </VChip>
+          </template>
+          <span>{{ t('platform.widgets.commercial.estimatedHistory') }}</span>
+        </VTooltip>
       </div>
 
       <!-- Zone graphique — le graphe est en position ABSOLUE (.cw-chart-fill) : sa hauteur ne

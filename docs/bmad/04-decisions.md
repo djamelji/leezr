@@ -26971,3 +26971,26 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Défauts résiduels** : (1) le donut `_PlatformPlanDistributionWidget` garde une **hauteur fixe** (150/200 px) — il ne disparaît plus mais n'exploite pas encore le Presentation Engine adaptatif (hors périmètre P0, candidat P2 ultérieur) ; (2) `/platform/presentation-lab` reste un **harness DEV** (matrice 7 tailles contention-sensible ; le mode `?live=1` isolé est fiable).
 
 **Règles respectées** : **DEV uniquement, aucun push main, aucune PROD, aucune reconstruction du moteur, aucune modification des données financières, P3 non démarré, pas d'audit global.**
+
+## ADR-749 — Dashboard Platform unifié : fin du cockpit historique, P0 sécurité, santé fiable
+
+**Date** : 2026-11-10
+**Contexte** : l'audit `docs/bmad/PLATFORM-DASHBOARD-COCKPIT-AUDIT.md` a prouvé que les blocs ADR-441 (Attention requise + Santé système + 5 cartes KPI) restaient **codés en dur dans `_DashboardOverview.vue`, empilés au-dessus** du moteur de widgets premium P2 — avec 3 défauts réels : (1) **fuite de permissions** (cockpit gated par `view_dashboard` seul alors que les widgets gatent finement), (2) **faux « Scheduler critique »** (proxy 2h de runs au lieu du heartbeat autoritatif), (3) **doublons** (santé système ×2 avec verdicts contradictoires, Companies/Modules carte vs widget).
+
+**Décision / Livraison (DEV)** — P0→P2 en une seule livraison :
+
+- **P0 SÉCURITÉ — `DashboardCockpitController` (attention + health)** : chaque tranche est désormais gated **à l'intérieur** du contrôleur contre la **permission fine** de son domaine, miroir de `DashboardWidgetController::batchResolve` — billing→`view_billing`, support→`manage_support`, alertes plateforme→`view_alerts`, santé→`view_system_health`. Un utilisateur ne reçoit **jamais** dans le JSON une donnée non autorisée (pas seulement masquée). Les rôles ne sont **pas** codés en dur : ce sont des scénarios de permissions. **8 tests Feature de refus** (`DashboardCockpitPermissionTest`) : Support sans billing, Finance sans ops/sécurité, alertes exigeant `view_alerts`, badges santé exigeant `view_system_health`, `view_dashboard` seul = payloads vides.
+
+- **Santé scheduler fiable** — `SystemHealthService::schedulerSection()` (+ `health()`) : bascule du comptage `ScheduledTaskRun` (2h) vers le **signal autoritatif** `ScheduledTaskRegistry::globalHealth()` (heartbeat par minute). Mapping : `ok→healthy`, `silent→warning`, `dead→critical`, `unknown→warning`. « Aucune tâche exécutée » n'est **plus** traité comme une panne ; une **absence/péremption réelle** de heartbeat reste détectable (jamais un faux `ok`). Vérifié : sur DEV idle, Scheduler passe de **`critical` → `warning`**. Badge AI codé en dur `ok` remplacé par une sonde réelle (`AiHealthReadService`).
+
+- **Métriques corrigées** (`attention()`) : overdue = `whereNull('paid_at')` (exclusion des factures réglées laissées à un statut périmé) ; distinction **`subscriptions_pending`** (validation admin) vs **`subscriptions_pending_payment`** (paiement à régulariser) = deux items distincts.
+
+- **UI unifiée — `_DashboardOverview.vue`** : suppression du bloc « Santé système » (doublon du widget `platform.system_health`, déjà au layout par défaut), des **5 cartes KPI** (Entreprises/Modules → widgets `companies_overview`/`catalog_overview` ; Rôles & Utilisateurs → pages d'administration dédiées — endpoints inchangés, consommés ailleurs). « Attention requise » **conservé** mais transformé en **bandeau compact permissionné** (RouterLink par item + lien vers l'objet, état « tout va bien » discret si rien d'actionnable). `dashboard.store.js` : `loadCockpit()` ne charge plus que les alertes (`fetchHealth` retiré). Résultat : **une seule génération d'interface**, zéro doublon.
+
+- **Qualification MRR (P2)** — `_PlatformCommercialWidget.vue` : chip discret **« ⓘ Estimé »** + tooltip indiquant que l'historique est **reconstruit depuis les abonnements actifs** (pas de snapshot MRR), donc le N-1 est une **estimation**, pas une valeur certifiée. Contrôles Semaine/Mois/Année + Comparer N-1 préservés. **Aucune refonte du moteur Billing**, aucune donnée fabriquée.
+
+**Tests** : `DashboardCockpitPermissionTest` **8/8** (refus Finance/Support/Ops + métriques + scheduler non-critical idle) ; suites dashboard existantes **50/50** (`DashboardEngine`, `PlatformDashboardAuthorization`, `OperationsWidgets`, `DashboardGridV2`, catalogue) ; `PlatformCommercialSeriesTest` **6/6** ; **`pnpm build` clean** ; **Presentation Engine non-régressé** (`presentation-resize.spec.js` PENDANT 0/14 · APRÈS 0/14 · 0 JS) ; **axe** : nouveaux éléments (bandeau + chip) **0 violation** ; les violations full-page résiduelles sont **100 % layout Vuexy préexistant** (`@core`/`@layouts`, non modifiable) — net-réduites (−4 VTooltip de l'ancien bloc santé).
+
+**Conséquences** : dashboard Platform moderne et cohérent, sans empilement, sans doublon, sans faux indicateur de santé, sans fuite de permissions. Les informations administratives (rôles, utilisateurs, modules) restent accessibles depuis leurs pages spécialisées. Preuves AVANT/APRÈS capturées.
+
+**Règles respectées** : **DEV uniquement, aucun push main, aucune PROD, aucune manipulation du scheduler/workers (lecture seule des signaux), aucune modification des données financières, P3 non démarré.**

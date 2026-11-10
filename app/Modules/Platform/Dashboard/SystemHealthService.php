@@ -5,7 +5,6 @@ namespace App\Modules\Platform\Dashboard;
 use App\Core\Ai\ReadModels\AiHealthReadService;
 use App\Core\Alerts\PlatformAlert;
 use App\Core\Automation\ScheduledTaskRegistry;
-use App\Core\Automation\ScheduledTaskRun;
 use App\Core\Email\EmailLog;
 use Illuminate\Support\Facades\DB;
 
@@ -88,17 +87,31 @@ class SystemHealthService
     private function schedulerSection(): array
     {
         try {
-            $recentRuns = ScheduledTaskRun::where('created_at', '>=', now()->subHours(2));
-            $failedCount = (clone $recentRuns)->where('status', 'failed')->count();
-            $totalCount = (clone $recentRuns)->count();
-            $lastRun = ScheduledTaskRun::latest('created_at')->first();
-            $status = $totalCount === 0 ? 'critical' : ($failedCount > 2 ? 'critical' : ($failedCount > 0 ? 'warning' : 'healthy'));
+            // ADR-749: the scheduler's liveness is the per-minute HEARTBEAT, not business-task
+            // history. "No task ran in 2h" means the scheduler had nothing to do (idle), NOT
+            // that it is down — the old run-count check produced a permanent false 'critical' on
+            // idle/reset environments. We read the authoritative globalHealth() instead:
+            //   ok      → healthy          (cron firing)
+            //   silent  → warning          (heartbeat late — possible transient delay)
+            //   dead    → critical         (heartbeat stale beyond threshold — cron stopped)
+            //   unknown → warning          (no heartbeat yet — DETECTABLE, never a fake 'healthy')
+            // A real anomaly (dead heartbeat) still surfaces red.
+            $gh = ScheduledTaskRegistry::globalHealth();
+            $status = match ($gh['status']) {
+                'ok' => 'healthy',
+                'dead' => 'critical',
+                default => 'warning', // silent | unknown
+            };
 
             return ['key' => 'scheduler', 'label' => 'Scheduler', 'status' => $status, 'details' => [
-                'runs_2h' => $totalCount, 'failed_2h' => $failedCount, 'last_run_at' => $lastRun?->created_at?->toIso8601String(),
+                'heartbeat_status' => $gh['status'],
+                'heartbeat_age_seconds' => $gh['heartbeat_age_seconds'],
+                'last_heartbeat_at' => $gh['last_heartbeat_at'],
+                'last_activity_at' => $gh['last_activity_at'],
+                'business_runs_recorded' => $gh['business_runs_recorded'],
             ]];
         } catch (\Throwable) {
-            return ['key' => 'scheduler', 'label' => 'Scheduler', 'status' => 'critical', 'details' => ['error' => 'Unable to check']];
+            return ['key' => 'scheduler', 'label' => 'Scheduler', 'status' => 'warning', 'details' => ['error' => 'Unable to check']];
         }
     }
 

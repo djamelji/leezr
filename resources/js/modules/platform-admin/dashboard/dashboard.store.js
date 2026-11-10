@@ -12,7 +12,6 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
   // ── Cockpit (ADR-441) ─────────────────────────────────────────────
 
   const attentionItems = ref([])
-  const healthBadges = ref({})
   const cockpitLoading = ref(false)
 
   async function fetchAttention() {
@@ -21,22 +20,16 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     attentionItems.value = data.items
   }
 
-  async function fetchHealth() {
-    const data = await $platformApi('/dashboard/health')
-
-    healthBadges.value = data.badges
-  }
-
+  // ADR-749 : le bandeau « Santé système » historique est retiré de l'UI (doublon du widget
+  // platform.system_health) → loadCockpit ne charge plus que les alertes actionnables.
   async function loadCockpit() {
     cockpitLoading.value = true
     try {
-      await Promise.all([fetchAttention(), fetchHealth()])
+      await fetchAttention()
     }
     catch {
-      // ADR-598 (Phase 2 deploy): swallow (e.g. 403 for a role without view_dashboard) so a
-      // restricted user never triggers an uncaught rejection. API stays server-enforced.
+      // ADR-598 : swallow (ex. 403 pour un rôle sans view_dashboard) ; items filtrés serveur.
       attentionItems.value = []
-      healthBadges.value = {}
     }
     finally {
       cockpitLoading.value = false
@@ -169,9 +162,8 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     updateTile,
     updateWidgetScope,
     loadDashboard,
-    // Cockpit (ADR-441)
+    // Cockpit (ADR-441 / ADR-749)
     attentionItems,
-    healthBadges,
     cockpitLoading,
     loadCockpit,
   }
