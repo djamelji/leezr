@@ -3,6 +3,7 @@
 namespace App\Modules\Workforce\Employees\Services;
 
 use App\Company\RBAC\CompanyRole;
+use App\Company\RBAC\MembershipSecurityPolicy;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
@@ -169,21 +170,10 @@ class EmployeeAccessService
         return $op === 'revoke' ? 'révoqué' : 'suspendu';
     }
 
-    /** Vrai si la membership est administrative ET la seule administrative ACTIVE de la company. */
+    /** Dernier administrateur actif — délègue à l'autorité serveur unique (ADR-752, pas de duplication). */
     private function isLastAdmin(Company $company, Membership $membership): bool
     {
-        if (! $membership->isAdmin()) {
-            return false;
-        }
-        $otherActiveAdmins = Membership::where('company_id', $company->id)
-            ->where('id', '!=', $membership->id)
-            ->whereNull('suspended_at')
-            ->with('companyRole:id,is_administrative')
-            ->get()
-            ->filter(fn (Membership $m) => $m->isAdmin())
-            ->count();
-
-        return $otherActiveAdmins === 0;
+        return MembershipSecurityPolicy::isLastActiveAdmin($company, $membership);
     }
 
     private function audit(Company $company, Employee $employee, int $actorId, string $action, array $metadata, string $severity = 'info'): void
@@ -214,16 +204,17 @@ class EmployeeAccessService
             }
         }
 
-        // Rôle : non-administratif uniquement (pas de privilège admin auto). Défaut = 1er rôle non-admin.
+        // Rôle : défaut = 1er rôle NON-admin (jamais de privilège admin par défaut). Une attribution
+        // EXPLICITE est validée par l'autorité serveur UNIQUE (ADR-752) — identique au chemin Members :
+        // un rôle admin n'est attribuable que par un acteur administratif (owner/admin), jamais par
+        // uniformisation aveugle.
         $role = $companyRoleId
             ? CompanyRole::where('company_id', $company->id)->where('id', $companyRoleId)->first()
             : CompanyRole::where('company_id', $company->id)->where('is_administrative', false)->orderBy('id')->first();
         if (! $role) {
             throw ValidationException::withMessages(['role' => 'Aucun rôle collaborateur disponible pour cette entreprise.']);
         }
-        if ($role->is_administrative) {
-            throw ValidationException::withMessages(['role' => 'Un rôle administratif ne peut pas être attribué via l\'accès collaborateur.']);
-        }
+        MembershipSecurityPolicy::assertCanAssignRole($company, $role, User::find($actorId), null);
 
         $user = User::where('email', $email)->first();
         $isNewUser = false;

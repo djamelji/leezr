@@ -3,6 +3,8 @@
 namespace App\Modules\Core\Members\Http;
 
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
+use App\Company\RBAC\CompanyRole;
+use App\Company\RBAC\MembershipSecurityPolicy;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
 use App\Core\Fields\FieldWriteService;
@@ -183,6 +185,11 @@ class MembershipController extends Controller
         $profileBefore = $membership->user->only('first_name', 'last_name');
         if (!empty($baseFields)) {
             $membership->user->update($baseFields);
+
+            // ADR-752 : propager le nom vers le collaborateur RH lié pour éviter la divergence
+            // d'identité. Le modèle Employee est dans Core ; la requête est un no-op si la personne
+            // n'a pas de fiche RH (company sans Workforce) → aucune dépendance au module.
+            \App\Core\Workforce\Services\LinkedIdentityService::userToEmployee($company->id, $membership->user);
         }
 
         // ─── Bloc B — Dynamic fields (FieldWriteService) ──────
@@ -206,23 +213,35 @@ class MembershipController extends Controller
 
         // ─── Bloc C — Company role (membership pivot) ────────
         $roleChanged = false;
+        $assignedSensitive = false;
         if (array_key_exists('company_role_id', $validated)) {
+            // Verrou owner (403 historique préservé).
             if ($membership->isOwner()) {
                 return response()->json([
                     'message' => 'Cannot change the role of the owner.',
                 ], 403);
             }
 
-            $roleChanged = $membership->company_role_id !== $validated['company_role_id'];
-            $membership->update(['company_role_id' => $validated['company_role_id']]);
+            // ADR-752 : autorité serveur UNIQUE — anti-escalade / anti auto-promotion / dernier
+            // admin / isolation tenant, identique au chemin « accès collaborateur ».
+            $newRole = CompanyRole::where('company_id', $company->id)->findOrFail($validated['company_role_id']);
+            MembershipSecurityPolicy::assertCanAssignRole($company, $newRole, $request->user(), $membership);
+
+            $roleChanged = $membership->company_role_id !== $newRole->id;
+            $assignedSensitive = MembershipSecurityPolicy::isSensitiveRole($newRole);
+            $membership->update(['company_role_id' => $newRole->id]);
         }
 
         // ADR-125: publish after mutation (only on role reassignment)
         if ($roleChanged) {
             $this->publishDomainEvent('members.changed', $company->id, ['action' => 'member_role_changed', 'user_id' => $membership->user_id]);
 
-            // ADR-130: audit log
-            app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ROLE_CHANGED, 'membership', (string) $membership->id);
+            // ADR-130 / ADR-752 : audit log — sévérité renforcée pour l'attribution d'un rôle ADMIN.
+            app(AuditLogger::class)->logCompany(
+                $company->id, AuditAction::MEMBER_ROLE_CHANGED, 'membership', (string) $membership->id,
+                ['actorId' => $request->user()->id, 'actorType' => 'user', 'severity' => $assignedSensitive ? 'warning' : 'info',
+                 'metadata' => ['role_id' => $membership->company_role_id, 'is_administrative' => $assignedSensitive]],
+            );
         }
 
         $membership = $membership->fresh(['companyRole:id,key,name']);
@@ -254,7 +273,19 @@ class MembershipController extends Controller
             ], 403);
         }
 
+        // ADR-752 : mêmes garde-fous que la révocation d'accès Workforce (plus de contournement
+        // par le chemin Members) — pas soi-même, jamais le dernier administrateur actif.
+        MembershipSecurityPolicy::assertCanModifyAccess($company, $membership, $request->user());
+
         $userId = $membership->user_id;
+
+        // Cohérence cycle de vie (ADR-752) : si ce compte est lié à un collaborateur RH, on le
+        // DÉLIE (sans supprimer la fiche RH, les contrats, documents, pointages…) pour éviter un
+        // `employee.user_id` orphelin. Employee = modèle Core ; no-op si aucune fiche liée.
+        \App\Core\Workforce\Employee::withoutGlobalScopes()
+            ->where('company_id', $company->id)->where('user_id', $userId)
+            ->update(['user_id' => null]);
+
         $membership->delete();
 
         // ADR-125: publish after mutation

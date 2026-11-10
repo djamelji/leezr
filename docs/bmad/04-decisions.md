@@ -27051,3 +27051,43 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Tests** : PHPUnit dashboard **46/46** (archetype compliance non-régressé), `pnpm build` clean, captures dark réelles, 0 erreur JS.
 
 **Verdict** : **GO DEV**. **Règles** : DEV uniquement, aucun push main/PROD, aucun nouveau moteur, aucune donnée fictive, aucun élargissement RBAC (relâchement de guard délibéré et motivé, pas aveugle), Billing/scheduler/`@core`/`@layouts` non touchés.
+
+## ADR-752 — Consolidation Company, Phase 0 : socle Identité / Accès / Cycle de vie
+
+**Date** : 2026-11-10
+**Contexte** : audit `COMPANY-CONSOLIDATION-AUDIT.md` validé (direction : fiche Collaborateur unifiée Core). Avant toute fusion visuelle (P1-P4), trois arbitrages + corrections de socle, sur DEV.
+
+### 1. Arbitrage pivot d'identité Contact / User / Membership / Employee
+- **`contacts` (ADR-563) N'EXISTE PAS** (grep : 6 modules horizontaux « planifiés, 0 code, 0/6 »). C'est le **pivot CIBLE (T1)**, pas implémenté. On ne le construit PAS en Phase 0.
+- Responsabilités réelles : **User** = identité/login (source de l'e-mail de connexion) ; **Membership** = accès + rôle RBAC (`company_role_id`) ; **Employee** = fiche RH (peut exister **sans** User — 216/234 en base), re-stocke nom/e-mail.
+- **Décision** : le pivot conceptuel de la future fiche est la **« Personne »**, adressée par un **identifiant non ambigu** `person_ref = user:{id} | employee:{id}` (discriminé), **sans nouvelle table** en Phase 0. L'e-mail de **login reste porté par le User** ; l'e-mail RH est un contact distinct. **Workforce ne devient PAS une dépendance du Core** : le modèle `Employee` est déjà physiquement dans `app/Core/Workforce/` (référence Core→Core, no-op si aucune fiche). **Aucun User auto-créé** pour les 216 Employee sans compte ; **aucun rapprochement automatique** par nom/e-mail — seule une liaison `user_id` **explicite** (invitation/grant) relie une personne.
+- **Matrice d'identité & rapprochement** :
+
+| Cas | user_id | membership | Fiche RH | Clé fiche | Rapprochement |
+|---|---|---|---|---|---|
+| Accès applicatif seul (admin/technique) | ✔ | ✔ | ✘ | `user:{id}` | — |
+| Employé sans compte (défaut, 92 %) | ✘ | ✘ | ✔ | `employee:{id}` | grant explicite → crée User+Membership |
+| Employé avec compte | ✔ | ✔ | ✔ | `user:{id}` (= `employee.user_id`) | lien établi au grant ; anti-doublon (`EmployeeAccessService:245`) |
+| Admin aussi salarié | ✔ (owner/admin) | ✔ | ✔ | `user:{id}` | — |
+| Multi-company | ✔ (N memberships) | N | 0..N (par company) | `user:{id}` scoping company | jamais cross-tenant |
+
+### 2. Règle RBAC d'attribution UNIQUE (`MembershipSecurityPolicy`)
+Autorité serveur **unique** (`app/Company/RBAC/MembershipSecurityPolicy.php`) appelée à l'identique par **tous** les points d'entrée (`MembershipController::update`, `EmployeeAccessService::grant`) — plus aucune règle dupliquée dans les contrôleurs. Invariants : isolation tenant (rôle d'une autre company refusé) ; **pas d'auto-modification de son propre rôle** ; **anti-escalade** (un acteur non administratif ne peut jamais attribuer un rôle administratif ; `null`/acteur inconnu = non-admin) ; **protection du dernier administrateur actif** ; verrou `owner` conservé côté appelant (403 historique). Audit renforcé (sévérité `warning`) sur l'attribution d'un rôle **admin**. L'accès collaborateur, qui interdisait TOUT rôle admin (asymétrie), applique désormais la **même** règle (admin assignable seulement par un acteur admin) — sans « rendre tous les rôles admin librement attribuables » (le défaut reste non-admin). *Contexte vérifié : `members.manage` est `is_admin=true` → seul un admin atteint le chemin Members ; mais `members.invite` est `is_admin=false` → l'anti-escalade protège réellement le chemin « accès collaborateur ».*
+
+### 3. Cycle de vie sécurisé (emploi ≠ accès)
+Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (`employee.status`), suspendre l'accès (membership `suspended_at`), révoquer l'accès (supprime membership + délie `employee.user_id`, **conserve** fiche/contrats/documents/pointages), supprimer un membership. Corrections : `MembershipController::destroy` applique désormais **les mêmes garde-fous** que la révocation Workforce (`assertCanModifyAccess` : pas soi-même, jamais le dernier admin ; owner déjà verrouillé) — fin du contournement par le chemin Members ; et **délie** la fiche RH liée (plus d'`employee.user_id` orphelin) **sans perte de données RH**. Aucune action destructive implicite.
+
+### 4. Prévention des divergences d'identité (personnes RELIÉES)
+`LinkedIdentityService` (`app/Core/Workforce/Services/`) propage le **nom** entre `User` et l'`Employee` lié, de façon idempotente, appelé par les deux surfaces d'édition (`MembershipController::update`, `EmployeeController::update`). **E-mail de login non touché** (User = source) ; **aucun rapprochement auto** (n'agit que sur un `user_id` déjà lié). Les 216 personnes non reliées ne sont pas affectées.
+
+### Tests & résultat
+`CompanyPhase0SecurityTest` **12/12** (owner 403, auto-rôle refusé, anti-escalade via accès collaborateur, règle unifiée admin-par-admin, isolation tenant, retrait=pas-soi-même, retrait délie la fiche RH en préservant les données, synchro nom bidirectionnelle). Non-régression : EmployeeAccess + WorkforceSecurityWD + SecurityInvariant + CompanyPermission + CompanyAccessPolicy + RolePermissionInvariant + ManageStructureHardening + MemberProfile/Credential/Roles/Invitation/Suspension = **>190 verts**. Aucun frontend modifié. **Aucune migration, aucune fusion de personnes, aucune donnée détruite.**
+
+### Plan de consolidation actualisé (P1-P4 — NON démarré, après checkpoint Phase 0)
+- **P1 — Fiche Collaborateur unifiée Core** : généraliser `EmployeeFileReadModel` → `PersonFileReadModel` clé `person_ref` (`user:{id}|employee:{id}`) ; route `/company/people/:id` + **redirects** `members/:id` & `workforce/employees/:id` ; onglets conditionnés module+permission (déjà `available_sections`) ; RBAC par endpoint inchangé.
+- **P2 — Liste unifiée** `/company/people` = memberships ∪ employees (dédup via `user_id`), colonnes workforce conditionnelles ; nav : 1 entrée « Collaborateurs » remplaçant Members+Employees ; anciennes routes en redirect.
+- **P3 — Rôles & autorisations** : `roles.vue` → onglet « Rôles & autorisations » (définitions, `roles.manage`) ; attribution sur l'onglet Accès de la fiche (`MembershipSecurityPolicy`). `/company/roles` en redirect.
+- **P4 — Nav, documents & nettoyage** : distinguer les 2 entrées « Documents », dédoublonner config types, sortir `dev-lab` de prod, flag `consolidated-preview`, factoriser widgets dashboard/home & stores shipment/delivery.
+- **Rollback** : chaque phase derrière alias/redirects ; suppression d'une ancienne page = 0 lien entrant + redirect ≥ 1 cycle + tests verts. Routes à garder résolvables : `company-members[-id]`, `company-workforce-employees[-id]`.
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, P1-P4 non démarrés.

@@ -306,6 +306,10 @@ class EmployeeController extends Controller
 
         $employee->update($validated);
 
+        // ADR-752 : si le collaborateur est RELIÉ à un compte, propager le nom vers le User pour
+        // éviter la divergence d'identité (nom RH ≠ nom du compte). Email de login non touché.
+        \App\Core\Workforce\Services\LinkedIdentityService::employeeToUser($employee);
+
         return response()->json($employee);
     }
 
