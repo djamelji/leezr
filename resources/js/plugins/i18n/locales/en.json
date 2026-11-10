@@ -4373,7 +4373,8 @@
     },
     "access": {
       "title": "App access", "effectivePermissions": "Effective permissions",
-      "noPermissions": "No permission (or access not allowed)."
+      "noPermissions": "No permission (or access not allowed).",
+      "assignRole": "Assigned role", "roleUpdated": "Role updated.", "roleUpdateError": "Could not change the role."
     },
     "fields": {
       "name": "Name", "loginEmail": "Login email", "hrEmail": "HR email (contact)",
@@ -4388,6 +4389,8 @@
     "person": "Person", "account": "Account", "role": "Role",
     "employment": "Employment", "job": "Job", "department": "Department",
     "new": "New", "inviteUser": "Invite a user", "createEmployee": "Create an employee file",
+    "inviteUserHint": "Creates app access (account + role).", "createEmployeeHint": "HR file without an account (add access later).",
+    "tabPeople": "People", "tabRoles": "Roles & authorizations",
     "searchPlaceholder": "Search a collaborator…", "empty": "No collaborator."
   },
   "home": {

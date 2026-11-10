@@ -37,6 +37,15 @@ export const usePersonStore = defineStore('company-person', () => {
     }
   }
 
+  // Attribution de rôle — RÉUTILISE l'endpoint members sécurisé (→ MembershipSecurityPolicy côté
+  // serveur : anti-escalade, dernier admin, owner, pas d'auto-modification). Aucune logique dupliquée.
+  async function changeRole(companyRoleId) {
+    const mid = data.value?.membership_id
+    if (!mid) throw new Error('no_membership')
+
+    return $api(`/company/members/${mid}`, { method: 'PUT', body: { company_role_id: companyRoleId } })
+  }
+
   const history = ref([])
   const historyLoading = ref(false)
   async function loadHistory(ref) {
@@ -53,6 +62,6 @@ export const usePersonStore = defineStore('company-person', () => {
     data, loading, error,
     identity, account, employment, sections, can, employeeId, userId, personRef,
     history, historyLoading,
-    load, loadHistory,
+    load, loadHistory, changeRole,
   }
 })

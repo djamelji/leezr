@@ -5,6 +5,8 @@
 // Aucune duplication : les sections Workforce sont les composants existants, auto-chargés.
 import { useRoute, useRouter } from 'vue-router'
 import { usePersonStore } from '@/modules/company/people/person.store'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import EmployeePlanningSection from '@/pages/company/workforce/employees/_EmployeePlanningSection.vue'
 import EmployeeTimeSection from '@/pages/company/workforce/employees/_EmployeeTimeSection.vue'
@@ -18,11 +20,36 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = usePersonStore()
+const settings = useCompanySettingsStore()
+const { toast } = useAppToast()
 const { can } = useCan()
 
 const personRef = computed(() => String(route.params.personRef || ''))
 const currentTab = ref('overview')
 const accessDialogOpen = ref(false)
+
+// ── Attribution de rôle (fiche opérationnelle) — réutilise l'endpoint members sécurisé ──
+const roleItems = computed(() => {
+  const list = (settings.roles || []).map(r => ({ title: r.name, value: r.id }))
+  const cur = store.account.role
+  if (cur && !list.some(i => i.value === cur.id)) list.unshift({ title: cur.name, value: cur.id })
+
+  return list
+})
+const selectedRole = ref(null)
+const savingRole = ref(false)
+watch(() => store.account.role, r => { selectedRole.value = r?.id ?? null }, { immediate: true })
+async function saveRole() {
+  if (!selectedRole.value || savingRole.value) return
+  savingRole.value = true
+  try {
+    await store.changeRole(selectedRole.value)
+    await reload()
+    toast(t('people.access.roleUpdated'), 'success')
+  }
+  catch (e) { toast(e?.data?.message || t('people.access.roleUpdateError'), 'error') }
+  finally { savingRole.value = false }
+}
 
 const TAB_META = {
   overview: { icon: 'tabler-layout-dashboard' },
@@ -53,7 +80,10 @@ async function reload() {
   if (!store.sections.includes(currentTab.value)) currentTab.value = 'overview'
 }
 watch(personRef, reload)
-onMounted(reload)
+onMounted(async () => {
+  await reload()
+  if (can('members.manage') && !settings.roles?.length) settings.fetchRoles().catch(() => {})
+})
 watch(currentTab, tab => { if (tab === 'history') store.loadHistory(personRef.value) })
 
 function onAccessChanged() { reload() }
@@ -151,6 +181,11 @@ function onAccessChanged() { reload() }
                   <div class="text-body-2 text-medium-emphasis">{{ accountMeta.label }}<span v-if="store.account.role"> · {{ store.account.role.name }}</span></div>
                 </div>
                 <VBtn v-if="store.can.manage_access && store.employeeId" color="primary" variant="tonal" size="small" prepend-icon="tabler-key" @click="accessDialogOpen = true">{{ t('people.manageAccess') }}</VBtn>
+              </div>
+              <!-- Changement de rôle (fiche opérationnelle) — sécurisé serveur (MembershipSecurityPolicy) -->
+              <div v-if="store.can.change_role && store.data.membership_id && !store.account.is_owner" class="d-flex align-end flex-wrap gap-2 mb-4">
+                <AppSelect v-model="selectedRole" :items="roleItems" :label="t('people.access.assignRole')" density="compact" style="max-inline-size: 280px" />
+                <VBtn color="primary" variant="tonal" size="small" :loading="savingRole" :disabled="selectedRole === store.account.role?.id" prepend-icon="tabler-check" @click="saveRole">{{ t('common.save') }}</VBtn>
               </div>
               <VDivider class="mb-3" />
               <div class="text-overline mb-2">{{ t('people.access.effectivePermissions') }}</div>

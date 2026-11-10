@@ -139,6 +139,19 @@ class PeoplePhase2Test extends TestCase
         $this->assertSame('Zoe Unique', $res['data'][0]['name']);
     }
 
+    public function test_roles_view_facet_sees_roles_not_people_list(): void
+    {
+        // ADR-755 : roles.view donne accès aux DÉFINITIONS de rôles, PAS à la liste des personnes.
+        // roles.view est une permission admin → rôle administratif (mais SANS members.view/workforce.view).
+        $rolesRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'rolesview', 'name' => 'RolesView', 'is_administrative' => true]);
+        $rolesRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['roles.view'])->pluck('id')->all());
+        $u = User::factory()->create();
+        $this->company->memberships()->create(['user_id' => $u->id, 'role' => 'user', 'company_role_id' => $rolesRole->id]);
+
+        $this->as($u)->getJson('/api/company/people')->assertForbidden();      // pas de facette personne
+        $this->as($u)->getJson('/api/company/roles')->assertOk();              // mais accès aux rôles
+    }
+
     public function test_list_requires_a_facet(): void
     {
         $role = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'nofacet', 'name' => 'NoFacet', 'is_administrative' => false]);

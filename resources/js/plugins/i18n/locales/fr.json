@@ -4373,7 +4373,8 @@
     },
     "access": {
       "title": "Accès applicatif", "effectivePermissions": "Permissions effectives",
-      "noPermissions": "Aucune permission (ou accès non autorisé)."
+      "noPermissions": "Aucune permission (ou accès non autorisé).",
+      "assignRole": "Rôle attribué", "roleUpdated": "Rôle mis à jour.", "roleUpdateError": "Impossible de modifier le rôle."
     },
     "fields": {
       "name": "Nom", "loginEmail": "E-mail de connexion", "hrEmail": "E-mail RH (contact)",
@@ -4388,6 +4389,8 @@
     "person": "Personne", "account": "Compte", "role": "Rôle",
     "employment": "Emploi", "job": "Poste", "department": "Département",
     "new": "Nouveau", "inviteUser": "Inviter un utilisateur", "createEmployee": "Créer une fiche salarié",
+    "inviteUserHint": "Crée un accès applicatif (compte + rôle).", "createEmployeeHint": "Fiche RH sans compte (ajout d'accès ultérieur).",
+    "tabPeople": "Personnes", "tabRoles": "Rôles & autorisations",
     "searchPlaceholder": "Rechercher un collaborateur…", "empty": "Aucun collaborateur."
   },
   "home": {
