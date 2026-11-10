@@ -428,6 +428,7 @@
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",
+    "mySpace": "Mon espace salarié",
     "welcomeSubtitle": "Votre espace de gestion centralisé",
     "viewingCompany": "Vous consultez {name}.",
     "workingIn": "Vous travaillez dans {name}.",

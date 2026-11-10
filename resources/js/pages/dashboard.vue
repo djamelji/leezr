@@ -8,6 +8,7 @@ import OnboardingWidget from './company/dashboard/_OnboardingWidget.vue'
 import QuickActionsBar from './company/dashboard/_QuickActionsBar.vue'
 import HomePrioritiesSection from '@/components/dashboard/HomePrioritiesSection.vue'
 import { useCan } from '@/composables/useCan'
+import { useWorkforceClockStore } from '@/core/stores/workforce-clock'
 
 definePage({
   meta: {
@@ -23,6 +24,15 @@ const complianceStore = useCompanyComplianceStore()
 const { can, canModule } = useCan()
 // P3-B: Workforce "À traiter" shown as a fixed top section for the concerned users.
 const showPriorities = computed(() => canModule('workforce') && can('workforce.view'))
+
+// ADR-751b : un administrateur Company PEUT aussi être salarié. Le WorkspaceResolver le
+// route vers /dashboard (sa gestion) ; on lui donne ici un accès EXPLICITE à son espace
+// opérationnel /home (pointage, planning, congés, docs, activités) sans quitter la gestion.
+// Condition = posséder un enregistrement Employee actif (résolu self-service côté serveur),
+// jamais un rôle codé en dur. Le store clock est déjà alimenté par le widget navbar.
+const clock = useWorkforceClockStore()
+const isEmployee = computed(() => !!clock.employee)
+const showMySpace = computed(() => canModule('workforce') && isEmployee.value)
 
 const canEdit = computed(() => auth.isAdministrative)
 const companyName = computed(() => auth.currentCompany?.name || '')
@@ -41,6 +51,10 @@ onMounted(() => {
   })
   if (canCompliance.value)
     complianceStore.fetchCompliance()
+  // Résout « suis-je salarié ? » pour proposer l'accès à l'espace opérationnel (idempotent :
+  // le widget navbar peut l'avoir déjà fait ; firstOrFail → 404 silencieux si non-salarié).
+  if (canModule('workforce') && !clock.employee)
+    clock.fetchProfile()
 })
 
 // ── Dashboard Engine ──
@@ -84,16 +98,29 @@ const acceptSuggestion = suggestion => {
 <template>
   <div>
     <!-- ═══ Welcome Header ═══ -->
-    <div class="mb-6">
-      <h4 class="text-h4">
-        {{ t('dashboard.welcome', { name: userName }) }}
-      </h4>
-      <p class="text-body-1 text-medium-emphasis mb-0">
-        {{ t('dashboard.welcomeSubtitle') }}
-        <span v-if="companyName">
-          — <span class="font-weight-medium text-high-emphasis">{{ companyName }}</span>
-        </span>
-      </p>
+    <div class="d-flex align-start flex-wrap gap-3 mb-6">
+      <div class="flex-grow-1">
+        <h4 class="text-h4">
+          {{ t('dashboard.welcome', { name: userName }) }}
+        </h4>
+        <p class="text-body-1 text-medium-emphasis mb-0">
+          {{ t('dashboard.welcomeSubtitle') }}
+          <span v-if="companyName">
+            — <span class="font-weight-medium text-high-emphasis">{{ companyName }}</span>
+          </span>
+        </p>
+      </div>
+      <!-- ADR-751b : accès explicite à l'espace opérationnel pour un admin aussi salarié -->
+      <VBtn
+        v-if="showMySpace"
+        to="/home"
+        variant="tonal"
+        color="primary"
+        prepend-icon="tabler-user-heart"
+        class="flex-shrink-0"
+      >
+        {{ t('dashboard.mySpace') }}
+      </VBtn>
     </div>
 
     <!-- ═══ Suggestions Banner ═══ -->

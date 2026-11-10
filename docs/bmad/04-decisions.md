@@ -27034,3 +27034,20 @@ Audit transversal (suspension, états commerciaux, Stripe, couverture) consigné
 **Recette** : testé en tant que field_worker réel (`bob@leezr.test`) → `/home` (pas de redirection), « Bonjour, Bob », hero créneau+pointage (bouton Pointer l'arrivée), 3 cartes (1 congé / 5 docs / 2 livraisons), soldes congés ; 6 appels self-service **200**, `jsErr=0`. Desktop + **mobile 390px** (cartes empilées, action-first) + composants 100 % tokens de thème Vuetify (dark-ready par construction). **axe** : 0 violation introduite par les sections éditoriales (la seule résiduelle = `text-disabled` des widgets de grille préexistants, partagés avec `/dashboard`). `pnpm build` clean. Aucun backend modifié.
 
 **Verdict** : **GO DEV**. **Règles** : DEV uniquement, aucun nouveau moteur, aucune donnée fictive, aucun élargissement RBAC, Billing/scheduler/`@core`/`@layouts` non touchés.
+
+## ADR-751b — Recette P3 /home : 3 corrections ciblées (admin-salarié, widgets vides, dark mode)
+
+**Date** : 2026-11-10
+**Contexte** : recette d'ADR-751. Trois réserves levées sur DEV.
+
+**1. Administrateur Company également salarié** — Le WorkspaceResolver route les administratifs vers `/dashboard` et le guard forçait `/home → /dashboard`, rendant l'espace opérationnel inaccessible à un admin pourtant salarié. Corrections : (a) `guards.js` — suppression de la redirection forcée `/home → /dashboard` (on conserve `/dashboard → /home` pour que les field workers ne voient pas la gestion) : un admin peut désormais consulter `/home` **explicitement** sans perdre son dashboard ; (b) `dashboard.vue` — bouton **« Mon espace salarié » → /home** dans l'en-tête, affiché uniquement si l'utilisateur possède un **Employee actif** (`clock.employee`, résolu self-service), jamais un rôle codé en dur. Validé : `owner@leezr.test` (management + Employee co1) voit le bouton sur `/dashboard` et accède à `/home` (« Bonjour, Djamel », pointage + créneau + 3 cartes) **sans redirection**.
+
+**2. Widgets de conformité vides pour field_worker** — Les 5 widgets `compliance.*` (agrégats de conformité à l'échelle de l'entreprise = concern MANAGER) déclaraient `archetypes() = null` (tous) → ils apparaissaient, vides, dans l'accueil du field_worker. Correction : `archetypes() = ['management', 'operations_center']` (cohérent avec les widgets workforce manager), excluant field_worker. La conformité **propre** du salarié reste couverte par la carte éditoriale « Documents à régulariser » (self-scoped) → **aucune anomalie réelle masquée**. Respecte le moteur de widgets (gating natif), les permissions, les modules et les layouts des managers (archetype inclus → inchangés). Validé : Bob (field_worker) passe de 7 widgets (dont compliance vides) à **3 widgets livraisons pertinents**, `emptyCards=0`.
+
+**3. Dark mode** — Scénario Playwright corrigé pour activer le **vrai thème Vuetify** (préférence utilisateur, réversible) ; `.v-theme--dark` confirmé présent. 4 captures `/home` produites (desktop light/dark, mobile light/dark) et examinées visuellement : fonds sombres corrects, textes haut-contraste, bouton « Pointer l'arrivée » lisible, cartes d'action et états de pointage/vides lisibles. Composition 100 % tokens de thème → dark-ready par construction.
+
+**Recette métier** : field_worker avec Workforce (Bob ✓ pointage/créneau/cartes), utilisateur logistique (carte « Mes livraisons » ✓), admin aussi salarié (owner ✓), field_worker sans Employee (hero masqué par `isEmployee` — garanti par construction : `fetchProfile` 404 → `employee=null`). Isolation inchangée (endpoints self-scoped `user_id`/`assigned_to_user_id`). `jsErr=0` partout.
+
+**Tests** : PHPUnit dashboard **46/46** (archetype compliance non-régressé), `pnpm build` clean, captures dark réelles, 0 erreur JS.
+
+**Verdict** : **GO DEV**. **Règles** : DEV uniquement, aucun push main/PROD, aucun nouveau moteur, aucune donnée fictive, aucun élargissement RBAC (relâchement de guard délibéré et motivé, pas aveugle), Billing/scheduler/`@core`/`@layouts` non touchés.

@@ -104,12 +104,13 @@ export const setupGuards = router => {
       return { path: '/login' }
     }
 
-    // ADR-357: Workspace cross-guard — redirect to correct space
+    // ADR-357: Workspace cross-guard. Un field worker ne doit PAS accéder à la gestion →
+    // /dashboard est renvoyé vers /home. L'inverse n'est PLUS forcé (ADR-751b) : un
+    // administrateur (workspace 'dashboard') qui est AUSSI salarié peut consulter
+    // explicitement son espace opérationnel /home (accès proposé depuis /dashboard). Le
+    // landing par défaut reste piloté par le workspace (unauthenticatedOnly ci-dessus).
     if (to.path === '/dashboard' && auth.workspace === 'home') {
       return { path: '/home' }
-    }
-    if (to.path === '/home' && auth.workspace === 'dashboard') {
-      return { path: '/dashboard' }
     }
 
     // Surface guard — structure routes require tenant hydration + management level

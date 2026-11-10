@@ -91,8 +91,5 @@ class ComplianceOverdueWidget implements WidgetManifest
         return [];
     }
 
-    public function archetypes(): ?array
-    {
-        return null;
-    }
+    public function archetypes(): ?array { return ['management', 'operations_center']; } // ADR-751b: company-wide compliance = manager concern, excluded from field_worker home
 }
