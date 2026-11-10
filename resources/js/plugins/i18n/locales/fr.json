@@ -4355,6 +4355,32 @@
       "hint": "Vos créneaux, pointages et demandes apparaîtront ici dès qu'ils seront disponibles."
     }
   },
+  "people": {
+    "loadError": "Impossible de charger la fiche.",
+    "owner": "Propriétaire",
+    "manageAccess": "Gérer l'accès",
+    "noContract": "Aucun contrat",
+    "noHistory": "Aucun historique disponible.",
+    "tabs": {
+      "overview": "Vue d'ensemble", "personal": "Informations", "access": "Accès & autorisations",
+      "employment": "Emploi & contrat", "planning": "Planning", "time": "Temps & pointage",
+      "leave": "Congés & absences", "documents": "Documents", "history": "Historique"
+    },
+    "account": {
+      "connected": "Compte connecté", "active": "Compte activé", "invited": "Invitation en attente",
+      "suspended": "Accès suspendu", "none": "Aucun compte"
+    },
+    "access": {
+      "title": "Accès applicatif", "effectivePermissions": "Permissions effectives",
+      "noPermissions": "Aucune permission (ou accès non autorisé)."
+    },
+    "fields": {
+      "name": "Nom", "loginEmail": "E-mail de connexion", "hrEmail": "E-mail RH (contact)",
+      "phone": "Téléphone", "employeeNumber": "N° collaborateur", "hireDate": "Date d'embauche",
+      "compensation": "Rémunération", "manager": "Responsable"
+    },
+    "empStatus": { "active": "Actif", "inactive": "Inactif", "on_leave": "En congé", "suspended": "Suspendu", "terminated": "Sorti" }
+  },
   "home": {
     "title": "Accueil",
     "widgetsTitle": "Mes widgets",

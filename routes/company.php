@@ -225,6 +225,15 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::delete('/company/members/{id}', [MembershipController::class, 'destroy'])
         ->middleware('company.access:use-permission,members.manage');
 
+    // ADR-753 (Phase 1) — fiche Collaborateur unifiée (Core, indépendante de Workforce).
+    // personRef = user-{id} | employee-{id}. Gated members.view ; données sensibles gated par section.
+    Route::get('/company/people/{personRef}', [\App\Modules\Core\People\Http\PersonController::class, 'show'])
+        ->middleware('company.access:use-permission,members.view')
+        ->where('personRef', '(user|employee)-[0-9]+');
+    Route::get('/company/people/{personRef}/history', [\App\Modules\Core\People\Http\PersonController::class, 'history'])
+        ->middleware('company.access:use-permission,members.view')
+        ->where('personRef', '(user|employee)-[0-9]+');
+
     // Member credentials
     Route::post('/company/members/{id}/reset-password', [MemberCredentialController::class, 'resetPassword'])
         ->middleware('company.access:use-permission,members.credentials');

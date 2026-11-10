@@ -4355,6 +4355,32 @@
       "hint": "Your shifts, clock-ins and requests will appear here as soon as they are available."
     }
   },
+  "people": {
+    "loadError": "Unable to load the file.",
+    "owner": "Owner",
+    "manageAccess": "Manage access",
+    "noContract": "No contract",
+    "noHistory": "No history available.",
+    "tabs": {
+      "overview": "Overview", "personal": "Personal info", "access": "Access & authorizations",
+      "employment": "Employment & contract", "planning": "Planning", "time": "Time & attendance",
+      "leave": "Leave & absences", "documents": "Documents", "history": "History"
+    },
+    "account": {
+      "connected": "Account connected", "active": "Account activated", "invited": "Invitation pending",
+      "suspended": "Access suspended", "none": "No account"
+    },
+    "access": {
+      "title": "App access", "effectivePermissions": "Effective permissions",
+      "noPermissions": "No permission (or access not allowed)."
+    },
+    "fields": {
+      "name": "Name", "loginEmail": "Login email", "hrEmail": "HR email (contact)",
+      "phone": "Phone", "employeeNumber": "Employee number", "hireDate": "Hire date",
+      "compensation": "Compensation", "manager": "Manager"
+    },
+    "empStatus": { "active": "Active", "inactive": "Inactive", "on_leave": "On leave", "suspended": "Suspended", "terminated": "Terminated" }
+  },
   "home": {
     "title": "Home",
     "widgetsTitle": "My widgets",

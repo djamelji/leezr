@@ -27091,3 +27091,23 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 - **Rollback** : chaque phase derrière alias/redirects ; suppression d'une ancienne page = 0 lien entrant + redirect ≥ 1 cycle + tests verts. Routes à garder résolvables : `company-members[-id]`, `company-workforce-employees[-id]`.
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, P1-P4 non démarrés.
+
+## ADR-753 — Consolidation Company, Phase 1 : fiche Collaborateur unifiée (Core)
+
+**Date** : 2026-11-10
+**Contexte** : ADR-752 (socle) validée. P1 remplace les parcours dispersés Members/Workforce par **une** fiche personne, portée par le **Core Company** et enrichie par les modules — accessible **sans** Workforce. P2/P3/P4 non démarrés.
+
+**Architecture (implémentée, réutilise l'existant)** :
+- **`PersonRef`** (`app/Modules/Core/People/`) — référence non ambiguë URL-safe `user-{id}` | `employee-{id}`, toujours interprétée dans la Company courante, résolue par un lien `user_id` EXPLICITE (jamais par nom/e-mail).
+- **`PersonFileReadModel`** (Core) — agrège **User + Membership + Employee + CompanyRole** + sections Workforce AUTORISÉES. Réutilise **`EmployeeFileReadModel::overview`** pour l'emploi (gated module, `available_sections`), **sans fusion de table ni création de compte**. Référence canonique = la fiche RH prime (`employee-{id}`) quand elle existe → l'ancien lien `user-{id}` résout la bonne fiche. Compensation/documents/historique **masqués par permission** côté serveur.
+- **Route Core** `GET /company/people/{personRef}` (+ `/history`), gated `members.view` sous le module `core.members` → **indépendante de Workforce**. Contrainte de format `(user|employee)-\d+`.
+
+**Fiche (frontend)** `pages/company/people/[personRef].vue` : en-tête (identité, statut compte, rôle, poste/établissement, « Gérer l'accès ») + onglets **conditionnés module+permission+données** : Vue d'ensemble · Informations · **Accès & autorisations** (rôle + **permissions effectives** + état compte + actions) · Emploi & contrat · Planning · Temps · Congés · Documents · Historique. Les onglets Workforce **RÉUTILISENT** les composants existants auto-chargés (`_EmployeePlanningSection`/`Time`/`Leave`/`Documents`) et le **dialogue d'accès** (`_EmployeeAccessDialog` → `EmployeeAccessService` sécurisé). Aucune duplication. **Pas d'onglet vide** (absent si pas de données/droit). **Historique = audit RÉEL** (masqué si aucune trace, jamais inventé).
+
+**Sécurité / mutations** : toutes les mutations passent par les endpoints sécurisés existants (rôle → `MembershipSecurityPolicy` via le PUT members ; accès → `EmployeeAccessService`). **Aucun nouveau chemin moins restrictif**. L'e-mail de login (User) et l'e-mail RH restent distincts (réutilise `LinkedIdentityService`). Les autres companies d'un multi-membership ne sont jamais exposées (scoping company).
+
+**Tests** : `PersonFilePhase1Test` **9/9** — user-seul (pas d'onglet emploi), employee-seul sans compte, personne reliée (résolution canonique employee), route exige `members.view` (403 sinon), **rémunération masquée** sans `compensation_read`, isolation tenant (404), sans Workforce (user OK / employee 404), **historique masqué** sans audit / affiché avec. Non-régression : CompanyPhase0 + MemberProfile + WorkforceSecurityWD + PageModuleAlignment (la nouvelle page déclare son meta) = **45+ verts**. **Rendu vérifié** : fiche reliée = 9 onglets, en-tête premium, onglet Accès (permissions effectives), desktop + **mobile 390px**, `jsErr=0`, dark-ready (tokens).
+
+**Défauts résiduels** : (1) les anciennes routes `members/:id` & `workforce/employees/:id` **ne redirigent pas encore** vers `/company/people` (évité pour ne pas casser les e2e Workforce — relève de **P2**, nav/liste) ; (2) onglets « Emploi/Informations » = synthèses natives du read-model (édition fine reste sur les surfaces Workforce existantes — enrichissement P2) ; (3) tension doctrine `Employee` sous `app/Core/Workforce/` (hors scope).
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucune donnée financière modifiée, **P2/P3/P4 non démarrés**.
