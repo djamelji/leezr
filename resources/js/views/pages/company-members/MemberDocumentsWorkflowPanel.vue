@@ -57,10 +57,14 @@ const viewerDocument = ref(null)
 const requestMenuVisible = ref(false)
 const requestingCode = ref(null)
 
+// ADR-760 (M3) : personRef extrait de resourceBase (ex. /company/people/employee-5 → employee-5)
+// → permet « Demander un document » même pour un Employee SANS compte (via person_ref).
+const personRef = computed(() => (props.resourceBase ? props.resourceBase.split('/').pop() : null))
+
 // Requestable doc types = those activated but without an active request.
-// Désactivé quand le dossier n'a pas de compte (sujet employee sans user → pas de user_id).
+// Autorisé dès qu'on a un personRef (sujet) OU un compte.
 const requestableDocTypes = computed(() => {
-  if (!props.supportsRequests) return []
+  if (!props.supportsRequests && !personRef.value) return []
 
   return memberDocuments.value.filter(
     doc => !doc.request_status || doc.request_status === 'approved' || doc.request_status === 'rejected',
@@ -72,7 +76,9 @@ const requestDocument = async code => {
   try {
     await $api('/company/document-requests', {
       method: 'POST',
-      body: { user_id: props.memberId, document_type_code: code },
+      body: personRef.value
+        ? { person_ref: personRef.value, document_type_code: code }
+        : { user_id: props.memberId, document_type_code: code },
     })
     toast(t('documents.requestSent'), 'success')
     requestMenuVisible.value = false
@@ -233,6 +239,14 @@ const viewerDownloadUrl = computed(() => {
     return ''
 
   return `${base.value}/documents/${viewerDocument.value.code}/download`
+})
+
+// ADR-760 (M3) : timeline des versions dans le viewer.
+const viewerVersionsUrl = computed(() => {
+  if (!viewerDocument.value?.upload)
+    return ''
+
+  return `${base.value}/documents/${viewerDocument.value.code}/versions`
 })
 
 const handleViewerApprove = async () => {
@@ -684,6 +698,7 @@ const handleViewerDownload = async () => {
     v-model:is-dialog-visible="isViewerOpen"
     :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type, ocr_text: viewerDocument.upload.ocr_text, ai_analysis: viewerDocument.upload.ai_analysis, ai_insights: viewerDocument.upload.ai_insights, ai_suggestions: viewerDocument.upload.ai_suggestions, ai_status: viewerDocument.upload.ai_status } : null"
     :download-url="viewerDownloadUrl"
+    :versions-url="viewerVersionsUrl"
     :can-review="!!(viewerDocument?.can_review && canEdit)"
     :review-status="viewerDocument?.request_status"
     :review-note="viewerDocument?.request_review_note"

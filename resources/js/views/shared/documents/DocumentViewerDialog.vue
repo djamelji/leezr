@@ -2,6 +2,7 @@
 import { $api } from '@/utils/api'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
+import DocumentVersionsTimeline from '@/views/shared/documents/DocumentVersionsTimeline.vue'
 
 const props = defineProps({
   isDialogVisible: {
@@ -13,6 +14,11 @@ const props = defineProps({
     default: null,
   },
   downloadUrl: {
+    type: String,
+    default: '',
+  },
+  // ADR-760 (M3) : base de l'endpoint versions (ex. /company/documents/kbis/versions)
+  versionsUrl: {
     type: String,
     default: '',
   },
@@ -448,6 +454,14 @@ defineExpose({ markApplied })
             </VExpansionPanelText>
           </VExpansionPanel>
         </VExpansionPanels>
+
+        <!-- ADR-760 (M3) : historique des versions (téléchargements gatés par la policy serveur) -->
+        <div
+          v-if="versionsUrl"
+          class="mx-4 mt-3 mb-4"
+        >
+          <DocumentVersionsTimeline :versions-url="versionsUrl" />
+        </div>
       </PerfectScrollbar>
 
       <!-- Sticky actions footer -->

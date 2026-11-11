@@ -129,6 +129,14 @@ const viewerDownloadUrl = computed(() => {
   return `/company/documents/${viewerDocument.value.code}/download`
 })
 
+// ADR-760 (M3) : timeline des versions du coffre Company.
+const viewerVersionsUrl = computed(() => {
+  if (!viewerDocument.value?.upload)
+    return ''
+
+  return `/company/documents/${viewerDocument.value.code}/versions`
+})
+
 const handleViewerDownload = () => {
   if (viewerDocument.value?.upload)
     handleDownload(viewerDocument.value.code, viewerDocument.value.upload.file_name)
@@ -401,6 +409,7 @@ const handleDelete = async code => {
     v-model:is-dialog-visible="isViewerOpen"
     :document="viewerDocument?.upload ? { code: viewerDocument.code, label: viewerDocument.label, file_name: viewerDocument.upload.file_name, file_size_bytes: viewerDocument.upload.file_size_bytes, mime_type: viewerDocument.upload.mime_type, ocr_text: viewerDocument.upload.ocr_text, ai_analysis: viewerDocument.upload.ai_analysis, ai_insights: viewerDocument.upload.ai_insights, ai_status: viewerDocument.upload.ai_status } : null"
     :download-url="viewerDownloadUrl"
+    :versions-url="viewerVersionsUrl"
     @download="handleViewerDownload"
   />
   </template>

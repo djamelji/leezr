@@ -36,45 +36,65 @@ class DocumentRequestQueueReadModel
             ->orderByDesc('requested_at')
             ->get();
 
-        // Batch-load member documents for submitted requests (1 query)
-        $submittedUserDocPairs = $requests
-            ->where('status', DocumentRequest::STATUS_SUBMITTED)
-            ->map(fn ($r) => ['user_id' => $r->user_id, 'document_type_id' => $r->document_type_id])
+        // ADR-760 (M3) : aperçu keyé par SUJET (document_subject_type/id) → couvre aussi les
+        // demandes d'un Employee SANS compte (user_id null).
+        $subjectPairs = $requests
+            ->whereIn('status', [DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_IN_REVIEW, DocumentRequest::STATUS_TO_REPLACE])
+            ->map(fn ($r) => [$r->document_subject_type, $r->document_subject_id, $r->document_type_id])
             ->values();
 
         $uploads = collect();
-        if ($submittedUserDocPairs->isNotEmpty()) {
+        if ($subjectPairs->isNotEmpty()) {
             $uploads = MemberDocument::where('company_id', $companyId)
-                ->where(function ($q) use ($submittedUserDocPairs) {
-                    foreach ($submittedUserDocPairs as $pair) {
+                ->where(function ($q) use ($subjectPairs) {
+                    foreach ($subjectPairs as [$st, $sid, $tid]) {
                         $q->orWhere(fn ($sub) => $sub
-                            ->where('user_id', $pair['user_id'])
-                            ->where('document_type_id', $pair['document_type_id']));
+                            ->where('document_subject_type', $st)
+                            ->where('document_subject_id', $sid)
+                            ->where('document_type_id', $tid));
                     }
                 })
                 ->get()
-                ->keyBy(fn ($d) => $d->user_id.':'.$d->document_type_id);
+                ->keyBy(fn ($d) => $d->document_subject_type.':'.$d->document_subject_id.':'.$d->document_type_id);
         }
 
-        return $requests->map(function (DocumentRequest $req) use ($uploads) {
+        // Libellés des employés sans compte (pour afficher une personne sur ces lignes).
+        $employeeIds = $requests->where('document_subject_type', 'employee')->pluck('document_subject_id')->filter()->unique()->all();
+        $employees = $employeeIds
+            ? \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('id', $employeeIds)->get()->keyBy('id')
+            : collect();
+
+        return $requests->map(function (DocumentRequest $req) use ($uploads, $employees) {
             $membership = $req->user?->memberships()
                 ->where('company_id', $req->company_id)
                 ->with('companyRole:id,name,key')
                 ->first();
 
-            $uploadKey = $req->user_id.':'.$req->document_type_id;
+            $uploadKey = $req->document_subject_type.':'.$req->document_subject_id.':'.$req->document_type_id;
             $memberDoc = $uploads->get($uploadKey);
+
+            // Personne : compte si présent, sinon l'employé sans compte (libellé uniquement).
+            $employee = $req->document_subject_type === 'employee' ? $employees->get($req->document_subject_id) : null;
 
             return [
                 'id' => $req->id,
                 'status' => $req->status,
+                'subject' => $req->document_subject_type.':'.$req->document_subject_id,
+                'person_ref' => $req->document_subject_type.'-'.$req->document_subject_id,
                 'user' => $req->user ? [
                     'id' => $req->user->id,
                     'first_name' => $req->user->first_name,
                     'last_name' => $req->user->last_name,
                     'email' => $req->user->email,
                     'membership_id' => $membership?->id,
-                ] : null,
+                ] : ($employee ? [
+                    'id' => null,
+                    'first_name' => $employee->first_name,
+                    'last_name' => $employee->last_name,
+                    'email' => $employee->email,
+                    'membership_id' => null,
+                    'account_less' => true,
+                ] : null),
                 'role' => $membership?->companyRole ? [
                     'id' => $membership->companyRole->id,
                     'key' => $membership->companyRole->key,

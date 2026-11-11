@@ -57,6 +57,7 @@ class DocumentRequest extends Model
         'requested_at',
         'submitted_at',
         'reviewed_at',
+        'last_reminded_at',
     ];
 
     protected $casts = [
@@ -66,6 +67,7 @@ class DocumentRequest extends Model
         'requested_at' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'last_reminded_at' => 'datetime',
     ];
 
     public function canTransitionTo(string $target): bool

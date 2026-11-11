@@ -366,6 +366,9 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::get('/profile/documents', [SelfDocumentController::class, 'index']);
     Route::post('/profile/documents/{code}', [SelfDocumentController::class, 'upload']);
     Route::get('/profile/documents/{code}/download', [SelfDocumentController::class, 'download']);
+    // ADR-760 (M3): historique des versions de ses propres documents
+    Route::get('/profile/documents/{code}/versions', [SelfDocumentController::class, 'versions']);
+    Route::get('/profile/documents/{code}/versions/{versionId}/download', [SelfDocumentController::class, 'downloadVersion']);
 });
 
 // ─── Modules management (module-gated) ───────────────────

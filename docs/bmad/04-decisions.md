@@ -27258,3 +27258,28 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M3** : (1) UI timeline des versions = API livrée + testée, affichage riche reporté ; (2) centre de demandes gated `documents.manage` (admin) — vue filtrée par périmètre pour un manager d'équipe = M3 ; (3) demande in-fiche masquée pour l'employé sans compte (la demande account-less passe par le centre/API) ; (4) aperçu d'upload du centre encore keyé user_id (les demandes account-less s'affichent sans aperçu) ; (5) campagnes collectives = M4 (non démarré).
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/paie, **M3–M7 non démarrés**.
+
+## ADR-760 — DMS M3 : expirations, renouvellements & relances automatiques
+
+**Date** : 2026-11-11
+**Contexte** : M2 (ADR-759, `d72ae15`) validée. M3 construit le moteur d'échéances / renouvellement / relances, réutilisant M0–M2. Pas de campagnes collectives (M4) ni d'import bulletins (M5).
+
+**1. Parcours account-less finalisés** — « Demander un document » depuis la fiche Collaborateur fonctionne pour un **Employee sans compte** : le panel dérive le `personRef` de `resourceBase` et POST `person_ref` (backend M2 déjà compatible). Le **centre de demandes** affiche désormais l'aperçu ET un libellé personne pour les demandes account-less : `DocumentRequestQueueReadModel` keye les uploads par **sujet** (`document_subject_type/id`) et résout le nom de l'employé. Fin des dépendances injustifiées à `user_id`.
+
+**2–3. Moteur d'expiration + renouvellement (`DocumentLifecycleOrchestrator`)** — à l'approche de l'expiration (`renew_days_before`), ouvre une demande de renouvellement si aucune n'est active (garde anti-doublon via `DocumentRequestService::findExisting`), journalise un événement `renewed`, préserve le document courant + ses versions (remplacement non destructif existant), et la conformité se recalcule via `DocumentComplianceStateService`. Distingue expiration du document / échéance de demande / échéance de renouvellement / statut de validation. `expires_at` reste explicite (aucune règle pays codée en dur).
+
+**4. Relances CONFIGURABLES** — `CompanyDocumentSetting.reminder_policy` (JSON, défauts dans le modèle, surchargeable par société) : tiers avant/à/après expiration et avant/après échéance de demande (ex. J-30/J-7/J0/J+7 — **exemples, pas codés en dur**). Topics existants réutilisés (`expiring_soon`/`expired`/`request_new`), préférences/canaux respectés par `NotificationDispatcher`. **Account-less** : pas de canal applicatif → **signal destiné aux gestionnaires Company** (owners + rôles administratifs), sans prétendre avoir notifié la personne.
+
+**5. Jobs unifiés & fiables** — les **3 commandes redondantes** (`check-expiration` monolithe = `auto-renew` + `auto-remind`) délèguent DÉSORMAIS à l'orchestrateur unique : **lock cache partagé** (sérialise les 3 commandes entre elles, pas d'exécution concurrente ni d'envoi en double), **chunking**, **idempotence DÉTERMINISTE** (nouvelle colonne `document_requests.last_reminded_at` + événements `reminded`/`renewed` — un tier ne part qu'une fois par cycle, depuis `requested_at`), horloge serveur (Carbon), **journalisation + compteurs** (observabilité). **Entrées de planification inchangées** (contrainte respectée : pas de modif cron/scheduler/workers).
+
+**6. Centre de conformité** — l'onglet Conformité expose désormais les **états workflow** (en validation / refusé / demandé) déjà fournis par le backend, en plus de manquant/expirant/expiré/valide. *(Filtres département/site + vue par collaborateur = M4.)*
+
+**7. Périmètre manager** — l'ACCÈS est déjà gouverné par `DocumentAccessPolicy` (M1.1) distinguant voir-l'obligation / consulter / télécharger / valider, relation `manager_id` directe, pièces hautement confidentielles non exposées sans droit. *(Vue de suivi conformité scopée équipe = M4.)*
+
+**8. Timeline des versions** — composant RÉUTILISABLE `DocumentVersionsTimeline.vue` (version courante + archivées : n°, date, auteur, source, téléchargement gaté) intégré au viewer dans les **3 surfaces** (coffre Company, fiche Collaborateur, Mes documents). Endpoint self-service `/profile/documents/{code}/versions` ajouté. Versions archivées protégées par la même policy.
+
+**Tests** : `DmsM3LifecycleTest` **7/7** (renouvellement idempotent sans doublon ; pas de renouvellement sans/au-delà de la fenêtre d'expiration ; relance une fois par tier ; demande en retard → relance due+ ; **account-less → signal sans compte artificiel** ; réexécutions sûres). `DmsM3SurfacesTest` **2/2** (queue account-less avec libellé+aperçu ; versions self-service + download). Régression **470 verts**. **Build clean.** Captures Playwright : conformité enrichie + **timeline des versions** (viewer), light/dark/mobile.
+
+**Défauts résiduels / conditions M4** : (1) centre de conformité sans filtres **département/site** ni vue **par collaborateur** (états workflow affichés) ; (2) vue de suivi conformité **scopée équipe** pour un manager (l'accès est déjà gouverné, la vue agrégée reste company) ; (3) agrégat de conformité toujours **membership-driven** (employés sans compte non comptés dans le taux global) ; (4) pas de concept de **durée de validité** calculée (expires_at explicite) — à ajouter si besoin métier ; (5) relances d'expiration ancrées sur une demande (docs optionnels expirés sans demande non relancés). **Campagnes collectives = M4.**
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, **config cron/scheduler/workers inchangée**, **M4–M7 non démarrés**.

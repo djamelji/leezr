@@ -165,6 +165,43 @@ const exportCsv = () => {
             />
             {{ t('companyDocuments.compliance.expired') }}: {{ store.compliance.summary.expired }}
           </VChip>
+          <!-- ADR-759/760 : états workflow (en validation / refusé / demandé) — déjà fournis par le backend -->
+          <VChip
+            v-if="store.compliance.summary.pending_validation"
+            variant="tonal"
+            color="info"
+          >
+            <VIcon
+              icon="tabler-eye-search"
+              size="14"
+              start
+            />
+            {{ t('documents.in_review') }}: {{ store.compliance.summary.pending_validation }}
+          </VChip>
+          <VChip
+            v-if="store.compliance.summary.rejected"
+            variant="tonal"
+            color="error"
+          >
+            <VIcon
+              icon="tabler-x"
+              size="14"
+              start
+            />
+            {{ t('documents.rejected') }}: {{ store.compliance.summary.rejected }}
+          </VChip>
+          <VChip
+            v-if="store.compliance.summary.requested"
+            variant="tonal"
+            color="warning"
+          >
+            <VIcon
+              icon="tabler-clock"
+              size="14"
+              start
+            />
+            {{ t('documents.requested') }}: {{ store.compliance.summary.requested }}
+          </VChip>
         </div>
       </VCardText>
     </VCard>

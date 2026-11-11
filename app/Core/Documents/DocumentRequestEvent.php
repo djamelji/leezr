@@ -22,6 +22,8 @@ class DocumentRequestEvent extends Model
     public const E_REJECTED = 'rejected';
     public const E_TO_REPLACE = 'to_replace';
     public const E_CANCELLED = 'cancelled';
+    public const E_REMINDED = 'reminded';   // relance (tier dans metadata)
+    public const E_RENEWED = 'renewed';     // demande de renouvellement ouverte à l'expiration
 
     protected $fillable = [
         'company_id', 'document_request_id', 'event', 'actor_id', 'note', 'version_id', 'metadata', 'created_at',
