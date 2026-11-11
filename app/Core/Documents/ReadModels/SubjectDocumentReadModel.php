@@ -3,6 +3,8 @@
 namespace App\Core\Documents\ReadModels;
 
 use App\Core\Documents\DocumentConfidentiality;
+use App\Core\Documents\DocumentLifecycleService;
+use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentResolverService;
 use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
@@ -13,46 +15,84 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 
 /**
- * ADR-758 (DMS M1.1) — liste documentaire par SUJET explicite (user OU employee), indépendante
- * d'un compte/membership. Permet le dossier d'un Employee SANS User. Les uploads sont retrouvés
- * via `document_subject_type/id` (pas via user_id). Chaque entrée est annotée (état consolidé,
- * confidentialité, `can_download`) et REDACTÉE si l'acteur n'est pas autorisé : il ne découvre
- * ni l'existence du fichier ni ses métadonnées sensibles.
+ * ADR-758 (M1.1) / ADR-759 (M2) — projection documentaire UNIFIÉE par SUJET(S). Fusionne les
+ * documents d'une personne rattachés à `employee:{id}` ET `user:{id}` (continuité des dossiers) —
+ * liens EXPLICITES uniquement, jamais par nom/e-mail, aucun déplacement de fichier, aucun doublon
+ * fonctionnel (dédup par type, on garde la pièce portée par un fichier). Annote l'état consolidé,
+ * la confidentialité, la demande (statut/échéance/message/motif) et `can_download`, avec REDACTION
+ * si l'acteur n'est pas autorisé (ne découvre ni l'existence ni les métadonnées sensibles).
+ *
+ * @param  list<DocumentSubject>  $subjects  tous les sujets explicites de la personne
  */
 class SubjectDocumentReadModel
 {
     public static function get(Company $company, DocumentSubject $subject, ?User $actor): array
     {
-        // 1. Catalogue des types company_user activés (sans rôle — l'employé sans compte n'en a pas).
+        return self::forSubjects($company, [$subject], $subject, null, null, $actor);
+    }
+
+    /**
+     * @param  list<DocumentSubject>  $subjects
+     */
+    public static function forSubjects(Company $company, array $subjects, DocumentSubject $primary, ?User $userForCatalog, ?string $roleKey, ?User $actor): array
+    {
+        // 1. Catalogue des types company_user (role-aware si compte présent).
         $documents = DocumentResolverService::resolve(
-            null,
+            $userForCatalog,
             $company->id,
-            null,
+            $roleKey,
             $company->market_key,
             scope: DocumentType::SCOPE_COMPANY_USER,
         );
 
         if (empty($documents)) {
-            return ['documents' => [], 'subject' => (string) $subject];
+            return ['documents' => [], 'subject' => (string) $primary];
         }
 
-        // 2. Uploads réels de CE sujet (clé = document_type_id).
         $codes = array_column($documents, 'code');
         $typesByCode = DocumentType::whereIn('code', $codes)->get()->keyBy('code');
+        $typeIds = $typesByCode->pluck('id')->all();
 
+        // 2. Uploads sur TOUS les sujets, dédupliqués par type (priorité à la pièce avec fichier).
+        $subjectPairs = array_map(fn ($s) => [$s->type, $s->id], $subjects);
         $uploads = MemberDocument::where('company_id', $company->id)
-            ->where('document_subject_type', $subject->type)
-            ->where('document_subject_id', $subject->id)
-            ->get()
-            ->keyBy('document_type_id');
+            ->whereIn('document_type_id', $typeIds)
+            ->where(function ($q) use ($subjectPairs) {
+                foreach ($subjectPairs as [$t, $id]) {
+                    $q->orWhere(fn ($w) => $w->where('document_subject_type', $t)->where('document_subject_id', $id));
+                }
+            })
+            ->get();
+        $uploadsByType = [];
+        foreach ($uploads as $u) {
+            $cur = $uploadsByType[$u->document_type_id] ?? null;
+            if ($cur === null || (empty($cur->file_path) && ! empty($u->file_path))) {
+                $uploadsByType[$u->document_type_id] = $u;
+            }
+        }
+
+        // 3. Demandes sur TOUS les sujets, par type (priorité à la plus récemment active).
+        $requests = DocumentRequest::where('company_id', $company->id)
+            ->whereIn('document_type_id', $typeIds)
+            ->where(function ($q) use ($subjectPairs) {
+                foreach ($subjectPairs as [$t, $id]) {
+                    $q->orWhere(fn ($w) => $w->where('document_subject_type', $t)->where('document_subject_id', $id));
+                }
+            })
+            ->orderByDesc('updated_at')
+            ->get();
+        $requestByType = [];
+        foreach ($requests as $r) {
+            $requestByType[$r->document_type_id] ??= $r;
+        }
 
         $policy = app(DocumentAccessPolicy::class);
 
         foreach ($documents as &$doc) {
             $type = $typesByCode->get($doc['code']);
-            $upload = $type ? $uploads->get($type->id) : null;
+            $upload = $type ? ($uploadsByType[$type->id] ?? null) : null;
+            $request = $type ? ($requestByType[$type->id] ?? null) : null;
 
-            // Fusionne l'upload réel (le resolver avait upload=null car user=null).
             if ($upload) {
                 $doc['upload'] = [
                     'id' => $upload->id,
@@ -62,16 +102,17 @@ class SubjectDocumentReadModel
                     'expires_at' => $upload->expires_at?->toIso8601String(),
                     'uploaded_at' => $upload->created_at?->toIso8601String(),
                 ];
-                $doc['lifecycle_status'] = \App\Core\Documents\DocumentLifecycleService::computeStatus([
-                    'expires_at' => $upload->expires_at,
-                ]);
+                $doc['lifecycle_status'] = DocumentLifecycleService::computeStatus(['expires_at' => $upload->expires_at]);
             }
 
             $hasFile = $upload !== null && ! empty($upload->file_path);
+            $state = State::evaluateFromParts($hasFile, $request?->status, $doc['lifecycle_status'] ?? 'missing');
 
-            // Pas de workflow de demande pour un sujet sans compte → validation not_required.
-            $state = State::evaluateFromParts($hasFile, null, $doc['lifecycle_status'] ?? 'missing');
-            $doc['request_status'] = null;
+            $doc['request_status'] = $request?->status;
+            $doc['request_review_note'] = $request?->review_note;
+            $doc['request_message'] = $request?->message;
+            $doc['due_date'] = $request?->due_date?->toDateString();
+            $doc['is_overdue'] = (bool) $request?->isOverdue();
             $doc['has_file'] = $hasFile;
             $doc['can_review'] = false;
             $doc['compliance_status'] = $state['consolidated'];
@@ -80,17 +121,16 @@ class SubjectDocumentReadModel
             $doc['is_highly_confidential'] = $doc['confidentiality'] === DocumentConfidentiality::HIGHLY_CONFIDENTIAL;
 
             $canView = $actor !== null
-                && $policy->canAccess($actor, $company, $subject, $doc['code'], DocumentAccessPolicy::OP_VIEW_METADATA);
+                && $policy->canAccess($actor, $company, $primary, $doc['code'], DocumentAccessPolicy::OP_VIEW_METADATA);
             $doc['can_download'] = $hasFile && $canView;
 
-            // Redaction : acteur non autorisé → ne révèle ni l'existence ni les métadonnées.
             if (! $canView) {
                 $doc = self::redact($doc);
             }
         }
         unset($doc);
 
-        return ['documents' => $documents, 'subject' => (string) $subject];
+        return ['documents' => $documents, 'subject' => (string) $primary];
     }
 
     /** Masque l'upload et l'existence du fichier pour un slot non autorisé. */

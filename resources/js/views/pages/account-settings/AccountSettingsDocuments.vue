@@ -157,6 +157,39 @@ const handleViewerDownload = () => {
                   <div class="text-body-2 text-disabled">
                     {{ t('documents.maxSize', { size: doc.max_file_size_mb }) }} · {{ t('documents.acceptedTypes', { types: doc.accepted_types.join(', ') }) }}
                   </div>
+                  <!-- ADR-759 (M2) : message + échéance + motif de refus destinés au collaborateur -->
+                  <div
+                    v-if="doc.request_message"
+                    class="text-body-2 text-medium-emphasis mt-1"
+                  >
+                    <VIcon
+                      icon="tabler-message"
+                      size="14"
+                      start
+                    />{{ doc.request_message }}
+                  </div>
+                  <div
+                    v-if="doc.due_date"
+                    class="text-body-2 mt-1"
+                    :class="doc.is_overdue ? 'text-error' : 'text-medium-emphasis'"
+                  >
+                    <VIcon
+                      icon="tabler-calendar-event"
+                      size="14"
+                      start
+                    />{{ t('documents.dueDate') }}: {{ doc.due_date }}
+                    <span v-if="doc.is_overdue"> · {{ t('documents.overdue') }}</span>
+                  </div>
+                  <div
+                    v-if="doc.request_status === 'rejected' && doc.request_review_note"
+                    class="text-body-2 text-error mt-1"
+                  >
+                    <VIcon
+                      icon="tabler-alert-triangle"
+                      size="14"
+                      start
+                    />{{ doc.request_review_note }}
+                  </div>
                 </td>
                 <td>
                   <div class="d-flex align-center gap-2 flex-wrap">

@@ -7,29 +7,51 @@ use App\Core\Models\User;
 use App\Core\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * ADR-176: Document request workflow model.
+ * ADR-176 / ADR-759 (DMS M2): Document request workflow model.
  *
- * Tracks the lifecycle of a member document request:
- * requested → submitted → approved/rejected.
+ * Cycle : requested → submitted → in_review → approved | rejected ; approved → to_replace ;
+ * tout état → cancelled. Rattaché au SUJET (user OU employee sans compte). La traçabilité
+ * complète vit dans `document_request_events` (append-only) — aucune preuve supprimée.
  *
- * One active request per (company_id, user_id, document_type_id).
+ * Un enregistrement courant par (company_id, document_subject_type, document_subject_id, type).
  */
 class DocumentRequest extends Model
 {
     use BelongsToCompany;
+
     public const STATUS_REQUESTED = 'requested';
     public const STATUS_SUBMITTED = 'submitted';
+    public const STATUS_IN_REVIEW = 'in_review';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
+    public const STATUS_TO_REPLACE = 'to_replace';
     public const STATUS_CANCELLED = 'cancelled';
+
+    /** Transitions autorisées (état courant → états cibles). */
+    public const TRANSITIONS = [
+        self::STATUS_REQUESTED => [self::STATUS_SUBMITTED, self::STATUS_CANCELLED],
+        self::STATUS_SUBMITTED => [self::STATUS_IN_REVIEW, self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_CANCELLED],
+        self::STATUS_IN_REVIEW => [self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_CANCELLED],
+        self::STATUS_REJECTED => [self::STATUS_SUBMITTED, self::STATUS_CANCELLED],
+        self::STATUS_APPROVED => [self::STATUS_TO_REPLACE, self::STATUS_CANCELLED],
+        self::STATUS_TO_REPLACE => [self::STATUS_SUBMITTED, self::STATUS_CANCELLED],
+        self::STATUS_CANCELLED => [self::STATUS_REQUESTED],
+    ];
 
     protected $fillable = [
         'company_id',
+        'document_subject_type',
+        'document_subject_id',
         'user_id',
         'document_type_id',
         'status',
+        'message',
+        'due_date',
+        'requires_validation',
+        'approved_version_id',
         'reviewer_id',
         'review_note',
         'requested_at',
@@ -38,10 +60,25 @@ class DocumentRequest extends Model
     ];
 
     protected $casts = [
+        'document_subject_id' => 'integer',
+        'requires_validation' => 'boolean',
+        'due_date' => 'date',
         'requested_at' => 'datetime',
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
+
+    public function canTransitionTo(string $target): bool
+    {
+        return in_array($target, self::TRANSITIONS[$this->status] ?? [], true);
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->due_date !== null
+            && ! in_array($this->status, [self::STATUS_APPROVED, self::STATUS_CANCELLED], true)
+            && $this->due_date->isPast();
+    }
 
     public function user(): BelongsTo
     {
@@ -56,5 +93,10 @@ class DocumentRequest extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(DocumentRequestEvent::class)->orderBy('created_at');
     }
 }

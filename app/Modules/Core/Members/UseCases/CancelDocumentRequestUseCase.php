@@ -5,6 +5,7 @@ namespace App\Modules\Core\Members\UseCases;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentRequest;
+use App\Core\Documents\Services\DocumentRequestService;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
@@ -19,6 +20,7 @@ class CancelDocumentRequestUseCase
 {
     public function __construct(
         private readonly AuditLogger $audit,
+        private readonly DocumentRequestService $requests,
     ) {}
 
     public function execute(Company $company, int $requestId, User $actor): void
@@ -31,11 +33,8 @@ class CancelDocumentRequestUseCase
             abort(422, 'Only requests in "requested" status can be cancelled.');
         }
 
-        $request->update([
-            'status' => DocumentRequest::STATUS_CANCELLED,
-            'reviewer_id' => $actor->id,
-            'reviewed_at' => now(),
-        ]);
+        // ADR-759 (M2): annulation via le moteur (événement append-only).
+        $this->requests->cancel($request, $actor);
 
         $this->audit->logCompany(
             $company->id,

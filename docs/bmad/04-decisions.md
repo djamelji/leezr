@@ -27227,3 +27227,34 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M2** : (1) docs uploadés en mode account-less PUIS compte ajouté → restent sous `employee:{id}` (invariant respecté) mais la vue bascule sur `user:{id}` — fusion des deux vues = M2 ; (2) UI de liste des versions (member & company) = API livrée, affichage riche (timeline) = M2 ; (3) relation manager = 1 niveau direct (`manager_id`), pas de hiérarchie récursive ni département ; (4) `documents.view_confidential` sans le droit paie ne voit pas les bulletins (voulu) — un profil « RH global » devra cumuler les droits.
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun effacement de documents, aucun changement Billing, **M2 non démarré**.
+
+## ADR-759 — DMS M2 : demandes documentaires, validation & conformité
+
+**Date** : 2026-11-11
+**Contexte** : M1.1 (ADR-758, `3cb131e`) validée. M2 livre le cycle complet : une Company demande une pièce, le collaborateur la fournit, la Company valide/refuse, avec traçabilité complète et conformité exacte. Réutilise les modèles/services existants (aucune reconstruction).
+
+**1. Continuité des dossiers (priorité)** — `PersonSubjectResolver` résout l'ensemble des sujets EXPLICITES d'une personne (`employee:{id}` + `user:{id}`). `MemberDocumentWorkflowReadModel` (compte) fusionne les documents déposés sous `employee:{id}` avant l'ajout du compte — y compris les types HORS surface de rôle (ajoutés en fin de dossier `carried_over`) → **aucun document perdu, aucun déplacement de fichier, aucun doublon fonctionnel, aucun rapprochement par nom/e-mail**. `SubjectDocumentReadModel` devient une projection multi-sujets. Vision unique : fiche, demandes, conformité.
+
+**2. Évolution `document_requests` (migration additive `2026_11_12_000001`)** — ajout de `message`, `due_date`, `requires_validation`, `document_subject_type/id` (user_id nullable → demande à un Employee SANS compte), `approved_version_id` ; unique par SUJET (l'ancien unique conservé, non bloquant). Nouvelle table APPEND-ONLY `document_request_events` (demandé/déposé/en vérification/accepté/refusé+motif/à remplacer/annulé) → **traçabilité complète, aucune preuve supprimée**.
+
+**3. Moteur de cycle (`DocumentRequestService`)** — transitions AUTORISÉES uniquement (`DocumentRequest::TRANSITIONS`), chaque transition journalisée. `open` (demande, refuse si déjà active), `markSubmitted` (dépôt, lookup tolérant sujet OU user_id), `approve` (lie la version validée via sha256 dans l'événement), `reject` (**le refus RESTE l'état, motif conservé** — fin de l'auto-re-request ADR-410 ; re-soumission possible), `requestReplacement`, `cancel`. Tous les canaux (self/admin/person, batch, commandes, lazy-create) écrivent le sujet + passent par le moteur.
+
+**4. Demande individuelle** — `POST /company/document-requests` accepte `person_ref` (user ou employee sans compte) OU `user_id`, + `message`, `due_date`, `requires_validation`. Un Employee sans compte a une vraie demande, **sans User artificiel**.
+
+**5. Validation/refus** — `ReviewMemberDocumentUseCase` délègue au moteur : approve (fichier requis, lie la version), reject (motif obligatoire, persistant). Remplacement d'une pièce acceptée → repasse en soumission (nouvelle validation).
+
+**6. Conformité exacte** — `DocumentComplianceReadModel`/`DocumentComplianceStateService` : refusé/en attente JAMAIS conforme ; validé+expiré non conforme. États : manquant/demandé/en validation/refusé/valide/expirant/expiré. Indicateurs Company cohérents avec les fiches.
+
+**7. Centre de demandes Company** — `_DocumentsRequests.vue` (onglet `requests`, `documents.manage`) : file À traiter/En attente, valider/refuser/relancer/annuler, upload pour le membre, recherche/filtres, actions par lot. `DocumentRequestQueueReadModel` enrichi (motif, reviewer, échéance, message, `is_overdue`, états refusé/à remplacer inclus).
+
+**8. Self-service** — `SelfDocumentReadModel`/`AccountSettingsDocuments.vue` : le collaborateur voit ses demandes avec **échéance, message et motif de refus inline**, dépose/remplace, consulte l'état. Pas d'info interne de vérification non destinée.
+
+**9. Versions** — endpoints member + company (M1.1) ; chips `DocumentStatusChip`/viewer étendus aux nouveaux états.
+
+**10. Sécurité** — `DocumentAccessPolicy` (M1.1) inchangée : self / manager direct / RH / paie / confidentiel / admin ; redaction des métadonnées. Centre de demandes gated `documents.manage` ; isolation tenant prouvée.
+
+**Tests** : `DmsM2FoundationsTest` **9/9** (cycle complet demande→dépôt→validation avec sha validé ; refus+motif persistant + historique + re-soumission ; remplacement→revalidation ; annulation ; demande account-less ; **continuité ajout de compte** ; conformité par états ; échéance dépassée ; isolation tenant). Régression **529 verts** (documents+people+nav+audit). **Build clean.** Captures Playwright : centre de demandes + self-service (échéance/message/motif), light/dark/mobile.
+
+**Défauts résiduels / conditions M3** : (1) UI timeline des versions = API livrée + testée, affichage riche reporté ; (2) centre de demandes gated `documents.manage` (admin) — vue filtrée par périmètre pour un manager d'équipe = M3 ; (3) demande in-fiche masquée pour l'employé sans compte (la demande account-less passe par le centre/API) ; (4) aperçu d'upload du centre encore keyé user_id (les demandes account-less s'affichent sans aperçu) ; (5) campagnes collectives = M4 (non démarré).
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/paie, **M3–M7 non démarrés**.

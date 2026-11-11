@@ -4,10 +4,13 @@ namespace App\Modules\Core\Documents\Http;
 
 use App\Company\RBAC\CompanyRole;
 use App\Core\Documents\DocumentRequest;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\ReadModels\DocumentRequestQueueReadModel;
+use App\Core\Documents\Services\PersonSubjectResolver;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
+use App\Modules\Core\People\PersonRef;
 use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Modules\Core\Members\UseCases\BatchRequestByRoleUseCase;
@@ -29,24 +32,52 @@ class DocumentRequestController
     public function store(Request $request, RequestDocumentUseCase $useCase): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'integer'],
+            'user_id' => ['required_without:person_ref', 'nullable', 'integer'],
+            'person_ref' => ['required_without:user_id', 'nullable', 'string'], // employee-{id} | user-{id}
             'document_type_code' => ['required', 'string'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'due_date' => ['nullable', 'date', 'after:today'],
+            'requires_validation' => ['nullable', 'boolean'],
         ]);
 
         $company = $request->attributes->get('company');
+        $subject = $this->resolveSubject($company, $validated);
 
         $docRequest = $useCase->execute(
             $company->id,
-            $validated['user_id'],
+            $subject,
             $validated['document_type_code'],
+            $request->user(),
+            $validated['message'] ?? null,
+            $validated['due_date'] ?? null,
+            (bool) ($validated['requires_validation'] ?? true),
         );
 
-        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'requested', 'entity' => 'DocumentRequest', 'document_type' => $validated['document_type_code'], 'user_id' => $validated['user_id']]);
+        $this->publishDomainEvent('document.updated', $company->id, ['type' => 'requested', 'entity' => 'DocumentRequest', 'document_type' => $validated['document_type_code'], 'subject' => (string) $subject]);
 
         return response()->json([
             'message' => 'Document requested.',
             'document_request' => $docRequest,
         ], 201);
+    }
+
+    /** Résout le sujet documentaire d'une demande depuis person_ref (prioritaire) ou user_id. */
+    private function resolveSubject($company, array $validated): DocumentSubject
+    {
+        if (! empty($validated['person_ref'])) {
+            $ref = PersonRef::parse($validated['person_ref']);
+            abort_if($ref === null, 422, 'Invalid person reference.');
+            $ids = PersonSubjectResolver::identify($company, $ref->type, $ref->id);
+            $resolved = PersonSubjectResolver::resolve($company, $ids['user'], $ids['employee']);
+            abort_if($resolved['canonical'] === null, 422, 'Unresolvable subject.');
+
+            return $resolved['canonical'];
+        }
+
+        // user_id : vérifie l'appartenance tenant.
+        $company->memberships()->where('user_id', $validated['user_id'])->firstOrFail();
+
+        return DocumentSubject::user((int) $validated['user_id']);
     }
 
     public function batchByRole(Request $request, BatchRequestByRoleUseCase $useCase): JsonResponse
@@ -83,8 +114,9 @@ class DocumentRequestController
                 try {
                     $singleUseCase->execute(
                         $company->id,
-                        $membership->user_id,
+                        DocumentSubject::user((int) $membership->user_id),
                         $validated['document_type_code'],
+                        $request->user(),
                     );
                     $created++;
                 } catch (\Throwable) {

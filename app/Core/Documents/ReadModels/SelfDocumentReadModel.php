@@ -59,7 +59,11 @@ class SelfDocumentReadModel
             $request = $typeId ? $requests->get($typeId) : null;
 
             $doc['request_status'] = $request?->status;
+            // Motif de refus visible par le collaborateur (destiné à lui) ; échéance + message.
             $doc['request_review_note'] = $request?->review_note;
+            $doc['request_message'] = $request?->message;
+            $doc['due_date'] = $request?->due_date?->toDateString();
+            $doc['is_overdue'] = (bool) $request?->isOverdue();
             $doc['can_upload'] = true;
             $doc['can_delete'] = false;
         }

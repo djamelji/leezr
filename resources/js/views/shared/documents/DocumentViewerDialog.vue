@@ -23,7 +23,7 @@ const props = defineProps({
   reviewStatus: {
     type: String,
     default: null,
-    validator: v => v === null || ['requested', 'submitted', 'approved', 'rejected'].includes(v),
+    validator: v => v === null || ['requested', 'submitted', 'in_review', 'approved', 'rejected', 'to_replace'].includes(v),
   },
   reviewNote: {
     type: String,

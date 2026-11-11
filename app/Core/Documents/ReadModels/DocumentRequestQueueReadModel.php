@@ -18,14 +18,20 @@ class DocumentRequestQueueReadModel
 {
     public static function forCompany(int $companyId): array
     {
+        // ADR-759 (M2) : inclut aussi les demandes refusées / à remplacer / en vérification
+        // (le centre de suivi doit les montrer), pas seulement requested/submitted.
         $requests = DocumentRequest::where('company_id', $companyId)
             ->whereIn('status', [
                 DocumentRequest::STATUS_REQUESTED,
                 DocumentRequest::STATUS_SUBMITTED,
+                DocumentRequest::STATUS_IN_REVIEW,
+                DocumentRequest::STATUS_REJECTED,
+                DocumentRequest::STATUS_TO_REPLACE,
             ])
             ->with([
                 'user:id,first_name,last_name,email',
                 'documentType',
+                'reviewer:id,first_name,last_name',
             ])
             ->orderByDesc('requested_at')
             ->get();
@@ -95,6 +101,14 @@ class DocumentRequestQueueReadModel
                 ] : null,
                 'requested_at' => $req->requested_at?->toISOString(),
                 'submitted_at' => $req->submitted_at?->toISOString(),
+                // ADR-759 (M2) : échéance, message, décision, traçabilité.
+                'message' => $req->message,
+                'due_date' => $req->due_date?->toDateString(),
+                'is_overdue' => $req->isOverdue(),
+                'review_note' => $req->review_note,
+                'reviewed_at' => $req->reviewed_at?->toISOString(),
+                'reviewer' => $req->reviewer ? trim($req->reviewer->first_name.' '.$req->reviewer->last_name) : null,
+                'requires_validation' => (bool) $req->requires_validation,
             ];
         })
             ->values()

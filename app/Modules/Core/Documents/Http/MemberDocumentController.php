@@ -160,22 +160,9 @@ class MemberDocumentController extends Controller
             ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
         }
 
-        // ADR-176: Update DocumentRequest workflow
-        DocumentRequest::updateOrCreate(
-            [
-                'company_id' => $company->id,
-                'user_id' => $user->id,
-                'document_type_id' => $type->id,
-            ],
-            [
-                'status' => DocumentRequest::STATUS_SUBMITTED,
-                'submitted_at' => now(),
-                'requested_at' => now(),
-                'reviewer_id' => null,
-                'review_note' => null,
-                'reviewed_at' => null,
-            ],
-        );
+        // ADR-176 / ADR-759 (M2): soumission via le moteur de demandes (sujet-keyed + événement).
+        app(\App\Core\Documents\Services\DocumentRequestService::class)
+            ->markSubmitted($company->id, DocumentSubject::user($user->id), $type, $request->user());
 
         $this->publishDomainEvent('document.updated', $company->id, ['id' => $document->id, 'type' => 'uploaded', 'entity' => 'MemberDocument', 'member_id' => $user->id, 'document_type' => $type->code, 'ai_status' => 'pending']);
 

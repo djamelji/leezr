@@ -15,6 +15,7 @@ use App\Core\Documents\ReadModels\SubjectDocumentReadModel;
 use App\Core\Documents\Services\DocumentAccessPolicy;
 use App\Core\Documents\Services\DocumentComplianceStateService;
 use App\Core\Documents\Services\DocumentIntegrityService;
+use App\Core\Documents\Services\DocumentRequestService;
 use App\Core\Documents\Services\DocumentVersioningService;
 use App\Core\Models\User;
 use App\Core\Workforce\Employee;
@@ -42,8 +43,11 @@ class PersonDocumentController extends Controller
             $membership = $company->memberships()->where('user_id', $user->id)->with('companyRole:id,key')->first();
             $roleKey = $membership?->companyRole?->key;
 
+            // Continuité : fusionne les documents déposés sous employee:{id} avant l'ajout du compte.
+            $mergeEmployeeId = $employee?->id;
+
             return response()->json(
-                MemberDocumentWorkflowReadModel::get($user, $company, $roleKey, $request->user()),
+                MemberDocumentWorkflowReadModel::get($user, $company, $roleKey, $request->user(), $mergeEmployeeId),
             );
         }
 
@@ -127,6 +131,10 @@ class PersonDocumentController extends Controller
                 'published_state' => DocumentComplianceStateService::P_PUBLISHED,
             ]);
         }
+
+        // ADR-759 (M2): soumission via le moteur de demandes (sujet-keyed, supporte l'employé sans
+        // compte). Enregistre l'événement + relie la demande au dépôt.
+        app(DocumentRequestService::class)->markSubmitted($company->id, $subject, $type, $request->user());
 
         return response()->json([
             'message' => 'Document uploaded.',

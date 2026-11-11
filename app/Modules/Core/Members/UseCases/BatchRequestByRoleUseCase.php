@@ -69,13 +69,16 @@ class BatchRequestByRoleUseCase
         $created = 0;
 
         foreach ($eligibleUserIds as $userId) {
+            // ADR-759 (M2): clé par SUJET (user) — cohérent avec le moteur de demandes.
             DocumentRequest::updateOrCreate(
                 [
                     'company_id' => $companyId,
-                    'user_id' => $userId,
+                    'document_subject_type' => \App\Core\Documents\DocumentSubject::TYPE_USER,
+                    'document_subject_id' => $userId,
                     'document_type_id' => $docType->id,
                 ],
                 [
+                    'user_id' => $userId,
                     'status' => DocumentRequest::STATUS_REQUESTED,
                     'requested_at' => $now,
                     'submitted_at' => null,

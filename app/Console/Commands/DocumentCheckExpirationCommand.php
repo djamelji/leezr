@@ -212,6 +212,8 @@ class DocumentCheckExpirationCommand extends Command
                 try {
                     DocumentRequest::create([
                         'company_id' => $setting->company_id,
+                        'document_subject_type' => \App\Core\Documents\DocumentSubject::TYPE_USER,
+                        'document_subject_id' => $document->user_id,
                         'user_id' => $document->user_id,
                         'document_type_id' => $document->document_type_id,
                         'status' => DocumentRequest::STATUS_REQUESTED,

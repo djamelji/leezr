@@ -381,9 +381,15 @@ class DocumentRequestWorkflowTest extends TestCase
             ]);
 
         $response->assertOk();
-        // ADR-410: rejection auto-re-requests → final status is 'requested'
-        $response->assertJsonPath('review.status', 'requested');
+        // ADR-759 (M2): le refus RESTE l'état courant (plus d'auto-re-request) ; motif conservé.
+        $response->assertJsonPath('review.status', 'rejected');
         $response->assertJsonPath('review.review_note', 'Document is expired');
+
+        // Traçabilité : un événement de refus avec motif est journalisé.
+        $this->assertDatabaseHas('document_request_events', [
+            'event' => 'rejected',
+            'note' => 'Document is expired',
+        ]);
     }
 
     // ═══════════════════════════════════════════════════════

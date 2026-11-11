@@ -159,22 +159,10 @@ class UploadOwnDocumentUseCase
                 );
             }
 
-            // Update DocumentRequest workflow (ADR-176) — un ré-upload re-soumet (ex. après refus).
-            DocumentRequest::updateOrCreate(
-                [
-                    'company_id' => $data->company->id,
-                    'user_id' => $data->user->id,
-                    'document_type_id' => $type->id,
-                ],
-                [
-                    'status' => DocumentRequest::STATUS_SUBMITTED,
-                    'submitted_at' => now(),
-                    'requested_at' => now(),
-                    'reviewer_id' => null,
-                    'review_note' => null,
-                    'reviewed_at' => null,
-                ],
-            );
+            // ADR-176 / ADR-759 (M2): soumission via le moteur (sujet-keyed + événement). Un
+            // ré-upload re-soumet (ex. après refus) ; l'historique des événements est conservé.
+            app(\App\Core\Documents\Services\DocumentRequestService::class)
+                ->markSubmitted($data->company->id, DocumentSubject::user($data->user->id), $type, $data->user);
 
             return $document;
         });

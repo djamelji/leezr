@@ -3,20 +3,27 @@
 namespace App\Modules\Core\Members\UseCases;
 
 use App\Core\Documents\DocumentRequest;
+use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\MemberDocument;
+use App\Core\Documents\Services\DocumentRequestService;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
 use Illuminate\Validation\ValidationException;
 
 /**
- * ADR-176: Review (approve/reject) a member document request.
+ * ADR-176 / ADR-759 (M2): Review (approve/reject) a member document request.
  *
- * Pipeline: actor membership → target membership → type → scope guard
- * → load request → transition guard → update → result.
+ * Délègue la transition au DocumentRequestService (événements append-only + lien version validée).
+ * Le refus CONSERVE son motif et RESTE l'état courant (plus d'auto-re-request) — le collaborateur
+ * peut re-soumettre. Pipeline : actor → target → type → scope → request → transition → notify.
  */
 class ReviewMemberDocumentUseCase
 {
+    public function __construct(private readonly DocumentRequestService $requests)
+    {
+    }
+
     public function execute(ReviewMemberDocumentData $data): ReviewMemberDocumentResult
     {
         // 1. Verify actor membership (defense in depth)
@@ -38,50 +45,32 @@ class ReviewMemberDocumentUseCase
             ]);
         }
 
-        // 5. Load DocumentRequest
-        $request = DocumentRequest::where('company_id', $data->company->id)
-            ->where('user_id', $targetUser->id)
-            ->where('document_type_id', $type->id)
-            ->firstOrFail();
+        // 5. Load DocumentRequest (sujet = user, tolérant aux lignes legacy)
+        $request = $this->requests->findExisting($data->company->id, DocumentSubject::user($targetUser->id), $type->id);
+        abort_if($request === null, 404);
 
-        // 6. Transition guards
+        // 6. Transition via le moteur (événements + lien version + refus persistant).
         if ($data->status === DocumentRequest::STATUS_APPROVED) {
-            // Must have a file
-            $hasFile = MemberDocument::where('company_id', $data->company->id)
-                ->where('user_id', $targetUser->id)
+            // Tolérant aux documents legacy (sujet non renseigné) : match sujet OU user_id.
+            $document = MemberDocument::where('company_id', $data->company->id)
                 ->where('document_type_id', $type->id)
-                ->exists();
+                ->where(function ($w) use ($targetUser) {
+                    $w->where(function ($a) use ($targetUser) {
+                        $a->where('document_subject_type', DocumentSubject::TYPE_USER)->where('document_subject_id', $targetUser->id);
+                    })->orWhere('user_id', $targetUser->id);
+                })
+                ->first();
 
-            if (! $hasFile) {
-                throw ValidationException::withMessages([
-                    'status' => ['Cannot approve: no file has been submitted.'],
-                ]);
+            if ($document === null || empty($document->file_path)) {
+                throw ValidationException::withMessages(['status' => ['Cannot approve: no file has been submitted.']]);
             }
 
-            if ($request->status !== DocumentRequest::STATUS_SUBMITTED) {
-                throw ValidationException::withMessages([
-                    'status' => ['Can only approve submitted documents.'],
-                ]);
-            }
+            $this->requests->approve($request, $data->actor, $document);
+        } else {
+            $this->requests->reject($request, $data->actor, (string) $data->reviewNote);
         }
 
-        if ($data->status === DocumentRequest::STATUS_REJECTED) {
-            if ($request->status !== DocumentRequest::STATUS_SUBMITTED) {
-                throw ValidationException::withMessages([
-                    'status' => ['Can only reject submitted documents.'],
-                ]);
-            }
-        }
-
-        // 8. Update request
-        $request->update([
-            'status' => $data->status,
-            'reviewer_id' => $data->actor->id,
-            'review_note' => $data->reviewNote,
-            'reviewed_at' => now(),
-        ]);
-
-        // 9. ADR-389: Notify the member about the review outcome
+        // 7. ADR-389: Notify the member about the review outcome
         NotificationDispatcher::send(
             topicKey: 'documents.reviewed',
             recipients: [$targetUser],
@@ -96,33 +85,13 @@ class ReviewMemberDocumentUseCase
             entityKey: "document_request:{$targetUser->id}:{$type->code}",
         );
 
-        // 10. ADR-410: Rejection auto-re-requests — reset to requested + notify
-        if ($data->status === DocumentRequest::STATUS_REJECTED) {
-            $request->update([
-                'status' => DocumentRequest::STATUS_REQUESTED,
-                'requested_at' => now(),
-            ]);
+        $request->refresh();
 
-            NotificationDispatcher::send(
-                topicKey: 'documents.request_new',
-                recipients: [$targetUser],
-                payload: [
-                    'document_type' => $type->label,
-                    'document_code' => $type->code,
-                    'review_note' => $data->reviewNote,
-                    'link' => '/account-settings/documents',
-                ],
-                company: $data->company,
-                entityKey: "document_request:{$targetUser->id}:{$type->code}",
-            );
-        }
-
-        // 11. Return result
         return new ReviewMemberDocumentResult(
             code: $type->code,
             status: $request->status,
             reviewNote: $request->review_note,
-            reviewedAt: $request->reviewed_at->toIso8601String(),
+            reviewedAt: $request->reviewed_at?->toIso8601String(),
         );
     }
 }
