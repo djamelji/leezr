@@ -240,9 +240,9 @@ class AuthorizationContractTest extends TestCase
 
         $navKeys = $this->extractNavKeys($response->json('groups'));
 
-        // Members nav item requires members.view — limited admin has it
-        $this->assertContains('members', $navKeys,
-            'Administrative role with members.view must see Members nav item');
+        // Collaborators nav item (ADR-754, ex-"members") requires members.view — limited admin has it
+        $this->assertContains('people', $navKeys,
+            'Administrative role with members.view must see Collaborators nav item');
     }
 
     public function test_administrative_gets_management_role_level(): void

@@ -35,11 +35,13 @@ class WorkforceNavE2RecetteTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const MODULES = ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'];
+    // ADR-754 : l'entrée « Collaborateurs » (people) appartient au module core.members — requis
+    // pour que la nav management expose l'espace employés (ex-workforce-employees).
+    private const MODULES = ['core.members', 'workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents'];
 
     /** space => [navItemKey, landingRoutePath, readPermission]. */
     private const SPACES = [
-        'employees' => ['workforce-employees', '/workforce/employees', 'workforce.view'],
+        'employees' => ['people', '/workforce/employees', 'workforce.view'],
         'time' => ['workforce-time', '/workforce/time-entries', 'workforce.timesheet_view'],
         // ADR-729 (M6.A) — « Planning » est une entrée de nav de premier niveau (page autonome), plus un
         // deep-link vers l'onglet de « Temps & présences » → on vérifie désormais sa visibilité en menu.
@@ -197,7 +199,7 @@ class WorkforceNavE2RecetteTest extends TestCase
         $perms = ['workforce.view', 'workforce.manage', 'workforce.timesheet_view', 'workforce.planning_view',
             'workforce.leave_request', 'workforce_documents.view'];
         $u = $this->userWith($perms, admin: true, asEmployee: true);
-        $this->assertContains('workforce-employees', $this->navItemKeys($perms));
+        $this->assertContains('people', $this->navItemKeys($perms));
         $this->assertContains('workforce-me', $this->navItemKeys($perms), 'Mon espace accessible même en admin');
         // Le contexte personnel reste joignable côté serveur.
         $this->actingAs($u)->getJson('/api/workforce/me', ['X-Company-Id' => $this->company->id])->assertOk();

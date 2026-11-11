@@ -78,14 +78,25 @@ class MemberDocumentWorkflowReadModel
             $doc['has_file'] = $doc['upload'] !== null;
             $doc['can_review'] = $request?->status === DocumentRequest::STATUS_SUBMITTED;
 
-            // ADR-757 (DMS M1): état consolidé + confidentialité + droit de téléchargement effectif.
+            // ADR-757/758 (DMS M1/M1.1): état consolidé + confidentialité + accès effectif + redaction.
             $state = State::evaluateFromParts($doc['has_file'], $request?->status, $doc['lifecycle_status'] ?? 'missing');
             $doc['compliance_status'] = $state['consolidated'];
             $doc['satisfies_obligation'] = $state['satisfies_obligation'];
             $doc['confidentiality'] = DocumentConfidentiality::forTypeCode($doc['code']);
             $doc['is_highly_confidential'] = $doc['confidentiality'] === DocumentConfidentiality::HIGHLY_CONFIDENTIAL;
-            $doc['can_download'] = $doc['has_file'] && $actor !== null
-                && $policy->canAccess($actor, $company, DocumentSubject::user($member->id), $doc['code'], DocumentAccessPolicy::OP_DOWNLOAD);
+
+            $subject = DocumentSubject::user($member->id);
+            $canView = $actor !== null
+                && $policy->canAccess($actor, $company, $subject, $doc['code'], DocumentAccessPolicy::OP_VIEW_METADATA);
+            $doc['can_download'] = $doc['has_file'] && $canView;
+
+            // Redaction : un acteur non autorisé ne découvre ni l'existence du fichier ni ses
+            // métadonnées sensibles (bulletin/ID/bancaire d'autrui).
+            if (! $canView) {
+                $doc = \App\Core\Documents\ReadModels\SubjectDocumentReadModel::redact($doc);
+                $doc['request_status'] = $request?->status; // statut de workflow conservé (non sensible)
+                $doc['can_review'] = false;
+            }
         }
 
         unset($doc);

@@ -212,7 +212,7 @@ function onAccessChanged() { reload() }
             <VWindowItem value="planning"><EmployeePlanningSection v-if="currentTab === 'planning' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
             <VWindowItem value="time"><EmployeeTimeSection v-if="currentTab === 'time' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
             <VWindowItem value="leave"><EmployeeLeaveSection v-if="currentTab === 'leave' && store.employeeId" :employee-id="store.employeeId" /></VWindowItem>
-            <VWindowItem value="documents"><MemberDocumentsWorkflowPanel v-if="currentTab === 'documents' && store.membershipId" :member-id="store.membershipId" :can-edit="can('documents.manage')" /></VWindowItem>
+            <VWindowItem value="documents"><MemberDocumentsWorkflowPanel v-if="currentTab === 'documents' && store.personRef" :resource-base="`/company/people/${store.personRef}`" :supports-requests="!!store.membershipId" :can-edit="can('documents.manage')" /></VWindowItem>
 
             <!-- Historique (réel) -->
             <VWindowItem value="history">

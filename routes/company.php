@@ -36,6 +36,7 @@ use App\Modules\Core\Documents\Http\DocumentRequestController;
 use App\Modules\Core\Documents\Http\AiQuotaController;
 use App\Modules\Core\Documents\Http\MemberDocumentAiSuggestionController;
 use App\Modules\Core\Documents\Http\MemberDocumentController;
+use App\Modules\Core\Documents\Http\PersonDocumentController;
 use App\Modules\Core\Documents\Http\SelfDocumentController;
 use App\Modules\Core\Settings\Http\CompanyLegalStructureController;
 use App\Modules\Core\Settings\Http\CompanyFieldActivationController;
@@ -259,6 +260,11 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.manage');
     Route::get('/company/documents/{code}/download', [CompanyDocumentController::class, 'download'])
         ->middleware('company.access:use-permission,documents.view');
+    // ADR-758 (DMS M1.1): versions Company (liste + download archivé)
+    Route::get('/company/documents/{code}/versions', [CompanyDocumentController::class, 'versions'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/documents/{code}/versions/{versionId}/download', [CompanyDocumentController::class, 'downloadVersion'])
+        ->middleware('company.access:use-permission,documents.view');
     Route::delete('/company/documents/{code}', [CompanyDocumentController::class, 'destroy'])
         ->middleware('company.access:use-permission,documents.manage');
 
@@ -312,6 +318,19 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.view');
     Route::delete('/company/members/{id}/documents/{code}', [MemberDocumentController::class, 'destroy'])
         ->middleware('company.access:use-permission,documents.manage');
+
+    // ADR-758 (DMS M1.1): dossier documentaire par personRef (user-{id} | employee-{id}),
+    // fonctionne pour un Employee SANS compte (sujet documentaire explicite).
+    Route::get('/company/people/{personRef}/documents', [PersonDocumentController::class, 'index'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::post('/company/people/{personRef}/documents/{code}', [PersonDocumentController::class, 'upload'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::get('/company/people/{personRef}/documents/{code}/download', [PersonDocumentController::class, 'download'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/people/{personRef}/documents/{code}/versions', [PersonDocumentController::class, 'versions'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/people/{personRef}/documents/{code}/versions/{versionId}/download', [PersonDocumentController::class, 'downloadVersion'])
+        ->middleware('company.access:use-permission,documents.view');
 
     // Document review workflow (ADR-176)
     Route::put('/company/members/{id}/documents/{code}/review', [MemberDocumentController::class, 'review'])

@@ -125,7 +125,7 @@ class DispatcherRoleModelTest extends TestCase
     public function test_dispatcher_sees_members_nav_item(): void
     {
         $keys = $this->extractNavKeys();
-        $this->assertContains('members', $keys, 'Dispatcher should see Members nav item (has members.view).');
+        $this->assertContains('people', $keys, 'Dispatcher should see Collaborators nav item (has members.view).');
     }
 
     public function test_dispatcher_does_not_see_support_nav_item(): void

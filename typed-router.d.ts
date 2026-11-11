@@ -60,6 +60,8 @@ declare module 'vue-router/auto-routes' {
     'company-my-deliveries-id': RouteRecordInfo<'company-my-deliveries-id', '/company/my-deliveries/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'company-notifications': RouteRecordInfo<'company-notifications', '/company/notifications', Record<never, never>, Record<never, never>>,
     'company-notifications-notification-preferences': RouteRecordInfo<'company-notifications-notification-preferences', '/company/notifications/_NotificationPreferences', Record<never, never>, Record<never, never>>,
+    'company-people': RouteRecordInfo<'company-people', '/company/people', Record<never, never>, Record<never, never>>,
+    'company-people-person-ref': RouteRecordInfo<'company-people-person-ref', '/company/people/:personRef', { personRef: ParamValue<true> }, { personRef: ParamValue<false> }>,
     'company-plan': RouteRecordInfo<'company-plan', '/company/plan', Record<never, never>, Record<never, never>>,
     'company-profile-company-profile-documents': RouteRecordInfo<'company-profile-company-profile-documents', '/company/profile/_CompanyProfileDocuments', Record<never, never>, Record<never, never>>,
     'company-profile-company-profile-overview': RouteRecordInfo<'company-profile-company-profile-overview', '/company/profile/_CompanyProfileOverview', Record<never, never>, Record<never, never>>,

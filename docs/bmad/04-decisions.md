@@ -27199,3 +27199,31 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels M1 / conditions M2** : (1) historique des versions **company** : versioning actif au stockage mais pas d'endpoint/UI de liste dédié (membres OK) ; (2) `DocumentAccessPolicy` ne modélise pas encore la relation **manager→équipe** (self vs autrui seulement) ; (3) classification appliquée au download/versions mais pas encore comme **redaction fine** des métadonnées de liste ; (4) UI « premium » (recherche/filtres avancés, timeline de versions riche) = polish M2 ; (5) `DownloadOwnDocumentUseCase` non gated explicitement (sûr car intrinsèquement self). **Condition M2** : exposer l'historique company, modéliser la relation d'équipe, enrichir l'UX premium + redaction métadonnées.
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun effacement de documents, aucun changement Billing, **M2–M7 non démarrés**.
+
+## ADR-758 — DMS M1.1 : sécurisation, parité & dossier sans compte
+
+**Date** : 2026-11-11
+**Contexte** : M1 (ADR-757, `79531ec`) acceptée mais avec réserves. M1.1 lève : dépendance artificielle à un compte pour le dossier d'un Employee sans User ; confidentialité limitée aux téléchargements (pas aux métadonnées) ; `documents.view_confidential` traité comme passe universel ; versions Company non exposées ; 8 tests nav obsolètes. **DEV uniquement ; pas de M2.**
+
+**1. Dossier documentaire par SUJET, sans compte (ADR-758)** — migration additive `2026_11_11_000002` : `member_documents.user_id` NULLABLE + index unique par sujet `(company_id, document_subject_type, document_subject_id, document_type_id)`. Nouveau `PersonDocumentController` + routes `/company/people/{personRef}/documents[...]` : résout le personRef (`user-{id}` | `employee-{id}`) en **sujet canonique** (User s'il existe → `user:{id}` + workflow role-aware ; sinon Employee **sans compte** → `employee:{id}`). `SubjectDocumentReadModel` liste par sujet (uploads via `document_subject_*`, pas `user_id`). Upload/remplacement non destructif/versioning/téléchargement fonctionnent **sans User ni Membership** ; `user_id` null stocké, aucun compte artificiel, aucun stockage dupliqué. Invariant respecté : le sujet n'est jamais réécrit quand un compte est ajouté.
+
+**2. Redaction des métadonnées (ADR-758)** — la policy s'applique DÉSORMAIS aux métadonnées/listes, pas seulement aux téléchargements : opération `OP_VIEW_METADATA`. Un acteur non autorisé ne découvre NI l'existence du fichier NI ses métadonnées sensibles — `upload=null`, `has_file=false`, `compliance_status='restricted'`, `restricted=true`. Appliqué à `MemberDocumentWorkflowReadModel` ET `SubjectDocumentReadModel`. Testé par accès API direct.
+
+**3. Policy contextuelle par catégorie (ADR-758)** — `DocumentConfidentiality` distingue des CATÉGORIES : **payroll** (bulletins), **identity_financial** (ID/bancaire/social/judiciaire), **standard**. `DocumentAccessPolicy` décide par catégorie, **sans coder les rôles en dur** :
+  - self → tout ; owner/`documents.manage` → tout ;
+  - **standard** → `documents.view` OU **manager direct** (relation `Employee.manager_id` vérifiée) ;
+  - **payroll** → `workforce.compensation_read` | `workforce.payroll_validate` | `workforce.payroll_prepare` (domaine paie) ;
+  - **identity_financial** → `documents.view_confidential` | `workforce.sensitive_read`.
+  → `documents.view_confidential` N'EST PLUS un passe universel (ouvre identité, **pas** les bulletins). La relation manager donne accès au **standard** d'un subordonné direct, **jamais** à ses pièces confidentielles. Matrice documentée dans la policy.
+
+**4. Versions Company (ADR-758)** — `CompanyDocumentController::versions` + `downloadVersion` (routes `/company/documents/{code}/versions[...]`), via `DocumentVersioningService`. Exposent version courante + archivées (n°, auteur, date, **hash**, taille) ; **jamais** les chemins de stockage ; download gated par la policy ; tenant-scopé (scope company).
+
+**5. Tests nav/RBAC (ADR-754) (ADR-758)** — 8 tests corrigés vers la nav « Collaborateurs » actuelle (clé `people`, module `core.members`) **sans restaurer l'ancienne entrée Members** : `NavBuilderTest`, `AuthorizationContractTest`, `DispatcherRoleModelTest`, `WorkforceNavE2RecetteTest` (dont ajout de `core.members` aux modules activés — l'espace employés passe par l'entrée people).
+
+**6. Frontend** — `MemberDocumentsWorkflowPanel` paramétré (`resourceBase` + `supportsRequests`) → réutilisé tel quel pour la page company-members ET la fiche. La fiche `/company/people/:personRef` adresse DÉSORMAIS le dossier par personRef (marche pour Employee sans compte) ; le workflow « demander » est masqué sans compte.
+
+**Tests** : `DmsM11FoundationsTest` **9/9** (Employee sans compte : liste/upload/remplacement/versions/download/isolation ; policy par catégorie : view_confidential≠payroll, compensation≠identité, sensitive=identité, view=standard seul ; relation manager = standard des subordonnés, pas le confidentiel ; redaction ; versions Company auteur+hash sans chemin). Régression consolidée **341 verts** (documents+people+nav+modules), **0 échec**. **Build clean.** Captures Playwright : dossier Employee sans compte (light/dark/mobile) — coffre complet, upload, « Demander » masqué.
+
+**Défauts résiduels / conditions M2** : (1) docs uploadés en mode account-less PUIS compte ajouté → restent sous `employee:{id}` (invariant respecté) mais la vue bascule sur `user:{id}` — fusion des deux vues = M2 ; (2) UI de liste des versions (member & company) = API livrée, affichage riche (timeline) = M2 ; (3) relation manager = 1 niveau direct (`manager_id`), pas de hiérarchie récursive ni département ; (4) `documents.view_confidential` sans le droit paie ne voit pas les bulletins (voulu) — un profil « RH global » devra cumuler les droits.
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun effacement de documents, aucun changement Billing, **M2 non démarré**.

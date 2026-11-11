@@ -163,8 +163,8 @@ class NavBuilderTest extends TestCase
         $groups = NavBuilder::forCompany($company, null, 'management');
         $allKeys = $this->extractItemKeys($groups);
 
-        // Core modules' nav items should be present
-        $this->assertContains('members', $allKeys);
+        // Core modules' nav items should be present (ADR-754: 'members' unified into 'people')
+        $this->assertContains('people', $allKeys);
         $this->assertContains('company-profile', $allKeys);
     }
 
@@ -217,14 +217,14 @@ class NavBuilderTest extends TestCase
         $mgmtGroups = NavBuilder::forCompany($company, null, 'management');
         $mgmtKeys = $this->extractItemKeys($mgmtGroups);
 
-        $this->assertContains('members', $mgmtKeys, 'Management should see structure items');
+        $this->assertContains('people', $mgmtKeys, 'Management should see structure items');
         $this->assertContains('company-profile', $mgmtKeys, 'Management should see structure items');
 
         // Operational does NOT see structure items
         $opGroups = NavBuilder::forCompany($company, null, 'operational');
         $opKeys = $this->extractItemKeys($opGroups);
 
-        $this->assertNotContains('members', $opKeys, 'Operational should not see structure items');
+        $this->assertNotContains('people', $opKeys, 'Operational should not see structure items');
         $this->assertNotContains('company-profile', $opKeys, 'Operational should not see structure items');
     }
 

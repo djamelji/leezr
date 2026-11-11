@@ -14,7 +14,18 @@ import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.
 const props = defineProps({
   memberId: {
     type: [String, Number],
-    required: true,
+    default: 0,
+  },
+  // ADR-758 (DMS M1.1) : base d'API alternative (ex. /company/people/employee-5) pour adresser
+  // un dossier par personRef — fonctionne pour un Employee SANS compte. Défaut = membre.
+  resourceBase: {
+    type: String,
+    default: '',
+  },
+  // Le workflow « demander un document » suppose un compte (user_id) → désactivable.
+  supportsRequests: {
+    type: Boolean,
+    default: true,
   },
   canEdit: {
     type: Boolean,
@@ -25,6 +36,9 @@ const props = defineProps({
 const emit = defineEmits(['createCustomType'])
 
 const { t } = useI18n()
+
+// Base d'API : personRef si fournie, sinon le membre (rétro-compat page company-members).
+const base = computed(() => props.resourceBase || `/company/members/${props.memberId}`)
 const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
 const { formatFileSize, fileFormatIcon, fileFormatLabel } = useDocumentHelpers()
@@ -43,8 +57,11 @@ const viewerDocument = ref(null)
 const requestMenuVisible = ref(false)
 const requestingCode = ref(null)
 
-// Requestable doc types = those activated but without an active request
+// Requestable doc types = those activated but without an active request.
+// Désactivé quand le dossier n'a pas de compte (sujet employee sans user → pas de user_id).
 const requestableDocTypes = computed(() => {
+  if (!props.supportsRequests) return []
+
   return memberDocuments.value.filter(
     doc => !doc.request_status || doc.request_status === 'approved' || doc.request_status === 'rejected',
   )
@@ -72,7 +89,7 @@ const requestDocument = async code => {
 const fetchDocuments = async () => {
   documentsLoading.value = true
   try {
-    const data = await $api(`/company/members/${props.memberId}/documents`)
+    const data = await $api(`${base.value}/documents`)
 
     memberDocuments.value = data.documents || []
   }
@@ -82,8 +99,8 @@ const fetchDocuments = async () => {
   }
 }
 
-// Refetch when memberId changes (navigation between members)
-watch(() => props.memberId, fetchDocuments, { immediate: true })
+// Refetch when the resource base changes (navigation between members / persons)
+watch(() => base.value, fetchDocuments, { immediate: true })
 
 // ADR-427: Realtime SSE — targeted AI status update per document row
 useRealtimeSubscription('document.updated', envelope => {
@@ -136,7 +153,7 @@ const handleDocUpload = async (code, files, expiresAt = null) => {
     files.forEach(f => formData.append('files[]', f))
     if (expiresAt) formData.append('expires_at', expiresAt)
 
-    await $api(`/company/members/${props.memberId}/documents/${code}`, {
+    await $api(`${base.value}/documents/${code}`, {
       method: 'POST',
       body: formData,
     })
@@ -164,7 +181,7 @@ const handleDocDelete = async code => {
   })
   if (!ok) return
   try {
-    await $api(`/company/members/${props.memberId}/documents/${code}`, { method: 'DELETE' })
+    await $api(`${base.value}/documents/${code}`, { method: 'DELETE' })
     toast(t('documents.deleted'), 'success')
     await fetchDocuments()
   }
@@ -176,7 +193,7 @@ const handleDocDelete = async code => {
 const handleReview = async (code, status, note = null) => {
   reviewingCode.value = code
   try {
-    await $api(`/company/members/${props.memberId}/documents/${code}/review`, {
+    await $api(`${base.value}/documents/${code}/review`, {
       method: 'PUT',
       body: { status, review_note: note },
     })
@@ -215,7 +232,7 @@ const viewerDownloadUrl = computed(() => {
   if (!viewerDocument.value?.upload)
     return ''
 
-  return `/company/members/${props.memberId}/documents/${viewerDocument.value.code}/download`
+  return `${base.value}/documents/${viewerDocument.value.code}/download`
 })
 
 const handleViewerApprove = async () => {
@@ -242,7 +259,7 @@ const handleApplySuggestions = async fields => {
   if (!doc?.code) return
 
   try {
-    await $api(`/company/members/${props.memberId}/documents/${doc.code}/apply-suggestions`, {
+    await $api(`${base.value}/documents/${doc.code}/apply-suggestions`, {
       method: 'POST',
       body: { fields },
     })
@@ -269,7 +286,7 @@ const handleViewerDownload = async () => {
   const fileName = viewerDocument.value.upload.file_name
 
   try {
-    const blob = await $api(`/company/members/${props.memberId}/documents/${code}/download`, {
+    const blob = await $api(`${base.value}/documents/${code}/download`, {
       responseType: 'blob',
     })
 
@@ -503,7 +520,7 @@ const handleViewerDownload = async () => {
                   icon
                   variant="text"
                   size="small"
-                  :href="`/api/company/members/${memberId}/documents/${doc.code}/download`"
+                  :href="`/api${base}/documents/${doc.code}/download`"
                   target="_blank"
                 >
                   <VIcon icon="tabler-download" />
