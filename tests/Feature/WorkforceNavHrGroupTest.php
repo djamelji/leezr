@@ -29,10 +29,11 @@ class WorkforceNavHrGroupTest extends TestCase
     private const EXPECTED_GROUP = [
         // ADR-754 (P2) : l'entrée « Employés » est remplacée par « Collaborateurs » (Core, groupe
         // Entreprise) — plus d'entrée workforce-employees dans le groupe RH.
+        // ADR-766 (M7) : l'entrée « Documents » RH est consolidée dans l'espace Documents unifié (Core,
+        // groupe Entreprise, onglet RH) — plus d'entrée workforce-documents dans le groupe RH.
         'workforce-time' => 'workforce',
         'workforce-leave' => 'workforce',
         'workforce-payroll' => 'workforce',
-        'workforce-documents' => 'workforce',
         'workforce-organization' => 'workforce',
         'workforce-settings' => 'workforce',
         // « Mon espace » = self-service personnel, hors management RH.
@@ -106,10 +107,11 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        // L'ordre reflète le parcours d'activité : Collaborateurs → Temps → Planning → Congés → Documents → Paie → Organisation → Paramètres.
+        // L'ordre reflète le parcours d'activité : Temps → Planning → Congés → Paie → Organisation → Paramètres.
         // ADR-712 : item « Planning » dédié (sort 25) intercalé après « Temps de travail ».
+        // ADR-766 : « Documents » RH n'est plus une entrée de nav (onglet de l'espace Documents unifié).
         $this->assertSame(
-            ['workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
+            ['workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
             $this->itemKeys($groups, 'workforce'),
         );
     }
@@ -205,9 +207,10 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        $expectedRoutes = [            'workforce-leave' => 'company-workforce-leave',
+        // ADR-766 : workforce-documents n'est plus un item de nav (route conservée en alias → onglet RH).
+        $expectedRoutes = [
+            'workforce-leave' => 'company-workforce-leave',
             'workforce-time' => 'company-workforce-time',
-            'workforce-documents' => 'company-workforce-documents',
             'workforce-payroll' => 'company-workforce-payroll',
         ];
         foreach ($expectedRoutes as $itemKey => $route) {

@@ -17,8 +17,12 @@ class DocumentsModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 23,
             capabilities: new Capabilities(
+                // ADR-766 (M7) — ESPACE DOCUMENTS UNIFIÉ : une seule entrée « Documents ». Visible pour la
+                // gouvernance DMS (`documents.view`) OU le registre RH (`workforce_documents.view`) OU les
+                // signatures (`workforce_signature.view`). Chaque onglet reste gated par sa permission réelle
+                // (aucun élargissement d'accès : un profil ne voit que les onglets qu'il peut réellement ouvrir).
                 navItems: [
-                    ['key' => 'documents', 'title' => 'Documents', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-file-text', 'permission' => 'documents.view', 'surface' => 'structure'],
+                    ['key' => 'documents', 'title' => 'Documents', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-file-text', 'anyPermission' => ['documents.view', 'workforce_documents.view', 'workforce_signature.view'], 'surface' => 'structure'],
                 ],
                 routeNames: ['company-documents-tab'],
                 middlewareKey: 'core.documents',

@@ -14,6 +14,11 @@ import DocumentDetailDrawer from './_DocumentDetailDrawer.vue'
 
 definePage({ meta: { module: 'workforce_documents', permission: 'workforce_documents.view' } })
 
+// ADR-766 (M7) — espace Documents UNIFIÉ : cette page vit désormais comme onglet « RH » de
+// `/company/documents`. En standalone (`/company/workforce/documents`), elle REDIRIGE vers l'entrée
+// unique ; montée avec `embedded` par l'espace Documents, elle rend le registre RH (header masqué).
+const props = defineProps({ embedded: { type: Boolean, default: false } })
+
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
 const { can } = useCan()
@@ -176,6 +181,12 @@ watchDebounced([subjectTypeFilter, signatureStatusFilter, templateCodeFilter, em
 watch(options, fetchData, { deep: true })
 
 onMounted(() => {
+  // Standalone → une seule entrée Documents : rediriger vers l'onglet RH de l'espace Documents.
+  if (!props.embedded) {
+    router.replace({ name: 'company-documents-tab', params: { tab: 'hr' } })
+
+    return
+  }
   fetchData()
   fetchStats()
   employeesStore.fetchEmployees({ perPage: 200 }).catch(() => {})
@@ -210,9 +221,9 @@ watch(activeTab, v => {
 
 <template>
   <div>
-    <!-- Header de l'espace Documents unifié -->
+    <!-- Header de l'espace Documents unifié (masqué quand embarqué dans l'espace Documents) -->
     <div class="d-flex align-center justify-space-between mb-4">
-      <div>
+      <div v-if="!embedded">
         <h4 class="text-h4 font-weight-bold">
           {{ $t('workforceDocuments.spaceTitle') }}
         </h4>
@@ -220,6 +231,7 @@ watch(activeTab, v => {
           {{ $t('workforceDocuments.spaceSubtitle') }}
         </p>
       </div>
+      <VSpacer v-if="embedded" />
       <VBtn
         v-if="activeTab === 'documents' && can('workforce_documents.generate')"
         color="primary"

@@ -17,9 +17,10 @@ class RolesModule implements ModuleDefinition
             surface: 'structure',
             sortOrder: 15,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'company-roles', 'title' => 'Roles', 'to' => ['name' => 'company-roles'], 'icon' => 'tabler-shield-lock', 'permission' => 'roles.view', 'surface' => 'structure'],
-                ],
+                // ADR-766 (M7) — Roles consolidé dans « Collaborateurs » (People expose l'onglet Rôles via
+                // son `anyPermission` incluant `roles.view`). Plus d'entrée de nav dédiée ; la route reste
+                // enregistrée comme ALIAS (redirige côté front vers People, onglet Rôles).
+                navItems: [],
                 routeNames: ['company-roles'],
                 middlewareKey: 'core.roles',
             ),

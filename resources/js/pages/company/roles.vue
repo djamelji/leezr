@@ -8,8 +8,15 @@ import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
 import PermissionMatrix from '@/pages/shared/_PermissionMatrix.vue'
+import { useRouter } from 'vue-router'
+
+// ADR-766 (M7) — Roles consolidé dans « Collaborateurs » : en standalone (`/company/roles`), cette page
+// REDIRIGE vers l'onglet Rôles de People (une seule entrée). Montée avec `embedded` par People, elle rend
+// le gestionnaire RBAC tel quel (réutilisation, zéro duplication, aucun changement de permission).
+const props = defineProps({ embedded: { type: Boolean, default: false } })
 
 const { t } = useI18n()
+const router = useRouter()
 const auth = useAuthStore()
 const settingsStore = useCompanySettingsStore()
 const membersStore = useMembersStore()
@@ -31,6 +38,12 @@ const fieldActivations = ref([])
 const fieldActivationsLoaded = ref(false)
 
 onMounted(async () => {
+  // Standalone → une seule entrée : rediriger vers l'espace Collaborateurs (onglet Rôles).
+  if (!props.embedded) {
+    router.replace({ name: 'company-people', query: { tab: 'roles' } })
+
+    return
+  }
   try {
     await Promise.all([
       settingsStore.fetchCompanyRoles(),

@@ -145,8 +145,12 @@ class CompanyNavInvariantTest extends TestCase
 
         $keys = $this->navKeysFor($user);
 
-        $this->assertContains('company-roles', $keys,
-            'Management role with roles.view should see Roles');
+        // ADR-766 (M7) — Roles consolidé dans Collaborateurs : roles.view donne l'entrée unique `people`
+        // (qui héberge l'onglet Rôles via anyPermission), plus d'entrée `company-roles` dédiée.
+        $this->assertContains('people', $keys,
+            'Management role with roles.view should reach Roles via the Collaborators entry');
+        $this->assertNotContains('company-roles', $keys,
+            'No standalone Roles nav item (consolidated into Collaborators)');
     }
 
     // ───────────────────────────────────────────────────────────
@@ -157,8 +161,9 @@ class CompanyNavInvariantTest extends TestCase
     {
         $keys = $this->navKeysFor($this->owner);
 
-        $this->assertContains('company-roles', $keys, 'Owner should see Roles');
-        $this->assertContains('people', $keys, 'Owner should see Collaborators (ADR-754)');
+        // ADR-766 (M7) — Roles est un onglet de Collaborateurs ; plus d'entrée `company-roles` dédiée.
+        $this->assertNotContains('company-roles', $keys, 'No standalone Roles nav item (consolidated)');
+        $this->assertContains('people', $keys, 'Owner should see Collaborators (ADR-754, hosts Roles tab)');
         $this->assertContains('company-profile', $keys, 'Owner should see Company Profile');
     }
 

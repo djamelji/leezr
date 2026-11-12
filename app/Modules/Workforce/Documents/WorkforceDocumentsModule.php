@@ -17,10 +17,11 @@ class WorkforceDocumentsModule implements ModuleDefinition
             surface: 'hr',
             sortOrder: 240,
             capabilities: new Capabilities(
-                navItems: [
-                    ['key' => 'workforce-documents', 'title' => 'Documents', 'to' => ['name' => 'company-workforce-documents'], 'icon' => 'tabler-file-certificate', 'permission' => 'workforce_documents.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 40],
-                ],
-                routeNames: [],
+                // ADR-766 (M7) — ESPACE DOCUMENTS UNIFIÉ : plus d'entrée de nav « Documents » RH distincte.
+                // Le registre RH (docs générés + modèles + signatures) est un ONGLET de `/company/documents`.
+                // La route `company-workforce-documents` reste enregistrée comme ALIAS (redirige vers l'onglet RH).
+                navItems: [],
+                routeNames: ['company-workforce-documents'],
                 middlewareKey: 'workforce_documents',
             ),
             permissions: [

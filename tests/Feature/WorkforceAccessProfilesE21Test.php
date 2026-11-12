@@ -41,12 +41,15 @@ class WorkforceAccessProfilesE21Test extends TestCase
     private const MODULES = ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_contract', 'workforce_signature'];
 
     /** space => [navItemKey|null, landingRoutePath, readPermission]. */
+    // ADR-754/766 : « Collaborateurs » (people) et « Documents » RH sont des entrées CONSOLIDÉES (Core) —
+    // leur item de nav propre n'existe plus dans le groupe workforce (navKey=null → seule la PARITÉ RBAC
+    // SERVEUR est vérifiée ici : l'API /workforce/employees et /workforce/documents applique toujours ses droits).
     private const SPACES = [
-        'employees' => ['workforce-employees', '/workforce/employees', 'workforce.view'],
+        'employees' => [null, '/workforce/employees', 'workforce.view'],
         'time' => ['workforce-time', '/workforce/time-entries', 'workforce.timesheet_view'],
         'planning' => [null, '/workforce/planning/locations', 'workforce.planning_view'],
         'leave' => ['workforce-leave', '/workforce/leaves', 'workforce.leave_view_all'],
-        'documents' => ['workforce-documents', '/workforce/documents', 'workforce_documents.view'],
+        'documents' => [null, '/workforce/documents', 'workforce_documents.view'],
         'payroll' => ['workforce-payroll', '/workforce/payroll', 'workforce.payroll_prepare'],
         'organization' => ['workforce-organization', '/workforce/departments', 'workforce.view'],
         'settings' => ['workforce-settings', '/workforce/settings', 'workforce.view'],
@@ -291,9 +294,10 @@ class WorkforceAccessProfilesE21Test extends TestCase
         $owner = User::factory()->create();
         Membership::create(['user_id' => $owner->id, 'company_id' => $this->company->id, 'role' => 'owner']);
 
-        // Nav owner (bypass = perms null) : toutes les entrées d'activité.
+        // Nav owner (bypass = perms null) : entrées d'activité workforce (ADR-766 : Documents RH consolidé
+        // dans l'espace Documents unifié — plus d'item workforce-documents dans le groupe workforce).
         $nav = $this->navItemKeys(null);
-        foreach (['workforce-employees', 'workforce-time', 'workforce-leave', 'workforce-documents', 'workforce-payroll', 'workforce-organization', 'workforce-settings'] as $k) {
+        foreach (['workforce-time', 'workforce-leave', 'workforce-payroll', 'workforce-organization', 'workforce-settings'] as $k) {
             $this->assertContains($k, $nav);
         }
 

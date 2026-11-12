@@ -47,7 +47,8 @@ class WorkforceNavE2RecetteTest extends TestCase
         // deep-link vers l'onglet de « Temps & présences » → on vérifie désormais sa visibilité en menu.
         'planning' => ['workforce-planning', '/workforce/planning/locations', 'workforce.planning_view'],
         'leave' => ['workforce-leave', '/workforce/leaves', 'workforce.leave_request'],
-        'documents' => ['workforce-documents', '/workforce/documents', 'workforce_documents.view'],
+        // ADR-766 (M7) : « Documents » RH n'est plus une entrée de nav workforce (consolidée dans l'espace
+        // Documents unifié, onglet RH) — retirée de la recette nav workforce ; couverte par les tests Documents.
         'payroll' => ['workforce-payroll', '/workforce/payroll', 'workforce.payroll_prepare'],
         'organization' => ['workforce-organization', '/workforce/departments', 'workforce.view'],
         'settings' => ['workforce-settings', '/workforce/settings', 'workforce.view'],
@@ -144,7 +145,8 @@ class WorkforceNavE2RecetteTest extends TestCase
             'workforce.leave_request', 'workforce.leave_approve', 'workforce.leave_view_all',
             'workforce_documents.view'];
         $u = $this->userWith($perms, admin: true);
-        $this->assertMatrix($u, $perms, ['employees', 'time', 'planning', 'leave', 'documents', 'organization', 'settings']);
+        // ADR-766 : « documents » RH n'est plus un espace de nav workforce (onglet de l'espace Documents unifié).
+        $this->assertMatrix($u, $perms, ['employees', 'time', 'planning', 'leave', 'organization', 'settings']);
     }
 
     public function test_manager_limite_equipe(): void

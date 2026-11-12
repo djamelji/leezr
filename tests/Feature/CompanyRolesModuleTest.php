@@ -183,23 +183,11 @@ class CompanyRolesModuleTest extends TestCase
     }
 
     // ───────────────────────────────────────────────────────────
-    // Nav: management without roles.view → no Roles item
+    // Nav: Roles consolidé dans « Collaborateurs » (ADR-766, M7)
     // ───────────────────────────────────────────────────────────
 
-    public function test_nav_hides_roles_without_roles_view(): void
-    {
-        $response = $this->actAs($this->limitedAdmin)->getJson('/api/nav');
-        $response->assertOk();
-
-        $keys = collect($response->json('groups'))
-            ->flatMap(fn ($g) => collect($g['items'])->pluck('key'))
-            ->toArray();
-
-        $this->assertNotContains('company-roles', $keys,
-            'Management role without roles.view must NOT see Roles nav item');
-    }
-
-    public function test_nav_shows_roles_with_roles_view(): void
+    // Plus d'entrée de nav dédiée « Roles » : la capacité vit dans l'onglet Rôles de People.
+    public function test_nav_has_no_standalone_roles_entry(): void
     {
         $response = $this->actAs($this->manager)->getJson('/api/nav');
         $response->assertOk();
@@ -208,8 +196,22 @@ class CompanyRolesModuleTest extends TestCase
             ->flatMap(fn ($g) => collect($g['items'])->pluck('key'))
             ->toArray();
 
-        $this->assertContains('company-roles', $keys,
-            'Management role with roles.view should see Roles nav item');
+        $this->assertNotContains('company-roles', $keys,
+            'Roles no longer has a standalone nav item — it is a tab inside Collaborators (people).');
+    }
+
+    // Un utilisateur avec roles.view atteint les Rôles via l'entrée unique « Collaborateurs » (people).
+    public function test_nav_roles_reachable_via_people_with_roles_view(): void
+    {
+        $response = $this->actAs($this->manager)->getJson('/api/nav');
+        $response->assertOk();
+
+        $keys = collect($response->json('groups'))
+            ->flatMap(fn ($g) => collect($g['items'])->pluck('key'))
+            ->toArray();
+
+        $this->assertContains('people', $keys,
+            'roles.view (via anyPermission) must grant the Collaborators nav entry that hosts the Roles tab.');
     }
 
     // ───────────────────────────────────────────────────────────

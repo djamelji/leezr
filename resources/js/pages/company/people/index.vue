@@ -3,7 +3,7 @@
 // accès. Onglets selon les FACETTES : « Personnes » (liste unifiée, members.view|workforce.view)
 // et « Rôles & autorisations » (définitions RBAC, roles.view — RÉUTILISE /company/roles sans
 // duplication). Un utilisateur roles.view-seul voit l'onglet Rôles sans la liste des personnes.
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
@@ -11,13 +11,22 @@ import RolesManager from '@/pages/company/roles.vue'
 definePage({ meta: { module: 'core.members', surface: 'structure', anyPermission: ['members.view', 'workforce.view', 'roles.view'] } })
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const store = usePeopleListStore()
 const { can } = useCan()
 
 const canPeople = computed(() => can('members.view') || can('workforce.view'))
 const canRoles = computed(() => can('roles.view'))
-const tab = ref(canPeople.value ? 'people' : 'roles')
+// ADR-766 (M7) — deep-link `?tab=roles` (depuis l'alias /company/roles) ou repli selon les facettes.
+const initialTab = (route.query.tab === 'roles' && canRoles.value) ? 'roles' : (canPeople.value ? 'people' : 'roles')
+const tab = ref(initialTab)
+watch(tab, v => {
+  const q = { ...route.query }
+  if (v === 'roles') q.tab = 'roles'
+  else delete q.tab
+  router.replace({ query: q })
+})
 
 const search = ref('')
 const options = ref({ page: 1, itemsPerPage: 20, sortBy: [] })
@@ -152,7 +161,7 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
 
         <!-- ═══ RÔLES & AUTORISATIONS (réutilise /company/roles) ═══ -->
         <VWindowItem value="roles">
-          <RolesManager v-if="tab === 'roles' && canRoles" />
+          <RolesManager v-if="tab === 'roles' && canRoles" embedded />
         </VWindowItem>
       </VWindow>
     </VCard>
