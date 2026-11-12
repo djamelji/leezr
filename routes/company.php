@@ -34,6 +34,8 @@ use App\Modules\Core\Documents\Http\DocumentComplianceController;
 use App\Modules\Core\Documents\Http\DocumentSettingController;
 use App\Modules\Core\Documents\Http\DocumentCampaignController;
 use App\Modules\Core\Documents\Http\DocumentRequestController;
+use App\Modules\Core\Documents\Http\PayslipImportController;
+use App\Modules\Core\Documents\Http\PublishedPayslipController;
 use App\Modules\Core\Documents\Http\AiQuotaController;
 use App\Modules\Core\Documents\Http\MemberDocumentAiSuggestionController;
 use App\Modules\Core\Documents\Http\MemberDocumentController;
@@ -379,6 +381,30 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::put('/company/document-campaigns/{id}/cancel', [DocumentCampaignController::class, 'cancel'])
         ->middleware('company.access:use-permission,documents.manage');
 
+    // ADR-762 (DMS M5): import de bulletins externes — permissions DISTINCTES par action.
+    Route::post('/company/payslip-imports', [PayslipImportController::class, 'store'])
+        ->middleware('company.access:use-permission,payslips.import');
+    Route::get('/company/payslip-imports', [PayslipImportController::class, 'index'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::get('/company/payslip-imports/{id}', [PayslipImportController::class, 'show'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::get('/company/payslip-imports/{id}/items', [PayslipImportController::class, 'items'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::get('/company/payslip-imports/{id}/items/{itemId}/preview', [PayslipImportController::class, 'previewItem'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::put('/company/payslip-imports/{id}/items/{itemId}/assign', [PayslipImportController::class, 'assign'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::put('/company/payslip-imports/{id}/items/{itemId}/exclude', [PayslipImportController::class, 'exclude'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::post('/company/payslip-imports/{id}/publish', [PayslipImportController::class, 'publish'])
+        ->middleware('company.access:use-permission,payslips.publish');
+
+    // Bulletins PUBLIÉS — fiche Collaborateur (policy payroll à l'intérieur) + self-service.
+    Route::get('/company/people/{personRef}/payslips', [PublishedPayslipController::class, 'person'])
+        ->middleware('company.access:use-permission,documents.view');
+    Route::get('/company/people/{personRef}/payslips/{id}/download', [PublishedPayslipController::class, 'downloadPerson'])
+        ->middleware('company.access:use-permission,documents.view');
+
     // Self-document upload (ADR-173, no additional permission — self scope)
     Route::get('/profile/documents', [SelfDocumentController::class, 'index']);
     Route::post('/profile/documents/{code}', [SelfDocumentController::class, 'upload']);
@@ -386,6 +412,9 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     // ADR-760 (M3): historique des versions de ses propres documents
     Route::get('/profile/documents/{code}/versions', [SelfDocumentController::class, 'versions']);
     Route::get('/profile/documents/{code}/versions/{versionId}/download', [SelfDocumentController::class, 'downloadVersion']);
+    // ADR-762 (M5): mes bulletins (self-service — chaque salarié ne voit QUE les siens)
+    Route::get('/profile/payslips', [PublishedPayslipController::class, 'self']);
+    Route::get('/profile/payslips/{id}/download', [PublishedPayslipController::class, 'downloadSelf']);
 });
 
 // ─── Modules management (module-gated) ───────────────────

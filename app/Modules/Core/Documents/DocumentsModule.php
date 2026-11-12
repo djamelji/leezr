@@ -28,6 +28,11 @@ class DocumentsModule implements ModuleDefinition
                 ['key' => 'documents.view_confidential', 'label' => 'View Confidential Documents', 'is_admin' => true, 'hint' => "Access other people's highly-confidential documents (payslips, ID, bank details, judicial records). documents.view alone never grants this."],
                 ['key' => 'documents.manage', 'label' => 'Manage Documents', 'is_admin' => true, 'hint' => 'Upload, review, request, delete and upload documents on behalf of members. Preview documents before approval.'],
                 ['key' => 'documents.configure', 'label' => 'Configure Documents', 'is_admin' => true, 'hint' => 'Create, edit and archive document types. Configure activation, ordering, automation settings and expiration rules.'],
+                // ADR-762 (M5): import de bulletins externes — droits DISTINCTS (jamais déduits de documents.manage ni de workforce.compensation_read).
+                ['key' => 'payslips.import', 'label' => 'Import Payslips', 'is_admin' => true, 'hint' => 'Import external payslip batches and run recognition/matching.'],
+                ['key' => 'payslips.review', 'label' => 'Review Payslip Matches', 'is_admin' => true, 'hint' => 'Preview, correct matches, assign to an employee, exclude a document.'],
+                ['key' => 'payslips.publish', 'label' => 'Publish Payslips', 'is_admin' => true, 'hint' => 'Validate a batch and publish payslips to employee folders. Revoke a publication.'],
+                ['key' => 'payslips.download', 'label' => 'Download Payslips', 'is_admin' => true, 'hint' => 'Download individual payslips (others). Never granted by documents.view alone.'],
             ],
             bundles: [
                 [
@@ -41,6 +46,13 @@ class DocumentsModule implements ModuleDefinition
                     'label' => 'Document Management',
                     'hint' => 'Upload, review, preview, upload on behalf of members. Access confidential pieces. Create, edit and archive document types. Configure activation, ordering and automation.',
                     'permissions' => ['documents.manage', 'documents.view_confidential', 'documents.configure'],
+                    'is_admin' => true,
+                ],
+                [
+                    'key' => 'payslips.distribution',
+                    'label' => 'Payslip Distribution',
+                    'hint' => 'Import, review, publish and download external payslips (independent of the payroll generation engine).',
+                    'permissions' => ['payslips.import', 'payslips.review', 'payslips.publish', 'payslips.download'],
                     'is_admin' => true,
                 ],
             ],

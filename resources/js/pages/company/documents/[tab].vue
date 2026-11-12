@@ -4,6 +4,7 @@ definePage({ meta: { module: 'core.documents', surface: 'structure', permission:
 import DocumentsOverview from './_DocumentsOverview.vue'
 import DocumentsRequests from './_DocumentsRequests.vue'
 import DocumentsCampaigns from './_DocumentsCampaigns.vue'
+import DocumentsPayslipImport from './_DocumentsPayslipImport.vue'
 import DocumentsCompliance from './_DocumentsCompliance.vue'
 import DocumentsVault from './_DocumentsVault.vue'
 import DocumentsSettings from './_DocumentsSettings.vue'
@@ -27,6 +28,7 @@ const tabPermissions = {
   overview: null,
   requests: 'documents.manage',
   campaigns: 'documents.manage',
+  payslips: 'payslips.review',
   compliance: null,
   vault: null,
   settings: 'documents.configure',
@@ -48,6 +50,11 @@ const allTabs = computed(() => [
     title: t('documents.campaign.tab'),
     icon: 'tabler-send',
     tab: 'campaigns',
+  },
+  {
+    title: t('documents.payslip.tab'),
+    icon: 'tabler-cash',
+    tab: 'payslips',
   },
   {
     title: t('companyDocuments.tabs.compliance'),
@@ -181,6 +188,10 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
 
       <VWindowItem value="campaigns">
         <DocumentsCampaigns />
+      </VWindowItem>
+
+      <VWindowItem value="payslips">
+        <DocumentsPayslipImport />
       </VWindowItem>
 
       <VWindowItem value="compliance">

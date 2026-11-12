@@ -27308,3 +27308,32 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M5** : (1) ciblage **site/établissement** non supporté (pas de lien Employee→WorkLocation ; nécessite une colonne/relation) ; (2) campagnes **récurrentes/dynamiques** non implémentées (ponctuelles figées seulement) ; (3) centre de conformité sans filtres **département/site** ni vue **par collaborateur** (états affichés) ; (4) vue conformité **scopée manager** = résiduel (l'accès est gouverné, l'agrégat reste company) ; (5) export des états de campagne non implémenté ; (6) relance **ciblée** depuis le suivi (API prête, UI à finaliser). **Import bulletins = M5.**
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M5–M7 non démarrés**.
+
+## ADR-762 — DMS M5 : import, reconnaissance et distribution des bulletins externes
+
+**Date** : 2026-11-12
+**Contexte** : M4 (ADR-761, `36f326e`) validée. M5 construit une capacité DMS AUTONOME d'import/reconnaissance/rapprochement/distribution des bulletins externes, **indépendante du moteur de génération de paie** (non modifié). **Exigence absolue prouvée : aucun bulletin publié dans le dossier du mauvais salarié.**
+
+**1. Frontières** — capacité B (import/distribution bulletins) séparée de A (coffre) et C (génération paie `workforce_payroll`). Aucune modification du moteur de paie ni de Billing. Permissions DISTINCTES (cf. §10).
+
+**2. Sécurité d'ingestion** — `PayslipBatchValidator` (avant tout traitement) : signature RÉELLE (magic bytes, pas l'extension), tailles, nombre de fichiers, ZIP (nombre d'entrées, taille décompressée anti **zip bomb**, chemins **traversal**, entrées **chiffrées**), PDF seulement sinon rejet. Aucun contenu exécuté ; stockage privé.
+
+**3–4. Ingestion + découpage** — `PayslipIngestor` : extraction ZIP, **découpage d'un PDF multipage** en segments (une page = un bulletin par défaut via **Fpdi**), extraction de texte best-effort (OCR réutilisé). Une frontière ambiguë → revue (défaut SÛR). Async `IngestPayslipBatchJob` (uniqueId).
+
+**5–6. Extraction + matching + moteur de confiance** — `PayslipImportService::extractIdentifiers` (matricule/période/nom, données minimisées) + `PayslipMatcher` : **déterministe d'abord** (matricule exact unique → `certain`), sinon nom EXACT normalisé (unique → `probable`, homonymes → `ambiguous`), sinon `none`. Le matricule est unique par société (contrainte DB) → jamais de repli sur un autre salarié. **Un nom ou un score IA ne publie JAMAIS** : seuls les items `matched` (certain OU affecté manuellement) sont publiables.
+
+**7. Centre de revue** — espace « Import de bulletins » (onglet Documents, `payslips.review`) : lots, compteurs (certains/à vérifier/non identifiés/publiés), items (page, matricule, période, rapproché, confiance, état), affectation manuelle, exclusion, aperçu gaté, publication. `PayslipReviewReadModel` n'expose QUE des métadonnées de rapprochement (jamais de données salariales). Pagination serveur.
+
+**8. Publication SÛRE** — `publishBatch`/`publishItem` : re-contrôle du sujet AU MOMENT de la publication ; **transactionnel**, **idempotent** (même sha+période → pas de doublon), **rectificatif** = nouvelle version (ancienne CONSERVÉE `superseded_at`, jamais écrasée) ; **échec partiel isolé** (le lot n'est `published` que si TOUS les items sont résolus) ; verrouillé ; journalisé. Table dédiée `published_payslips` (série par sujet/période, classé `payroll` → jamais exposé via `documents.view` générique).
+
+**9. Rectificatifs/réimports** — même fichier → idempotent ; même salarié+période, contenu différent → rectificatif versionné ; aucun bulletin publié n'est écrasé ni supprimé silencieusement ; traçabilité du lot d'origine (`source_item_id`).
+
+**10. RBAC & confidentialité** — permissions DISTINCTES **non déduites** de `documents.manage`/`workforce.compensation_read` : `payslips.import` / `payslips.review` / `payslips.publish` / `payslips.download` (bundle `payslips.distribution`). Contrôles serveur par route. `DocumentAccessPolicy` (catégorie payroll) étendue à `payslips.download` → un gestionnaire documentaire général ne lit pas les salaires sans droit paie explicite ; chacun accède aux SIENS. Isolation tenant stricte prouvée.
+
+**12. Interface collaborateur** — bulletins publiés consultables par sujet (fiche `/company/people/{ref}/payslips`) et self-service (`/profile/payslips`, **chacun ne voit QUE les siens**), groupés par année/période, provenance (externe/généré), download gaté par la policy.
+
+**Tests** : `DmsM5PayslipTest` **14/14** — matricule exact → certain/publiable ; nom seul → probable/non publiable ; homonymes → ambigu ; matricule inconnu → none ; **BULLETIN JAMAIS PUBLIÉ AU MAUVAIS SALARIÉ** (seul le certain est publié) ; affectation manuelle → publiable ; account-less ; réimport idempotent ; rectificatif versionné ; publication partielle non silencieuse ; sécurité (rejet non-PDF/ZIP) ; isolation tenant ; self-service ne voit que les siens. Régression **532 verts** (documents+people+RBAC+payslip). **Build clean.** Captures Playwright : centre d'import + **revue** (certain/probable/aucun), light/dark/mobile.
+
+**Défauts résiduels / conditions M6** : (1) extraction OCR d'un PDF réel = best-effort (sans couche texte fiable, les items vont en revue — défaut sûr) ; (2) **entitlement/quotas** dédiés (fichiers/pages/OCR/IA) = les permissions font office de gate M5, intégration quotas = M6 ; (3) UI dédiée « Mes bulletins » self-service (endpoints livrés/testés, section à finaliser) ; (4) correction fine du découpage (frontières multipages) + classification IA des pages = avancé ; (5) révocation d'une publication (retrait contrôlé) = API/colonne prêtes, parcours UI à finaliser.
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M6–M7 non démarrés**.

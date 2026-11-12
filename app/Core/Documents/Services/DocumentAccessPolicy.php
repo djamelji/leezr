@@ -73,10 +73,11 @@ class DocumentAccessPolicy
             || $this->managesSubject($actor, $company, $subject);
     }
 
-    /** Bulletins (paie) : domaine rémunération/paie, PAS `documents.view_confidential`. */
+    /** Bulletins (paie) : domaine rémunération/paie OU droit dédié de téléchargement de bulletins. */
     private function canAccessPayroll(User $actor, Company $company): bool
     {
-        return $actor->hasCompanyPermission($company, 'workforce.compensation_read')
+        return $actor->hasCompanyPermission($company, 'payslips.download')
+            || $actor->hasCompanyPermission($company, 'workforce.compensation_read')
             || $actor->hasCompanyPermission($company, 'workforce.payroll_validate')
             || $actor->hasCompanyPermission($company, 'workforce.payroll_prepare');
     }
