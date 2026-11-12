@@ -3,6 +3,7 @@ definePage({ meta: { module: 'core.documents', surface: 'structure', permission:
 
 import DocumentsOverview from './_DocumentsOverview.vue'
 import DocumentsRequests from './_DocumentsRequests.vue'
+import DocumentsCampaigns from './_DocumentsCampaigns.vue'
 import DocumentsCompliance from './_DocumentsCompliance.vue'
 import DocumentsVault from './_DocumentsVault.vue'
 import DocumentsSettings from './_DocumentsSettings.vue'
@@ -25,6 +26,7 @@ const activeTab = computed({
 const tabPermissions = {
   overview: null,
   requests: 'documents.manage',
+  campaigns: 'documents.manage',
   compliance: null,
   vault: null,
   settings: 'documents.configure',
@@ -41,6 +43,11 @@ const allTabs = computed(() => [
     icon: 'tabler-file-text',
     tab: 'requests',
     badge: store.submittedRequestsCount || null,
+  },
+  {
+    title: t('documents.campaign.tab'),
+    icon: 'tabler-send',
+    tab: 'campaigns',
   },
   {
     title: t('companyDocuments.tabs.compliance'),
@@ -170,6 +177,10 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
 
       <VWindowItem value="requests">
         <DocumentsRequests />
+      </VWindowItem>
+
+      <VWindowItem value="campaigns">
+        <DocumentsCampaigns />
       </VWindowItem>
 
       <VWindowItem value="compliance">

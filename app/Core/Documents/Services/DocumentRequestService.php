@@ -177,7 +177,7 @@ class DocumentRequestService
     }
 
     /** Annule la demande (conserve l'historique). */
-    public function cancel(DocumentRequest $request, User $actor, ?string $note = null): DocumentRequest
+    public function cancel(DocumentRequest $request, ?User $actor = null, ?string $note = null): DocumentRequest
     {
         $this->assertTransition($request, DocumentRequest::STATUS_CANCELLED);
         $request->update(['status' => DocumentRequest::STATUS_CANCELLED]);

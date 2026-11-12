@@ -27283,3 +27283,28 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M4** : (1) centre de conformité sans filtres **département/site** ni vue **par collaborateur** (états workflow affichés) ; (2) vue de suivi conformité **scopée équipe** pour un manager (l'accès est déjà gouverné, la vue agrégée reste company) ; (3) agrégat de conformité toujours **membership-driven** (employés sans compte non comptés dans le taux global) ; (4) pas de concept de **durée de validité** calculée (expires_at explicite) — à ajouter si besoin métier ; (5) relances d'expiration ancrées sur une demande (docs optionnels expirés sans demande non relancés). **Campagnes collectives = M4.**
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, **config cron/scheduler/workers inchangée**, **M4–M7 non démarrés**.
+
+## ADR-761 — DMS M4 : campagnes documentaires collectives + agrégat de conformité corrigé
+
+**Date** : 2026-11-12
+**Contexte** : M3 (ADR-760, `61beb97`) validée. M4 construit les campagnes collectives ET corrige le défaut structurel P0 de l'agrégat de conformité. Pas d'import bulletins (M5).
+
+**1. P0 — agrégat de conformité SUBJECT-DRIVEN** — `DocumentComplianceReadModel` ne compte plus la population via les seuls Memberships. Nouveau `PersonPopulationResolver` : population DÉDUPLIQUÉE = Employees (avec ou sans compte, sujet canonique `user:{id}` si lié sinon `employee:{id}`) ∪ Users sans Employee. Garanties : une personne comptée **une fois**, **aucun doublon Employee+User relié**, **Employees sans compte COMPTÉS**, terminés exclus par défaut, dénominateur correct, agrégat tenant-scopé. Lookups docs/demandes par sujet (fallback user_id pour le legacy). *(Testé : les account-less comptent dans le dénominateur.)*
+
+**2–4. Modèle de campagne + ciblage + snapshot** — tables additives `document_campaigns` + `document_campaign_recipients` (SNAPSHOT figé, unicité sujet = anti-doublon). `DocumentCampaign` porte type/initiateur/company/ciblage/échéance/validation/politique de relance/statut/total. **Chaque destinataire conserve une DEMANDE INDIVIDUELLE réelle** (réutilise `DocumentRequestService`). `CampaignTargetingResolver` : modes all / department / employees / persons / single, **dédupliqués** via la population ; Employees sans compte éligibles. **Population FIGÉE au lancement** (pas d'ajout automatique ultérieur). *(Site = résiduel : pas de lien Employee→établissement.)*
+
+**5–6. Exécution FIABLE** — `DocumentCampaignService::launch` : **par chunks**, **idempotent** (une demande active existante est liée, pas recréée), **verrouillé** (lock cache par campagne, pas de concurrence), **reprenable** (destinataires pending/failed), **erreurs partielles** isolées (état `failed` + message). La campagne n'est `active` que si **TOUS** les destinataires ont une demande (sinon reste `launching`, relançable). Lancement ASYNCHRONE via `LaunchDocumentCampaignJob` (`uniqueId`, retries sûrs). Annulation contrôlée (annule les demandes `requested`).
+
+**7. Suivi de campagne** — `DocumentCampaignTrackingReadModel` : **partition mutuellement exclusive** (pending/received/validated/rejected) + **dimensions complémentaires** clairement identifiées (overdue/expired/account_less) + progression. Liste des destinataires **paginée serveur** (ne charge pas toutes les pièces). UI : onglet « Campagnes » (création + prévisualisation réelle dédupliquée + suivi).
+
+**8. Relances & expirations** — réutilise l'orchestrateur M3 (pas de second moteur) : les demandes de campagne sont relancées par les tiers configurables ; une campagne peut viser un document manquant/expiré/à renouveler.
+
+**9–10. Conformité & RBAC** — conformité corrigée (P0) intègre les account-less ; onglet conformité montre les états workflow. Campagnes gated `documents.manage` (le **pilotage n'implique PAS** le droit de télécharger les pièces — l'accès fichier reste gouverné par `DocumentAccessPolicy` par document). Séparation visibilité obligation / métadonnées / fichier / validation / administration campagne. Isolation tenant prouvée.
+
+**11. Parcours employé** — un collaborateur avec compte retrouve les demandes de campagne dans « Mes documents » (même moteur M2) ; un Employee sans compte conserve sa demande (consultable/gérable par la Company, **aucun User artificiel**).
+
+**Tests** : `DmsM4CampaignTest` **10/10** (ciblage all dédupliqué + account-less comptés ; ciblage département ; snapshot + demandes individuelles ; account-less sans user_id ; lancement idempotent/reprenable ; **population 250** chunkée ; annulation ; HTTP create+track ; isolation tenant ; **P0 conformité compte les account-less**). Régression **491 verts**. **Build clean.** Captures Playwright : onglet campagnes + **suivi** (67 destinataires, dont **35 sans compte**), création, light/dark/mobile.
+
+**Défauts résiduels / conditions M5** : (1) ciblage **site/établissement** non supporté (pas de lien Employee→WorkLocation ; nécessite une colonne/relation) ; (2) campagnes **récurrentes/dynamiques** non implémentées (ponctuelles figées seulement) ; (3) centre de conformité sans filtres **département/site** ni vue **par collaborateur** (états affichés) ; (4) vue conformité **scopée manager** = résiduel (l'accès est gouverné, l'agrégat reste company) ; (5) export des états de campagne non implémenté ; (6) relance **ciblée** depuis le suivi (API prête, UI à finaliser). **Import bulletins = M5.**
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M5–M7 non démarrés**.

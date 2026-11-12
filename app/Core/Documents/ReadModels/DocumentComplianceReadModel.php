@@ -101,39 +101,46 @@ class DocumentComplianceReadModel
             $allSlots[] = self::slot($typeId, $type, DocumentType::SCOPE_COMPANY, null, null, null, $state);
         }
 
-        // ── User-scope slots ──
-        $memberships = Membership::where('company_id', $companyId)
-            ->with('companyRole')
-            ->get();
+        // ── User-scope slots : population DÉDUPLIQUÉE par SUJET (ADR-761 P0) ──
+        // Compte les Employees (avec OU sans compte) + les Users sans Employee, une seule fois.
+        $population = \App\Core\Documents\Services\PersonPopulationResolver::forCompany($company);
 
-        if ($memberships->isNotEmpty() && $userTypeIds->isNotEmpty()) {
-            $memberDocs = MemberDocument::where('company_id', $companyId)
+        if ($population->isNotEmpty() && $userTypeIds->isNotEmpty()) {
+            // Uploads + demandes indexés par SUJET (couvre user ET employee ; fallback user_id
+            // pour les lignes legacy sans colonnes sujet).
+            $subjectKey = function ($row) {
+                $st = $row->document_subject_type ?: ($row->user_id ? 'user' : null);
+                $sid = $row->document_subject_id ?: $row->user_id;
+
+                return $st.':'.$sid.':'.$row->document_type_id;
+            };
+            $docsBySubject = MemberDocument::where('company_id', $companyId)
                 ->whereIn('document_type_id', $userTypeIds)
                 ->get()
-                ->groupBy('user_id');
+                ->keyBy($subjectKey);
 
-            // Statut de demande par (user_id, type_id) pour la dimension Validation.
-            $requests = DocumentRequest::where('company_id', $companyId)
+            $requestsBySubject = DocumentRequest::where('company_id', $companyId)
                 ->whereIn('document_type_id', $userTypeIds)
                 ->get()
-                ->keyBy(fn ($r) => $r->user_id.':'.$r->document_type_id);
+                ->keyBy($subjectKey);
 
-            foreach ($memberships as $membership) {
-                $roleKey = $membership->companyRole?->key;
-                $roleName = $membership->companyRole?->name;
-                $userDocsByType = ($memberDocs->get($membership->user_id) ?? collect())
-                    ->keyBy('document_type_id');
+            foreach ($population as $person) {
+                /** @var \App\Core\Documents\DocumentSubject $subject */
+                $subject = $person['subject'];
 
                 foreach ($userTypeIds as $typeId) {
                     $type = $types->get($typeId);
-                    $doc = $userDocsByType->get($typeId);
-                    $requestStatus = $requests->get($membership->user_id.':'.$typeId)?->status;
+                    $k = $subject->type.':'.$subject->id.':'.$typeId;
+                    $doc = $docsBySubject->get($k);
+                    $requestStatus = $requestsBySubject->get($k)?->status;
                     $state = State::evaluate($doc, $requestStatus);
 
-                    $allSlots[] = self::slot(
-                        $typeId, $type, DocumentType::SCOPE_COMPANY_USER,
-                        $roleKey, $roleName, $membership->user_id, $state,
-                    );
+                    $slot = self::slot($typeId, $type, DocumentType::SCOPE_COMPANY_USER, $person['role_key'], $person['role_name'], $person['user_id'], $state);
+                    $slot['subject'] = (string) $subject;
+                    $slot['employee_id'] = $person['employee_id'];
+                    $slot['department_id'] = $person['department_id'];
+                    $slot['account_less'] = $person['account_less'];
+                    $allSlots[] = $slot;
                 }
             }
         }

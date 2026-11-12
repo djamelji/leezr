@@ -32,6 +32,7 @@ use App\Modules\Core\Documents\Http\CompanyDocumentController;
 use App\Modules\Core\Documents\Http\CustomDocumentTypeController;
 use App\Modules\Core\Documents\Http\DocumentComplianceController;
 use App\Modules\Core\Documents\Http\DocumentSettingController;
+use App\Modules\Core\Documents\Http\DocumentCampaignController;
 use App\Modules\Core\Documents\Http\DocumentRequestController;
 use App\Modules\Core\Documents\Http\AiQuotaController;
 use App\Modules\Core\Documents\Http\MemberDocumentAiSuggestionController;
@@ -360,6 +361,22 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::put('/company/document-requests/{id}/remind', [DocumentRequestController::class, 'remind'])
         ->middleware('company.access:use-permission,documents.manage');
     Route::post('/company/document-requests/bulk-action', [DocumentRequestController::class, 'bulkAction'])
+        ->middleware('company.access:use-permission,documents.manage');
+
+    // ADR-761 (DMS M4): campagnes documentaires collectives (pilotage = documents.manage)
+    Route::get('/company/document-campaigns', [DocumentCampaignController::class, 'index'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::post('/company/document-campaigns/preview', [DocumentCampaignController::class, 'preview'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::post('/company/document-campaigns', [DocumentCampaignController::class, 'store'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::get('/company/document-campaigns/{id}', [DocumentCampaignController::class, 'show'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::get('/company/document-campaigns/{id}/recipients', [DocumentCampaignController::class, 'recipients'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::post('/company/document-campaigns/{id}/launch', [DocumentCampaignController::class, 'launch'])
+        ->middleware('company.access:use-permission,documents.manage');
+    Route::put('/company/document-campaigns/{id}/cancel', [DocumentCampaignController::class, 'cancel'])
         ->middleware('company.access:use-permission,documents.manage');
 
     // Self-document upload (ADR-173, no additional permission — self scope)
