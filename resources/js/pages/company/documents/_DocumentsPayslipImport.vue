@@ -59,6 +59,24 @@ const publish = async () => {
   finally { publishing.value = false }
 }
 
+// ADR-764 (M5.2) — éditeur de revue : exclure un segment, affecter un candidat.
+const reload = async () => {
+  summary.value = await $api(`/company/payslip-imports/${activeBatch.value.id}`)
+  items.value = (await $api(`/company/payslip-imports/${activeBatch.value.id}/items`)).items || []
+}
+
+const excludeItem = async it => {
+  try { await $api(`/company/payslip-imports/${activeBatch.value.id}/items/${it.id}/exclude`, { method: 'PUT' }); await reload() }
+  catch { toast(t('common.error'), 'error') }
+}
+
+const assignCandidate = async (it, candidateId) => {
+  try { await $api(`/company/payslip-imports/${activeBatch.value.id}/items/${it.id}/assign`, { method: 'PUT', body: { employee_id: candidateId } }); await reload() }
+  catch { toast(t('common.error'), 'error') }
+}
+
+const reasonLabel = r => (r ? t(`documents.payslip.reason.${r}`) : '')
+
 const confidenceColor = c => ({ certain: 'success', probable: 'warning', ambiguous: 'error', none: 'secondary' }[c] || 'secondary')
 const stateColor = s => ({ matched: 'success', published: 'success', review: 'warning', excluded: 'secondary', failed: 'error', pending: 'info' }[s] || 'secondary')
 
@@ -195,6 +213,7 @@ onMounted(fetchBatches)
                 <th>{{ t('documents.payslip.matched') }}</th>
                 <th>{{ t('documents.payslip.confidence') }}</th>
                 <th>{{ t('documents.payslip.statusCol') }}</th>
+                <th>{{ t('documents.payslip.actions') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -213,6 +232,13 @@ onMounted(fetchBatches)
                   >
                     {{ t(`documents.payslip.conf.${it.confidence}`) }}
                   </VChip>
+                  <!-- ADR-764 (M5.2) : explication de l'incertitude -->
+                  <div
+                    v-if="it.review_reason"
+                    class="text-caption text-medium-emphasis mt-1"
+                  >
+                    {{ reasonLabel(it.review_reason) }}
+                  </div>
                 </td>
                 <td>
                   <VChip
@@ -221,6 +247,31 @@ onMounted(fetchBatches)
                   >
                     {{ t(`documents.payslip.itemState.${it.state}`) }}
                   </VChip>
+                </td>
+                <td>
+                  <div
+                    v-if="it.state === 'review'"
+                    class="d-flex align-center gap-1 flex-wrap"
+                  >
+                    <!-- Affectation d'un candidat (ambigu/probable) -->
+                    <VBtn
+                      v-for="c in it.candidates"
+                      :key="c.id"
+                      size="x-small"
+                      variant="tonal"
+                      color="success"
+                      @click="assignCandidate(it, c.id)"
+                    >
+                      {{ c.name }}
+                    </VBtn>
+                    <VBtn
+                      size="x-small"
+                      variant="text"
+                      color="error"
+                      icon="tabler-x"
+                      @click="excludeItem(it)"
+                    />
+                  </div>
                 </td>
               </tr>
             </tbody>

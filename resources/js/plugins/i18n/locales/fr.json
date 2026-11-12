@@ -5245,6 +5245,15 @@
       "matched": "Rapproché",
       "confidence": "Confiance",
       "statusCol": "État",
+      "actions": "Actions",
+      "reason": {
+        "no_matricule_page": "Contient une page sans matricule — composition incertaine.",
+        "isolated_page": "Page isolée sans identifiant.",
+        "ambiguous_match": "Plusieurs salariés correspondent.",
+        "no_match": "Aucun salarié correspondant.",
+        "name_only": "Correspondance par nom seul — confirmez le destinataire.",
+        "uncertain": "Composition à confirmer."
+      },
       "myPayslips": "Mes bulletins",
       "period": "Période",
       "source": "Provenance",

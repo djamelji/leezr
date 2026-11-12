@@ -27364,3 +27364,30 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M6** : (1) OCR réel des scans = best-effort (automatisation IA/OCR robuste = M6) ; (2) classification IA fine des pages (annexe vs récapitulatif vs non-salarial) heuristique ; (3) quotas = limites par lot + compteurs (plans/entitlement commercial = M6, hors Billing) ; (4) UI éditeur (regroup/split) = API livrée/testée, surface graphique avancée à enrichir ; (5) notification de révocation au salarié = à finaliser.
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M6–M7 non démarrés**.
+
+## ADR-764 — DMS M5.2 : finalisation de l'import de bulletins (segmentation sûre, éditeur, quotas)
+
+**Date** : 2026-11-12
+**Contexte** : M5.1 (ADR-763, `047acc1`) acceptée. M5.2 finalise le produit d'import/distribution avant M6 — corrections ciblées, sans nouvelle architecture.
+
+**1. Risque des pages sans matricule CORRIGÉ (P0)** — la continuité physique n'est plus une preuve de rattachement. `PayslipSegmenter` exige une PREUVE concordante : une page sans matricule n'est rattachée de façon FIABLE que si sa **numérotation continue** celle du bulletin ("k/n" → "k+1/n"). Sinon elle est rattachée MAIS le segment passe en **REVUE** (`review_reason='no_matricule_page'`, composition incertaine) — jamais publié automatiquement, même si le matricule est certain. Une première page sans matricule → **quarantaine isolée**. Migration additive : `payslip_import_pages.page_index/page_total`, `payslip_import_items.review_reason`. **Prouvé : une page étrangère (autre matricule) n'est jamais fusionnée dans un autre bulletin ; une page sans matricule insérée au milieu force la revue.**
+
+**2. Éditeur de revue** — l'UI du centre d'import affiche désormais l'**explication de l'incertitude** par segment + les actions (affecter un candidat, exclure) câblées aux API M5.1 (regroup/split/exclude/assign/period/confirm). Toute modification invalide les confirmations et reconstitue le PDF. *(Miniatures de pages = résiduel : la liste de pages + raisons est livrée ; le rendu image nécessite une rastérisation.)*
+
+**3. OCR/classification** — extraction déterministe d'abord (matricule/période/**numérotation**), OCR réutilisé (`DocumentProcessingPipeline`), IA jamais seule pour publier ; résultats incertains → revue. Rôles de page (body/annex/summary/unknown) posés.
+
+**4. Recette de bout en bout** — `DmsM52PayslipTest` vérifie le **contenu des PDF reconstitués** (nombre de pages via Fpdi) : page étrangère jamais mélangée ; page sans matricule → revue ; continuité par numérotation → fiable ; **comptabilité des pages** (aucune perdue, aucune en double, chaque page dans exactement un segment) ; 10 salariés à pages variables ; quota fichiers ; notification de retrait.
+
+**5. Expérience collaborateur** — « Mes bulletins » finalisé (M5.1) ; **notification de retrait** émise vers le salarié lié lors d'une révocation (+ audit `payslip.revoked`). Continuité Employee sans compte → avec compte préservée (sujet canonique).
+
+**6. Quotas EFFECTIFS** — limite **fichiers par lot** appliquée au `createBatch` (refus `ValidationException`) ; limite **pages par lot** appliquée à l'ingestion (lot `failed` si dépassé, aucun traitement) ; compteurs `payslip_quota_usage`. Les quotas BLOQUENT réellement. Indépendant de `workforce_payroll`, aucun changement Billing.
+
+**7. Sécurité** — inchangée + renforcée : un segment à composition incertaine n'est jamais publiable ; révocation bloque toutes versions (410) ; permissions distinctes `payslips.*` ; isolation tenant.
+
+**Tests** : `DmsM52PayslipTest` **7/7** (non-mélange matricule étranger ; page blanche étrangère → revue ; preuve de numérotation → fiable ; comptabilité pages ; 10 salariés ; quota fichiers effectif ; notification+audit de retrait). `DmsM51` 6/6 + `DmsM5` 14/14 maintenus. Régression **696 verts**. **Build clean.** Captures Playwright : **éditeur de revue** (incertitude expliquée « page sans matricule », candidats à affecter, exclusion), light/dark/mobile.
+
+**Verdict GO/NO-GO** : **🟢 GO DEV** — la **segmentation est désormais sûre** (aucun mélange entre salariés prouvé : page étrangère jamais fusionnée, composition incertaine systématiquement en revue), l'éditeur et les quotas sont fonctionnels, le contenu des PDF reconstitués est vérifié. **Condition GO PROD (M6)** : reconnaissance **OCR/IA robuste des scans image réels** (en l'absence de couche texte, les pages tombent en revue — sûr mais non automatisé) ; **miniatures** de l'éditeur visuel.
+
+**Défauts résiduels / conditions M6** : (1) OCR des scans image réels = best-effort (automatisation IA/OCR robuste = M6) ; (2) miniatures de l'éditeur (rastérisation des pages) ; (3) affectation d'un employé hors candidats (recherche employé dans l'éditeur) = API `assign` prête, picker complet à ajouter ; (4) notification de retrait soumise au gate `documents.manage` du dispatcher pour certains profils (canal self à affiner).
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M6–M7 non démarrés**.

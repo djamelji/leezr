@@ -45,7 +45,25 @@ class PayslipIngestor
             }
         }
 
-        // 2. Lit les pages (identifiants par page).
+        // 2. QUOTA EFFECTIF : nombre total de pages du lot plafonné (bloque le traitement si dépassé).
+        $totalPages = 0;
+        foreach ($sources as $relPath) {
+            try {
+                $totalPages += (new Fpdi())->setSourceFile(Storage::disk('local')->path($relPath));
+            } catch (\Throwable) {
+            }
+        }
+        if ($totalPages > PayslipQuotaUsage::MAX_PAGES_PER_BATCH) {
+            $batch->update([
+                'status' => PayslipImportBatch::STATUS_FAILED,
+                'errors' => [['quota' => 'Batch exceeds the page limit ('.PayslipQuotaUsage::MAX_PAGES_PER_BATCH.').', 'pages' => $totalPages]],
+                'processed_at' => now(),
+            ]);
+
+            return $batch->fresh();
+        }
+
+        // 3. Lit les pages (identifiants par page).
         $pages = [];
         $pagesProcessed = 0;
         foreach ($sources as $relPath) {
@@ -59,6 +77,7 @@ class PayslipIngestor
                     $pages[] = [
                         'source_file_path' => $relPath, 'page_no' => $p,
                         'matricule' => $ids['matricule'], 'period' => $ids['period'],
+                        'page_index' => $ids['page_index'] ?? null, 'page_total' => $ids['page_total'] ?? null,
                         'is_blank' => trim($text) === '', 'name' => $ids['name'],
                     ];
                     $pagesProcessed++;

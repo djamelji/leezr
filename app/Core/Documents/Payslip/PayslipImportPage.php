@@ -21,11 +21,13 @@ class PayslipImportPage extends Model
     protected $fillable = [
         'company_id', 'payslip_import_batch_id', 'payslip_import_item_id',
         'source_file_path', 'source_page_no', 'extracted_matricule', 'extracted_period',
-        'is_blank', 'role', 'created_at',
+        'page_index', 'page_total', 'is_blank', 'role', 'created_at',
     ];
 
     protected $casts = [
         'source_page_no' => 'integer',
+        'page_index' => 'integer',
+        'page_total' => 'integer',
         'is_blank' => 'boolean',
         'created_at' => 'datetime',
     ];

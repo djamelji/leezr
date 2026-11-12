@@ -31,7 +31,7 @@ class PayslipImportItem extends Model
         'company_id', 'payslip_import_batch_id', 'file_path', 'source_file_path', 'file_sha256',
         'page_range', 'page_numbers', 'confirmed',
         'extracted_matricule', 'extracted_period', 'extracted_name',
-        'matched_employee_id', 'match_confidence', 'match_candidates', 'state',
+        'matched_employee_id', 'match_confidence', 'match_candidates', 'state', 'review_reason',
         'published_member_document_id', 'error',
     ];
 

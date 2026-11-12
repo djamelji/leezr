@@ -5245,6 +5245,15 @@
       "matched": "Matched",
       "confidence": "Confidence",
       "statusCol": "State",
+      "actions": "Actions",
+      "reason": {
+        "no_matricule_page": "Includes a page without an employee number — uncertain composition.",
+        "isolated_page": "Isolated page with no identifier.",
+        "ambiguous_match": "Several matching employees.",
+        "no_match": "No matching employee.",
+        "name_only": "Name match only — confirm the recipient.",
+        "uncertain": "Composition to be confirmed."
+      },
       "myPayslips": "My payslips",
       "period": "Period",
       "source": "Source",

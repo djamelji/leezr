@@ -56,17 +56,20 @@ class PayslipImportService
                 'source_page_no' => $p['page_no'],
                 'extracted_matricule' => $p['matricule'] ?? null,
                 'extracted_period' => $p['period'] ?? null,
+                'page_index' => $p['page_index'] ?? null,
+                'page_total' => $p['page_total'] ?? null,
                 'is_blank' => (bool) ($p['is_blank'] ?? false),
                 'role' => ($p['matricule'] ?? null) ? PayslipImportPage::ROLE_BODY : PayslipImportPage::ROLE_UNKNOWN,
                 'created_at' => now(),
             ]);
         }
 
-        // 2. Découpe en segments (règles déterministes).
+        // 2. Découpe en segments (règles déterministes + preuve de continuité).
         $segments = $this->segmenter->segment(array_map(fn ($p) => [
             'page_no' => $p['page_no'], 'matricule' => $p['matricule'] ?? null,
             'period' => $p['period'] ?? null, 'is_blank' => (bool) ($p['is_blank'] ?? false),
             'source' => $p['source_file_path'],
+            'page_index' => $p['page_index'] ?? null, 'page_total' => $p['page_total'] ?? null,
         ], $sourcePages));
 
         $names = collect($sourcePages)->keyBy(fn ($p) => $p['source_file_path'].':'.$p['page_no']);
@@ -77,7 +80,15 @@ class PayslipImportService
             $name = $names->get($firstKey)['name'] ?? null;
             $match = $this->matcher->match($batch->company_id, $seg['matricule'], $name);
 
+            // Un segment à composition INCERTAINE (page sans matricule non concordante) n'est jamais
+            // publiable automatiquement, même si le matricule est certain.
             $certain = $match['confidence'] === PayslipImportItem::C_CERTAIN && ! $seg['needs_review'];
+            $reason = $seg['needs_review']
+                ? ($seg['reason'] ?? 'uncertain')
+                : ($match['confidence'] === PayslipImportItem::C_AMBIGUOUS ? 'ambiguous_match'
+                    : ($match['confidence'] === PayslipImportItem::C_NONE ? 'no_match'
+                        : ($match['confidence'] === PayslipImportItem::C_PROBABLE ? 'name_only' : null)));
+
             $item = PayslipImportItem::create([
                 'company_id' => $batch->company_id,
                 'payslip_import_batch_id' => $batch->id,
@@ -90,6 +101,7 @@ class PayslipImportService
                 'match_confidence' => $match['confidence'],
                 'match_candidates' => $match['candidates'],
                 'state' => $certain ? PayslipImportItem::S_MATCHED : PayslipImportItem::S_REVIEW,
+                'review_reason' => $certain ? null : $reason,
                 'confirmed' => $certain,
             ]);
 
@@ -170,7 +182,18 @@ class PayslipImportService
             $name = trim($m[1]);
         }
 
-        return ['matricule' => $matricule, 'period' => $period, 'name' => $name];
+        // Numérotation de page (élément de preuve de continuité) : "2/3" ou "page 2 sur 3".
+        $pageIndex = null;
+        $pageTotal = null;
+        if (preg_match('/\b(\d{1,2})\s*\/\s*(\d{1,2})\b/', $text, $m)) {
+            $pageIndex = (int) $m[1];
+            $pageTotal = (int) $m[2];
+        } elseif (preg_match('/page\s+(\d{1,2})\s+(?:sur|de|\/)\s+(\d{1,2})/iu', $text, $m)) {
+            $pageIndex = (int) $m[1];
+            $pageTotal = (int) $m[2];
+        }
+
+        return ['matricule' => $matricule, 'period' => $period, 'name' => $name, 'page_index' => $pageIndex, 'page_total' => $pageTotal];
     }
 
     /**
@@ -194,6 +217,23 @@ class PayslipImportService
             'severity' => 'warning',
             'metadata' => ['subject' => (string) $payslip->subject(), 'period' => $payslip->period, 'reason' => $reason, 'actor' => $actor->id],
         ]);
+
+        // Notification de retrait au salarié concerné (si un compte est lié).
+        $subject = $payslip->subject();
+        $userId = $subject->is(DocumentSubject::TYPE_USER) ? $subject->id : null;
+        if ($userId === null && $subject->is(DocumentSubject::TYPE_EMPLOYEE)) {
+            $emp = Employee::withoutGlobalScopes()->where('company_id', $payslip->company_id)->find($subject->id);
+            $userId = $emp?->user_id;
+        }
+        if ($userId && ($recipient = User::find($userId))) {
+            NotificationDispatcher::send(
+                topicKey: 'documents.request_cancelled',
+                recipients: [$recipient],
+                payload: ['document_type' => 'Bulletin de paie', 'period' => $payslip->period, 'reason' => $reason, 'link' => '/account-settings/documents'],
+                company: Company::find($payslip->company_id),
+                entityKey: "payslip:{$subject}:{$payslip->period}",
+            );
+        }
     }
 
     /** Affectation manuelle (revue) : re-valide l'appartenance tenant → item publiable. */
