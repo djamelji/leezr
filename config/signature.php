@@ -31,6 +31,25 @@ return [
         'prep_ttl_seconds' => (int) env('SIGNATURE_PREP_TTL', 900),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Prestataire de signature EXTERNE (ADR-765, DMS M6)
+    |--------------------------------------------------------------------------
+    | Branchement d'un prestataire réel (Yousign/DocuSign/etc.) via le contrat d'adapter horizontal.
+    | SÉCURITÉ : `webhook_secret` obligatoire pour une utilisation active (sinon DEV/sandbox seulement,
+    | bloqué en PROD). `certified` ne doit être activé QUE pour un prestataire réellement certifié avec
+    | preuves démontrables — il conditionne l'annonce des niveaux avancé/qualifié. Aucune donnée en dur.
+    */
+    'external' => [
+        'enabled' => (bool) env('SIGNATURE_EXTERNAL_ENABLED', false),
+        'api_base' => env('SIGNATURE_EXTERNAL_API_BASE', ''),
+        'api_key' => env('SIGNATURE_EXTERNAL_API_KEY', ''),
+        'webhook_secret' => env('SIGNATURE_EXTERNAL_WEBHOOK_SECRET', ''),
+        'certified' => (bool) env('SIGNATURE_EXTERNAL_CERTIFIED', false),
+        'levels' => array_filter(explode(',', (string) env('SIGNATURE_EXTERNAL_LEVELS', 'simple'))),
+        'replay_tolerance_seconds' => (int) env('SIGNATURE_EXTERNAL_REPLAY_TOLERANCE', 300),
+    ],
+
     // Chemin absolu optionnel du binaire `pdfsig` (poppler). Si vide, résolution via PATH puis
     // emplacements connus — utile quand le PATH de php-fpm/Valet n'inclut pas Homebrew.
     'pdfsig_path' => env('SIGNATURE_PDFSIG_PATH', ''),

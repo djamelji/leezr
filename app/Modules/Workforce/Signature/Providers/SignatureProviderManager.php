@@ -26,6 +26,12 @@ class SignatureProviderManager extends Manager
         return new InternalSignatureAdapter();
     }
 
+    /** ADR-765 (M6) — prestataire de signature EXTERNE (contrat d'adapter réutilisé). */
+    protected function createExternalDriver(): \App\Modules\Workforce\Signature\Providers\Adapters\ExternalSignatureAdapter
+    {
+        return app(\App\Modules\Workforce\Signature\Providers\Adapters\ExternalSignatureAdapter::class);
+    }
+
     /** Résout un adaptateur par clé, en appliquant la garde PROD (DEV-only bloqué en production). */
     public static function adapterFor(?string $providerKey): ?SignatureProviderAdapter
     {
@@ -57,7 +63,7 @@ class SignatureProviderManager extends Manager
     public static function availableProviderKeys(): array
     {
         $manager = app(self::class);
-        $keys = [InternalSignatureAdapter::KEY];
+        $keys = [InternalSignatureAdapter::KEY, \App\Modules\Workforce\Signature\Providers\Adapters\ExternalSignatureAdapter::KEY];
 
         return array_values(array_filter($keys, function (string $key) use ($manager) {
             $driver = null;
