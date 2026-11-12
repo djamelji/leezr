@@ -28,7 +28,8 @@ class PayslipImportItem extends Model
     public const S_FAILED = 'failed';
 
     protected $fillable = [
-        'company_id', 'payslip_import_batch_id', 'file_path', 'file_sha256', 'page_range',
+        'company_id', 'payslip_import_batch_id', 'file_path', 'source_file_path', 'file_sha256',
+        'page_range', 'page_numbers', 'confirmed',
         'extracted_matricule', 'extracted_period', 'extracted_name',
         'matched_employee_id', 'match_confidence', 'match_candidates', 'state',
         'published_member_document_id', 'error',
@@ -36,8 +37,15 @@ class PayslipImportItem extends Model
 
     protected $casts = [
         'match_candidates' => 'array',
+        'page_numbers' => 'array',
+        'confirmed' => 'boolean',
         'matched_employee_id' => 'integer',
     ];
+
+    public function pages()
+    {
+        return $this->hasMany(PayslipImportPage::class, 'payslip_import_item_id')->orderBy('source_page_no');
+    }
 
     public function batch(): BelongsTo
     {

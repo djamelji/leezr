@@ -32,7 +32,78 @@ class PayslipImportService
         private readonly PayslipMatcher $matcher,
         private readonly DocumentIntegrityService $integrity,
         private readonly AuditLogger $audit,
+        private readonly PayslipSegmenter $segmenter,
+        private readonly PayslipReconstitutor $reconstitutor,
     ) {
+    }
+
+    /**
+     * ADR-763 (M5.1) — construit les SEGMENTS multipages d'un lot à partir des pages source
+     * (matricule/période par page). Regroupe par bulletin, crée un item par segment, reconstitue le
+     * PDF complet (ordre des pages) et rapproche. Une page sans rattachement reste en revue.
+     *
+     * @param  list<array{source_file_path:string,page_no:int,matricule:?string,period:?string,is_blank:bool,name:?string}>  $sourcePages
+     * @return list<PayslipImportItem>
+     */
+    public function buildSegments(PayslipImportBatch $batch, array $sourcePages): array
+    {
+        // 1. Persiste la représentation des pages.
+        foreach ($sourcePages as $p) {
+            PayslipImportPage::create([
+                'company_id' => $batch->company_id,
+                'payslip_import_batch_id' => $batch->id,
+                'source_file_path' => $p['source_file_path'],
+                'source_page_no' => $p['page_no'],
+                'extracted_matricule' => $p['matricule'] ?? null,
+                'extracted_period' => $p['period'] ?? null,
+                'is_blank' => (bool) ($p['is_blank'] ?? false),
+                'role' => ($p['matricule'] ?? null) ? PayslipImportPage::ROLE_BODY : PayslipImportPage::ROLE_UNKNOWN,
+                'created_at' => now(),
+            ]);
+        }
+
+        // 2. Découpe en segments (règles déterministes).
+        $segments = $this->segmenter->segment(array_map(fn ($p) => [
+            'page_no' => $p['page_no'], 'matricule' => $p['matricule'] ?? null,
+            'period' => $p['period'] ?? null, 'is_blank' => (bool) ($p['is_blank'] ?? false),
+            'source' => $p['source_file_path'],
+        ], $sourcePages));
+
+        $names = collect($sourcePages)->keyBy(fn ($p) => $p['source_file_path'].':'.$p['page_no']);
+        $items = [];
+
+        foreach ($segments as $seg) {
+            $firstKey = $seg['source'].':'.$seg['pages'][0];
+            $name = $names->get($firstKey)['name'] ?? null;
+            $match = $this->matcher->match($batch->company_id, $seg['matricule'], $name);
+
+            $certain = $match['confidence'] === PayslipImportItem::C_CERTAIN && ! $seg['needs_review'];
+            $item = PayslipImportItem::create([
+                'company_id' => $batch->company_id,
+                'payslip_import_batch_id' => $batch->id,
+                'file_path' => '',
+                'source_file_path' => $seg['source'],
+                'extracted_matricule' => $seg['matricule'],
+                'extracted_period' => $seg['period'],
+                'extracted_name' => $name,
+                'matched_employee_id' => $certain ? $match['employee_id'] : null,
+                'match_confidence' => $match['confidence'],
+                'match_candidates' => $match['candidates'],
+                'state' => $certain ? PayslipImportItem::S_MATCHED : PayslipImportItem::S_REVIEW,
+                'confirmed' => $certain,
+            ]);
+
+            // Rattache les pages au segment puis reconstitue le PDF complet + hash.
+            PayslipImportPage::where('payslip_import_batch_id', $batch->id)
+                ->where('source_file_path', $seg['source'])
+                ->whereIn('source_page_no', $seg['pages'])
+                ->update(['payslip_import_item_id' => $item->id]);
+            $this->reconstitutor->rebuild($item->fresh());
+
+            $items[] = $item->fresh();
+        }
+
+        return $items;
     }
 
     /** @param  list<\Illuminate\Http\UploadedFile>  $files */
@@ -102,6 +173,29 @@ class PayslipImportService
         return ['matricule' => $matricule, 'period' => $period, 'name' => $name];
     }
 
+    /**
+     * ADR-763 (M5.1) — RETRAIT contrôlé d'un bulletin publié. Bloque immédiatement consultation et
+     * téléchargement, TOUTES versions du couple (sujet, période) incluses (aucun contournement par
+     * une ancienne version). Les journaux sont conservés.
+     */
+    public function revoke(PublishedPayslip $payslip, User $actor, ?string $reason = null): void
+    {
+        PublishedPayslip::where('company_id', $payslip->company_id)
+            ->where('document_subject_type', $payslip->document_subject_type)
+            ->where('document_subject_id', $payslip->document_subject_id)
+            ->where('period', $payslip->period)
+            ->whereNull('revoked_at')
+            ->get()
+            ->each(function ($p) use ($actor, $reason) {
+                $p->update(['revoked_at' => now(), 'revoked_by' => $actor->id, 'revoke_reason' => $reason]);
+            });
+
+        $this->audit->logCompany($payslip->company_id, 'payslip.revoked', 'published_payslip', (string) $payslip->id, [
+            'severity' => 'warning',
+            'metadata' => ['subject' => (string) $payslip->subject(), 'period' => $payslip->period, 'reason' => $reason, 'actor' => $actor->id],
+        ]);
+    }
+
     /** Affectation manuelle (revue) : re-valide l'appartenance tenant → item publiable. */
     public function assign(PayslipImportItem $item, int $employeeId, User $actor): PayslipImportItem
     {
@@ -114,6 +208,7 @@ class PayslipImportService
             'matched_employee_id' => $employee->id,
             'match_confidence' => PayslipImportItem::C_PROBABLE,
             'state' => PayslipImportItem::S_MATCHED, // décision humaine → publiable
+            'confirmed' => true,
         ]);
 
         return $item;
@@ -121,7 +216,71 @@ class PayslipImportService
 
     public function exclude(PayslipImportItem $item): void
     {
-        $item->update(['state' => PayslipImportItem::S_EXCLUDED, 'matched_employee_id' => null]);
+        $item->update(['state' => PayslipImportItem::S_EXCLUDED, 'matched_employee_id' => null, 'confirmed' => false]);
+    }
+
+    /** ADR-763 (M5.1) — regroupe plusieurs segments en un seul. Invalide les confirmations. */
+    public function regroup(array $itemIds): PayslipImportItem
+    {
+        $items = PayslipImportItem::whereIn('id', $itemIds)->orderBy('id')->get();
+        if ($items->count() < 2) {
+            throw ValidationException::withMessages(['items' => ['At least two segments are required.']]);
+        }
+        $target = $items->first();
+        foreach ($items->skip(1) as $other) {
+            PayslipImportPage::where('payslip_import_item_id', $other->id)->update(['payslip_import_item_id' => $target->id]);
+            $other->delete();
+        }
+        $this->invalidate($target);
+
+        return $target->fresh();
+    }
+
+    /** Sépare un segment : les pages indiquées partent dans un NOUVEAU segment. Invalide les deux. */
+    public function split(PayslipImportItem $item, array $pageNumbers): PayslipImportItem
+    {
+        $moving = $item->pages()->whereIn('source_page_no', $pageNumbers)->get();
+        if ($moving->isEmpty() || $moving->count() >= $item->pages()->count()) {
+            throw ValidationException::withMessages(['pages' => ['Invalid split selection.']]);
+        }
+        $new = PayslipImportItem::create([
+            'company_id' => $item->company_id, 'payslip_import_batch_id' => $item->payslip_import_batch_id,
+            'file_path' => '', 'source_file_path' => $item->source_file_path,
+            'match_confidence' => PayslipImportItem::C_NONE, 'state' => PayslipImportItem::S_REVIEW, 'confirmed' => false,
+        ]);
+        PayslipImportPage::whereIn('id', $moving->pluck('id'))->update(['payslip_import_item_id' => $new->id]);
+
+        $this->invalidate($item);
+        $this->invalidate($new->fresh());
+
+        return $new->fresh();
+    }
+
+    /** Exclut une page d'un segment (annexe erronée, page blanche). Invalide le segment. */
+    public function excludePage(PayslipImportPage $page): void
+    {
+        $item = $page->item;
+        $page->update(['payslip_import_item_id' => null]);
+        if ($item) {
+            $this->invalidate($item->fresh());
+        }
+    }
+
+    public function correctPeriod(PayslipImportItem $item, string $period): void
+    {
+        $item->update(['extracted_period' => $period, 'confirmed' => false]);
+    }
+
+    /** Toute modification de composition : remet en revue + reconstitue le PDF + annule la confirmation. */
+    private function invalidate(PayslipImportItem $item): void
+    {
+        if ($item->pages()->count() === 0) {
+            $item->update(['state' => PayslipImportItem::S_EXCLUDED, 'confirmed' => false]);
+
+            return;
+        }
+        $item->update(['state' => PayslipImportItem::S_REVIEW, 'confirmed' => false, 'matched_employee_id' => null]);
+        $this->reconstitutor->rebuild($item->fresh());
     }
 
     /**
@@ -183,6 +342,13 @@ class PayslipImportService
         if (! $employee) {
             throw ValidationException::withMessages(['employee' => ['Matched employee no longer exists in this company.']]);
         }
+
+        // Reconstitue le PDF final (composition à jour) → hash validé réel avant publication.
+        if ($item->pages()->exists()) {
+            $this->reconstitutor->rebuild($item);
+            $item->refresh();
+        }
+
         $subject = DocumentSubject::employee((int) $employee->id);
         $period = $item->extracted_period ?: 'unknown';
 

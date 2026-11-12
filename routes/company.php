@@ -398,6 +398,18 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,payslips.review');
     Route::post('/company/payslip-imports/{id}/publish', [PayslipImportController::class, 'publish'])
         ->middleware('company.access:use-permission,payslips.publish');
+    // ADR-763 (M5.1): éditeur de revue des frontières multipages
+    Route::put('/company/payslip-imports/{id}/regroup', [PayslipImportController::class, 'regroup'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::put('/company/payslip-imports/{id}/items/{itemId}/split', [PayslipImportController::class, 'split'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::put('/company/payslip-imports/{id}/pages/{pageId}/exclude', [PayslipImportController::class, 'excludePage'])
+        ->middleware('company.access:use-permission,payslips.review');
+    Route::put('/company/payslip-imports/{id}/items/{itemId}/period', [PayslipImportController::class, 'correctPeriod'])
+        ->middleware('company.access:use-permission,payslips.review');
+    // ADR-763 (M5.1): révocation (retrait contrôlé) — droit de publication
+    Route::put('/company/published-payslips/{payslipId}/revoke', [PayslipImportController::class, 'revoke'])
+        ->middleware('company.access:use-permission,payslips.publish');
 
     // Bulletins PUBLIÉS — fiche Collaborateur (policy payroll à l'intérieur) + self-service.
     Route::get('/company/people/{personRef}/payslips', [PublishedPayslipController::class, 'person'])

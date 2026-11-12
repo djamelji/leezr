@@ -23,7 +23,7 @@ class PublishedPayslip extends Model
     protected $fillable = [
         'company_id', 'document_subject_type', 'document_subject_id', 'period',
         'file_path', 'file_name', 'file_sha256', 'file_size_bytes', 'source', 'source_item_id',
-        'version_no', 'superseded_at', 'created_by', 'created_at',
+        'version_no', 'superseded_at', 'revoked_at', 'revoked_by', 'revoke_reason', 'created_by', 'created_at',
     ];
 
     protected $casts = [
@@ -31,6 +31,7 @@ class PublishedPayslip extends Model
         'file_size_bytes' => 'integer',
         'version_no' => 'integer',
         'superseded_at' => 'datetime',
+        'revoked_at' => 'datetime',
         'created_at' => 'datetime',
     ];
 

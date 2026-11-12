@@ -27337,3 +27337,30 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Défauts résiduels / conditions M6** : (1) extraction OCR d'un PDF réel = best-effort (sans couche texte fiable, les items vont en revue — défaut sûr) ; (2) **entitlement/quotas** dédiés (fichiers/pages/OCR/IA) = les permissions font office de gate M5, intégration quotas = M6 ; (3) UI dédiée « Mes bulletins » self-service (endpoints livrés/testés, section à finaliser) ; (4) correction fine du découpage (frontières multipages) + classification IA des pages = avancé ; (5) révocation d'une publication (retrait contrôlé) = API/colonne prêtes, parcours UI à finaliser.
 
 **Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M6–M7 non démarrés**.
+
+## ADR-763 — DMS M5.1 : fiabilisation bulletins (multipage, éditeur, révocation, self-service)
+
+**Date** : 2026-11-12
+**Contexte** : M5 (ADR-762, `94c519f`) acceptée comme socle technique, pas comme fonctionnalité commercialisable. M5.1 fiabilise sans démarrer M6/M7.
+
+**1. P0 — intégrité multipage** — migration additive : `payslip_import_pages` (représentation page : matricule/période/rôle) ; items = SEGMENTS (`page_numbers`, `source_file_path`, `confirmed`). `PayslipSegmenter` (règles déterministes) : pages consécutives de même matricule → UN bulletin multipage ; changement de matricule → nouveau bulletin ; page sans matricule → annexe du précédent, sinon **quarantaine** (revue). `PayslipReconstitutor` fusionne les pages du segment **dans l'ordre** (Fpdi) + recalcule le hash. `buildSegments` orchestre page→segment→reconstitution→matching. **Aucune page isolée publiée sans appartenance déterminée.**
+
+**2. Éditeur de revue des frontières** — `regroup` (fusionne des segments), `split` (extrait des pages vers un nouveau segment), `excludePage`, `correctPeriod`, `assign`. **Toute modification INVALIDE la confirmation** (state→review, `confirmed=false`, matching réinitialisé) et **reconstitue** le PDF. La publication **reconstitue à nouveau** et valide la composition finale + sujet + période + hash réel + permissions avant d'écrire.
+
+**3. OCR/IA** — réutilise `DocumentProcessingPipeline` (best-effort). Sans couche texte fiable, une page reste en revue (défaut SÛR). L'IA peut aider la structure mais **n'autorise jamais seule** la publication ; indéchiffrable → revue/rejet.
+
+**4. « Mes bulletins »** — self-service finalisé (`/profile/payslips`) : liste par année/période, provenance (externe/Leezr), version/rectificatif, état disponible/retiré, download sécurisé, empty state, mobile/dark. **Chaque salarié ne voit QUE les siens** (sujet user). Fonctionne pour les docs déposés sous sujet Employee avant activation du compte (sujet canonique).
+
+**5. Rectificatifs & révocation** — `revoke` : retrait contrôlé qui bloque IMMÉDIATEMENT consultation et téléchargement, **TOUTES versions du couple (sujet, période) incluses** (aucun contournement par une ancienne version ou URL) → download `410`. Journaux conservés ; parcours de correction sans prétendre annuler un téléchargement déjà effectué.
+
+**6. Entitlements/quotas** — `payslip_quota_usage` (compteurs fichiers/pages/OCR) + limites par lot (`MAX_FILES`/`MAX_PAGES`) appliquées côté serveur avec refus explicites. Capacité **indépendante de `workforce_payroll`**, activée par les permissions `payslips.*`. Aucun changement Billing.
+
+**7. Sécurité & RBAC** — permissions distinctes (import/review/publish/download) ; révocation = `payslips.publish` ; édition = `payslips.review`. `DocumentAccessPolicy` (catégorie payroll) gouverne tout téléchargement ; bulletin révoqué non téléchargeable. Isolation tenant stricte.
+
+**Tests** : `DmsM51PayslipTest` **6/6** — multipage reconstitué EN ENTIER (PDF 3 pages vérifié via Fpdi) ; segments consécutifs ; annexe rattachée ; **page isolée en quarantaine** ; split+regroup (comptes de pages vérifiés, confirmation invalidée) ; **révocation bloque toutes les versions** (410). `DmsM5PayslipTest` 14/14 maintenu. Régression **689 verts**. **Build clean.** Captures Playwright : **« Mes bulletins »** (périodes, versions, provenance) + centre de revue, light/dark/mobile.
+
+**Verdict GO/NO-GO** : **GO DEV** — le socle multipage/éditeur/révocation/self-service est fiable et prouvé (fixtures PDF réelles). **Réserve commerciale** : l'extraction OCR d'un **scan image réel** reste best-effort (sans couche texte, les pages tombent en revue — comportement sûr mais non automatisé) → une reconnaissance OCR/IA robuste des scans est la condition d'un **GO PROD** complet (M6).
+
+**Défauts résiduels / conditions M6** : (1) OCR réel des scans = best-effort (automatisation IA/OCR robuste = M6) ; (2) classification IA fine des pages (annexe vs récapitulatif vs non-salarial) heuristique ; (3) quotas = limites par lot + compteurs (plans/entitlement commercial = M6, hors Billing) ; (4) UI éditeur (regroup/split) = API livrée/testée, surface graphique avancée à enrichir ; (5) notification de révocation au salarié = à finaliser.
+
+**Règles** : DEV uniquement, aucun push main/PROD, aucune migration destructive, aucun changement Billing/génération paie, config cron/workers inchangée, **M6–M7 non démarrés**.

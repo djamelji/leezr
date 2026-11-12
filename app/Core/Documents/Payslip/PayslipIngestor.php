@@ -8,10 +8,9 @@ use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 
 /**
- * ADR-762 (DMS M5) — ingestion d'un lot : extraction des fichiers (ZIP), DÉCOUPAGE d'un PDF multipage
- * en segments (une page = un bulletin par défaut ; une frontière ambiguë reste en revue), extraction
- * de texte (best-effort OCR, réutilise DocumentProcessingPipeline), puis rapprochement sûr via le
- * service. Aucun contenu n'est exécuté ; stockage privé.
+ * ADR-762 / ADR-763 (DMS M5/M5.1) — ingestion d'un lot : extraction ZIP, lecture des PAGES source
+ * (matricule/période par page, best-effort OCR), DÉCOUPAGE multipage par le segmenteur, puis
+ * reconstitution + rapprochement via le service. Les frontières incertaines restent en revue.
  */
 class PayslipIngestor
 {
@@ -25,9 +24,10 @@ class PayslipIngestor
     {
         $batch->update(['status' => PayslipImportBatch::STATUS_PROCESSING]);
         $dir = "payslip-imports/{$batch->company_id}/{$batch->id}";
-        $segIndex = 0;
         $errors = [];
 
+        // 1. Rassemble les PDF sources (PDF direct ou extraits d'une archive).
+        $sources = [];
         foreach (Storage::disk('local')->files($dir) as $sourcePath) {
             if (! str_contains(basename($sourcePath), 'source-')) {
                 continue;
@@ -36,15 +36,45 @@ class PayslipIngestor
             try {
                 $magic = $this->validator->magic($abs);
                 if ($magic === 'pdf') {
-                    $segIndex = $this->splitPdf($batch, $abs, $dir, $segIndex);
+                    $sources[] = $sourcePath;
                 } elseif ($magic === 'zip') {
-                    $segIndex = $this->ingestZip($batch, $abs, $dir, $segIndex);
+                    $sources = array_merge($sources, $this->extractZipPdfs($abs, $dir));
                 }
             } catch (\Throwable $e) {
                 $errors[] = ['file' => basename($sourcePath), 'error' => mb_substr($e->getMessage(), 0, 300)];
+            }
+        }
+
+        // 2. Lit les pages (identifiants par page).
+        $pages = [];
+        $pagesProcessed = 0;
+        foreach ($sources as $relPath) {
+            try {
+                $abs = Storage::disk('local')->path($relPath);
+                $pdf = new Fpdi();
+                $count = $pdf->setSourceFile($abs);
+                for ($p = 1; $p <= $count; $p++) {
+                    $text = $this->extractPageText($abs, $p);
+                    $ids = $this->import->extractIdentifiers($text);
+                    $pages[] = [
+                        'source_file_path' => $relPath, 'page_no' => $p,
+                        'matricule' => $ids['matricule'], 'period' => $ids['period'],
+                        'is_blank' => trim($text) === '', 'name' => $ids['name'],
+                    ];
+                    $pagesProcessed++;
+                }
+            } catch (\Throwable $e) {
+                $errors[] = ['file' => basename($relPath), 'error' => mb_substr($e->getMessage(), 0, 300)];
                 Log::warning('[dms.payslip] ingest error', ['batch' => $batch->id, 'error' => $e->getMessage()]);
             }
         }
+
+        // 3. Découpe + reconstitution + matching.
+        if ($pages) {
+            $this->import->buildSegments($batch, $pages);
+        }
+
+        PayslipQuotaUsage::bump($batch->company_id, filesImported: count($sources), pagesProcessed: $pagesProcessed);
 
         $batch->update([
             'status' => PayslipImportBatch::STATUS_REVIEW,
@@ -56,64 +86,51 @@ class PayslipIngestor
         return $batch->fresh();
     }
 
-    /** Découpe un PDF en segments d'une page, stocke chacun, crée un item (matching). */
-    private function splitPdf(PayslipImportBatch $batch, string $absPath, string $dir, int $segIndex): int
+    /** Extrait les PDF d'une archive vers des fichiers sources (pour reconstitution ultérieure). */
+    private function extractZipPdfs(string $absZip, string $dir): array
     {
-        $src = new Fpdi();
-        $pageCount = $src->setSourceFile($absPath);
-
-        for ($page = 1; $page <= $pageCount; $page++) {
-            $out = new Fpdi();
-            $tplId = $out->importPage($page);
-            $size = $out->getTemplateSize($tplId);
-            $out->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $out->useTemplate($tplId);
-
-            $relPath = $dir.'/segment-'.(++$segIndex).'.pdf';
-            Storage::disk('local')->put($relPath, $out->Output('S'));
-
-            $text = $this->extractText(Storage::disk('local')->path($relPath));
-            $this->import->addSegment($batch, $relPath, (string) $page, $text);
-        }
-
-        return $segIndex;
-    }
-
-    private function ingestZip(PayslipImportBatch $batch, string $absPath, string $dir, int $segIndex): int
-    {
+        $out = [];
         $zip = new \ZipArchive();
-        if ($zip->open($absPath) !== true) {
-            return $segIndex;
+        if ($zip->open($absZip) !== true) {
+            return $out;
         }
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
             if (! str_ends_with(strtolower((string) $name), '.pdf')) {
                 continue;
             }
-            $tmp = tempnam(sys_get_temp_dir(), 'paysl');
-            file_put_contents($tmp, $zip->getFromIndex($i));
-            if ($this->validator->magic($tmp) === 'pdf') {
-                $segIndex = $this->splitPdf($batch, $tmp, $dir, $segIndex);
+            $content = $zip->getFromIndex($i);
+            $rel = $dir.'/source-zip-'.$i.'.pdf';
+            Storage::disk('local')->put($rel, $content);
+            if ($this->validator->magic(Storage::disk('local')->path($rel)) === 'pdf') {
+                $out[] = $rel;
             }
-            @unlink($tmp);
         }
         $zip->close();
 
-        return $segIndex;
+        return $out;
     }
 
-    /** Texte best-effort (OCR via le pipeline existant). Échec → chaîne vide → item en revue. */
-    private function extractText(string $pdfPath): string
+    /** Texte d'une page (best-effort). Sans couche texte fiable → vide → la page reste en revue. */
+    private function extractPageText(string $absPdf, int $page): string
     {
         try {
-            $pipeline = app(DocumentProcessingPipeline::class);
-            if (method_exists($pipeline, 'extractTextFromPdf')) {
-                return (string) $pipeline->extractTextFromPdf($pdfPath);
-            }
-        } catch (\Throwable) {
-            // Aucun texte exploitable → revue manuelle (défaut SÛR).
-        }
+            $src = new Fpdi();
+            $src->setSourceFile($absPdf);
+            $tpl = $src->importPage($page);
+            $size = $src->getTemplateSize($tpl);
+            $src->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $src->useTemplate($tpl);
+            $tmp = tempnam(sys_get_temp_dir(), 'paysl').'.pdf';
+            file_put_contents($tmp, $src->Output('S'));
 
-        return '';
+            $pipeline = app(DocumentProcessingPipeline::class);
+            $text = method_exists($pipeline, 'extractTextFromPdf') ? (string) $pipeline->extractTextFromPdf($tmp) : '';
+            @unlink($tmp);
+
+            return $text;
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

@@ -42,6 +42,7 @@ class PublishedPayslipController extends Controller
             ->where('document_subject_type', $subject->type)->where('document_subject_id', $subject->id)
             ->findOrFail($id);
 
+        abort_if($payslip->revoked_at !== null, 410, 'This payslip has been revoked.'); // retrait : plus consultable
         if (! $policy->canAccess($request->user(), $company, $subject, 'payslip', DocumentAccessPolicy::OP_DOWNLOAD)) {
             abort(403, 'Not authorized to download this payslip.');
         }
@@ -67,6 +68,7 @@ class PublishedPayslipController extends Controller
             ->where('document_subject_type', DocumentSubject::TYPE_USER)
             ->where('document_subject_id', $request->user()->id)
             ->findOrFail($id);
+        abort_if($payslip->revoked_at !== null, 410, 'This payslip has been revoked.');
 
         return Storage::disk('local')->download($payslip->file_path, $payslip->file_name);
     }
@@ -86,7 +88,8 @@ class PublishedPayslipController extends Controller
                 'year' => substr((string) $p->period, 0, 4),
                 'version_no' => $p->version_no,
                 'source' => $p->source,
-                'can_download' => $canDownload,
+                'status' => $p->revoked_at ? 'revoked' : 'available',
+                'can_download' => $canDownload && $p->revoked_at === null,
                 'created_at' => $p->created_at?->toIso8601String(),
             ])->values()->all();
     }
