@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Members\Http;
 
+use App\Company\Security\GlobalIdentityPolicy;
 use App\Core\Auth\PasswordPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,6 +52,10 @@ class MemberCredentialController
         if ($membership->user_id === $request->user()->id) {
             return response()->json(['message' => 'Cannot modify your own credentials via this endpoint.'], 403);
         }
+
+        // ADR-767 : jamais de mot de passe imposé à un compte partagé avec une autre entreprise
+        // (prise de contrôle inter-tenant). Le lien de réinitialisation reste disponible.
+        GlobalIdentityPolicy::assertCompanyMayEdit($company, $membership->user, 'password');
 
         $request->validate([
             'password' => ['required', 'confirmed', PasswordPolicy::rules()],

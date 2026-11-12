@@ -2,6 +2,7 @@
 
 namespace App\Core\Workforce\Services;
 
+use App\Company\Security\GlobalIdentityPolicy;
 use App\Core\Models\User;
 use App\Core\Workforce\Employee;
 
@@ -27,6 +28,12 @@ class LinkedIdentityService
         }
         $user = User::find($employee->user_id);
         if (! $user) {
+            return;
+        }
+        // ADR-767 : la fiche RH appartient à la company ; le User est GLOBAL. Si le compte est aussi
+        // utilisé dans une autre entreprise, la company ne réécrit pas son identité (la fiche RH
+        // locale reste modifiée, le nom du compte reste celui choisi par la personne).
+        if (GlobalIdentityPolicy::isShared((int) $employee->company_id, $user)) {
             return;
         }
 

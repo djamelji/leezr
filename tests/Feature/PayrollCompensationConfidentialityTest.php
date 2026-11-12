@@ -353,7 +353,8 @@ class PayrollCompensationConfidentialityTest extends TestCase
             'company_id' => $this->company->id, 'title' => 'Chef', 'default_hourly_rate_cents' => 2500, 'source' => 'company',
         ]);
         $this->employee->update(['job_role_id' => $role->id]);
-        $noComp = $this->userWith(['workforce.view']);
+        // ADR-767 : lecture directe d'un collaborateur = périmètre RH (view + manage), sans compensation_read.
+        $noComp = $this->userWith(['workforce.view', 'workforce.manage']);
         $res = $this->apiGet($noComp, "/workforce/employees/{$this->employee->id}");
         $res->assertOk();
         $this->assertStringNotContainsString('default_hourly_rate_cents', $res->getContent());

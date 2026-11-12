@@ -373,7 +373,11 @@ const formatSalary = (cents, currency) => {
                 {{ $t('employees.contract.compensationSection') }}
               </div>
             </VCol>
-            <VCol cols="12">
+            <!-- ADR-767 : fixer une rémunération exige workforce.compensation_manage (contrôlé serveur) -->
+            <VCol
+              v-if="can('workforce.compensation_manage')"
+              cols="12"
+            >
               <AppSelect
                 v-model="formData.compensation_type"
                 :items="compensationTypes"
@@ -381,7 +385,7 @@ const formatSalary = (cents, currency) => {
               />
             </VCol>
             <VCol
-              v-if="formData.compensation_type === 'monthly'"
+              v-if="can('workforce.compensation_manage') && formData.compensation_type === 'monthly'"
               cols="12"
             >
               <AppMoneyField
@@ -390,7 +394,7 @@ const formatSalary = (cents, currency) => {
               />
             </VCol>
             <VCol
-              v-if="formData.compensation_type === 'hourly'"
+              v-if="can('workforce.compensation_manage') && formData.compensation_type === 'hourly'"
               cols="12"
             >
               <AppMoneyField
@@ -399,7 +403,7 @@ const formatSalary = (cents, currency) => {
               />
             </VCol>
             <VCol
-              v-if="formData.compensation_type === 'daily'"
+              v-if="can('workforce.compensation_manage') && formData.compensation_type === 'daily'"
               cols="12"
             >
               <AppMoneyField

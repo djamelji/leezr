@@ -219,9 +219,16 @@ Route::middleware('company.access:use-module,core.jobdomain')->group(function ()
 
 // ─── Members management (module-gated) ───────────────────
 Route::middleware('company.access:use-module,core.members')->group(function () {
-    Route::get('/company/members', [MembershipController::class, 'index']);
-    Route::get('/company/members/{id}', [MembershipController::class, 'show']);
-    Route::get('/company/members/{id}/fields', [MembershipController::class, 'fields']);
+    // ADR-767 : les LECTURES sont gated par permission métier (plus seulement par le module).
+    // Liste = annuaire des comptes : `members.view`, ou un module qui en a besoin comme sélecteur
+    // (demandes documentaires `documents.manage`, affectation `shipments.assign`). Profil et champs
+    // (données personnelles, champs dynamiques) = `members.view` uniquement.
+    Route::get('/company/members', [MembershipController::class, 'index'])
+        ->middleware('company.access:use-any-permission,members.view|documents.manage|shipments.assign');
+    Route::get('/company/members/{id}', [MembershipController::class, 'show'])
+        ->middleware('company.access:use-permission,members.view');
+    Route::get('/company/members/{id}/fields', [MembershipController::class, 'fields'])
+        ->middleware('company.access:use-permission,members.view');
     Route::post('/company/members', [MembershipController::class, 'store'])
         ->middleware('company.access:use-permission,members.invite');
     Route::put('/company/members/{id}', [MembershipController::class, 'update'])
@@ -384,8 +391,10 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     // ADR-762 (DMS M5): import de bulletins externes — permissions DISTINCTES par action.
     Route::post('/company/payslip-imports', [PayslipImportController::class, 'store'])
         ->middleware('company.access:use-permission,payslips.import');
+    // ADR-767: an importer (`payslips.import` only) follows the STATUS of ITS OWN batches (scoped in the
+    // controller) — batch detail, items, previews and every mutation stay `payslips.review`/`.publish`.
     Route::get('/company/payslip-imports', [PayslipImportController::class, 'index'])
-        ->middleware('company.access:use-permission,payslips.review');
+        ->middleware('company.access:use-any-permission,payslips.import|payslips.review');
     Route::get('/company/payslip-imports/{id}', [PayslipImportController::class, 'show'])
         ->middleware('company.access:use-permission,payslips.review');
     Route::get('/company/payslip-imports/{id}/items', [PayslipImportController::class, 'items'])
@@ -536,6 +545,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     // the buttons. Each route now also enforces the matching granular permission (mirrors v-can).
     // Owner bypasses all permission checks; self-service stays under the separate /workforce/me group.
     $perm = fn (string $key) => 'company.access:use-permission,'.$key;
+    // ADR-767 : périmètre de DONNÉES d'une lecture directe d'un collaborateur (soi / rapports
+    // directs / RH) — `workforce.view` donne l'action, pas la vue Company entière.
+    $employeeScope = \App\Modules\Workforce\Security\EnsureEmployeeInScope::class;
 
     // Departments — view to read, manage to mutate
     Route::get('departments', [\App\Modules\Workforce\Employees\Http\DepartmentController::class, 'index'])->middleware($perm('workforce.view'));
@@ -588,11 +600,11 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees/bulk', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'bulk'])->middleware($perm('workforce.manage'));
     // ADR-640 (W-C) — fiche unifiée : autorisation de scope (soi/rapport/RH) dans le contrôleur
     Route::get('employees/{id}/file', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'file']);
-    Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware($perm('workforce.view'));
+    Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware([$perm('workforce.view'), $employeeScope]);
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));
     // W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche (réutilise l'invitation Members, gated members.invite).
-    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware($perm('workforce.view'));
+    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware([$perm('workforce.view'), $employeeScope]);
     Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     // SECURITY-1 (ADR-688): access lifecycle — sensitive, gated members.manage.
@@ -601,7 +613,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees/{id}/access/revoke', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'revokeAccess'])->whereNumber('id')->middleware($perm('members.manage'));
 
     // Contracts — view to read, contracts to create/activate
-    Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware($perm('workforce.view'));
+    Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware([$perm('workforce.view'), $employeeScope]);
     Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store'])->middleware($perm('workforce.contracts'));
     Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate'])->middleware($perm('workforce.contracts'));
 

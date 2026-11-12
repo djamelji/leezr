@@ -295,6 +295,8 @@ class DmsM6ExternalSignatureTest extends TestCase
         Http::fake(['*' => Http::response('<html>error page</html>', 200)]);
 
         $req = $this->createAndSendExternal();
+        // ADR-767 : le jeton n'est envoyé qu'à l'origine configurée du prestataire (api_base).
+        config(['signature.external.api_base' => 'https://provider.test']);
         $req->metadata = array_merge($req->metadata ?? [], ['final_document_url' => 'https://provider.test/doc/1']);
 
         $this->assertNull($this->adapter()->fetchFinalDocument($req));
@@ -307,6 +309,8 @@ class DmsM6ExternalSignatureTest extends TestCase
         Http::fake(['*' => Http::response("%PDF-1.4\n signed bytes", 200)]);
 
         $req = $this->createAndSendExternal();
+        // ADR-767 : le jeton n'est envoyé qu'à l'origine configurée du prestataire (api_base).
+        config(['signature.external.api_base' => 'https://provider.test']);
         $req->metadata = array_merge($req->metadata ?? [], ['final_document_url' => 'https://provider.test/doc/1']);
 
         $bytes = $this->adapter()->fetchFinalDocument($req);

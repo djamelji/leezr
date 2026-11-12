@@ -4,6 +4,7 @@ namespace App\Modules\Workforce\Signature\Providers\Adapters;
 
 use App\Core\Documents\Services\DocumentIntegrityService;
 use App\Modules\Workforce\Signature\Models\SignatureRequest;
+use App\Modules\Workforce\Signature\Providers\Contracts\SealsDocumentRemotely;
 use App\Modules\Workforce\Signature\Providers\Contracts\SignatureProviderAdapter;
 use App\Modules\Workforce\Signature\Providers\Results\WebhookOutcome;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Http;
  * configuré et des preuves démontrables. Sans credentials, le contrat est exercé en mode SANDBOX
  * (clairement marqué `sandbox` dans les métadonnées) et NON vérifié contre un environnement réel.
  */
-class ExternalSignatureAdapter implements SignatureProviderAdapter
+class ExternalSignatureAdapter implements SealsDocumentRemotely, SignatureProviderAdapter
 {
     public const KEY = 'external';
 
@@ -87,6 +88,9 @@ class ExternalSignatureAdapter implements SignatureProviderAdapter
                 throw new \RuntimeException('External signature provider rejected the envelope.');
             }
             $data = $resp->json();
+            if (! is_array($data) || empty($data['id'])) {
+                throw new \RuntimeException('External signature provider returned no envelope reference.');
+            }
             $signerRefs = [];
             foreach ($signers as $s) {
                 $signerRefs[$s->id] = (string) ($data['signers'][$s->id] ?? $data['signer_references'][$s->id] ?? ('ext-signer-'.$s->id));
@@ -148,7 +152,8 @@ class ExternalSignatureAdapter implements SignatureProviderAdapter
         $signerRef = $payload['signer_reference'] ?? null;
         $requestId = null;
         if ($ref = ($payload['provider_reference'] ?? null)) {
-            $requestId = SignatureRequest::where('provider', self::KEY)->where('provider_reference', $ref)->value('id');
+            // Webhook context: no tenant is bound — resolve explicitly, scoped to THIS provider.
+            $requestId = SignatureRequest::withoutGlobalScopes()->where('provider', self::KEY)->where('provider_reference', $ref)->value('id');
         }
 
         return new WebhookOutcome(
@@ -156,7 +161,13 @@ class ExternalSignatureAdapter implements SignatureProviderAdapter
             signatureRequestId: $requestId ? (int) $requestId : null,
             signerReference: $signerRef,
             action: $action,
-            metadata: ['reason' => $payload['reason'] ?? null, 'final_document_url' => $payload['final_document_url'] ?? null],
+            metadata: [
+                'reason' => $payload['reason'] ?? null,
+                'final_document_url' => $payload['final_document_url'] ?? null,
+                'final_document_sha256' => $payload['final_document_sha256'] ?? null,
+                // Raw envelope reference: lets the caller tell "not provided" from "provided but unknown".
+                'provider_reference' => $payload['provider_reference'] ?? null,
+            ],
         );
     }
 
@@ -177,6 +188,11 @@ class ExternalSignatureAdapter implements SignatureProviderAdapter
         if (! $url || ! $this->config('api_key')) {
             return null;
         }
+        // ADR-767 — the URL comes from a webhook payload: the API token is only ever sent to the
+        // configured provider origin (never to an arbitrary host).
+        if (! $this->isProviderUrl((string) $url)) {
+            return null;
+        }
 
         $resp = Http::withToken((string) $this->config('api_key'))->timeout(30)->get($url);
         if ($resp->failed()) {
@@ -186,6 +202,30 @@ class ExternalSignatureAdapter implements SignatureProviderAdapter
 
         // Vérifie que le document retourné est bien un PDF (signature réelle, pas une page d'erreur).
         return str_starts_with($bytes, '%PDF-') ? $bytes : null;
+    }
+
+    public function awaitsSealedDocument(SignatureRequest $request): bool
+    {
+        // Sandbox (no credentials): nothing will ever be delivered → do not wait.
+        if ((string) $this->config('api_base', '') === '' || ! $this->config('api_key')) {
+            return false;
+        }
+
+        return empty($request->metadata['final_document_url']);
+    }
+
+    /** Same scheme + host (+ port) as the configured API base. */
+    private function isProviderUrl(string $url): bool
+    {
+        $base = parse_url((string) $this->config('api_base', ''));
+        $target = parse_url($url);
+        if (empty($base['host']) || empty($target['host'])) {
+            return false;
+        }
+
+        return strtolower($base['scheme'] ?? '') === strtolower($target['scheme'] ?? '')
+            && strtolower($base['host']) === strtolower($target['host'])
+            && ($base['port'] ?? null) === ($target['port'] ?? null);
     }
 
     /** Lecture d'un en-tête (insensible à la casse ; HeaderBag renvoie des tableaux). */

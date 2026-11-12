@@ -50,7 +50,8 @@ class PersonFilePhase1Test extends TestCase
         $this->adminRole = $this->setUpCompanyRbac($this->company);
 
         $this->hrRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'hr', 'name' => 'HR', 'is_administrative' => false]);
-        $this->hrRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view', 'workforce.view'])->pluck('id')->all());
+        // ADR-767 : vue RH Company = workforce.view + workforce.manage (view seul = périmètre équipe).
+        $this->hrRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view', 'workforce.view', 'workforce.manage'])->pluck('id')->all());
 
         // Rôle SANS aucune facette (ni members.view ni workforce.view) → ne peut pas entrer.
         $this->noAccessRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'noacc', 'name' => 'NoAccess', 'is_administrative' => false]);

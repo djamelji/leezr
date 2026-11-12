@@ -5,11 +5,11 @@ namespace App\Modules\Core\Members\Http;
 use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Company\RBAC\CompanyRole;
 use App\Company\RBAC\MembershipSecurityPolicy;
+use App\Company\Security\GlobalIdentityPolicy;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
-use App\Core\Models\User;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\CompanyEntitlements;
@@ -17,10 +17,10 @@ use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Core\Security\SecurityDetector;
 use App\Modules\Core\Members\Http\Requests\StoreMemberRequest;
 use App\Modules\Core\Members\Http\Requests\UpdateMemberRequest;
+use App\Modules\Core\Members\UseCases\InviteMemberUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Password;
 
 class MembershipController extends Controller
 {
@@ -122,46 +122,23 @@ class MembershipController extends Controller
             ], 422);
         }
 
-        $validated = $request->validated();
-
-        $user = User::where('email', $validated['email'])->first();
-        $isNewUser = false;
-
-        if (!$user) {
-            $user = User::create([
-                'first_name' => $validated['first_name'] ?? explode('@', $validated['email'])[0],
-                'last_name' => $validated['last_name'] ?? '',
-                'email' => $validated['email'],
-                'password' => null,
-            ]);
-            $isNewUser = true;
+        // ADR-767 : l'attribution du rôle passe par l'autorité serveur UNIQUE (anti-escalade,
+        // isolation tenant) AVANT toute écriture — voir InviteMemberUseCase.
+        $membership = app(InviteMemberUseCase::class)->execute($company, $request->validated(), $request->user());
+        if ($membership === null) {
+            return response()->json(['message' => 'This user is already a member of this company.'], 422);
         }
-
-        if ($user->isMemberOf($company)) {
-            return response()->json([
-                'message' => 'This user is already a member of this company.',
-            ], 422);
-        }
-
-        $membership = $company->memberships()->create([
-            'user_id' => $user->id,
-            'role' => 'user',
-            'company_role_id' => $validated['company_role_id'],
-        ]);
-
-        $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name']);
-
-        // Send invitation if user was just created (no password)
-        if ($isNewUser) {
-            $token = Password::broker('users')->createToken($user);
-            $user->sendPasswordResetNotification($token);
-        }
+        $user = $membership->user;
+        $sensitive = MembershipSecurityPolicy::isSensitiveRole($membership->companyRole);
 
         // ADR-125: publish after mutation
         $this->publishDomainEvent('members.changed', $company->id, ['action' => 'member_added', 'user_id' => $user->id]);
 
         // ADR-130: audit log
-        app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ADDED, 'user', (string) $user->id);
+        app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_ADDED, 'user', (string) $user->id, [
+            'actorId' => $request->user()->id, 'actorType' => 'user', 'severity' => $sensitive ? 'warning' : 'info',
+            'metadata' => ['role_id' => $membership->company_role_id, 'is_administrative' => $sensitive],
+        ]);
 
         return response()->json([
             'member' => [
@@ -181,7 +158,9 @@ class MembershipController extends Controller
         $validated = $request->validated();
 
         // ─── Bloc A — Base fields (user table) ─────────────────
-        $baseFields = array_intersect_key($validated, array_flip(['first_name', 'last_name']));
+        // ADR-767 : seuls les champs RÉELLEMENT modifiés ; refus (422) si l'identité globale est
+        // partagée avec une autre entreprise (GlobalIdentityPolicy = autorité unique).
+        $baseFields = GlobalIdentityPolicy::authorizedChanges($company, $membership->user, $validated);
         $profileBefore = $membership->user->only('first_name', 'last_name');
         if (!empty($baseFields)) {
             $membership->user->update($baseFields);

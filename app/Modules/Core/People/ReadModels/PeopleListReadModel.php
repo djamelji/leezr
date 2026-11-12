@@ -43,7 +43,11 @@ class PeopleListReadModel
 
         // ── Facette RH : employees (fiches), dédupliquées via user_id ──
         if ($canHr && $hasWorkforce) {
+            // ADR-767 : périmètre RH = autorité Workforce (Company pour un profil RH, sinon soi +
+            // rapports directs). `workforce.view` seul ne donne plus la liste de toute l'entreprise.
+            $scope = \App\Modules\Workforce\Security\WorkforceAccess::employeeScopeFor($company, $actor);
             $employees = Employee::withoutGlobalScopes()->where('company_id', $company->id)
+                ->when($scope !== null, fn ($q) => $q->whereIn('id', $scope))
                 ->with(['department:id,name', 'jobRole:id,title'])->get();
             foreach ($employees as $e) {
                 $key = $e->user_id ? 'u'.$e->user_id : 'e'.$e->id;

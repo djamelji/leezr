@@ -204,9 +204,9 @@ class EmployeeController extends Controller
             'phone' => 'nullable|string|max:50',
             'employee_number' => 'nullable|string|max:50',
             'hire_date' => 'required|date',
-            'department_id' => 'nullable|integer|exists:workforce_departments,id',
-            'job_role_id' => 'nullable|integer|exists:workforce_job_roles,id',
-            'manager_id' => 'nullable|integer|exists:workforce_employees,id',
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
+            'job_role_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
+            'manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)],
         ]);
 
         $data = new CreateEmployeeData(
@@ -299,9 +299,9 @@ class EmployeeController extends Controller
             'email' => 'sometimes|nullable|email|max:255',
             'phone' => 'sometimes|nullable|string|max:50',
             'employee_number' => 'sometimes|nullable|string|max:50',
-            'department_id' => 'sometimes|nullable|integer|exists:workforce_departments,id',
-            'job_role_id' => 'sometimes|nullable|integer|exists:workforce_job_roles,id',
-            'manager_id' => 'sometimes|nullable|integer|exists:workforce_employees,id',
+            'department_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
+            'job_role_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
+            'manager_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)],
         ]);
 
         $employee->update($validated);

@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
  */
 class PayslipBatchValidator
 {
-    public const MAX_FILES = 20;
+    public const MAX_FILES = PayslipQuotaUsage::MAX_FILES_PER_BATCH; // ADR-767: single source
     public const MAX_FILE_BYTES = 50 * 1024 * 1024;      // 50 MB / fichier
     public const MAX_ZIP_ENTRIES = 500;
     public const MAX_ZIP_UNCOMPRESSED = 500 * 1024 * 1024; // 500 MB décompressé (anti zip bomb)

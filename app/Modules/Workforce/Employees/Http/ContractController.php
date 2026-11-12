@@ -57,6 +57,11 @@ class ContractController extends Controller
             'daily_rate_cents' => 'nullable|integer|min:0',
         ]);
 
+        // ADR-767 : fixer une rémunération exige `workforce.compensation_manage` (créer un contrat
+        // — `workforce.contracts` — ne donne pas le droit de décider du salaire).
+        $setsCompensation = isset($validated['base_salary_cents']) || isset($validated['hourly_rate_cents']) || isset($validated['daily_rate_cents']);
+        abort_if($setsCompensation && ! WorkforceAccess::canManageCompensation($request), 403, 'Not authorized to set compensation.');
+
         $contract = app(CreateContractUseCase::class)->execute(
             employee: $employee,
             contractType: $validated['contract_type'],
@@ -77,7 +82,10 @@ class ContractController extends Controller
             dailyRateCents: isset($validated['daily_rate_cents']) ? (int) $validated['daily_rate_cents'] : null,
         );
 
-        $contract->load(['conventionCollective:id,idcc,short_name', 'compensationPlans']);
+        // ADR-634/767 : la compensation n'est renvoyée que sous workforce.compensation_read.
+        $contract->load(WorkforceAccess::canReadCompensation($request)
+            ? ['conventionCollective:id,idcc,short_name', 'compensationPlans']
+            : ['conventionCollective:id,idcc,short_name']);
 
         return response()->json($contract, 201);
     }

@@ -210,6 +210,15 @@ class ScheduledTaskRegistry
             'cron' => '0 1 * * *',
             'expected_interval_minutes' => 1440,
         ],
+        // ADR-767 — expiration des demandes de signature échues
+        'workforce:signature-expire' => [
+            'command' => 'workforce:signature-expire',
+            'description' => 'automations.tasks.signatureExpire',
+            'category' => 'workforce',
+            'frequency' => 'hourly',
+            'cron' => '0 * * * *',
+            'expected_interval_minutes' => 60,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

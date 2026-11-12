@@ -3,6 +3,7 @@
 namespace App\Modules\Workforce\Security;
 
 use App\Core\Models\Company;
+use App\Core\Models\User;
 use App\Core\Workforce\Employee;
 use Illuminate\Http\Request;
 
@@ -15,6 +16,36 @@ use Illuminate\Http\Request;
  */
 class WorkforceAccess
 {
+    /**
+     * ADR-767 — PÉRIMÈTRE « collaborateurs » d'un acteur, hors requête HTTP (read-models Core) :
+     * null = vue Company (profil RH : `workforce.view` + `workforce.manage`, ou owner) ; sinon la
+     * liste des ids visibles = soi + rapports directs (vide si l'acteur n'a pas de fiche). Même règle
+     * que `hasViewAll('employee')` / `visibleEmployeeIds()` — une seule autorité, deux points d'entrée.
+     *
+     * @return list<int>|null
+     */
+    public static function employeeScopeFor(Company $company, User $actor): ?array
+    {
+        if ($actor->hasCompanyPermission($company, 'workforce.view') && $actor->hasCompanyPermission($company, 'workforce.manage')) {
+            return null;
+        }
+
+        $self = Employee::withoutCompanyScope()->where('company_id', $company->id)->where('user_id', $actor->id)->first();
+        if (! $self) {
+            return [];
+        }
+
+        $reports = Employee::withoutCompanyScope()->where('company_id', $company->id)->where('manager_id', $self->id)->pluck('id')->all();
+
+        return array_values(array_unique(array_merge([$self->id], $reports)));
+    }
+
+    /** L'utilisateur peut-il MODIFIER le salaire / la compensation ? (ADR-767) */
+    public static function canManageCompensation(Request $request): bool
+    {
+        return static::has($request, 'workforce.compensation_manage');
+    }
+
     /** L'utilisateur peut-il voir le salaire / la compensation ? */
     public static function canReadCompensation(Request $request): bool
     {

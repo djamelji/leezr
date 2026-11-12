@@ -8,7 +8,10 @@ import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 
-definePage({ meta: { module: 'core.members', surface: 'structure', anyPermission: ['members.view', 'workforce.view', 'roles.view'] } })
+// ADR-767 : plus de `surface: 'structure'` — un manager/RH NON administratif détenant la facette RH
+// (`workforce.view`) doit atteindre ses collaborateurs. L'accès reste décidé par permission (facettes)
+// et le périmètre de données par le serveur (WorkforceAccess).
+definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'workforce.view', 'roles.view'] } })
 
 const { t } = useI18n()
 const route = useRoute()

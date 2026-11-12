@@ -32,6 +32,13 @@ class WorkforceModule implements ModuleDefinition
                     // DISTINCT du planning prévisionnel désormais porté par l'entrée « Planning » dédiée.
                     // N'apparaît que si l'utilisateur peut LIRE le pointage (timesheet_view) → pas de menu mort
                     // (time_manage/*_approve seuls ne donnent pas la lecture ; l'index route exige timesheet_view).
+                    // ADR-767 : l'entrée unique « Collaborateurs » (Core) est une entrée de STRUCTURE, donc
+                    // masquée aux rôles non administratifs. Depuis ADR-754 (retrait de « Employés », surface
+                    // `hr`), un manager/RH NON administratif détenant `workforce.view` n'avait plus AUCUNE
+                    // entrée vers ses collaborateurs. On restitue cet accès pour ces seuls profils
+                    // (`operationalOnly` → jamais en double de l'entrée Core côté management) ; le
+                    // périmètre de données reste décidé par WorkforceAccess (soi + rapports, ou RH).
+                    ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'workforce', 'sort' => 10],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 60],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »

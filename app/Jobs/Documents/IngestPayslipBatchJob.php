@@ -4,6 +4,7 @@ namespace App\Jobs\Documents;
 
 use App\Core\Documents\Payslip\PayslipImportBatch;
 use App\Core\Documents\Payslip\PayslipIngestor;
+use App\Core\Tenancy\InteractsWithTenant;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,12 +17,17 @@ use Illuminate\Queue\SerializesModels;
  */
 class IngestPayslipBatchJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, InteractsWithTenant, Queueable, SerializesModels;
 
     public int $tries = 2;
 
-    public function __construct(public int $batchId)
+    /**
+     * ADR-767 / ADR-733 — tenant job: the company travels in the payload (`InteractsWithTenant`) and the
+     * whole ingestion runs under ITS scope. No scope bypass: a batch of another tenant is simply not found.
+     */
+    public function __construct(public int $batchId, int $companyId)
     {
+        $this->onTenant($companyId);
     }
 
     public function uniqueId(): string
@@ -31,9 +37,11 @@ class IngestPayslipBatchJob implements ShouldQueue
 
     public function handle(PayslipIngestor $ingestor): void
     {
-        $batch = PayslipImportBatch::find($this->batchId);
-        if ($batch && $batch->status === PayslipImportBatch::STATUS_UPLOADED) {
-            $ingestor->ingest($batch);
-        }
+        $this->runInTenant(function () use ($ingestor) {
+            $batch = PayslipImportBatch::find($this->batchId); // tenant-scoped
+            if ($batch && $batch->status === PayslipImportBatch::STATUS_UPLOADED) {
+                $ingestor->ingest($batch);
+            }
+        });
     }
 }

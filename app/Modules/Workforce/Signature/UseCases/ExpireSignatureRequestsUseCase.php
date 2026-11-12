@@ -2,6 +2,7 @@
 
 namespace App\Modules\Workforce\Signature\UseCases;
 
+use App\Core\Tenancy\CompanyContext;
 use App\Modules\Workforce\Signature\Models\SignatureEvent;
 use App\Modules\Workforce\Signature\Models\SignatureRequest;
 use App\Modules\Workforce\Signature\Models\SignatureSigner;
@@ -27,8 +28,11 @@ class ExpireSignatureRequestsUseCase
         }
 
         $count = 0;
-        foreach ($query->get() as $request) {
-            DB::transaction(function () use ($request, &$count) {
+        // ADR-767 — runs from the scheduler with NO tenant bound: each request is processed inside ITS OWN
+        // tenant context (relations/events are tenant-scoped models), never relying on a no-op scope.
+        foreach ($query->get(['id', 'company_id']) as $request) {
+            CompanyContext::runFor((int) $request->company_id, function () use ($request, &$count) {
+                DB::transaction(function () use ($request, &$count) {
                 $locked = SignatureRequest::withoutGlobalScopes()->where('id', $request->id)->lockForUpdate()->first();
                 if (! $locked || ! $locked->isActive() || ! $locked->isExpiredByTime(now())) {
                     return;
@@ -45,6 +49,7 @@ class ExpireSignatureRequestsUseCase
                     'signature_request', (string) $locked->id, ['actorType' => 'system', 'severity' => 'warning'],
                 );
                 $count++;
+                });
             });
         }
 

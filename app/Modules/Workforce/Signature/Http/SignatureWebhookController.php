@@ -3,11 +3,9 @@
 namespace App\Modules\Workforce\Signature\Http;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Workforce\Signature\Models\SignatureRequest;
-use App\Modules\Workforce\Signature\Models\SignatureSigner;
 use App\Modules\Workforce\Signature\Models\SignatureWebhookEvent;
 use App\Modules\Workforce\Signature\Providers\SignatureProviderManager;
-use App\Modules\Workforce\Signature\UseCases\RecordSignerActionUseCase;
+use App\Modules\Workforce\Signature\UseCases\ApplyProviderWebhookOutcomeUseCase;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,7 +57,7 @@ class SignatureWebhookController extends Controller
 
         // 3. Traitement idempotent ; toujours 200 (les régressions illégales sont rejetées en interne).
         try {
-            DB::transaction(function () use ($adapter, $payload, $request, $webhookEvent) {
+            DB::transaction(function () use ($adapter, $payload, $request, $webhookEvent, $provider) {
                 $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_PROCESSING]);
                 $outcome = $adapter->handleWebhookEvent($payload, $request->headers->all());
 
@@ -68,7 +66,7 @@ class SignatureWebhookController extends Controller
 
                     return;
                 }
-                $this->applyOutcome($outcome);
+                app(ApplyProviderWebhookOutcomeUseCase::class)->execute($provider, $outcome);
                 $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_PROCESSED]);
             });
         } catch (\Throwable $e) {
@@ -78,27 +76,5 @@ class SignatureWebhookController extends Controller
         }
 
         return response()->json(['handled' => true]);
-    }
-
-    private function applyOutcome(\App\Modules\Workforce\Signature\Providers\Results\WebhookOutcome $outcome): void
-    {
-        if (! $outcome->signatureRequestId && ! $outcome->signerReference) {
-            return;
-        }
-
-        // Résout le signataire par référence prestataire (liée à sa propre demande → pas de cross-tenant).
-        if ($outcome->signerReference) {
-            $signer = SignatureSigner::withoutGlobalScopes()
-                ->where('evidence_reference', $outcome->signerReference)->first();
-            if (! $signer) {
-                return;
-            }
-            // L'action webhook est appliquée via la machine à états (rejette tout état illégal / désordre).
-            if ($outcome->action === 'signed' && ! $signer->isActed()) {
-                app(RecordSignerActionUseCase::class)->signByServerAuthority($signer, 'provider_webhook');
-            } elseif ($outcome->action === 'declined' && ! $signer->isActed()) {
-                app(RecordSignerActionUseCase::class)->declineByServerAuthority($signer, $outcome->metadata['reason'] ?? null, 'provider_webhook');
-            }
-        }
     }
 }

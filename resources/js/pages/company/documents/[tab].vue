@@ -26,6 +26,10 @@ const { can, moduleActive } = useCompanyPermissionContext()
 // L'onglet RH n'apparaît que si le module workforce_documents est actif ET l'utilisateur a le droit.
 const canHr = computed(() => moduleActive('workforce_documents') && can('workforce_documents.view'))
 
+// ADR-767 : un importateur (`payslips.import` seul) accède à l'onglet pour téléverser et suivre SES lots ;
+// la revue (items/affectations/publication) reste gated `payslips.review`/`.publish` dans l'onglet et côté serveur.
+const canPayslips = computed(() => can('payslips.import') || can('payslips.review'))
+
 const activeTab = computed({
   get: () => route.params.tab,
   set: () => route.params.tab,
@@ -38,7 +42,7 @@ const tabPermissions = {
   overview: 'documents.view',
   requests: 'documents.manage',
   campaigns: 'documents.manage',
-  payslips: 'payslips.review',
+  payslips: null, // ADR-767 : visibilité via `canPayslips` (import OU revue), contenu gated dans l'onglet
   compliance: 'documents.view',
   vault: 'documents.view',
   settings: 'documents.configure',
@@ -66,6 +70,7 @@ const allTabs = computed(() => [
     title: t('documents.payslip.tab'),
     icon: 'tabler-cash',
     tab: 'payslips',
+    visible: canPayslips.value,
   },
   {
     title: t('companyDocuments.tabs.compliance'),

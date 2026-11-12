@@ -129,6 +129,90 @@ class DocumentProcessingPipeline
         }
     }
 
+    /**
+     * ADR-767 — text of a PDF (or of ONE page of it), reusing this pipeline's own toolchain. Text layer
+     * first (`pdftotext`, poppler — exact, no recognition involved); when the page carries no text layer
+     * (scan), fall back to the EXISTING OCR path (rasterize via ImageProcessor → Tesseract). Never throws:
+     * an unreadable page yields an empty text, which callers must treat as "needs human review".
+     *
+     * @return array{text: string, source: 'text_layer'|'ocr'|'none', ocr_ran: bool}
+     */
+    public function extractTextFromPdf(string $pdfPath, ?int $page = null): array
+    {
+        $text = $this->extractTextLayer($pdfPath, $page);
+        if ($text !== '') {
+            return ['text' => $text, 'source' => 'text_layer', 'ocr_ran' => false];
+        }
+
+        if (! $this->findTesseract()) {
+            return ['text' => '', 'source' => 'none', 'ocr_ran' => false];
+        }
+
+        $single = null;
+        $images = [];
+        try {
+            $target = $pdfPath;
+            if ($page !== null) {
+                $target = $single = $this->singlePagePdf($pdfPath, $page);
+            }
+            $images = $this->imageProcessor->pdfToImages($target);
+            if (empty($images)) {
+                return ['text' => '', 'source' => 'none', 'ocr_ran' => false];
+            }
+            $ocr = trim((string) $this->extractOcrText($images));
+
+            return ['text' => $ocr, 'source' => $ocr !== '' ? 'ocr' : 'none', 'ocr_ran' => true];
+        } catch (\Throwable $e) {
+            Log::warning('DocumentProcessingPipeline: PDF text extraction failed', ['path' => $pdfPath, 'page' => $page, 'error' => $e->getMessage()]);
+
+            return ['text' => '', 'source' => 'none', 'ocr_ran' => false];
+        } finally {
+            foreach ($images as $img) {
+                @unlink($img);
+            }
+            if ($single !== null) {
+                @unlink($single);
+            }
+        }
+    }
+
+    /** Text layer through poppler's `pdftotext` ('' when the binary is missing or the page has no text). */
+    private function extractTextLayer(string $pdfPath, ?int $page): string
+    {
+        try {
+            $args = ['pdftotext', '-enc', 'UTF-8', '-layout'];
+            if ($page !== null) {
+                array_push($args, '-f', (string) $page, '-l', (string) $page);
+            }
+            array_push($args, $pdfPath, '-');
+
+            // php-fpm/Valet may run with a minimal PATH (same concern as ImageProcessor::shellEnv()).
+            $path = '/opt/homebrew/bin:/usr/local/bin:'.(getenv('PATH') ?: '/usr/bin:/bin');
+            $result = Process::timeout(20)->env(['PATH' => $path])->run($args);
+
+            return $result->successful() ? trim(str_replace("\f", "\n", $result->output())) : '';
+        } catch (\Throwable $e) {
+            Log::info('DocumentProcessingPipeline: pdftotext unavailable', ['error' => $e->getMessage()]);
+
+            return '';
+        }
+    }
+
+    /** One page of a PDF as a standalone temporary PDF (caller unlinks it). */
+    private function singlePagePdf(string $pdfPath, int $page): string
+    {
+        $pdf = new Fpdi();
+        $pdf->setSourceFile($pdfPath);
+        $tpl = $pdf->importPage($page);
+        $size = $pdf->getTemplateSize($tpl);
+        $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+        $pdf->useTemplate($tpl);
+        $tmp = sys_get_temp_dir().'/'.uniqid('pdf_single_').'.pdf';
+        $pdf->Output('F', $tmp);
+
+        return $tmp;
+    }
+
     public function cleanup(): void
     {
         foreach ($this->tempFiles as $file) {

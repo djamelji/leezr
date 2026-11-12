@@ -317,8 +317,15 @@ class RecordSignerActionUseCase
         $remaining = $request->signers()->whereNotIn('status', [SignatureSigner::STATUS_SIGNED])->count();
 
         if ($remaining === 0) {
+            // ADR-767 — prestataire externe réel : le document scellé n'est pas encore annoncé → la demande
+            // reste active et sera finalisée par l'événement de complétion du prestataire (ou expirera).
+            $finalize = app(FinalizeSignatureRequestUseCase::class);
+            if ($finalize->awaitsProviderDocument($request)) {
+                return $request->fresh('signers');
+            }
+
             // Tous ont signé → finalisation (vérification empreinte + preuves + archivage).
-            app(FinalizeSignatureRequestUseCase::class)->execute($request);
+            $finalize->execute($request);
 
             return $request->fresh('signers');
         }

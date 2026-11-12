@@ -24,7 +24,11 @@ class PayslipImportController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $batches = PayslipImportBatch::where('company_id', $company->id)->orderByDesc('id')->get()
+        // ADR-767: without `payslips.review`, an importer only sees the batches IT created (status only).
+        $canReview = $request->user()->hasCompanyPermission($company, 'payslips.review');
+        $batches = PayslipImportBatch::where('company_id', $company->id)
+            ->when(! $canReview, fn ($q) => $q->where('created_by', $request->user()->id))
+            ->orderByDesc('id')->get()
             ->map(fn ($b) => ['id' => $b->id, 'status' => $b->status, 'items_total' => $b->items_total, 'items_published' => $b->items_published, 'created_at' => $b->created_at?->toIso8601String()]);
 
         return response()->json(['batches' => $batches]);
@@ -33,13 +37,13 @@ class PayslipImportController extends Controller
     public function store(Request $request, PayslipImportService $service): JsonResponse
     {
         $request->validate([
-            'files' => ['required', 'array', 'min:1', 'max:20'],
+            'files' => ['required', 'array', 'min:1', 'max:'.\App\Core\Documents\Payslip\PayslipQuotaUsage::MAX_FILES_PER_BATCH],
             'files.*' => ['file', 'max:51200'], // 50 MB (la validation profonde est faite par le validateur)
         ]);
         $company = $request->attributes->get('company');
 
         $batch = $service->createBatch($company, $request->user(), array_values($request->file('files')));
-        IngestPayslipBatchJob::dispatch($batch->id);
+        IngestPayslipBatchJob::dispatch($batch->id, (int) $company->id);
 
         return response()->json(['batch' => ['id' => $batch->id, 'status' => $batch->status]], 201);
     }

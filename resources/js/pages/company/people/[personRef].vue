@@ -17,7 +17,9 @@ import EmployeeAccessDialog from '@/pages/company/workforce/employees/_EmployeeA
 // le versioning, la confidentialité et l'état consolidé.
 import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
 
-definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })
+// ADR-767 : même règle que l'API (`members.view` OU `workforce.view`) — la fiche exigeait
+// `members.view` seul et renvoyait un 403 front à un profil RH pourtant autorisé côté serveur.
+definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'workforce.view'] } })
 
 const { t } = useI18n()
 const route = useRoute()

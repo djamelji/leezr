@@ -165,6 +165,7 @@
     "company": {
       "dashboard": "Accueil",
       "people": "Collaborateurs",
+      "workforce-people": "Collaborateurs",
       "members": "Membres",
       "settings": "Paramètres",
       "company-roles": "Rôles",
@@ -5248,6 +5249,7 @@
       "statusCol": "État",
       "actions": "Actions",
       "reason": {
+        "ocr_unverified": "Identifiant lu par OCR (scan) — à confirmer avant publication.",
         "no_matricule_page": "Contient une page sans matricule — composition incertaine.",
         "isolated_page": "Page isolée sans identifiant.",
         "ambiguous_match": "Plusieurs salariés correspondent.",
@@ -5977,7 +5979,8 @@
       "usageCollectSnapshots": "Collecter les snapshots d'utilisation",
       "workflowResetCounters": "Réinitialiser les compteurs quotidiens",
       "leaveAccrue": "Acquisition mensuelle des congés",
-      "leaveConsumeDue": "Consommation des congés à échéance"
+      "leaveConsumeDue": "Consommation des congés à échéance",
+      "signatureExpire": "Expiration des demandes de signature échues"
     },
     "categories": {
       "documents": "Documents",

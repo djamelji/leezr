@@ -165,6 +165,7 @@
     "company": {
       "dashboard": "Home",
       "people": "Collaborators",
+      "workforce-people": "Collaborators",
       "members": "Members",
       "settings": "Settings",
       "company-roles": "Roles",
@@ -5248,6 +5249,7 @@
       "statusCol": "State",
       "actions": "Actions",
       "reason": {
+        "ocr_unverified": "Identifier read by OCR (scan) — confirm before publishing.",
         "no_matricule_page": "Includes a page without an employee number — uncertain composition.",
         "isolated_page": "Isolated page with no identifier.",
         "ambiguous_match": "Several matching employees.",
@@ -5977,7 +5979,8 @@
       "usageCollectSnapshots": "Collect usage snapshots",
       "workflowResetCounters": "Reset workflow daily counters",
       "leaveAccrue": "Monthly leave accrual",
-      "leaveConsumeDue": "Consume due leaves"
+      "leaveConsumeDue": "Consume due leaves",
+      "signatureExpire": "Expire overdue signature requests"
     },
     "categories": {
       "documents": "Documents",

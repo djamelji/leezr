@@ -1,12 +1,20 @@
 <script setup>
 // ADR-762 (DMS M5) — centre « Import de bulletins » : upload d'un lot, revue des correspondances
 // (certaines / à vérifier / non identifiées), affectation manuelle, publication contrôlée.
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 
 const { t } = useI18n()
 const { toast } = useAppToast()
+
+// ADR-767 : chaque action est gated par SA permission (miroir des routes serveur). Un importateur
+// téléverse et suit l'état de SES lots ; la revue et la publication exigent leurs droits propres.
+const { can } = useCompanyPermissionContext()
+const canImport = computed(() => can('payslips.import'))
+const canReview = computed(() => can('payslips.review'))
+const canPublish = computed(() => can('payslips.publish'))
 
 const batches = ref([])
 const uploading = ref(false)
@@ -90,6 +98,7 @@ onMounted(fetchBatches)
       <VCardSubtitle>{{ t('documents.payslip.subtitle') }}</VCardSubtitle>
       <template #append>
         <VBtn
+          v-if="canImport"
           color="primary"
           prepend-icon="tabler-upload"
           :loading="uploading"
@@ -137,6 +146,7 @@ onMounted(fetchBatches)
             <td>{{ b.items_published }}</td>
             <td class="text-end">
               <VBtn
+                v-if="canReview"
                 size="small"
                 variant="text"
                 @click="openReview(b)"
@@ -165,6 +175,7 @@ onMounted(fetchBatches)
           <VCardTitle>{{ t('documents.payslip.reviewTitle', { id: activeBatch?.id }) }}</VCardTitle>
           <template #append>
             <VBtn
+              v-if="canPublish"
               color="primary"
               :loading="publishing"
               :disabled="(summary.counts.matched || 0) === 0"

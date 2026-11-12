@@ -136,6 +136,15 @@ Schedule::command('documents:auto-remind')->dailyAt('09:00')->withoutOverlapping
     ->onSuccess(SI::onSuccess('documents:auto-remind'))
     ->onFailure(SI::onFailure('documents:auto-remind'));
 
+// ── Workforce Signature (ADR-767) ────────────────────────
+// Expire overdue signature requests + revoke their pending signing links — hourly.
+Schedule::command('workforce:signature-expire')->hourly()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/workforce-signature-expire.log'))
+    ->when(SI::enabled('workforce:signature-expire'))
+    ->before(SI::before('workforce:signature-expire'))
+    ->onSuccess(SI::onSuccess('workforce:signature-expire'))
+    ->onFailure(SI::onFailure('workforce:signature-expire'));
+
 // ── Workflow Engine (ADR-437) ────────────────────────────
 // Reset daily execution counters at midnight
 Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping()

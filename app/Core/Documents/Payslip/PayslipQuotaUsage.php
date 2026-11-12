@@ -13,7 +13,12 @@ class PayslipQuotaUsage extends Model
 {
     use BelongsToCompany;
 
-    // Limites par défaut (par lot). La capacité est activée par les permissions payslips.*.
+    // ADR-767 — the migration (dms_m51) creates `payslip_quota_usage` (singular). Without this the model
+    // resolved to `payslip_quota_usages`, a table that does not exist: every REAL ingestion crashed on
+    // `bump()` (never seen by the earlier suites, which bypassed the ingestor).
+    protected $table = 'payslip_quota_usage';
+
+    // Per-batch limits — SINGLE source of truth (the validator and the HTTP layer both read these).
     public const MAX_FILES_PER_BATCH = 20;
     public const MAX_PAGES_PER_BATCH = 3000;
 

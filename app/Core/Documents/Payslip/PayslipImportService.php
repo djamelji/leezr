@@ -42,7 +42,7 @@ class PayslipImportService
      * (matricule/période par page). Regroupe par bulletin, crée un item par segment, reconstitue le
      * PDF complet (ordre des pages) et rapproche. Une page sans rattachement reste en revue.
      *
-     * @param  list<array{source_file_path:string,page_no:int,matricule:?string,period:?string,is_blank:bool,name:?string}>  $sourcePages
+     * @param  list<array{source_file_path:string,page_no:int,matricule:?string,period:?string,is_blank:bool,name:?string,text_source?:?string}>  $sourcePages
      * @return list<PayslipImportItem>
      */
     public function buildSegments(PayslipImportBatch $batch, array $sourcePages): array
@@ -75,6 +75,12 @@ class PayslipImportService
         $names = collect($sourcePages)->keyBy(fn ($p) => $p['source_file_path'].':'.$p['page_no']);
         $items = [];
 
+        // ADR-767 — pages whose text comes from OCR (no text layer). Recognition can misread a
+        // character (A100 → A190) and land on ANOTHER real employee: an OCR-read identifier is a
+        // candidate for a human, never a proof → such a segment is never auto-publishable.
+        $ocrKeys = collect($sourcePages)->filter(fn ($p) => ($p['text_source'] ?? null) === 'ocr')
+            ->map(fn ($p) => $p['source_file_path'].':'.$p['page_no'])->flip();
+
         foreach ($segments as $seg) {
             $firstKey = $seg['source'].':'.$seg['pages'][0];
             $name = $names->get($firstKey)['name'] ?? null;
@@ -82,12 +88,13 @@ class PayslipImportService
 
             // Un segment à composition INCERTAINE (page sans matricule non concordante) n'est jamais
             // publiable automatiquement, même si le matricule est certain.
-            $certain = $match['confidence'] === PayslipImportItem::C_CERTAIN && ! $seg['needs_review'];
+            $fromOcr = collect($seg['pages'])->contains(fn ($no) => $ocrKeys->has($seg['source'].':'.$no));
+            $certain = $match['confidence'] === PayslipImportItem::C_CERTAIN && ! $seg['needs_review'] && ! $fromOcr;
             $reason = $seg['needs_review']
                 ? ($seg['reason'] ?? 'uncertain')
-                : ($match['confidence'] === PayslipImportItem::C_AMBIGUOUS ? 'ambiguous_match'
+                : ($fromOcr && $match['confidence'] === PayslipImportItem::C_CERTAIN ? 'ocr_unverified' : ($match['confidence'] === PayslipImportItem::C_AMBIGUOUS ? 'ambiguous_match'
                     : ($match['confidence'] === PayslipImportItem::C_NONE ? 'no_match'
-                        : ($match['confidence'] === PayslipImportItem::C_PROBABLE ? 'name_only' : null)));
+                        : ($match['confidence'] === PayslipImportItem::C_PROBABLE ? 'name_only' : null))));
 
             $item = PayslipImportItem::create([
                 'company_id' => $batch->company_id,

@@ -27437,3 +27437,67 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Verdict GO/NO-GO** : **🟢 GO DEV (LOT 1)** — deux doublons de navigation éliminés (Roles, Documents) sans perte de fonctionnalité ni élargissement de permission, aucun nouveau 403 prouvé, routes historiques conservées en alias. **LOT 1 ≠ M7 complet** : restent (LOT 2) fiche Collaborateur pleinement opérable (édition identité/contrat/credentials/invitation/bulletins/signatures par réutilisation des formulaires existants) + redirections members/employees ; (LOT 3) self-service cohérent ; (LOT 4) recette E2E complète par facette + captures avant/après. Pré-requis PROD : identiques au socle (pas de changement d'infra) ; aucune incidence Billing/paie/cron.
 
 **Règles** : DEV uniquement, aucun push main/PROD, **aucune migration** (manifestes + pages + config front only), **aucun fichier supprimé** (routes historiques en alias), aucun changement Billing/génération paie, config cron/workers inchangée, **LOT 2→4 non démarrés**.
+
+## ADR-767 — M7 (LOT 1.1) : correctifs de sécurité et de fiabilité issus de l'audit du code réel
+
+**Date** : 2026-11-12
+**Contexte** : la reprise de session (base `e43b0438`) a comparé le **code réel** aux livraisons déclarées dans ADR-752→766. Plusieurs écarts ont été trouvés ; **le code prime sur les ADR** lorsqu'ils se contredisent. M7 LOT 2 est suspendu le temps de ce lot correctif. Méthode imposée pour chaque anomalie : reproduction par un test qui ÉCHOUE, cause exacte, correction au niveau de l'autorité métier, test de régression, permissions + isolation tenant, parcours applicatif réel (HTTP / job), pas de méthode isolée.
+
+### Priorité 1 — Sécurité
+
+| # | Anomalie reproduite | Cause | Correction (autorité) |
+|---|---|---|---|
+| 1 | Un NON-admin détenant `members.invite` invitait dans un rôle ADMINISTRATIF (201) | `MembershipController::store` n'appelait pas `MembershipSecurityPolicy` (ADR-752 ne couvrait que `update` et `EmployeeAccessService::grant`) | `InviteMemberUseCase` : `assertCanAssignRole` AVANT toute écriture (ni membership ni compte créés en cas de refus) ; audit `warning` si rôle admin. Tous les chemins d'attribution passent désormais par la policy (invite, changement de rôle, accès collaborateur) ; restent hors policy les seuls chemins système (création de company, sync jobdomain) |
+| 2 | `GET /company/members`, `/{id}`, `/{id}/fields` lisibles par tout membre (gate module seul) | aucune permission sur les routes | liste : `members.view` \| `documents.manage` \| `shipments.assign` (sélecteurs légitimes) ; profil + champs : `members.view` |
+| 3 | `workforce.view` seul voyait TOUS les collaborateurs (liste People, fiche par `personRef`, `GET employees/{id}`, `/contracts`, `/access`) alors que l'ancienne liste bornait à soi + rapports directs | People (ADR-754) et les lectures directes n'appelaient pas `WorkforceAccess` | `WorkforceAccess::employeeScopeFor()` (même règle que `hasViewAll('employee')`) consommée par `PeopleListReadModel` / `PersonFileReadModel` ; middleware `EnsureEmployeeInScope` sur les 3 lectures directes. Hors périmètre : 404 (fiche People) / 403 (API Workforce) ; la facette ACCÈS reste visible sans aucune donnée RH |
+| 4a | `workforce.contracts` suffisait à FIXER un salaire ; la réponse de création renvoyait `compensation_plans` sans `compensation_read` | `workforce.compensation_manage` n'était vérifiée nulle part | `ContractController::store` : montant fourni ⇒ `compensation_manage` exigé (403) ; compensation renvoyée seulement sous `compensation_read` ; champs salaire du formulaire masqués sans le droit |
+| 4b | `department_id` / `job_role_id` / `manager_id` d'une AUTRE company acceptés (création et édition d'un collaborateur) | règles `exists:` non scopées tenant | `Rule::exists(...)->where('company_id', …)` |
+| 5a | Un admin de la company A renommait un `User` aussi membre de la company B | `User` est global ; aucune garde | `GlobalIdentityPolicy` (nouvelle autorité) : identité partagée ⇒ 422 ; seuls les champs réellement modifiés comptent |
+| 5b | **Prise de contrôle inter-tenant** : inviter un e-mail existant puis lui imposer un mot de passe (`PUT members/{id}/password`) | idem | `GlobalIdentityPolicy::assertCompanyMayEdit` dans `setPassword` (le lien de réinitialisation, envoyé à la personne, reste permis) |
+| 5c | Éditer la fiche RH d'un collaborateur lié renommait le `User` partagé | `LinkedIdentityService::employeeToUser` sans garde | pas de propagation si identité partagée (la fiche RH locale reste modifiée) |
+| 6 | Un manager/RH NON administratif (`workforce.view`) n'avait plus aucune entrée vers ses collaborateurs, et la fiche exigeait `members.view` côté front | ADR-754 a remplacé « Employés » (surface `hr`) par « Collaborateurs » (surface `structure`) | entrée `workforce-people` (`operationalOnly`, jamais en double) ; metas People alignées sur l'API (`members.view` \| `workforce.view`) |
+
+### Priorité 2 — Pipelines réels
+
+- **Import de bulletins** : (a) tout upload réel plantait en 500 (`payslip_quota_usages` introuvable : `$table` manquant sur `PayslipQuotaUsage`) ; (b) `PayslipIngestor` appelait `extractTextFromPdf()` derrière un `method_exists` sur une méthode INEXISTANTE → texte toujours vide, aucun rapprochement possible. Corrigé : `DocumentProcessingPipeline::extractTextFromPdf()` (couche texte `pdftotext`, repli OCR existant). **Un matricule lu par OCR ne publie jamais seul** (`review_reason=ocr_unverified`, candidat proposé) — l'OCR de test lisait « A190 » pour « A100 ». `IngestPayslipBatchJob` porte le tenant (`InteractsWithTenant`). Les tests M5→M5.2 injectaient le texte et ne passaient jamais par l'ingestor ni le job : le parcours upload → job → extraction → matching → revue est maintenant testé.
+- **Signature externe** : `verifyEvidence()` était appelé AVANT l'archivage du document scellé qu'il exige → aucune complétion possible, même avec de vrais credentials (ADR-765 le présentait comme un comportement de sandbox). Corrigé sans relâcher les contrôles : capacité `SealsDocumentRemotely` + `finalizeProviderSealed()` (récupération authentifiée chez le prestataire, `%PDF-`, hash attesté si fourni, archivage, PUIS preuves vérifiées sur l'artefact stocké). Le jeton API n'est envoyé qu'à l'origine de `api_base`. Événements webhook `completed`/`failed` désormais appliqués (`ApplyProviderWebhookOutcomeUseCase`). Le sandbox échoue toujours en `provider_evidence_unverified`.
+- **Expiration des signatures** : `ExpireSignatureRequestsUseCase` n'avait ni commande ni planification. Ajout de `workforce:signature-expire` (horaire, `withoutOverlapping`, toggle, `ScheduledTaskRegistry`), idempotent, exécuté par tenant (`CompanyContext::runFor`).
+
+### Priorité 3 — Anomalies connexes
+
+- **Quotas bulletins** : limite fichiers ramenée à une source unique (`MAX_FILES_PER_BATCH`), `ocr_pages` incrémenté. Aucune limite CUMULÉE n'est définie nulle part → non inventée (résiduel).
+- **`payslips.import` seul** : l'index des lots renvoyait 403. Désormais `payslips.import|payslips.review`, un importateur ne voit que SES lots ; détail/items/aperçu/mutations restent réservés à `payslips.review`/`.publish`.
+- **Webhooks** : résolution du signataire scopée prestataire + demande ; enveloppe inconnue ou référence ambiguë = aucun effet.
+- **`GET /company/people/{ref}/payslips`** : toujours sans consommateur front (UI = LOT 2). Garanties serveur testées (catégorie paie, isolation tenant).
+
+### Matrice RBAC avant / après
+
+| Action | Avant | Après |
+|---|---|---|
+| Inviter dans un rôle admin | `members.invite` | `members.invite` + acteur administratif |
+| Lister les membres | module actif | `members.view` \| `documents.manage` \| `shipments.assign` |
+| Profil / champs d'un membre | module actif | `members.view` |
+| Voir tous les collaborateurs (People, API) | `workforce.view` | `workforce.view` + `workforce.manage` (ou owner) ; sinon soi + rapports directs |
+| Fixer une rémunération | `workforce.contracts` | `workforce.contracts` + `workforce.compensation_manage` |
+| Lire la rémunération à la création | `workforce.contracts` | `workforce.compensation_read` |
+| Renommer / imposer un mot de passe | `members.manage` / `members.credentials` | idem **et** identité non partagée avec une autre company |
+| Suivre ses imports de bulletins | `payslips.review` | `payslips.import` (ses lots) \| `payslips.review` |
+| Entrée Collaborateurs, rôle non administratif | aucune | `workforce.view` |
+
+### Tests
+
+`Adr767SecurityHardeningTest` **20/20** (13 échouaient avant correction, + nav), `Adr767PayslipPipelineTest` **10/10**, `Adr767SignaturePipelineTest` **16/16**. Tests existants ajustés : `PeoplePhase2Test`, `PersonFilePhase1Test`, `PayrollCompensationConfidentialityTest` (un « RH Company » = `workforce.view` + `workforce.manage`), `CompanyMemberProfileTest` (budget de requêtes 15 → 20 : coût constant du contrôle de permission), `DmsM6ExternalSignatureTest` (tests 13-14 : `api_base` configuré). **Suite complète : 4132 verts, 12 skipped, 3 échecs pré-existants** `ControllerSizeInvariantTest` (inchangés). **Build clean.** `MembershipController` 304 → 283 lignes, `EmployeeController` inchangé (343), `SignatureWebhookController` réduit.
+
+### Défauts résiduels
+
+1. `pdftotext` / Tesseract / ImageMagick présents en local, **non vérifiés sur le VPS** ; aucune lib PHP de repli. Sans eux, tout part en revue (sûr, non automatisé).
+2. Signature externe : aucun prestataire réel appelé (`Http::fake`, schéma générique) ; le hash attesté par le prestataire est optionnel. **NO-GO PROD inchangé.** Pas d'index unique `(signature_request_id, evidence_reference)` (lot sans migration ; le code refuse déjà l'ambiguïté).
+3. Un profil `payslips.*` sans `documents.view` n'atteint pas la page Documents ; la route people/payslips exige `documents.view` avant la policy paie.
+4. Une invitation rattache un compte EXISTANT à la company sans acceptation de la personne (conception historique, non modifiée).
+5. `ContractController::store` renvoie une 500 sur chevauchement de contrats (`DomainException` non traduite) ; `employees/summary` reste un agrégat Company pour `workforce.view`.
+6. Un rôle non administratif détenant seulement `members.view` peut ouvrir `/company/people` par URL (l'API l'autorisait déjà) ; pas d'entrée de nav.
+7. Regex de numérotation de pages `\d{1,2}/\d{1,2}` pouvant matcher une date ; quotas cumulés non définis ; ESLint pré-existant sur les fichiers Vue touchés.
+
+**Verdict** : **🟢 GO DEV — reprise de M7 LOT 2 possible.** Les prérequis de sécurité du LOT 2 (invitation, lectures, périmètre RH, rémunération, identité partagée) sont corrigés à la source. **NO-GO PROD** inchangé (signature externe, OCR des scans, outillage VPS).
+
+**Règles** : DEV uniquement, aucun push, **aucune migration**, aucune interface historique supprimée, aucun changement Billing/paie, LOT 2 non démarré.

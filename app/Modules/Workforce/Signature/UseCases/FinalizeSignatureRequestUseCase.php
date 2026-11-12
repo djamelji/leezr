@@ -7,6 +7,8 @@ use App\Core\Models\Company;
 use App\Modules\Workforce\Signature\Models\SignatureEvent;
 use App\Modules\Workforce\Signature\Models\SignatureRequest;
 use App\Modules\Workforce\Signature\Models\SignatureSigner;
+use App\Modules\Workforce\Signature\Providers\Contracts\SealsDocumentRemotely;
+use App\Modules\Workforce\Signature\Providers\Contracts\SignatureProviderAdapter;
 use App\Modules\Workforce\Signature\Providers\SignatureProviderManager;
 use App\Modules\Workforce\Signature\Services\SignatureDocumentService;
 use App\Modules\Workforce\Signature\Services\SignatureEventRecorder;
@@ -41,6 +43,14 @@ class FinalizeSignatureRequestUseCase
 
         // 2. Preuves prestataire.
         $adapter = SignatureProviderManager::adapterFor($request->provider);
+
+        // ADR-767 — prestataire qui SCELLE le document de son côté : l'artefact doit d'abord être
+        // récupéré chez lui, validé et archivé ; les preuves sont ensuite vérifiées SUR cet artefact.
+        // (Avant : verifyEvidence() était appelé avant que l'artefact existe → jamais de complétion.)
+        if ($adapter instanceof SealsDocumentRemotely) {
+            return $this->finalizeProviderSealed($request, $document, $adapter);
+        }
+
         if ($adapter === null || ! $adapter->verifyEvidence($request)) {
             return $this->fail($request, 'provider_evidence_unverified');
         }
@@ -260,6 +270,107 @@ class FinalizeSignatureRequestUseCase
             $request->company_id, \App\Core\Audit\AuditAction::SIGNATURE_COMPLETED,
             'signature_request', (string) $request->id,
             ['actorType' => 'system', 'metadata' => ['certified' => $certified, 'signature_format' => 'pades_external']],
+        );
+
+        $this->maybeSendSignedCopy($request);
+
+        return $request->fresh('signers');
+    }
+
+    /**
+     * ADR-767 — true when every signer has signed but the provider has not delivered the sealed document
+     * yet: the request stays active and is finalised by the provider's completion event.
+     */
+    public function awaitsProviderDocument(SignatureRequest $request): bool
+    {
+        $adapter = SignatureProviderManager::adapterFor($request->provider);
+
+        return $adapter instanceof SealsDocumentRemotely && $adapter->awaitsSealedDocument($request);
+    }
+
+    /** ADR-767 — failure REPORTED by the provider (authenticated webhook). No-op on a terminal request. */
+    public function failFromProvider(SignatureRequest $request, ?string $reason): SignatureRequest
+    {
+        if (! $request->isActive()) {
+            return $request->fresh('signers');
+        }
+
+        return $this->fail($request, 'provider_reported_failure'.($reason ? ': '.mb_substr($reason, 0, 180) : ''));
+    }
+
+    /**
+     * ADR-767 — finalisation with a document SEALED BY THE PROVIDER. No control is relaxed:
+     *  (a) the sealed document must really come from the provider (authenticated fetch, real PDF) ;
+     *  (b) if the provider attested a hash, the fetched bytes must match it ;
+     *  (c) the artefact is archived, then `verifyEvidence()` re-reads it FROM STORAGE and checks its hash ;
+     *  (d) only then `completed`. Any miss → `failed`, the document is never marked signed.
+     * The provider's document is archived AS IS (never re-sealed with a server key).
+     */
+    private function finalizeProviderSealed(SignatureRequest $request, GeneratedDocument $document, SignatureProviderAdapter $adapter): SignatureRequest
+    {
+        // (a) Sandbox / unreachable provider / non-PDF answer → no sealed document → no evidence.
+        $bytes = $adapter->fetchFinalDocument($request);
+        if ($bytes === null) {
+            return $this->fail($request, 'provider_evidence_unverified');
+        }
+
+        // (b) Hash attested by the provider (when provided) must match what was actually received.
+        $attested = $request->metadata['final_document_sha256'] ?? null;
+        if (is_string($attested) && $attested !== '' && ! hash_equals(strtolower($attested), hash('sha256', $bytes))) {
+            return $this->fail($request, 'provider_document_hash_mismatch');
+        }
+
+        // (c) Archive, then verify the evidence against the STORED artefact.
+        $archive = $this->documents->archiveSignedArtifact($request, $bytes);
+        $request->signed_document_path = $archive['path'];
+        $request->signed_document_sha256 = $archive['sha256'];
+        if (! $adapter->verifyEvidence($request)) {
+            \Illuminate\Support\Facades\Storage::disk(config('documents.generated_disk', 'local'))->delete($archive['path']);
+            $request->signed_document_path = null;
+            $request->signed_document_sha256 = null;
+
+            return $this->fail($request, 'provider_evidence_unverified');
+        }
+        $certified = $adapter->isCertified();
+
+        // (d) completed.
+        $request->transitionTo(SignatureRequest::STATUS_COMPLETED);
+        $request->completed_at = now();
+        $request->metadata = array_merge($request->metadata ?? [], [
+            'signature_format' => 'provider_sealed',
+            'seal_type' => 'external_provider',
+            'certified' => $certified,
+        ]);
+        $request->save();
+
+        if ($document->canTransitionSignatureTo(GeneratedDocument::SIGNATURE_SIGNED)) {
+            $document->transitionSignatureTo(GeneratedDocument::SIGNATURE_SIGNED);
+            $document->signed_at = now();
+            $document->signature_provider = $request->provider;
+            $document->signature_metadata = [
+                'signature_request_id' => $request->id,
+                'signed_document_sha256' => $archive['sha256'],
+                'signature_format' => 'provider_sealed',
+                'certified' => $certified,
+                'provider' => $request->provider,
+            ];
+            $document->save();
+        }
+
+        $this->events->record($request, SignatureEvent::TYPE_VERIFICATION_PASSED, [
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'verification' => 'passed',
+            'documentSha256' => $archive['sha256'],
+            'payload' => ['signature_format' => 'provider_sealed', 'verified_by' => 'provider_document_integrity', 'hash_attested' => (bool) $attested, 'certified' => $certified],
+        ]);
+        $this->events->record($request, SignatureEvent::TYPE_COMPLETED, [
+            'actorType' => SignatureEvent::ACTOR_SYSTEM,
+            'payload' => ['signed_sha256' => $archive['sha256'], 'signature_format' => 'provider_sealed', 'certified' => $certified],
+        ]);
+        app(\App\Core\Audit\AuditLogger::class)->logCompany(
+            $request->company_id, \App\Core\Audit\AuditAction::SIGNATURE_COMPLETED,
+            'signature_request', (string) $request->id,
+            ['actorType' => 'system', 'metadata' => ['certified' => $certified, 'signature_format' => 'provider_sealed']],
         );
 
         $this->maybeSendSignedCopy($request);

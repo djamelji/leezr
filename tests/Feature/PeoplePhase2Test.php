@@ -42,7 +42,9 @@ class PeoplePhase2Test extends TestCase
         $this->setUpCompanyRbac($this->company);
 
         $this->hrOnlyRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'hronly', 'name' => 'HR', 'is_administrative' => false]);
-        $this->hrOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['workforce.view'])->pluck('id')->all());
+        // ADR-767 : un profil RH (vue Company) = workforce.view + workforce.manage ; `workforce.view`
+        // seul est borné à soi + rapports directs (couvert par Adr767SecurityHardeningTest).
+        $this->hrOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['workforce.view', 'workforce.manage'])->pluck('id')->all());
 
         $this->accessOnlyRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'accessonly', 'name' => 'Access', 'is_administrative' => false]);
         $this->accessOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view'])->pluck('id')->all());

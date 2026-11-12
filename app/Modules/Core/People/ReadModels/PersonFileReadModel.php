@@ -58,13 +58,21 @@ class PersonFileReadModel
         // les comptes sans les données RH. Gating serveur strict, jamais d'élargissement implicite.
         $can = [
             'view_access' => $actor->hasCompanyPermission($company, 'members.view'),       // facette ACCÈS
-            'view_hr' => $actor->hasCompanyPermission($company, 'workforce.view'),          // facette RH
+            'view_hr' => $actor->hasCompanyPermission($company, 'workforce.view')          // facette RH
+                && self::employeeInScope($company, $actor, $employee),
             'manage_access' => $actor->hasCompanyPermission($company, 'members.invite') || $actor->hasCompanyPermission($company, 'members.manage'),
             'change_role' => $actor->hasCompanyPermission($company, 'members.manage'),
-            'edit_hr' => $actor->hasCompanyPermission($company, 'workforce.manage'),
+            'edit_hr' => $actor->hasCompanyPermission($company, 'workforce.manage') && self::employeeInScope($company, $actor, $employee),
             'view_compensation' => $actor->hasCompanyPermission($company, 'workforce.compensation_read'),
             'view_history' => $actor->hasCompanyPermission($company, 'audit.view'),
         ];
+
+        // ADR-767 : l'acteur doit détenir AU MOINS UNE facette SUR CETTE PERSONNE. Une fiche RH hors
+        // périmètre (ni soi, ni rapport direct, ni profil RH) n'est pas consultable par `workforce.view`
+        // seul ; elle ne reste visible que par sa facette ACCÈS (compte), sans aucune donnée RH.
+        if (! $can['view_hr'] && ! ($can['view_access'] && $membership)) {
+            return null;
+        }
 
         // ── Identité : User prioritaire (compte), repli sur la fiche RH. Les champs d'origine RH
         // (téléphone, e-mail de contact RH) ne sont exposés qu'avec la facette RH. ──
@@ -113,6 +121,17 @@ class PersonFileReadModel
             'available_sections' => array_values(array_unique($sections)),
             'can' => $can,
         ];
+    }
+
+    /** Périmètre RH (autorité Workforce) : vrai sans fiche RH (rien à restreindre). */
+    private static function employeeInScope(Company $company, User $actor, ?Employee $employee): bool
+    {
+        if (! $employee) {
+            return true;
+        }
+        $scope = \App\Modules\Workforce\Security\WorkforceAccess::employeeScopeFor($company, $actor);
+
+        return $scope === null || in_array($employee->id, $scope, true);
     }
 
     private static function identity(?User $user, ?Employee $employee, bool $canHr): array

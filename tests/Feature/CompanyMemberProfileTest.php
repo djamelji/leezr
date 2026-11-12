@@ -243,6 +243,8 @@ class CompanyMemberProfileTest extends TestCase
 
         // Query count should be reasonable (no N+1)
         // Typical: auth check + company context + membership + user + field definitions + activations + values
-        $this->assertLessThanOrEqual(15, $queryCount, "ReadModel generated {$queryCount} queries — check for N+1");
+        // ADR-767 : la route est désormais gated `members.view` → coût CONSTANT du contrôle de
+        // permission (membership + rôle + permissions) ajouté au budget ; toujours aucun N+1.
+        $this->assertLessThanOrEqual(20, $queryCount, "ReadModel generated {$queryCount} queries — check for N+1");
     }
 }

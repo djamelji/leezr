@@ -66,19 +66,23 @@ class PayslipIngestor
         // 3. Lit les pages (identifiants par page).
         $pages = [];
         $pagesProcessed = 0;
+        $ocrPages = 0;
         foreach ($sources as $relPath) {
             try {
                 $abs = Storage::disk('local')->path($relPath);
                 $pdf = new Fpdi();
                 $count = $pdf->setSourceFile($abs);
                 for ($p = 1; $p <= $count; $p++) {
-                    $text = $this->extractPageText($abs, $p);
+                    $extracted = $this->extractPageText($abs, $p);
+                    $text = $extracted['text'];
+                    $ocrPages += $extracted['ocr_ran'] ? 1 : 0;
                     $ids = $this->import->extractIdentifiers($text);
                     $pages[] = [
                         'source_file_path' => $relPath, 'page_no' => $p,
                         'matricule' => $ids['matricule'], 'period' => $ids['period'],
                         'page_index' => $ids['page_index'] ?? null, 'page_total' => $ids['page_total'] ?? null,
                         'is_blank' => trim($text) === '', 'name' => $ids['name'],
+                        'text_source' => $extracted['source'],
                     ];
                     $pagesProcessed++;
                 }
@@ -93,7 +97,7 @@ class PayslipIngestor
             $this->import->buildSegments($batch, $pages);
         }
 
-        PayslipQuotaUsage::bump($batch->company_id, filesImported: count($sources), pagesProcessed: $pagesProcessed);
+        PayslipQuotaUsage::bump($batch->company_id, filesImported: count($sources), pagesProcessed: $pagesProcessed, ocrPages: $ocrPages);
 
         $batch->update([
             'status' => PayslipImportBatch::STATUS_REVIEW,
@@ -130,26 +134,17 @@ class PayslipIngestor
         return $out;
     }
 
-    /** Texte d'une page (best-effort). Sans couche texte fiable → vide → la page reste en revue. */
-    private function extractPageText(string $absPdf, int $page): string
+    /**
+     * Text of one page, through the shared DocumentProcessingPipeline (text layer first, OCR fallback).
+     * ADR-767: the previous code probed a method that did not exist (`method_exists` guard) and silently
+     * returned '' for every page. An unreadable page still yields '' → it stays in review (safe default).
+     *
+     * @return array{text: string, source: string, ocr_ran: bool}
+     */
+    private function extractPageText(string $absPdf, int $page): array
     {
-        try {
-            $src = new Fpdi();
-            $src->setSourceFile($absPdf);
-            $tpl = $src->importPage($page);
-            $size = $src->getTemplateSize($tpl);
-            $src->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $src->useTemplate($tpl);
-            $tmp = tempnam(sys_get_temp_dir(), 'paysl').'.pdf';
-            file_put_contents($tmp, $src->Output('S'));
+        $result = app(DocumentProcessingPipeline::class)->extractTextFromPdf($absPdf, $page);
 
-            $pipeline = app(DocumentProcessingPipeline::class);
-            $text = method_exists($pipeline, 'extractTextFromPdf') ? (string) $pipeline->extractTextFromPdf($tmp) : '';
-            @unlink($tmp);
-
-            return $text;
-        } catch (\Throwable) {
-            return '';
-        }
+        return ['text' => (string) $result['text'], 'source' => (string) $result['source'], 'ocr_ran' => (bool) $result['ocr_ran']];
     }
 }
