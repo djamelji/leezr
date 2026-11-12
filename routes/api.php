@@ -107,6 +107,11 @@ Route::middleware(['auth:sanctum', 'session.governance'])->group(function () {
     Route::get('/whoami', [AuthController::class, 'whoami']);
     Route::get('/my-companies', [AuthController::class, 'myCompanies']);
 
+    // M7 LOT 2 — the invited person's own pending invitations (no company context: no access yet).
+    Route::get('/my-invitations', [\App\Modules\Infrastructure\Auth\Http\MyInvitationController::class, 'index']);
+    Route::post('/my-invitations/{id}/accept', [\App\Modules\Infrastructure\Auth\Http\MyInvitationController::class, 'accept'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::post('/my-invitations/{id}/decline', [\App\Modules\Infrastructure\Auth\Http\MyInvitationController::class, 'decline'])->whereNumber('id')->middleware('throttle:20,1');
+
     // Heartbeat (session keepalive — governance middleware handles TTL header)
     Route::post('/heartbeat', fn () => response()->noContent());
 });

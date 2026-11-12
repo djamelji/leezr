@@ -74,6 +74,34 @@ class PersonFileReadModel
             return null;
         }
 
+        // ── ADR-768 (M7 LOT 2) — capacités d'ACTION de la fiche, calculées serveur à partir des MÊMES
+        // autorités que les endpoints (aucune n'est une permission de navigation). L'interface n'affiche
+        // une action que si elle est vraie ici ; l'endpoint la revérifie de toute façon.
+        $has = fn (string $p) => $actor->hasCompanyPermission($company, $p);
+        $isSelf = $user && (int) $user->id === (int) $actor->id;
+        $protected = $membership && ($membership->isOwner() || $isSelf
+            || \App\Company\RBAC\MembershipSecurityPolicy::isLastActiveAdmin($company, $membership));
+        $inScope = self::employeeInScope($company, $actor, $employee);
+        $shared = $user ? \App\Company\Security\GlobalIdentityPolicy::isShared($company->id, $user) : false;
+        $can += [
+            'edit_identity' => (bool) $membership && $has('members.manage'),
+            'edit_global_name' => (bool) $membership && $has('members.manage') && ! $shared,
+            'manage_credentials' => (bool) $membership && $has('members.credentials') && ! $membership->isOwner() && ! $isSelf,
+            'set_password' => (bool) $membership && $has('members.credentials') && ! $membership->isOwner() && ! $isSelf && ! $shared,
+            'suspend_access' => (bool) $membership && $has('members.manage') && ! $protected,
+            'remove_access' => (bool) $membership && $has('members.manage') && ! $protected,
+            'invite' => $has('members.invite'),
+            'manage_contracts' => (bool) $employee && $hasWorkforce && $can['view_hr'] && $has('workforce.contracts'),
+            'manage_compensation' => (bool) $employee && $hasWorkforce && $can['view_hr'] && $has('workforce.compensation_manage'),
+            'generate_contract' => (bool) $employee && $hasWorkforce && $can['view_hr'] && $has('workforce_contract.generate'),
+            'view_signatures' => (bool) $employee && $hasWorkforce && $can['view_hr'] && $has('workforce_signature.view'),
+            'view_payslips' => self::canViewPayslips($company, $actor, $user, $employee),
+            'create_hr_record' => $hasWorkforce && ! $employee && (bool) $membership && $has('workforce.manage') && $has('members.view'),
+            'link_account' => $hasWorkforce && (bool) $employee && ! $user && $inScope && $has('workforce.manage') && $has('members.manage'),
+        ];
+        // La rémunération n'est lisible que dans le périmètre RH de l'acteur (jamais hors équipe).
+        $can['view_compensation'] = $can['view_compensation'] && $can['view_hr'];
+
         // ── Identité : User prioritaire (compte), repli sur la fiche RH. Les champs d'origine RH
         // (téléphone, e-mail de contact RH) ne sont exposés qu'avec la facette RH. ──
         $identity = self::identity($user, $employee, $can['view_hr']);
@@ -105,6 +133,10 @@ class PersonFileReadModel
         if ($hasHrDocs || $hasCoreDocs) {
             $sections[] = 'documents';
         }
+        // Bulletins : autorité paie (DocumentAccessPolicy) — jamais `documents.view` ni `members.view`.
+        if ($can['view_payslips']) {
+            $sections[] = 'payslips';
+        }
         // Historique : UNIQUEMENT si des traces d'audit réelles existent ET droit audit (sinon masqué).
         if ($can['view_history'] && self::hasHistory($company, $user, $employee)) {
             $sections[] = 'history';
@@ -118,9 +150,22 @@ class PersonFileReadModel
             'identity' => $identity,
             'account' => $account,
             'employment' => $employment,
+            'identity_shared' => $shared && $can['view_access'],
             'available_sections' => array_values(array_unique($sections)),
             'can' => $can,
         ];
+    }
+
+    /** Bulletins d'AUTRUI : même autorité que l'endpoint (`DocumentAccessPolicy`, catégorie PAYROLL). */
+    private static function canViewPayslips(Company $company, User $actor, ?User $user, ?Employee $employee): bool
+    {
+        if (! ModuleGate::isActive($company, 'core.documents')) {
+            return false;
+        }
+        $subject = \App\Core\Documents\Services\PersonSubjectResolver::resolve($company, $user, $employee)['canonical'] ?? null;
+
+        return $subject !== null && app(\App\Core\Documents\Services\DocumentAccessPolicy::class)
+            ->canAccess($actor, $company, $subject, 'payslip', \App\Core\Documents\Services\DocumentAccessPolicy::OP_VIEW_METADATA);
     }
 
     /** Périmètre RH (autorité Workforce) : vrai sans fiche RH (rien à restreindre). */
@@ -154,7 +199,9 @@ class PersonFileReadModel
     {
         $state = 'none';
         if ($user && $membership) {
-            if ($membership->isSuspended()) {
+            if ($membership->isPendingAcceptance()) {
+                $state = 'pending_acceptance'; // M7 LOT 2 : invitation non encore acceptée par la personne
+            } elseif ($membership->isSuspended()) {
                 $state = 'suspended';
             } elseif (! $user->password_set_at) {
                 $state = 'invited';

@@ -241,6 +241,10 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     // (compte/rôle vs données RH) est ensuite gated séparément dans le read-model.
     Route::get('/company/people', [\App\Modules\Core\People\Http\PersonController::class, 'index'])
         ->middleware('company.access:use-any-permission,members.view|workforce.view');
+    // ADR-768 : résolution SERVEUR d'un identifiant historique (membership / employee) → personRef,
+    // pour rediriger les anciennes routes sans jamais confondre un id Membership et un id Employee.
+    Route::get('/company/people/resolve', [\App\Modules\Core\People\Http\PersonController::class, 'resolve'])
+        ->middleware('company.access:use-any-permission,members.view|workforce.view');
     Route::get('/company/people/{personRef}', [\App\Modules\Core\People\Http\PersonController::class, 'show'])
         ->middleware('company.access:use-any-permission,members.view|workforce.view')
         ->where('personRef', '(user|employee)-[0-9]+');
@@ -253,6 +257,14 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
         ->middleware('company.access:use-permission,members.credentials');
     Route::put('/company/members/{id}/password', [MemberCredentialController::class, 'setPassword'])
         ->middleware('company.access:use-permission,members.credentials');
+
+    // ADR-768 (M7 LOT 2) — cycle de vie de l'accès d'un COMPTE (avec ou sans fiche RH).
+    Route::post('/company/members/{id}/suspend', [\App\Modules\Core\Members\Http\MemberAccessController::class, 'suspend'])
+        ->whereNumber('id')->middleware('company.access:use-permission,members.manage');
+    Route::post('/company/members/{id}/restore', [\App\Modules\Core\Members\Http\MemberAccessController::class, 'restore'])
+        ->whereNumber('id')->middleware('company.access:use-permission,members.manage');
+    Route::post('/company/members/{id}/resend-invitation', [\App\Modules\Core\Members\Http\MemberAccessController::class, 'resendInvitation'])
+        ->whereNumber('id')->middleware('company.access:use-permission,members.invite');
 
     // User profile (personal data, no additional permission needed)
     Route::get('/profile', [UserProfileController::class, 'show']);
@@ -421,10 +433,12 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,payslips.publish');
 
     // Bulletins PUBLIÉS — fiche Collaborateur (policy payroll à l'intérieur) + self-service.
+    // ADR-768 : l'entrée accepte AUSSI un profil paie sans `documents.view` (plus de 403 parasite) ;
+    // l'autorité reste DocumentAccessPolicy (catégorie PAYROLL) — `documents.view` seul n'obtient rien.
     Route::get('/company/people/{personRef}/payslips', [PublishedPayslipController::class, 'person'])
-        ->middleware('company.access:use-permission,documents.view');
+        ->middleware('company.access:use-any-permission,documents.view|payslips.download|workforce.compensation_read|workforce.payroll_validate|workforce.payroll_prepare');
     Route::get('/company/people/{personRef}/payslips/{id}/download', [PublishedPayslipController::class, 'downloadPerson'])
-        ->middleware('company.access:use-permission,documents.view');
+        ->middleware('company.access:use-any-permission,documents.view|payslips.download|workforce.compensation_read|workforce.payroll_validate|workforce.payroll_prepare');
 
     // Self-document upload (ADR-173, no additional permission — self scope)
     Route::get('/profile/documents', [SelfDocumentController::class, 'index']);
@@ -598,6 +612,11 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees/import', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'import'])->middleware($perm('workforce.import'));
     Route::post('employees/bulk/preview', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'bulkPreview'])->middleware($perm('workforce.manage'));
     Route::post('employees/bulk', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'bulk'])->middleware($perm('workforce.manage'));
+    // ADR-768 (M7 LOT 2) — pont EXPLICITE compte ↔ fiche RH (jamais par nom/e-mail). Deux facettes
+    // requises : RH (`workforce.manage`) ET comptes (`members.view` pour choisir, `members.manage` pour lier).
+    Route::get('employees/link-candidates', [\App\Modules\Workforce\Employees\Http\EmployeeAccountLinkController::class, 'candidates'])->middleware([$perm('workforce.manage'), $perm('members.view')]);
+    Route::post('employees/from-member', [\App\Modules\Workforce\Employees\Http\EmployeeAccountLinkController::class, 'createForMember'])->middleware([$perm('workforce.manage'), $perm('members.view')]);
+    Route::post('employees/{id}/link-account', [\App\Modules\Workforce\Employees\Http\EmployeeAccountLinkController::class, 'linkAccount'])->whereNumber('id')->middleware([$perm('workforce.manage'), $perm('members.manage')]);
     // ADR-640 (W-C) — fiche unifiée : autorisation de scope (soi/rapport/RH) dans le contrôleur
     Route::get('employees/{id}/file', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'file']);
     Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware([$perm('workforce.view'), $employeeScope]);

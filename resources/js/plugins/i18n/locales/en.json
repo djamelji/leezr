@@ -4365,35 +4365,122 @@
     "noContract": "No contract",
     "noHistory": "No history available.",
     "tabs": {
-      "overview": "Overview", "personal": "Personal info", "access": "Access & authorizations",
-      "employment": "Employment & contract", "planning": "Planning", "time": "Time & attendance",
-      "leave": "Leave & absences", "documents": "Documents", "history": "History"
+      "overview": "Overview",
+      "personal": "Personal info",
+      "access": "Access & authorizations",
+      "employment": "Employment",
+      "planning": "Planning",
+      "time": "Time & attendance",
+      "leave": "Leave & absences",
+      "documents": "Documents",
+      "history": "History",
+      "contract": "Contract",
+      "payslips": "Payslips"
     },
     "account": {
-      "connected": "Account connected", "active": "Account activated", "invited": "Invitation pending",
-      "suspended": "Access suspended", "none": "No account"
+      "pending_acceptance": "Pending acceptance",
+      "connected": "Account connected",
+      "active": "Account activated",
+      "invited": "Invitation pending",
+      "suspended": "Access suspended",
+      "none": "No account"
     },
     "access": {
-      "title": "App access", "effectivePermissions": "Effective permissions",
+      "title": "App access",
+      "effectivePermissions": "Effective permissions",
       "noPermissions": "No permission (or access not allowed).",
-      "assignRole": "Assigned role", "roleUpdated": "Role updated.", "roleUpdateError": "Could not change the role."
+      "assignRole": "Assigned role",
+      "roleUpdated": "Role updated.",
+      "roleUpdateError": "Could not change the role.",
+      "stateHint": {
+        "none": "This person has no access to the application.",
+        "invited": "Invitation sent — the password has not been set yet.",
+        "pending_acceptance": "Invitation sent to an existing account — waiting for acceptance.",
+        "active": "Account activated, no sign-in recorded yet.",
+        "connected": "The account is active and has already signed in.",
+        "suspended": "Access is suspended; the account and data are kept."
+      },
+      "grant": "Grant access",
+      "resend": "Resend invitation",
+      "restore": "Restore access",
+      "suspend": "Suspend access",
+      "remove": "Remove access",
+      "cancelInvitation": "Cancel invitation",
+      "pendingNotice": "This person already has an account. Access to your company is only activated once they accept the invitation.",
+      "restored": "Access restored.",
+      "suspended": "Access suspended.",
+      "invitationResent": "Invitation resent.",
+      "removed": "Access removed.",
+      "removeConfirm": "Remove {name}'s access to your company? Their HR record and documents are kept.",
+      "resetSent": "Password reset e-mail sent.",
+      "passwordSet": "Password set.",
+      "passwordShared": "This account is also used in another company: a password cannot be imposed from here. The reset link remains available.",
+      "suspendTitle": "Suspend access",
+      "suspendHint": "The person will no longer be able to sign in to your company. Nothing is deleted; access can be restored at any time.",
+      "suspendReason": "Reason (optional)"
     },
     "fields": {
-      "name": "Name", "loginEmail": "Login email", "hrEmail": "HR email (contact)",
-      "phone": "Phone", "employeeNumber": "Employee number", "hireDate": "Hire date",
-      "compensation": "Compensation", "manager": "Manager"
+      "name": "Name",
+      "loginEmail": "Login email",
+      "hrEmail": "HR email (contact)",
+      "phone": "Phone",
+      "employeeNumber": "Employee number",
+      "hireDate": "Hire date",
+      "compensation": "Compensation",
+      "manager": "Manager"
     },
-    "empStatus": { "active": "Active", "inactive": "Inactive", "on_leave": "On leave", "suspended": "Suspended", "terminated": "Terminated" }
+    "empStatus": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "on_leave": "On leave",
+      "suspended": "Suspended",
+      "terminated": "Terminated"
+    },
+    "identity": {
+      "sharedNotice": "This person uses the same account in another company: their name is edited from their own profile. Information specific to your company can still be edited here."
+    },
+    "payslips": {
+      "empty": "No published payslip for this person."
+    },
+    "hrLink": {
+      "createTitle": "Create employee record",
+      "createHint": "An HR record will be created for this account, with its current name. No other data is inferred.",
+      "linkTitle": "Link to an account",
+      "linkHint": "Pick this person's account among members without an employee record. Linking is explicit: nothing is matched by name or e-mail.",
+      "linkAction": "Link",
+      "account": "Account",
+      "noCandidate": "No member without an employee record.",
+      "linked": "Record linked to the account.",
+      "created": "Employee record created.",
+      "noRecordTitle": "Employee record",
+      "noRecordHint": "This account has no employee record: contract, planning and leave are not available."
+    }
   },
   "peopleList": {
     "title": "Collaborators",
     "subtitle": "Everyone in your company — access and HR data according to your permissions.",
-    "person": "Person", "account": "Account", "role": "Role",
-    "employment": "Employment", "job": "Job", "department": "Department",
-    "new": "New", "inviteUser": "Invite a user", "createEmployee": "Create an employee file",
-    "inviteUserHint": "Creates app access (account + role).", "createEmployeeHint": "HR file without an account (add access later).",
-    "tabPeople": "People", "tabRoles": "Roles & authorizations",
-    "searchPlaceholder": "Search a collaborator…", "empty": "No collaborator."
+    "person": "Person",
+    "account": "Account",
+    "role": "Role",
+    "employment": "Employment",
+    "job": "Job",
+    "department": "Department",
+    "new": "New",
+    "inviteUser": "Invite a user",
+    "createEmployee": "Create an employee file",
+    "inviteUserHint": "Creates app access (account + role).",
+    "createEmployeeHint": "HR file without an account (add access later).",
+    "tabPeople": "People",
+    "tabRoles": "Roles & authorizations",
+    "searchPlaceholder": "Search a collaborator…",
+    "empty": "No collaborator.",
+    "invited": "Invitation sent.",
+    "invitedPending": "This account already exists: an invitation has been sent. Access will be activated once accepted.",
+    "tools": "Tools",
+    "toolsHr": "Import, export and bulk actions",
+    "toolsHrHint": "Employee list (CSV import, export, bulk changes).",
+    "toolsFields": "Custom fields",
+    "toolsFieldsHint": "Configure member profile fields."
   },
   "home": {
     "title": "Home",
@@ -5224,9 +5311,22 @@
       "launched": "Campaign launched.",
       "progress": "Progress",
       "accountLess": "No account",
-      "target": { "all": "All eligible employees", "department": "Department(s)" },
-      "partition": { "pending": "Pending", "received": "Received", "validated": "Validated" },
-      "state": { "draft": "Draft", "launching": "Launching", "active": "Active", "completed": "Completed", "cancelled": "Cancelled" }
+      "target": {
+        "all": "All eligible employees",
+        "department": "Department(s)"
+      },
+      "partition": {
+        "pending": "Pending",
+        "received": "Received",
+        "validated": "Validated"
+      },
+      "state": {
+        "draft": "Draft",
+        "launching": "Launching",
+        "active": "Active",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
     },
     "payslip": {
       "tab": "Payslip import",
@@ -5264,10 +5364,34 @@
       "generated": "Leezr",
       "available": "Available",
       "revoked": "Revoked",
-      "counts": { "certain": "Certain", "review": "To review", "unidentified": "Unidentified", "published": "Published" },
-      "conf": { "certain": "Certain", "probable": "Probable", "ambiguous": "Ambiguous", "none": "None" },
-      "itemState": { "pending": "Pending", "matched": "Matched", "review": "Review", "excluded": "Excluded", "published": "Published", "failed": "Failed" },
-      "state": { "uploaded": "Uploaded", "processing": "Processing", "review": "In review", "publishing": "Publishing", "published": "Published", "failed": "Failed" }
+      "counts": {
+        "certain": "Certain",
+        "review": "To review",
+        "unidentified": "Unidentified",
+        "published": "Published"
+      },
+      "conf": {
+        "certain": "Certain",
+        "probable": "Probable",
+        "ambiguous": "Ambiguous",
+        "none": "None"
+      },
+      "itemState": {
+        "pending": "Pending",
+        "matched": "Matched",
+        "review": "Review",
+        "excluded": "Excluded",
+        "published": "Published",
+        "failed": "Failed"
+      },
+      "state": {
+        "uploaded": "Uploaded",
+        "processing": "Processing",
+        "review": "In review",
+        "publishing": "Publishing",
+        "published": "Published",
+        "failed": "Failed"
+      }
     },
     "approve": "Approve",
     "reject": "Reject",
@@ -8822,7 +8946,8 @@
       "active": "Account activated",
       "connected": "Connected",
       "account_without_membership": "Account to re-link",
-      "suspended": "Access suspended"
+      "suspended": "Access suspended",
+      "pending_acceptance": "Pending acceptance"
     },
     "card": {
       "title": "Access & account",
@@ -8951,5 +9076,22 @@
       },
       "activeSubsShort": "active subs"
     }
+  },
+  "invitations": {
+    "pageTitle": "Your invitations",
+    "pageSubtitle": "A company invited you to join its workspace. Nothing is activated without your consent.",
+    "title": "Invitation to join {company}",
+    "invitedBy": "Invited by {name}",
+    "role": "Proposed role: {role}",
+    "noAccessUntilAccepted": "No access is opened until you accept.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "You joined {company}.",
+    "declined": "Invitation from {company} declined.",
+    "error": "Unable to process the invitation.",
+    "none": "You have no pending invitation.",
+    "signInFirst": "Sign in with your account to see your invitations.",
+    "signIn": "Sign in",
+    "backToApp": "Back to the app"
   }
 }

@@ -8,6 +8,7 @@ import MemberProfileForm from '@/company/components/MemberProfileForm.vue'
 import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
 import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
 import { useAppToast } from '@/composables/useAppToast'
+import { $api } from '@/utils/api'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -59,7 +60,28 @@ const applyProfile = data => {
   dynamicForm.value = df
 }
 
+// ADR-768 (M7 LOT 2) — parité PROUVÉE avec la fiche Collaborateur unifiée (identité, rôle, champs
+// dynamiques, documents, identifiants) : cette route REDIRIGE vers `/company/people/:personRef`.
+// L'id de l'URL est un id de MEMBERSHIP : il est résolu côté serveur (jamais interprété comme un
+// id User ou Employee). L'interface historique n'est pas supprimée : `?legacy=1` la conserve.
+const isLegacy = route.query.legacy === '1'
+
+const redirectToPerson = async () => {
+  try {
+    const { person_ref: personRef } = await $api('/company/people/resolve', { query: { membership_id: route.params.id } })
+    const { legacy, ...query } = route.query
+
+    await router.replace({ path: `/company/people/${personRef}`, query })
+  }
+  catch {
+    toast(t('members.failedToLoadProfile'), 'error')
+    router.replace({ name: 'company-people' })
+  }
+}
+
 onMounted(async () => {
+  if (!isLegacy) return redirectToPerson()
+
   try {
     const [data] = await Promise.all([
       membersStore.fetchMemberProfile(route.params.id),

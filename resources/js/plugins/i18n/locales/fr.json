@@ -4365,35 +4365,122 @@
     "noContract": "Aucun contrat",
     "noHistory": "Aucun historique disponible.",
     "tabs": {
-      "overview": "Vue d'ensemble", "personal": "Informations", "access": "Accès & autorisations",
-      "employment": "Emploi & contrat", "planning": "Planning", "time": "Temps & pointage",
-      "leave": "Congés & absences", "documents": "Documents", "history": "Historique"
+      "overview": "Vue d'ensemble",
+      "personal": "Informations",
+      "access": "Accès & autorisations",
+      "employment": "Emploi",
+      "planning": "Planning",
+      "time": "Temps & pointage",
+      "leave": "Congés & absences",
+      "documents": "Documents",
+      "history": "Historique",
+      "contract": "Contrat",
+      "payslips": "Bulletins de paie"
     },
     "account": {
-      "connected": "Compte connecté", "active": "Compte activé", "invited": "Invitation en attente",
-      "suspended": "Accès suspendu", "none": "Aucun compte"
+      "pending_acceptance": "En attente d'acceptation",
+      "connected": "Compte connecté",
+      "active": "Compte activé",
+      "invited": "Invitation en attente",
+      "suspended": "Accès suspendu",
+      "none": "Aucun compte"
     },
     "access": {
-      "title": "Accès applicatif", "effectivePermissions": "Permissions effectives",
+      "title": "Accès applicatif",
+      "effectivePermissions": "Permissions effectives",
       "noPermissions": "Aucune permission (ou accès non autorisé).",
-      "assignRole": "Rôle attribué", "roleUpdated": "Rôle mis à jour.", "roleUpdateError": "Impossible de modifier le rôle."
+      "assignRole": "Rôle attribué",
+      "roleUpdated": "Rôle mis à jour.",
+      "roleUpdateError": "Impossible de modifier le rôle.",
+      "stateHint": {
+        "none": "Cette personne n'a pas d'accès à l'application.",
+        "invited": "Invitation envoyée — le mot de passe n'a pas encore été défini.",
+        "pending_acceptance": "Invitation envoyée à un compte existant — en attente de son acceptation.",
+        "active": "Compte activé, aucune connexion enregistrée pour l'instant.",
+        "connected": "Le compte est actif et s'est déjà connecté.",
+        "suspended": "L'accès est suspendu ; le compte et les données sont conservés."
+      },
+      "grant": "Donner accès",
+      "resend": "Relancer l'invitation",
+      "restore": "Réactiver l'accès",
+      "suspend": "Suspendre l'accès",
+      "remove": "Retirer l'accès",
+      "cancelInvitation": "Annuler l'invitation",
+      "pendingNotice": "Cette personne possède déjà un compte. Son accès à votre entreprise ne sera activé qu'après son acceptation de l'invitation.",
+      "restored": "Accès réactivé.",
+      "suspended": "Accès suspendu.",
+      "invitationResent": "Invitation renvoyée.",
+      "removed": "Accès retiré.",
+      "removeConfirm": "Retirer l'accès de {name} à votre entreprise ? Sa fiche RH et ses documents sont conservés.",
+      "resetSent": "E-mail de réinitialisation envoyé.",
+      "passwordSet": "Mot de passe défini.",
+      "passwordShared": "Ce compte est aussi utilisé dans une autre entreprise : le mot de passe ne peut pas être imposé d'ici. Le lien de réinitialisation reste disponible.",
+      "suspendTitle": "Suspendre l'accès",
+      "suspendHint": "La personne ne pourra plus se connecter à votre entreprise. Rien n'est supprimé ; l'accès peut être réactivé à tout moment.",
+      "suspendReason": "Motif (facultatif)"
     },
     "fields": {
-      "name": "Nom", "loginEmail": "E-mail de connexion", "hrEmail": "E-mail RH (contact)",
-      "phone": "Téléphone", "employeeNumber": "N° collaborateur", "hireDate": "Date d'embauche",
-      "compensation": "Rémunération", "manager": "Responsable"
+      "name": "Nom",
+      "loginEmail": "E-mail de connexion",
+      "hrEmail": "E-mail RH (contact)",
+      "phone": "Téléphone",
+      "employeeNumber": "N° collaborateur",
+      "hireDate": "Date d'embauche",
+      "compensation": "Rémunération",
+      "manager": "Responsable"
     },
-    "empStatus": { "active": "Actif", "inactive": "Inactif", "on_leave": "En congé", "suspended": "Suspendu", "terminated": "Sorti" }
+    "empStatus": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "on_leave": "En congé",
+      "suspended": "Suspendu",
+      "terminated": "Sorti"
+    },
+    "identity": {
+      "sharedNotice": "Cette personne utilise le même compte dans une autre entreprise : son nom se modifie depuis son propre profil. Les informations propres à votre entreprise restent modifiables ici."
+    },
+    "payslips": {
+      "empty": "Aucun bulletin publié pour cette personne."
+    },
+    "hrLink": {
+      "createTitle": "Créer la fiche salarié",
+      "createHint": "Une fiche RH sera créée pour ce compte, avec son nom actuel. Aucune autre donnée n'est déduite.",
+      "linkTitle": "Rattacher à un compte",
+      "linkHint": "Choisissez le compte de cette personne parmi les membres sans fiche salarié. Le rattachement est explicite : rien n'est rapproché par nom ou par e-mail.",
+      "linkAction": "Rattacher",
+      "account": "Compte",
+      "noCandidate": "Aucun membre sans fiche salarié.",
+      "linked": "Fiche rattachée au compte.",
+      "created": "Fiche salarié créée.",
+      "noRecordTitle": "Fiche salarié",
+      "noRecordHint": "Ce compte n'a pas de fiche salarié : contrat, planning et congés ne sont pas disponibles."
+    }
   },
   "peopleList": {
     "title": "Collaborateurs",
     "subtitle": "Toutes les personnes de votre entreprise — accès et données RH selon vos permissions.",
-    "person": "Personne", "account": "Compte", "role": "Rôle",
-    "employment": "Emploi", "job": "Poste", "department": "Département",
-    "new": "Nouveau", "inviteUser": "Inviter un utilisateur", "createEmployee": "Créer une fiche salarié",
-    "inviteUserHint": "Crée un accès applicatif (compte + rôle).", "createEmployeeHint": "Fiche RH sans compte (ajout d'accès ultérieur).",
-    "tabPeople": "Personnes", "tabRoles": "Rôles & autorisations",
-    "searchPlaceholder": "Rechercher un collaborateur…", "empty": "Aucun collaborateur."
+    "person": "Personne",
+    "account": "Compte",
+    "role": "Rôle",
+    "employment": "Emploi",
+    "job": "Poste",
+    "department": "Département",
+    "new": "Nouveau",
+    "inviteUser": "Inviter un utilisateur",
+    "createEmployee": "Créer une fiche salarié",
+    "inviteUserHint": "Crée un accès applicatif (compte + rôle).",
+    "createEmployeeHint": "Fiche RH sans compte (ajout d'accès ultérieur).",
+    "tabPeople": "Personnes",
+    "tabRoles": "Rôles & autorisations",
+    "searchPlaceholder": "Rechercher un collaborateur…",
+    "empty": "Aucun collaborateur.",
+    "invited": "Invitation envoyée.",
+    "invitedPending": "Ce compte existe déjà : une invitation lui a été envoyée. L'accès sera activé après son acceptation.",
+    "tools": "Outils",
+    "toolsHr": "Import, export et actions groupées",
+    "toolsHrHint": "Liste des salariés (import CSV, export, modifications en masse).",
+    "toolsFields": "Champs personnalisés",
+    "toolsFieldsHint": "Régler les champs du profil des membres."
   },
   "home": {
     "title": "Accueil",
@@ -5224,9 +5311,22 @@
       "launched": "Campagne lancée.",
       "progress": "Progression",
       "accountLess": "Sans compte",
-      "target": { "all": "Tous les salariés éligibles", "department": "Département(s)" },
-      "partition": { "pending": "En attente", "received": "Reçus", "validated": "Validés" },
-      "state": { "draft": "Brouillon", "launching": "En cours de lancement", "active": "Active", "completed": "Terminée", "cancelled": "Annulée" }
+      "target": {
+        "all": "Tous les salariés éligibles",
+        "department": "Département(s)"
+      },
+      "partition": {
+        "pending": "En attente",
+        "received": "Reçus",
+        "validated": "Validés"
+      },
+      "state": {
+        "draft": "Brouillon",
+        "launching": "En cours de lancement",
+        "active": "Active",
+        "completed": "Terminée",
+        "cancelled": "Annulée"
+      }
     },
     "payslip": {
       "tab": "Import bulletins",
@@ -5264,10 +5364,34 @@
       "generated": "Leezr",
       "available": "Disponible",
       "revoked": "Retiré",
-      "counts": { "certain": "Certains", "review": "À vérifier", "unidentified": "Non identifiés", "published": "Publiés" },
-      "conf": { "certain": "Certain", "probable": "Probable", "ambiguous": "Ambigu", "none": "Aucun" },
-      "itemState": { "pending": "En attente", "matched": "Rapproché", "review": "Revue", "excluded": "Exclu", "published": "Publié", "failed": "Échec" },
-      "state": { "uploaded": "Importé", "processing": "Traitement", "review": "En revue", "publishing": "Publication", "published": "Publié", "failed": "Échec" }
+      "counts": {
+        "certain": "Certains",
+        "review": "À vérifier",
+        "unidentified": "Non identifiés",
+        "published": "Publiés"
+      },
+      "conf": {
+        "certain": "Certain",
+        "probable": "Probable",
+        "ambiguous": "Ambigu",
+        "none": "Aucun"
+      },
+      "itemState": {
+        "pending": "En attente",
+        "matched": "Rapproché",
+        "review": "Revue",
+        "excluded": "Exclu",
+        "published": "Publié",
+        "failed": "Échec"
+      },
+      "state": {
+        "uploaded": "Importé",
+        "processing": "Traitement",
+        "review": "En revue",
+        "publishing": "Publication",
+        "published": "Publié",
+        "failed": "Échec"
+      }
     },
     "approve": "Approuver",
     "reject": "Rejeter",
@@ -8822,7 +8946,8 @@
       "active": "Compte activé",
       "connected": "Connecté",
       "account_without_membership": "Compte à ré-associer",
-      "suspended": "Accès suspendu"
+      "suspended": "Accès suspendu",
+      "pending_acceptance": "En attente d'acceptation"
     },
     "card": {
       "title": "Accès & compte",
@@ -8951,5 +9076,22 @@
       },
       "activeSubsShort": "abos actifs"
     }
+  },
+  "invitations": {
+    "pageTitle": "Vos invitations",
+    "pageSubtitle": "Une entreprise vous a invité(e) à rejoindre son espace. Rien n'est activé sans votre accord.",
+    "title": "Invitation à rejoindre {company}",
+    "invitedBy": "Invité(e) par {name}",
+    "role": "Rôle proposé : {role}",
+    "noAccessUntilAccepted": "Aucun accès n'est ouvert tant que vous n'avez pas accepté.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "accepted": "Vous avez rejoint {company}.",
+    "declined": "Invitation de {company} refusée.",
+    "error": "Impossible de traiter l'invitation.",
+    "none": "Vous n'avez aucune invitation en attente.",
+    "signInFirst": "Connectez-vous avec votre compte pour consulter vos invitations.",
+    "signIn": "Se connecter",
+    "backToApp": "Retour à l'application"
   }
 }

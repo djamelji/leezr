@@ -11,6 +11,9 @@ import AppShellGate from './components/AppShellGate.vue'
 import SessionTimeoutWarning from './components/SessionTimeoutWarning.vue'
 import SessionExpiredDialog from './components/SessionExpiredDialog.vue'
 
+// M7 LOT 2 — invitations à rejoindre une entreprise, en attente d'acceptation par l'utilisateur.
+import PendingInvitationsCard from '@/components/PendingInvitationsCard.vue'
+
 const DefaultLayoutWithHorizontalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithHorizontalNav.vue'))
 const DefaultLayoutWithVerticalNav = defineAsyncComponent(() => import('./components/DefaultLayoutWithVerticalNav.vue'))
 const configStore = useConfigStore()
@@ -73,6 +76,7 @@ watch([
     <AppLoadingIndicator ref="refLoadingIndicator" />
 
     <AppShellGate>
+      <PendingInvitationsCard />
       <RouterView v-slot="{ Component }">
         <Suspense
           :timeout="0"

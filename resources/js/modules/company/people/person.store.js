@@ -47,6 +47,40 @@ export const usePersonStore = defineStore('company-person', () => {
     return $api(`/company/members/${mid}`, { method: 'PUT', body: { company_role_id: companyRoleId } })
   }
 
+  // ── ADR-768 (M7 LOT 2) — actions de la fiche : RÉUTILISENT les endpoints sécurisés existants
+  // (Members / Workforce). Le serveur revérifie chaque action ; `can.*` ne sert qu'à l'affichage.
+  const memberUrl = suffix => {
+    const mid = data.value?.membership_id
+    if (!mid) throw new Error('no_membership')
+
+    return `/company/members/${mid}${suffix}`
+  }
+
+  const suspendAccess = reason => $api(memberUrl('/suspend'), { method: 'POST', body: { reason: reason || null } })
+  const restoreAccess = () => $api(memberUrl('/restore'), { method: 'POST' })
+  const removeAccess = () => $api(memberUrl(''), { method: 'DELETE' })
+  const resendInvitation = () => (data.value?.employee_id
+    ? $api(`/workforce/employees/${data.value.employee_id}/access/resend`, { method: 'POST' })
+    : $api(memberUrl('/resend-invitation'), { method: 'POST' }))
+  const sendPasswordReset = () => $api(memberUrl('/reset-password'), { method: 'POST' })
+  const setPassword = body => $api(memberUrl('/password'), { method: 'PUT', body })
+
+  // Pont EXPLICITE compte ↔ fiche RH (jamais par nom/e-mail).
+  const fetchLinkCandidates = async () => (await $api('/workforce/employees/link-candidates')).candidates || []
+  const createHrRecord = body => $api('/workforce/employees/from-member', { method: 'POST', body: { ...body, user_id: data.value?.user_id } })
+  const linkAccount = userId => $api(`/workforce/employees/${data.value?.employee_id}/link-account`, { method: 'POST', body: { user_id: userId } })
+
+  // Bulletins publiés (autorité paie côté serveur).
+  const payslips = ref([])
+  const payslipsLoading = ref(false)
+  async function loadPayslips(ref) {
+    payslipsLoading.value = true
+    try { payslips.value = (await $api(`/company/people/${encodeURIComponent(ref)}/payslips`)).payslips || [] }
+    catch { payslips.value = [] }
+    finally { payslipsLoading.value = false }
+  }
+  const downloadPayslip = (ref, id) => $api(`/company/people/${encodeURIComponent(ref)}/payslips/${id}/download`, { responseType: 'blob' })
+
   const history = ref([])
   const historyLoading = ref(false)
   async function loadHistory(ref) {
@@ -64,5 +98,8 @@ export const usePersonStore = defineStore('company-person', () => {
     identity, account, employment, sections, can, employeeId, userId, membershipId, personRef,
     history, historyLoading,
     load, loadHistory, changeRole,
+    suspendAccess, restoreAccess, removeAccess, resendInvitation, sendPasswordReset, setPassword,
+    fetchLinkCandidates, createHrRecord, linkAccount,
+    payslips, payslipsLoading, loadPayslips, downloadPayslip,
   }
 })

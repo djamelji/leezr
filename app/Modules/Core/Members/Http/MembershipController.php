@@ -29,42 +29,11 @@ class MembershipController extends Controller
     {
         $company = $request->attributes->get('company');
 
-        $members = $company->memberships()
-            ->with(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name'])
-            ->get();
-
-        // ADR-168b: bulk completeness (5 queries, no N+1)
-        $completeness = CompanyUserProfileReadModel::bulkCompleteness($company, $members);
-
-        // P3-A (ADR-686): clarify Members vs Collaborateurs — mark which accounts are
-        // also employees (salariés) vs administrative/technical accounts. Light batch
-        // read via the user_id bridge, guarded by the workforce module being active
-        // (no hard coupling: a company without Workforce simply gets no employee links).
-        $employeeByUser = [];
-        if (\App\Core\Modules\ModuleGate::isActive($company, 'workforce')) {
-            $employeeByUser = \App\Core\Workforce\Employee::withoutGlobalScopes()
-                ->where('company_id', $company->id)
-                ->whereNotNull('user_id')
-                ->pluck('id', 'user_id')->all();
-        }
-
-        $mapped = $members->map(fn (Membership $m) => [
-            'id' => $m->id,
-            'user' => $m->user->only('id', 'first_name', 'last_name', 'display_name', 'email', 'avatar', 'status'),
-            'role' => $m->role,
-            'company_role' => $m->companyRole ? $m->companyRole->only('id', 'key', 'name') : null,
-            'created_at' => $m->created_at,
-            'profile_completeness' => $completeness[$m->id] ?? ['filled' => 0, 'total' => 0, 'complete' => true],
-            // Person link: the account is a collaborator (salarié) if an Employee references its user.
-            'employee_id' => $employeeByUser[$m->user_id] ?? null,
-            'is_employee' => isset($employeeByUser[$m->user_id]),
-        ]);
-
-        return response()->json([
-            'members' => $mapped,
-            'member_count' => $members->count(),
-            'member_limit' => CompanyEntitlements::memberLimit($company),
-        ]);
+        // ADR-768 : annuaire PAR FACETTE — un appelant « sélecteur » (documents.manage /
+        // shipments.assign sans members.view) ne reçoit que le minimum pour choisir une personne.
+        return response()->json(\App\Modules\Core\Members\ReadModels\MemberDirectoryReadModel::list(
+            $company, $request->user()->hasCompanyPermission($company, 'members.view'),
+        ));
     }
 
     public function show(Request $request, int $id): JsonResponse
@@ -148,6 +117,8 @@ class MembershipController extends Controller
                 'company_role' => $membership->companyRole ? $membership->companyRole->only('id', 'key', 'name') : null,
                 'created_at' => $membership->created_at,
             ],
+            // ADR-768 : compte pré-existant → invitation EN ATTENTE d'acceptation (aucun accès encore).
+            'pending_acceptance' => $membership->isPendingAcceptance(),
         ], 201);
     }
 

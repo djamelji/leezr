@@ -7,6 +7,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
+import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
+import PersonCreateEmployeeDialog from './_PersonCreateEmployeeDialog.vue'
+import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
+import { useAppToast } from '@/composables/useAppToast'
 
 // ADR-767 : plus de `surface: 'structure'` — un manager/RH NON administratif détenant la facette RH
 // (`workforce.view`) doit atteindre ses collaborateurs. L'accès reste décidé par permission (facettes)
@@ -18,6 +22,28 @@ const route = useRoute()
 const router = useRouter()
 const store = usePeopleListStore()
 const { can } = useCan()
+const settings = useCompanySettingsStore()
+const { toast } = useAppToast()
+
+// ── ADR-768 (M7 LOT 2) — création EN PLACE : inviter un utilisateur (compte + rôle) ou créer une
+// fiche salarié sans compte. Mêmes composants et endpoints que les anciennes listes ; plus de
+// renvoi obligatoire vers /company/members ou /company/workforce/employees.
+const inviteOpen = ref(false)
+const createEmployeeOpen = ref(false)
+const openInvite = async () => {
+  if (!settings.roles?.length) await settings.fetchCompanyRoles({ silent: true }).catch(() => {})
+  inviteOpen.value = true
+}
+const onMemberAdded = member => {
+  inviteOpen.value = false
+  // Un compte déjà existant n'est PAS activé : il doit accepter l'invitation.
+  toast(t(member?._pendingAcceptance ? 'peopleList.invitedPending' : 'peopleList.invited'), member?._pendingAcceptance ? 'info' : 'success')
+  reload()
+}
+const onEmployeeCreated = emp => {
+  if (emp?.id) router.push(`/company/people/employee-${emp.id}`)
+  else reload()
+}
 
 const canPeople = computed(() => can('members.view') || can('workforce.view'))
 const canRoles = computed(() => can('roles.view'))
@@ -39,9 +65,10 @@ const ACCOUNT_META = {
   connected: { color: 'success', label: 'people.account.connected' },
   active: { color: 'success', label: 'people.account.active' },
   invited: { color: 'warning', label: 'people.account.invited' },
+  pending_acceptance: { color: 'warning', label: 'people.account.pending_acceptance' },
   suspended: { color: 'error', label: 'people.account.suspended' },
 }
-const accountStates = ['connected', 'active', 'invited', 'suspended']
+const accountStates = ['connected', 'active', 'invited', 'pending_acceptance', 'suspended']
 const employmentStates = ['active', 'inactive', 'on_leave', 'suspended', 'terminated']
 
 const headers = computed(() => {
@@ -73,7 +100,13 @@ function reload() {
 watch(options, reload, { deep: true })
 watch(filters, () => { options.value.page = 1; reload() }, { deep: true })
 watch(search, () => { clearTimeout(debounce); debounce = setTimeout(() => { options.value.page = 1; reload() }, 350) })
-onMounted(() => { if (canPeople.value) reload() })
+onMounted(() => {
+  if (canPeople.value) reload()
+
+  // Deep-links des anciens raccourcis (tableau de bord, onboarding) : `?action=invite|create`.
+  if (route.query.action === 'invite' && can('members.invite')) openInvite()
+  if (route.query.action === 'create' && can('workforce.manage')) createEmployeeOpen.value = true
+})
 
 const openFiche = row => router.push(`/company/people/${row.person_ref}`)
 const accountMeta = s => ACCOUNT_META[s] || { color: 'secondary', label: 'people.account.none' }
@@ -88,13 +121,65 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         <p class="text-body-1 text-medium-emphasis mb-0">{{ t('peopleList.subtitle') }}</p>
       </div>
       <VSpacer />
-      <VMenu v-if="tab === 'people' && (can('members.invite') || can('workforce.manage'))">
+      <!-- Outils des listes historiques dont la parité n'est pas acquise (import / export / actions
+           groupées, réglage des champs personnalisés) : accessibles, jamais masqués. -->
+      <VMenu v-if="tab === 'people' && (can('workforce.import') || can('workforce.export') || can('workforce.manage') || can('members.manage'))">
         <template #activator="{ props }">
-          <VBtn v-bind="props" color="primary" prepend-icon="tabler-plus">{{ t('peopleList.new') }}</VBtn>
+          <VBtn
+            v-bind="props"
+            variant="tonal"
+            color="secondary"
+            prepend-icon="tabler-tool"
+            data-test="people-tools"
+          >
+            {{ t('peopleList.tools') }}
+          </VBtn>
         </template>
         <VList>
-          <VListItem v-if="can('members.invite')" to="/company/members" prepend-icon="tabler-user-plus" :title="t('peopleList.inviteUser')" :subtitle="t('peopleList.inviteUserHint')" />
-          <VListItem v-if="can('workforce.manage')" to="/company/workforce/employees" prepend-icon="tabler-id-badge-2" :title="t('peopleList.createEmployee')" :subtitle="t('peopleList.createEmployeeHint')" />
+          <VListItem
+            v-if="can('workforce.view') && (can('workforce.import') || can('workforce.export') || can('workforce.manage'))"
+            :to="{ name: 'company-workforce-employees' }"
+            prepend-icon="tabler-table-import"
+            :title="t('peopleList.toolsHr')"
+            :subtitle="t('peopleList.toolsHrHint')"
+          />
+          <VListItem
+            v-if="can('members.view') && can('members.manage')"
+            to="/company/members"
+            prepend-icon="tabler-forms"
+            :title="t('peopleList.toolsFields')"
+            :subtitle="t('peopleList.toolsFieldsHint')"
+          />
+        </VList>
+      </VMenu>
+      <VMenu v-if="tab === 'people' && (can('members.invite') || can('workforce.manage'))">
+        <template #activator="{ props }">
+          <VBtn
+            v-bind="props"
+            color="primary"
+            prepend-icon="tabler-plus"
+            data-test="people-new"
+          >
+            {{ t('peopleList.new') }}
+          </VBtn>
+        </template>
+        <VList>
+          <VListItem
+            v-if="can('members.invite')"
+            prepend-icon="tabler-user-plus"
+            :title="t('peopleList.inviteUser')"
+            :subtitle="t('peopleList.inviteUserHint')"
+            data-test="people-invite"
+            @click="openInvite"
+          />
+          <VListItem
+            v-if="can('workforce.manage')"
+            prepend-icon="tabler-id-badge-2"
+            :title="t('peopleList.createEmployee')"
+            :subtitle="t('peopleList.createEmployeeHint')"
+            data-test="people-create-employee"
+            @click="createEmployeeOpen = true"
+          />
         </VList>
       </VMenu>
     </div>
@@ -168,5 +253,18 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         </VWindowItem>
       </VWindow>
     </VCard>
+
+    <AddMemberDrawer
+      v-if="can('members.invite')"
+      :is-drawer-open="inviteOpen"
+      :company-roles="settings.roles"
+      @update:is-drawer-open="inviteOpen = $event"
+      @member-added="onMemberAdded"
+    />
+    <PersonCreateEmployeeDialog
+      v-if="can('workforce.manage')"
+      v-model="createEmployeeOpen"
+      @created="onEmployeeCreated"
+    />
   </div>
 </template>

@@ -27501,3 +27501,81 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Verdict** : **🟢 GO DEV — reprise de M7 LOT 2 possible.** Les prérequis de sécurité du LOT 2 (invitation, lectures, périmètre RH, rémunération, identité partagée) sont corrigés à la source. **NO-GO PROD** inchangé (signature externe, OCR des scans, outillage VPS).
 
 **Règles** : DEV uniquement, aucun push, **aucune migration**, aucune interface historique supprimée, aucun changement Billing/paie, LOT 2 non démarré.
+
+---
+
+## ADR-768 — M7 (LOT 2) : fiche Collaborateur opérationnelle
+
+**Date** : 2026-11-12
+**Contexte** : après ADR-767 (`76d4a94f`), la liste et la fiche `/company/people` étaient majoritairement en lecture seule et renvoyaient vers les anciennes pages pour inviter, créer, éditer, gérer un contrat ou des identifiants. Objectif : rendre People réellement opérationnel **sans reconstruire** les moteurs Members, Workforce ou DMS, et ne rediriger une ancienne route qu'à parité prouvée.
+
+### Décisions
+
+1. **La fiche compose, elle ne réimplémente pas.** Chaque section réutilise le composant et l'endpoint sécurisé existants : `MemberProfileForm` (identité, rôle, champs dynamiques), `_EmployeeProfile` (informations RH), `_EmployeeContract` + `_GenerateContractDialog` (contrat), sections planning / temps / congés, `MemberDocumentsWorkflowPanel` + documents RH générés + signatures, `_EmployeeAccessDialog` (donner accès). Nouveaux composants limités à l'assemblage : `_PersonOverview`, `_PersonIdentity`, `_PersonAccess`, `_PersonPayslips`, `_PersonHrLinkDialog`, `_PersonCreateEmployeeDialog`.
+2. **Capacités d'action calculées par le serveur** (`PersonFileReadModel::can`), à partir des mêmes autorités que les endpoints (`MembershipSecurityPolicy`, `GlobalIdentityPolicy`, `WorkforceAccess`, `DocumentAccessPolicy`). Aucune permission de navigation ne sert de policy ; l'interface n'affiche une action que si `can.*` est vrai et l'endpoint revérifie.
+3. **Accès d'un compte sans fiche RH** : `MemberAccessLifecycleUseCase` (suspendre / réactiver / relancer) + `MemberAccessController` — mêmes garde-fous que le chemin Workforce (jamais l'owner, jamais soi, jamais le dernier administrateur actif). Le retrait réutilise `DELETE /company/members/{id}`.
+4. **Compte existant = invitation à accepter** (fin de l'activation silencieuse relevée par ADR-767). Migration **additive** `memberships.acceptance_pending_at` + `invited_by`. Autorité unique `MembershipInvitation`. Un compte pré-existant invité (Members ou accès Workforce) reçoit un membership **en attente** — également `suspended_at`, donc bloqué par tous les contrôles d'accès existants (fail-closed) — et un e-mail. L'acceptation / le refus se font par le destinataire (`/api/my-invitations`, hors contexte company, bandeau dans le layout + page `/invitations`). Un administrateur ne peut ni lever l'attente (`restore` 422) ni toucher aux identifiants (`setPassword` / `resetPassword` 422). Un **nouveau** compte garde le parcours historique : définir son mot de passe vaut acceptation.
+5. **Pont explicite compte ↔ fiche RH** (`AttachEmployeeToMemberUseCase`, `EmployeeAccountLinkController`) : créer une fiche RH pour un membre existant, rattacher une fiche sans compte à un membre existant. Décision humaine sur une paire d'identifiants, jamais de rapprochement par nom ou e-mail, une fiche au plus par compte, le compte doit être membre de la company, l'identité globale n'est jamais réécrite. Deux facettes exigées (`workforce.manage` + `members.view` pour créer, + `members.manage` pour lier).
+6. **Contrats** : la `DomainException` de chevauchement devient une **422** lisible (`errors.start_date`) ; rien d'autre n'est intercepté. Avenants, modification et fin de contrat **n'existent pas** dans le moteur (ADR-574, arbitrage produit différé) : non inventés.
+7. **Bulletins** : onglet « Bulletins de paie » branché sur `GET /company/people/{ref}/payslips`. La route accepte désormais un profil paie sans `documents.view` ; l'autorité reste `DocumentAccessPolicy` (catégorie PAYROLL). `documents.view` et `members.view` n'ouvrent rien.
+8. **Annuaire des membres par facette** (`MemberDirectoryReadModel`) : un appelant « sélecteur » (`documents.manage`, `shipments.assign` sans `members.view`) ne reçoit que ids, nom et libellé de rôle — plus d'e-mail, de statut, de complétude, de lien RH ni de quota.
+9. **Redirections à parité prouvée seulement** : les deux routes de **détail** redirigent ; les deux **listes** restent en alias. Résolution serveur `GET /company/people/resolve` : un id Membership n'est jamais lu comme un id Employee. `?legacy=1` conserve l'interface historique (rien n'est supprimé). Les query params (dont `?tab=`) sont conservés.
+
+### Matrice de parité (avant → après)
+
+| Opération | Autorité / API | Lecture | Modification | Avant | Après |
+|---|---|---|---|---|---|
+| Lister, rechercher, filtrer | `PeopleListReadModel` | `members.view` \| `workforce.view` | — | OK | OK (+ état « en attente d'acceptation ») |
+| Inviter un utilisateur | `InviteMemberUseCase` → `POST /company/members` | — | `members.invite` | renvoi | **en place** |
+| Créer un salarié sans compte | `CreateEmployeeUseCase` → `POST /workforce/employees` | — | `workforce.manage` | renvoi | **en place** |
+| Fiche RH pour un membre existant | `AttachEmployeeToMemberUseCase` | `members.view` | `workforce.manage` | absent | **nouveau** |
+| Rattacher une fiche à un compte | idem | `members.view` | `workforce.manage` + `members.manage` | absent | **nouveau** |
+| Éditer identité + champs dynamiques | `GlobalIdentityPolicy` → `PUT /company/members/{id}` | `members.view` | `members.manage` | lecture seule | **parité** |
+| Changer de rôle | `MembershipSecurityPolicy` | `members.view` | `members.manage` | OK | OK |
+| Suspendre / réactiver un compte seul | `MemberAccessLifecycleUseCase` | `members.view` | `members.manage` | absent (Employee requis) | **nouveau** |
+| Retirer un accès | `DELETE /company/members/{id}` | — | `members.manage` | renvoi | **parité** |
+| Relancer une invitation | `MemberAccessLifecycleUseCase` / `EmployeeAccessService` | — | `members.invite` | Employee seulement | **parité** |
+| Identifiants (lien, mot de passe) | `MemberCredentialController` | — | `members.credentials` | renvoi | **parité** |
+| Informations RH (département, poste, responsable, matricule, coordonnées) | `PUT /workforce/employees/{id}` | `workforce.view` (périmètre) | `workforce.manage` | lecture seule | **parité** |
+| Contrat : consulter, créer, activer | `ContractController` | `workforce.view` (périmètre) | `workforce.contracts` | lecture seule | **parité** |
+| Générer le contrat (document) | `_GenerateContractDialog` | — | `workforce_contract.generate` | renvoi | **parité** |
+| Rémunération | `WorkforceAccess` | `workforce.compensation_read` | `workforce.compensation_manage` | séparé (ADR-767) | séparé, vérifié payload + UI |
+| Checklist d'intégration, alertes RH | `EmployeeFileReadModel` | `workforce.view` | — | renvoi | **parité** |
+| Planning, temps, congés | sections existantes | permissions du module | idem | OK | OK |
+| Documents, demandes, versions, validation | DMS | `documents.view` | `documents.manage` | OK | OK (+ type personnalisé) |
+| Documents RH générés, signatures | Workforce Documents / Signature | `workforce_documents.view`, `workforce_signature.view` | — | renvoi | **parité** |
+| Bulletins de paie | `DocumentAccessPolicy` (PAYROLL) | `payslips.download` \| `workforce.compensation_read` \| `payroll_*` | — | pas d'interface | **nouveau** |
+| Import, export, actions groupées | `EmployeeController` | — | `workforce.import` / `export` / `manage` | renvoi | **alias conservé** (menu Outils) |
+| Réglage des champs personnalisés, quota | Members | — | `members.manage` | renvoi | **alias conservé** (menu Outils) |
+| Avenants, modification, fin de contrat | — | — | — | inexistant | inexistant (moteur absent) |
+
+### Redirections
+
+| Ancienne route | Statut | Raison |
+|---|---|---|
+| `/company/members/:id` | **redirigée** → `/company/people/:personRef` (résolution serveur) | parité identité, rôle, champs, documents, identifiants |
+| `/company/workforce/employees/:id` | **redirigée** → `/company/people/employee-:id` | parité profil RH, contrat, génération, accès, intégration, sections, documents, signatures ; les E2E historiques passent à travers la redirection |
+| `/company/members` | **alias conservé** | réglage des champs personnalisés et affichage du quota non repris |
+| `/company/workforce/employees` | **alias conservé** | import, export, actions groupées, filtres avancés non repris |
+
+### Tests
+
+- `M7Lot2OperationalPersonFileTest` : 22 tests (HTTP réel → base → relecture par le read-model → autre company intacte) : contrats chevauchants, rémunération absente du payload, facettes ACCÈS / RH, manager limité, admin aussi salarié, bulletins, suspension d'un compte seul, owner / soi / dernier administrateur, retrait conservant la fiche RH, relance, compte existant en attente, identité partagée, rôle, pont compte ↔ fiche RH, références RH d'une autre company, résolution des anciens identifiants, annuaire minimal.
+- `M7Lot2InvitationAcceptanceTest` : 9 tests (attente, acceptation, refus, usurpation, contournement admin, identifiants, nouveau compte, accès Workforce, dernier administrateur).
+- E2E navigateur `tests/e2e/m7-lot2-people.spec.js` : 4 parcours (compte, salarié, compte existant avec refus par le destinataire, captures). `company-member-lifecycle` adapté à la redirection ; `hrux5-dev-rh` (ancienne URL salarié) passe sans modification.
+- Captures : `tests/e2e/__screens__/m7-lot2/` (desktop / mobile, clair / sombre).
+
+### Défauts résiduels
+
+1. Les deux **listes** historiques restent nécessaires (import / export / actions groupées, champs personnalisés) — LOT 4.
+2. Avenants, modification et fin de contrat : aucun moteur ; la fin de collaboration (`terminate`) existe en API mais n'a jamais eu d'interface.
+3. Un membership en attente d'acceptation compte dans le quota de membres ; les invitations n'expirent pas ; un compte pré-existant sans mot de passe doit passer par « mot de passe oublié » avant d'accepter ; la page `/invitations` ne mémorise pas le retour après connexion.
+4. `PUT /workforce/employees/{id}` et `POST .../contracts` ne vérifient pas le périmètre d'équipe (seulement `workforce.manage` / `workforce.contracts`) : sans effet aujourd'hui car la vue Company exige déjà `view` + `manage`, mais à durcir si une permission « gérer mon équipe » apparaît.
+5. L'invitation exige prénom et nom même pour un compte existant (validation historique : chaîne vide refusée) ; ces valeurs sont ignorées.
+6. Pré-existant, hors lot : le widget de pointage appelle `/workforce/me` dans une company sans module Workforce (toast 403 sur le tableau de bord).
+7. Les E2E exigent Mailpit (l'invitation envoie un e-mail synchrone ; sans SMTP l'invitation échoue en 500, transaction annulée).
+8. Les 3 échecs historiques de `ControllerSizeInvariantTest` restent suivis séparément ; aucun contrôleur de ce lot n'y figure et `MembershipController` passe de 283 à 254 lignes.
+
+**Verdict** : **🟢 GO DEV — LOT 3 possible.** NO-GO PROD inchangé (ADR-765, ADR-767).
+
+**Règles** : DEV uniquement, aucun push, une migration additive, aucune interface historique supprimée, Billing et paie intacts, LOT 3 et LOT 4 non démarrés.

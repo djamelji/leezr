@@ -62,25 +62,31 @@ class ContractController extends Controller
         $setsCompensation = isset($validated['base_salary_cents']) || isset($validated['hourly_rate_cents']) || isset($validated['daily_rate_cents']);
         abort_if($setsCompensation && ! WorkforceAccess::canManageCompensation($request), 403, 'Not authorized to set compensation.');
 
-        $contract = app(CreateContractUseCase::class)->execute(
-            employee: $employee,
-            contractType: $validated['contract_type'],
-            workModelKey: $validated['work_model_key'],
-            startDate: $validated['start_date'],
-            weeklyHours: (float) ($validated['weekly_hours'] ?? 35.00),
-            endDate: $validated['end_date'] ?? null,
-            probationEndDate: $validated['probation_end_date'] ?? null,
-            baseSalaryCents: $validated['base_salary_cents'] ?? null,
-            currency: $validated['currency'] ?? 'EUR',
-            payFrequency: $validated['pay_frequency'] ?? 'monthly',
-            overtimeRateBps: (int) ($validated['overtime_rate_bps'] ?? 2500),
-            conventionCollectiveId: isset($validated['convention_collective_id'])
-                ? (int) $validated['convention_collective_id']
-                : null,
-            compensationType: $validated['compensation_type'] ?? 'monthly',
-            hourlyRateCents: isset($validated['hourly_rate_cents']) ? (int) $validated['hourly_rate_cents'] : null,
-            dailyRateCents: isset($validated['daily_rate_cents']) ? (int) $validated['daily_rate_cents'] : null,
-        );
+        // ADR-768 : une règle métier refusée (chevauchement de contrats) est une erreur 422 lisible,
+        // pas une 500. Seule la DomainException du use case est traduite — rien d'autre n'est masqué.
+        try {
+            $contract = app(CreateContractUseCase::class)->execute(
+                employee: $employee,
+                contractType: $validated['contract_type'],
+                workModelKey: $validated['work_model_key'],
+                startDate: $validated['start_date'],
+                weeklyHours: (float) ($validated['weekly_hours'] ?? 35.00),
+                endDate: $validated['end_date'] ?? null,
+                probationEndDate: $validated['probation_end_date'] ?? null,
+                baseSalaryCents: $validated['base_salary_cents'] ?? null,
+                currency: $validated['currency'] ?? 'EUR',
+                payFrequency: $validated['pay_frequency'] ?? 'monthly',
+                overtimeRateBps: (int) ($validated['overtime_rate_bps'] ?? 2500),
+                conventionCollectiveId: isset($validated['convention_collective_id'])
+                    ? (int) $validated['convention_collective_id']
+                    : null,
+                compensationType: $validated['compensation_type'] ?? 'monthly',
+                hourlyRateCents: isset($validated['hourly_rate_cents']) ? (int) $validated['hourly_rate_cents'] : null,
+                dailyRateCents: isset($validated['daily_rate_cents']) ? (int) $validated['daily_rate_cents'] : null,
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors' => ['start_date' => [$e->getMessage()]]], 422);
+        }
 
         // ADR-634/767 : la compensation n'est renvoyée que sous workforce.compensation_read.
         $contract->load(WorkforceAccess::canReadCompensation($request)

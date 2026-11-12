@@ -1,6 +1,6 @@
 // @ts-check
 import { expect, test } from '@playwright/test'
-import { loginCompany, clickAndExpectApi } from './helpers'
+import { loginCompany, clickAndExpectApi, apiRequest } from './helpers'
 
 // Full member lifecycle driven by the company owner on the isolated local base:
 //   create member (role Driver) → edit role to Manager → delete — each step real API + persistence.
@@ -35,13 +35,17 @@ test('owner: create member → change role → delete (persisted, with owner pro
   await expect(ownerRow.locator('[data-test="member-delete"]')).toHaveCount(0)
 
   // ─── Edit role → Manager ────────────────────────────────────────────────────
+  // ADR-768 (M7 LOT 2) : /company/members/:id REDIRIGE vers la fiche Collaborateur unifiée (parité
+  // prouvée) — le même formulaire (MemberProfileForm) y vit dans l'onglet « Informations ».
+  const directory = await apiRequest(page, { path: '/api/company/members' })
+  const memberId = directory.json.members.find(m => m.user.email === email).id
   await row.locator('[data-test="member-edit"]').click()
-  await page.waitForURL(/\/company\/members\/\d+/, { timeout: 10000 })
+  await page.waitForURL(/\/company\/people\/user-\d+/, { timeout: 10000 })
   await page.waitForTimeout(1200)
+  await page.getByRole('tab', { name: 'Informations' }).first().click()
+  await page.waitForTimeout(800)
   await page.locator('[data-test="member-profile-role"]').click()
   await page.getByRole('option', { name: 'Manager', exact: true }).first().click()
-  const detailUrl = page.url()
-  const memberId = detailUrl.match(/members\/(\d+)/)[1]
   await clickAndExpectApi(page, { urlIncludes: `/api/company/members/${memberId}`, method: 'PUT' },
     () => page.locator('[data-test="member-profile-save"]').click())
 

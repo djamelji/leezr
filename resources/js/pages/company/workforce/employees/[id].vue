@@ -73,7 +73,18 @@ const load = async () => {
   finally { loading.value = false }
 }
 
-onMounted(load)
+// ADR-768 (M7 LOT 2) — parité PROUVÉE avec la fiche Collaborateur unifiée (profil RH, contrat,
+// génération, accès, intégration, planning/temps/congés, documents, signatures) : cette route
+// REDIRIGE vers `/company/people/employee-:id`. L'id de l'URL EST un id Employee : la référence est
+// construite dans le même espace, jamais devinée. `?legacy=1` conserve l'interface historique.
+const isLegacy = route.query.legacy === '1'
+
+onMounted(() => {
+  if (isLegacy) return load()
+  const { legacy, ...query } = route.query
+
+  router.replace({ path: `/company/people/employee-${empId.value}`, query })
+})
 onBeforeUnmount(() => store.clearCurrentEmployee())
 
 const TAB_META = {

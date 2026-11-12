@@ -4,6 +4,7 @@ namespace App\Modules\Core\Members\UseCases;
 
 use App\Company\RBAC\CompanyRole;
 use App\Company\RBAC\MembershipSecurityPolicy;
+use App\Company\Security\MembershipInvitation;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
@@ -37,7 +38,7 @@ class InviteMemberUseCase
             return null;
         }
 
-        return DB::transaction(function () use ($company, $data, $role, $user) {
+        return DB::transaction(function () use ($company, $data, $role, $user, $actor) {
             $isNewUser = $user === null;
             $user ??= User::create([
                 'first_name' => $data['first_name'] ?? explode('@', $data['email'])[0],
@@ -52,9 +53,13 @@ class InviteMemberUseCase
                 'company_role_id' => $role->id,
             ]);
 
-            // Invitation (password definition) only for an account created by this invitation.
             if ($isNewUser) {
+                // Account created by this invitation: defining its password is the acceptance.
                 $user->sendPasswordResetNotification(Password::broker('users')->createToken($user));
+            } else {
+                // M7 LOT 2: a PRE-EXISTING account is never attached silently — the membership stays
+                // pending (no access) until its owner accepts the invitation himself.
+                MembershipInvitation::requireAcceptance($company, $membership, $actor);
             }
 
             return $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name,is_administrative']);

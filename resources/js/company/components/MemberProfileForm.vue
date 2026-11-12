@@ -32,6 +32,12 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // ADR-768 : identité GLOBALE partagée avec une autre entreprise → nom non modifiable d'ici
+  // (GlobalIdentityPolicy côté serveur) ; les champs propres à l'entreprise restent éditables.
+  lockName: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['save', 'role-change'])
@@ -168,7 +174,7 @@ const handleSave = () => {
           v-model="form.first_name"
           :label="t('members.firstName')"
           :placeholder="t('members.firstName')"
-          :disabled="!editable"
+          :disabled="!editable || lockName"
         />
       </VCol>
       <VCol
@@ -179,7 +185,7 @@ const handleSave = () => {
           v-model="form.last_name"
           :label="t('members.lastName')"
           :placeholder="t('members.lastName')"
-          :disabled="!editable"
+          :disabled="!editable || lockName"
         />
       </VCol>
 

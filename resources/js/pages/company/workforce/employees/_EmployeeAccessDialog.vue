@@ -110,8 +110,24 @@ const restore = async () => {
         </div>
 
         <template v-else-if="access">
+          <!-- ADR-768 : compte pré-existant — invitation EN ATTENTE d'acceptation (aucun accès activé) -->
+          <template v-if="state === 'pending_acceptance'">
+            <VAlert type="warning" variant="tonal" density="compact" class="mb-3">
+              <VIcon icon="tabler-hourglass" start size="16" />
+              {{ t('people.access.pendingNotice') }}
+            </VAlert>
+            <VBtn
+              variant="tonal"
+              prepend-icon="tabler-send"
+              :loading="acting"
+              @click="resend"
+            >
+              {{ t('employeeAccess.resend') }}
+            </VBtn>
+          </template>
+
           <!-- ACCÈS SUSPENDU -->
-          <template v-if="state === 'suspended'">
+          <template v-else-if="state === 'suspended'">
             <VAlert type="warning" variant="tonal" density="compact" class="mb-3">
               <VIcon icon="tabler-lock" start size="16" />
               {{ t('employeeAccess.states.suspended') }}

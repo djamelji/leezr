@@ -39,6 +39,10 @@ final class AuditAction
     public const MEMBER_SUSPENDED = 'member.suspended';
     public const MEMBER_REACTIVATED = 'member.reactivated';
     public const MEMBER_ACCESS_REVOKED = 'member.access_revoked';
+    // M7 LOT 2: explicit acceptance of an invitation by a pre-existing account.
+    public const MEMBER_INVITATION_SENT = 'member.invitation_sent';
+    public const MEMBER_INVITATION_ACCEPTED = 'member.invitation_accepted';
+    public const MEMBER_INVITATION_DECLINED = 'member.invitation_declined';
 
     // ─── User profile (self-service) ─────────────────────
     public const USER_PROFILE_UPDATED = 'user.profile_updated';

@@ -104,6 +104,11 @@ La fiche est **majoritairement en lecture seule** et délègue les mutations lou
 compte possible). Pas de modèle Invitation dédié (invitation = Membership+User sans `password_set_at`). People
 résout par `personRef` = `user-{id}` | `employee-{id}`, lien `user_id` **explicite** (jamais par nom/email, ADR-752).
 
+> **Mise à jour LOT 2 (ADR-768)** — la matrice ci-dessus décrit l'état AVANT LOT 2. Après LOT 2 : inviter, créer,
+> éditer l'identité et les champs, identifiants, accès d'un compte seul, informations RH, contrat (consulter / créer /
+> activer / générer), signatures, bulletins et pont compte ↔ fiche RH sont **dans People**. Restent en GAP (alias
+> conservés) : import / export / actions groupées et réglage des champs personnalisés. Matrice complète : ADR-768.
+
 ## 5. Plan de consolidation M7 (lots, du plus sûr au plus sensible)
 
 ### LOT 1 — Dédoublonnages à parité PROUVÉE (sûrs, réversibles) — *ce checkpoint*
@@ -137,9 +142,9 @@ résout par `personRef` = `user-{id}` | `employee-{id}`, lien `user_id` **explic
 |---|---|---|---|
 | `/company/roles` | `/company/people` (onglet Rôles) | parité 100% (même composant) | **LOT 1 — activée** |
 | `/company/workforce/documents` | `/company/documents/hr` | page unifiée accepte `workforce_documents.view` | **LOT 1 — activée** |
-| `/company/members` | `/company/people` | parité invitation/suppression/quota/champs | LOT 2 (alias conservé) |
-| `/company/members/:id` | `/company/people/user-:id` | parité édition identité + credentials | LOT 2 (alias conservé) |
-| `/company/workforce/employees` | `/company/people` | parité création/import/export/bulk | LOT 2 (alias conservé) |
-| `/company/workforce/employees/:id` | `/company/people/employee-:id` | parité contrat/signatures/onboarding | LOT 2 (alias conservé) |
+| `/company/members` | `/company/people` | parité réglage des champs + quota | **alias conservé** (LOT 4) |
+| `/company/members/:id` | `/company/people/:personRef` (résolution serveur) | parité édition identité + credentials | **LOT 2 — activée** (`?legacy=1` conserve l'ancienne) |
+| `/company/workforce/employees` | `/company/people` | parité import/export/bulk | **alias conservé** (LOT 4) |
+| `/company/workforce/employees/:id` | `/company/people/employee-:id` | parité contrat/signatures/onboarding | **LOT 2 — activée** (`?legacy=1` conserve l'ancienne) |
 
 Contraintes : préserver ids/params/deep-links/notifications/permissions ; pas de boucle ; pas de nouveau 403.

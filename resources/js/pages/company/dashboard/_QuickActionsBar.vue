@@ -17,7 +17,7 @@ const actions = computed(() => {
       key: 'members',
       icon: 'tabler-users-plus',
       label: t('dashboard.quickActions.members'),
-      to: '/company/members',
+      to: '/company/people?action=invite', // ADR-768 : invitation EN PLACE dans Collaborateurs
       color: 'info',
     },
     {

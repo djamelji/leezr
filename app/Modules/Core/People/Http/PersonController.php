@@ -58,6 +58,40 @@ class PersonController extends Controller
     }
 
     /**
+     * ADR-768 (M7 LOT 2) — résout un identifiant HISTORIQUE vers la référence canonique de la personne.
+     * `membership_id` (ancienne route /company/members/:id) exige la facette ACCÈS ; `employee_id`
+     * (ancienne route /company/workforce/employees/:id) exige la facette RH. Un id n'est jamais
+     * interprété dans l'autre espace : un id Membership n'est pas un id Employee.
+     */
+    public function resolve(Request $request): JsonResponse
+    {
+        /** @var Company $company */
+        $company = $request->attributes->get('company');
+        $actor = $request->user();
+        $data = $request->validate([
+            'membership_id' => 'required_without:employee_id|integer',
+            'employee_id' => 'required_without:membership_id|integer',
+        ]);
+
+        if (isset($data['membership_id'])) {
+            abort_unless($actor->hasCompanyPermission($company, 'members.view'), 403);
+            $userId = Membership::where('company_id', $company->id)->whereKey($data['membership_id'])->value('user_id');
+            abort_if($userId === null, 404, 'Person not found in this company.');
+            $employeeId = \App\Core\Modules\ModuleGate::isActive($company, 'workforce')
+                ? Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('user_id', $userId)->value('id')
+                : null;
+
+            return response()->json(['person_ref' => (string) ($employeeId ? PersonRef::forEmployee($employeeId) : PersonRef::forUser($userId))]);
+        }
+
+        abort_unless($actor->hasCompanyPermission($company, 'workforce.view'), 403);
+        $exists = Employee::withoutGlobalScopes()->where('company_id', $company->id)->whereKey($data['employee_id'])->exists();
+        abort_unless($exists, 404, 'Person not found in this company.');
+
+        return response()->json(['person_ref' => (string) PersonRef::forEmployee((int) $data['employee_id'])]);
+    }
+
+    /**
      * Historique d'audit RÉEL de la personne (jamais inventé). Nécessite `audit.view`.
      */
     public function history(Request $request, string $personRef): JsonResponse

@@ -19,10 +19,13 @@ class Membership extends Model
         'suspended_at',
         'suspended_by',
         'suspension_reason',
+        'acceptance_pending_at',
+        'invited_by',
     ];
 
     protected $casts = [
         'suspended_at' => 'datetime',
+        'acceptance_pending_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -34,6 +37,15 @@ class Membership extends Model
     public function isSuspended(): bool
     {
         return $this->suspended_at !== null;
+    }
+
+    /**
+     * M7 LOT 2: invitation of a PRE-EXISTING account not yet accepted by its owner. Such a
+     * membership is also suspended (no access anywhere) and only the recipient can activate it.
+     */
+    public function isPendingAcceptance(): bool
+    {
+        return $this->acceptance_pending_at !== null;
     }
 
     public function companyRole(): BelongsTo

@@ -37,7 +37,7 @@ const handleSubmit = async () => {
   errorMessage.value = ''
 
   try {
-    await membersStore.addMember({
+    const added = await membersStore.addMember({
       first_name: form.value.first_name,
       last_name: form.value.last_name,
       email: form.value.email,
@@ -45,7 +45,7 @@ const handleSubmit = async () => {
     })
 
     form.value = { first_name: '', last_name: '', email: '', company_role_id: null }
-    emit('memberAdded')
+    emit('memberAdded', added)
   }
   catch (error) {
     errorMessage.value = error?.data?.message || t('members.failedToAdd')

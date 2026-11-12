@@ -4,6 +4,7 @@ namespace App\Modules\Workforce\Employees\Services;
 
 use App\Company\RBAC\CompanyRole;
 use App\Company\RBAC\MembershipSecurityPolicy;
+use App\Company\Security\MembershipInvitation;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
@@ -38,7 +39,10 @@ class EmployeeAccessService
 
         $state = 'none';
         if ($user && $membership) {
-            if ($membership->isSuspended()) {
+            if ($membership->isPendingAcceptance()) {
+                // M7 LOT 2 : compte pré-existant invité, acceptation par la personne en attente.
+                $state = 'pending_acceptance';
+            } elseif ($membership->isSuspended()) {
                 // SECURITY-1 : accès suspendu (membership + données conservés).
                 $state = 'suspended';
             } elseif (! $user->password_set_at) {
@@ -69,10 +73,10 @@ class EmployeeAccessService
             'assignable_roles' => CompanyRole::where('company_id', $company->id)
                 ->where('is_administrative', false)     // jamais de privilège admin par défaut
                 ->get(['id', 'name', 'key'])->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->all(),
-            'can_resend' => $state === 'invited',
+            'can_resend' => in_array($state, ['invited', 'pending_acceptance'], true),
             // Actions autorisées (sécurité admin : owner/soi/dernier admin protégés).
             'can_suspend' => $hasActiveAccess && ! $protected,
-            'can_restore' => (bool) ($membership && $membership->isSuspended()),
+            'can_restore' => (bool) ($membership && $membership->isSuspended() && ! $membership->isPendingAcceptance()),
             'can_revoke' => $membership && ! $protected,
         ];
     }
@@ -102,6 +106,8 @@ class EmployeeAccessService
     public function restore(Company $company, Employee $employee, int $actorId): array
     {
         $membership = $this->membershipOrFail($company, $employee);
+        // M7 LOT 2 : une invitation non acceptée ne s'active jamais par une « réactivation » admin.
+        MembershipInvitation::assertAccepted($membership);
 
         if ($membership->isSuspended()) {
             $membership->forceFill(['suspended_at' => null, 'suspended_by' => null, 'suspension_reason' => null])->save();
@@ -249,6 +255,10 @@ class EmployeeAccessService
                 'role' => 'user',
                 'company_role_id' => $role->id,
             ]);
+            // M7 LOT 2 : compte PRÉ-EXISTANT → accès en attente de SON acceptation (jamais silencieux).
+            if (! $isNewUser) {
+                MembershipInvitation::requireAcceptance($company, $membership, User::find($actorId));
+            }
         }
 
         // Lie le collaborateur au compte.
@@ -274,6 +284,13 @@ class EmployeeAccessService
     public function resendInvitation(Company $company, Employee $employee): array
     {
         $user = $employee->user_id ? User::find($employee->user_id) : null;
+        $pending = $user ? Membership::where('company_id', $company->id)->where('user_id', $user->id)->whereNotNull('acceptance_pending_at')->first() : null;
+        if ($pending) {
+            // M7 LOT 2 : compte pré-existant → on relance l'INVITATION (jamais un lien de mot de passe).
+            MembershipInvitation::resend($company, $pending, request()?->user());
+
+            return $this->status($company, $employee);
+        }
         if (! $user || $user->password_set_at) {
             throw ValidationException::withMessages(['access' => 'Aucune invitation en attente pour ce collaborateur.']);
         }
