@@ -191,7 +191,7 @@ class MembershipInvitation
      * What an administrator may know about the invitation of a membership (null when the access is
      * already active : nothing pending). Shape shared by every API that exposes it.
      *
-     * @return array{kind: string, delivery: ?string, sent_at: ?string, error: ?string, expires_at: ?string, expired: bool}|null
+     * @return array{kind: string, delivery: ?string, sent_at: ?string, error: ?string, expires_at: ?string, expired: bool, link_expires_at: ?string, link_expired: bool}|null
      */
     public static function summary(?Membership $membership): ?array
     {
@@ -204,19 +204,65 @@ class MembershipInvitation
             'delivery' => $membership->invitation_delivery_status,
             'sent_at' => $membership->invitation_sent_at?->toIso8601String(),
             'error' => $membership->invitation_delivery_status === self::DELIVERY_FAILED ? $membership->invitation_delivery_error : null,
-            'expires_at' => $kind === self::KIND_ACCEPTANCE ? $membership->invitation_expires_at?->toIso8601String() : null,
+            // (1) INVITATION expiry — acceptance by a pre-existing account only.
+            'expires_at' => self::expiresAt($membership)?->toIso8601String(),
             'expired' => self::isExpired($membership),
+            // (2) Password-definition LINK expiry — account created by the invitation only. The
+            // account and its membership do NOT expire : a fresh link is one « resend » (or one
+            // « forgot password » by the person) away. Never to be read as (1).
+            'link_expires_at' => ($link = self::setupLinkExpiresAt($membership, $kind))?->toIso8601String(),
+            'link_expired' => $link?->isPast() ?? false,
         ];
+    }
+
+    /** Validity end of the LAST password-definition link really sent (broker `auth.passwords.users.expire`). */
+    private static function setupLinkExpiresAt(Membership $membership, string $kind): ?\Illuminate\Support\Carbon
+    {
+        if ($kind !== self::KIND_ACCOUNT_SETUP || $membership->invitation_sent_at === null) {
+            return null;
+        }
+
+        return $membership->invitation_sent_at->copy()->addMinutes((int) config('auth.passwords.users.expire', 60));
     }
 
     // ── Expiry (M7 LOT 3) ───────────────────────────────────────────────────
 
-    /** A pending acceptance whose deadline has passed : can no longer be accepted, frees its seat. */
+    /**
+     * EFFECTIVE deadline of a pending acceptance (null when nothing is pending).
+     *
+     * M7 LOT 4 — compatibility rule : an invitation created before deadlines existed (ADR-768,
+     * `invitation_expires_at` NULL) is NOT eternal. Its deadline is DERIVED : the day it was sent
+     * (`acceptance_pending_at`) + the configured validity. Nothing is rewritten in the database —
+     * the rule is applied wherever expiry matters (acceptance, lists, quota, scheduled trace), so an
+     * old invitation can neither be accepted forever nor disappear without a trace. Renewing it
+     * (`resend`) stores a real deadline like any other invitation.
+     */
+    public static function expiresAt(Membership $membership): ?\Illuminate\Support\Carbon
+    {
+        if (! $membership->isPendingAcceptance()) {
+            return null;
+        }
+
+        return $membership->invitation_expires_at
+            ?? $membership->acceptance_pending_at->copy()->addDays(self::ttlDays());
+    }
+
+    /** A pending acceptance whose (effective) deadline has passed : can no longer be accepted, frees its seat. */
     public static function isExpired(Membership $membership): bool
     {
-        return $membership->isPendingAcceptance()
-            && $membership->invitation_expires_at !== null
-            && $membership->invitation_expires_at->isPast();
+        return self::expiresAt($membership)?->isPast() ?? false;
+    }
+
+    /**
+     * SQL form of « this membership still holds a seat / may still become an access » : everything
+     * except an EXPIRED pending acceptance (stored deadline, or derived one for a legacy row).
+     * Single definition shared by the quota and the scheduled trace.
+     */
+    public static function whereNotExpired($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('acceptance_pending_at')
+            ->orWhere('invitation_expires_at', '>', now())
+            ->orWhere(fn ($w) => $w->whereNull('invitation_expires_at')->where('acceptance_pending_at', '>', now()->subDays(self::ttlDays()))));
     }
 
     /** Is it an EXPIRED invitation of this very user ? (clear 410 instead of an anonymous 404) */
@@ -235,15 +281,21 @@ class MembershipInvitation
     {
         $due = Membership::withoutGlobalScopes()
             ->whereNotNull('acceptance_pending_at')
-            ->whereNotNull('invitation_expires_at')->where('invitation_expires_at', '<', now())
             ->whereNull('invitation_expired_at')
+            ->where(fn ($q) => $q->where('invitation_expires_at', '<=', now())
+                // legacy row without stored deadline : derived deadline (see expiresAt)
+                ->orWhere(fn ($w) => $w->whereNull('invitation_expires_at')->where('acceptance_pending_at', '<=', now()->subDays(self::ttlDays()))))
             ->get();
 
         foreach ($due as $membership) {
             $membership->forceFill(['invitation_expired_at' => now()])->save();
             app(AuditLogger::class)->logCompany($membership->company_id, AuditAction::MEMBER_INVITATION_EXPIRED, 'membership', (string) $membership->id, [
                 'actorType' => 'system', 'severity' => 'notice',
-                'metadata' => ['user_id' => $membership->user_id, 'invited_by' => $membership->invited_by, 'expired_at' => $membership->invitation_expires_at?->toIso8601String()],
+                'metadata' => [
+                    'user_id' => $membership->user_id, 'invited_by' => $membership->invited_by,
+                    'expired_at' => self::expiresAt($membership)?->toIso8601String(),
+                    'derived_deadline' => $membership->invitation_expires_at === null, // legacy invitation (no stored deadline)
+                ],
             ]);
         }
 
@@ -269,10 +321,11 @@ class MembershipInvitation
         return Membership::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->whereNotNull('acceptance_pending_at')
-            ->where(fn ($q) => $q->whereNull('invitation_expires_at')->orWhere('invitation_expires_at', '>', now())) // expired : no longer acceptable
             ->with(['company:id,name', 'companyRole:id,name'])
             ->orderBy('acceptance_pending_at')
-            ->get();
+            ->get()
+            ->reject(fn (Membership $m) => self::isExpired($m)) // expired (stored or derived deadline) : no longer acceptable
+            ->values();
     }
 
     /** The recipient accepts: the membership becomes active. Null when it is not HIS pending invitation. */

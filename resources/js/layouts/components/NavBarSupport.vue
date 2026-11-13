@@ -8,7 +8,10 @@ const openHelp = () => {
 </script>
 
 <template>
-  <IconBtn @click="openHelp">
+  <IconBtn
+    aria-label="Aide"
+    @click="openHelp"
+  >
     <VIcon icon="tabler-help-circle" />
     <VTooltip
       activator="parent"

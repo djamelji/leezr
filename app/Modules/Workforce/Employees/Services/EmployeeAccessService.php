@@ -303,6 +303,6 @@ class EmployeeAccessService
     /** Règle de quota UNIQUE (M7 LOT 3) : voir MemberQuota. */
     private function assertMemberLimit(Company $company): void
     {
-        MemberQuota::assertSeatAvailable($company);
+        MemberQuota::reserve($company);
     }
 }

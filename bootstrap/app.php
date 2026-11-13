@@ -44,6 +44,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', \App\Http\Middleware\SecurityHeadersMiddleware::class);
 
         $middleware->statefulApi();
+
+        // ADR-770 : le rapporteur d'erreurs frontend poste par `navigator.sendBeacon`, qui ne peut pas
+        // porter l'en-tête X-XSRF-TOKEN. Depuis l'origine de la SPA (stateful Sanctum) il recevait 419 :
+        // toute la télémétrie cliente était perdue. Ce puits de logs est public, limité en débit,
+        // validé, sans effet sur l'état ni sur la session — seul chemin exempté.
+        $middleware->validateCsrfTokens(except: ['api/runtime-error']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

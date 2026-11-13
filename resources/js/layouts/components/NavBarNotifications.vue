@@ -123,7 +123,10 @@ const viewAll = () => {
 </script>
 
 <template>
-  <IconBtn id="notification-btn">
+  <IconBtn
+    id="notification-btn"
+    aria-label="Notifications"
+  >
     <VBadge
       :model-value="hasUnseen"
       color="error"

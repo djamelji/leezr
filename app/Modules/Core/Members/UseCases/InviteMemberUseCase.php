@@ -4,6 +4,7 @@ namespace App\Modules\Core\Members\UseCases;
 
 use App\Company\RBAC\CompanyRole;
 use App\Company\RBAC\MembershipSecurityPolicy;
+use App\Company\Security\MemberQuota;
 use App\Company\Security\MembershipInvitation;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
@@ -34,10 +35,24 @@ class InviteMemberUseCase
 
         $user = User::where('email', $data['email'])->first();
         if ($user && $user->isMemberOf($company)) {
-            return null;
+            // M7 LOT 4 : inviting again the e-mail of an EXPIRED invitation is not « already a member »
+            // (it gives no access and holds no seat) — the invitation is RENEWED, with the role chosen
+            // now (already validated above) ; the quota is checked by the renewal itself.
+            $stale = Membership::where('company_id', $company->id)->where('user_id', $user->id)->first();
+            if ($stale === null || ! MembershipInvitation::isExpired($stale)) {
+                return null;
+            }
+            $stale->forceFill(['company_role_id' => $role->id])->save();
+            MembershipInvitation::resend($company, $stale, $actor);
+
+            return $stale->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name,is_administrative']);
         }
 
         $membership = DB::transaction(function () use ($company, $data, $role, $user, $actor) {
+            // M7 LOT 4 : the quota is (re)checked INSIDE the write transaction, company row locked —
+            // no path (HTTP or not, concurrent or not) adds a membership past the limit.
+            MemberQuota::reserve($company);
+
             $isNewUser = $user === null;
             $user ??= User::create([
                 'first_name' => $data['first_name'] ?? explode('@', $data['email'])[0],

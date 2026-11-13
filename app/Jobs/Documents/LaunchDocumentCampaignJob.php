@@ -2,6 +2,8 @@
 
 namespace App\Jobs\Documents;
 
+use App\Core\Tenancy\CompanyContext;
+use App\Core\Tenancy\InteractsWithTenant;
 use App\Core\Documents\DocumentCampaign;
 use App\Core\Documents\Services\DocumentCampaignService;
 use Illuminate\Bus\Queueable;
@@ -17,12 +19,20 @@ use Illuminate\Queue\SerializesModels;
  */
 class LaunchDocumentCampaignJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, InteractsWithTenant, Queueable, SerializesModels;
 
     public int $tries = 3;
 
-    public function __construct(public int $campaignId)
+    /**
+     * ADR-770 / ADR-733 — TENANT job : the company travels in the payload and the launch runs under
+     * ITS scope (it used to rely on the no-op scope of a context-less worker, and threw under strict
+     * tenancy). `$companyId` is optional only for jobs serialised before this change.
+     */
+    public function __construct(public int $campaignId, ?int $companyId = null)
     {
+        if ($companyId !== null) {
+            $this->onTenant($companyId);
+        }
     }
 
     public function uniqueId(): string
@@ -32,9 +42,17 @@ class LaunchDocumentCampaignJob implements ShouldQueue
 
     public function handle(DocumentCampaignService $service): void
     {
-        $campaign = DocumentCampaign::find($this->campaignId);
-        if ($campaign && $campaign->status !== DocumentCampaign::STATUS_CANCELLED) {
-            $service->launch($campaign);
+        // Legacy payload without tenant : read the owning company once, explicitly cross-tenant.
+        $this->tenantCompanyId ??= CompanyContext::runGlobal(fn () => DocumentCampaign::whereKey($this->campaignId)->value('company_id'));
+        if (! $this->tenantCompanyId) {
+            return; // campaign deleted meanwhile
         }
+
+        $this->runInTenant(function () use ($service) {
+            $campaign = DocumentCampaign::find($this->campaignId); // tenant-scoped
+            if ($campaign && $campaign->status !== DocumentCampaign::STATUS_CANCELLED) {
+                $service->launch($campaign);
+            }
+        });
     }
 }

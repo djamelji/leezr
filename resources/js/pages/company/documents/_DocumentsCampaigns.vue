@@ -196,6 +196,7 @@ onMounted(fetchAll)
           variant="tonal"
           size="small"
           :loading="previewing"
+          :disabled="form.mode === 'department' && !form.department_ids.length"
           class="mb-4"
           prepend-icon="tabler-users"
           @click="runPreview"

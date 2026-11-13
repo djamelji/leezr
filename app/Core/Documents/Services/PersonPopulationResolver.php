@@ -27,6 +27,9 @@ class PersonPopulationResolver
 {
     public static function forCompany(Company $company, bool $includeTerminated = false): Collection
     {
+        // ADR-770 : la population canonique suppose des lignes rattachées au sujet canonique.
+        PersonDocumentContinuity::reconcile($company);
+
         $persons = [];
 
         // 1. Employees (RH) — inclut les sujets SANS compte. Si Workforce est inactif, la table est

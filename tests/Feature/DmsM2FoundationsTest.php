@@ -207,8 +207,10 @@ class DmsM2FoundationsTest extends TestCase
         $docs = collect($this->as($this->owner)->getJson("/api/company/people/employee-{$emp->id}/documents")->json('documents'))->keyBy('code');
         $this->assertTrue($docs['id_card']['has_file'], 'Document account-less conservé après ajout du compte');
 
-        // Le fichier n'a pas été déplacé : il reste rattaché au sujet employee
-        $this->assertDatabaseHas('member_documents', ['document_subject_type' => 'employee', 'document_subject_id' => $emp->id]);
+        // ADR-770 : la LIGNE suit la personne (sujet canonique = compte) — même ligne, même fichier,
+        // rien de copié ni de dupliqué. (Avant : fusion à l'affichage seulement, conformité fausse.)
+        $this->assertDatabaseMissing('member_documents', ['document_subject_type' => 'employee', 'document_subject_id' => $emp->id]);
+        $this->assertSame(1, \App\Core\Documents\MemberDocument::where('company_id', $this->company->id)->where('document_subject_type', 'user')->where('document_subject_id', $emp->fresh()->user_id)->count());
     }
 
     // ───────── Conformité exacte ─────────

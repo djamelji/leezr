@@ -18,6 +18,10 @@ class DocumentRequestQueueReadModel
 {
     public static function forCompany(int $companyId): array
     {
+        if ($company = \App\Core\Models\Company::withoutGlobalScopes()->find($companyId)) {
+            \App\Core\Documents\Services\PersonDocumentContinuity::reconcile($company); // ADR-770
+        }
+
         // ADR-759 (M2) : inclut aussi les demandes refusées / à remplacer / en vérification
         // (le centre de suivi doit les montrer), pas seulement requested/submitted.
         $requests = DocumentRequest::where('company_id', $companyId)
@@ -64,11 +68,16 @@ class DocumentRequestQueueReadModel
             ? \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('id', $employeeIds)->get()->keyBy('id')
             : collect();
 
-        return $requests->map(function (DocumentRequest $req) use ($uploads, $employees) {
-            $membership = $req->user?->memberships()
-                ->where('company_id', $req->company_id)
-                ->with('companyRole:id,name,key')
-                ->first();
+        // ADR-770 : memberships et rôles chargés en UNE requête pour la page (était résolu ligne par
+        // ligne : 2 requêtes par demande — N+1 mesuré 20 → 210 requêtes).
+        $userIds = $requests->pluck('user_id')->filter()->unique()->all();
+        $memberships = $userIds
+            ? \App\Core\Models\Membership::where('company_id', $companyId)->whereIn('user_id', $userIds)
+                ->with('companyRole:id,name,key')->get()->keyBy('user_id')
+            : collect();
+
+        return $requests->map(function (DocumentRequest $req) use ($uploads, $employees, $memberships) {
+            $membership = $req->user_id ? $memberships->get($req->user_id) : null;
 
             $uploadKey = $req->document_subject_type.':'.$req->document_subject_id.':'.$req->document_type_id;
             $memberDoc = $uploads->get($uploadKey);

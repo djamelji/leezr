@@ -39,6 +39,9 @@ const onMemberAdded = member => {
   // Un compte déjà existant n'est PAS activé : il doit accepter l'invitation.
   // M7 LOT 3 : jamais de fausse confirmation — si l'e-mail n'a pas pu partir, on le dit.
   if (member?._invitationDelivery === 'failed') toast(t('peopleList.invitedNotSent'), 'warning')
+
+  // M7 LOT 4 : `queued` n'est pas « envoyé » — l'e-mail attend encore le worker.
+  else if (member?._invitationDelivery === 'queued') toast(t(member?._pendingAcceptance ? 'peopleList.invitedPendingQueued' : 'peopleList.invitedQueued'), 'info')
   else toast(t(member?._pendingAcceptance ? 'peopleList.invitedPending' : 'peopleList.invited'), member?._pendingAcceptance ? 'info' : 'success')
   reload()
 }
@@ -240,7 +243,7 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
             </template>
             <template #item.job_role="{ item }"><span :class="item.job_role ? '' : 'text-disabled'">{{ item.job_role || '—' }}</span></template>
             <template #item.department="{ item }"><span :class="item.department ? '' : 'text-disabled'">{{ item.department || '—' }}</span></template>
-            <template #item.actions="{ item }"><VBtn icon variant="text" size="small" @click.stop="openFiche(item)"><VIcon icon="tabler-chevron-right" /></VBtn></template>
+            <template #item.actions="{ item }"><VBtn icon variant="text" size="small" :aria-label="t('peopleList.openFile', { name: item.name })" @click.stop="openFiche(item)"><VIcon icon="tabler-chevron-right" /></VBtn></template>
             <template #no-data>
               <div class="text-center py-8 text-medium-emphasis">
                 <VIcon icon="tabler-users-group" size="40" class="text-disabled mb-2" />

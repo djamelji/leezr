@@ -135,6 +135,8 @@ const activityHint = computed(() => {
         <VList
           lines="two"
           class="py-2"
+          role="navigation"
+          :aria-label="t('mySpace.title')"
         >
           <VListItem
             v-for="e in entries"

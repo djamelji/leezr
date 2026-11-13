@@ -46,6 +46,7 @@ const i18nEnabled = computed(() => themeConfig.app.i18n.enable && themeConfig.ap
   <!-- Desktop/tablette large : tous les outils inline -->
   <template v-if="mdAndUp">
     <NavBarI18n
+      aria-label="Langue"
       v-if="i18nEnabled"
       :languages="themeConfig.app.i18n.langConfig"
     />
@@ -78,7 +79,10 @@ const i18nEnabled = computed(() => themeConfig.app.i18n.enable && themeConfig.ap
       >
         <VListItem v-if="i18nEnabled">
           <template #prepend>
-            <NavBarI18n :languages="themeConfig.app.i18n.langConfig" />
+            <NavBarI18n
+              aria-label="Langue"
+              :languages="themeConfig.app.i18n.langConfig"
+            />
           </template>
           <VListItemTitle>{{ $t('navbar.language', 'Langue') }}</VListItemTitle>
         </VListItem>

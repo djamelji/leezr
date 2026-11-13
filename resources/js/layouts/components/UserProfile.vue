@@ -39,6 +39,9 @@ const userProfileList = [
     <VAvatar
       size="38"
       class="cursor-pointer"
+      role="button"
+      tabindex="0"
+      aria-label="Menu du compte"
       :color="!(userData && userData.avatar) ? 'primary' : undefined"
       :variant="!(userData && userData.avatar) ? 'tonal' : undefined"
     >

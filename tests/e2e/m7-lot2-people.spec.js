@@ -4,9 +4,15 @@
 // RELUE après rechargement (persistance) — une capture seule ne prouve rien.
 import { expect, test } from '@playwright/test'
 import { apiRequest, clickAndExpectApi, loginCompany } from './helpers.js'
+import { createRun } from './run-ledger.js'
 
 const DIR = 'tests/e2e/__screens__/m7-lot2'
-const stamp = String(Date.now()).slice(-7)
+// ADR-770 : données possédées par CETTE exécution (identifiant unique + registre) ; le démontage ne
+// supprime que les lignes inscrites au registre, après preuve de propriété.
+const run = createRun('m7-lot2')
+const stamp = run.runId
+
+test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
 
 async function settle(page, ms = 1200) {
   await page.waitForLoadState('networkidle').catch(() => {})
@@ -33,9 +39,10 @@ test.describe.configure({ mode: 'serial' })
 
 test('compte : inviter → éditer identité → rôle → suspendre → réactiver → retirer (depuis People)', async ({ page }) => {
   test.setTimeout(3 * 60 * 1000)
-  const email = `e2e.people.${stamp}@leezr.test`
+  const email = run.email('people')
 
   await loginCompany(page, 'owner@leezr.test')
+  run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
   await page.goto('/company/people', { waitUntil: 'networkidle' })
   await settle(page)
 
@@ -49,7 +56,10 @@ test('compte : inviter → éditer identité → rôle → suspendre → réacti
   await page.getByRole('option', { name: 'Driver' }).first().click()
   const created = await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
     () => page.getByRole('button', { name: 'Ajouter', exact: true }).click())
-  expect((await created.json()).pending_acceptance, 'nouveau compte : parcours historique').toBe(false)
+  const createdBody = await created.json()
+  run.track('membership', createdBody.member.id)
+  run.track('user', createdBody.member.user.id)
+  expect(createdBody.pending_acceptance, 'nouveau compte : parcours historique').toBe(false)
   expect(page.url(), 'on reste sur Collaborateurs').toContain('/company/people')
 
   const ref = await findRef(page, email)
@@ -108,6 +118,7 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
 
   await loginCompany(page, 'owner@leezr.test')
+  run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
   await page.goto('/company/people', { waitUntil: 'networkidle' })
   await settle(page)
 
@@ -122,6 +133,7 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
   ])
   expect(resp.status()).toBe(201)
   const employeeId = (await resp.json()).id
+  run.track('employee', employeeId)
   const ref = `employee-${employeeId}`
 
   await page.waitForURL(new RegExp(`/company/people/${ref}`), { timeout: 15000 })
@@ -186,7 +198,16 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
 
   await page.goto(`/company/people/${ref}`, { waitUntil: 'networkidle' })
   await settle(page)
-  await page.locator('[data-test="person-link-account"]').click()
+  // Barre d'actions adaptative : selon la largeur disponible (nom long), l'action est directe ou
+  // repliée dans le menu « ⋮ ».
+  const direct = page.locator('[data-test="person-link-account"]')
+  if (await direct.isVisible().catch(() => false)) {
+    await direct.click()
+  }
+  else {
+    await page.locator('[data-test="person-header"] button:has(.tabler-dots-vertical)').locator('visible=true').first().click()
+    await page.locator('.v-overlay-container .v-list-item', { hasText: 'Rattacher à un compte' }).first().click()
+  }
   await page.locator('[data-test="hr-link-account"]').click()
   await page.getByRole('option', { name: new RegExp(target.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click()
   await clickAndExpectApi(page, { urlIncludes: `/workforce/employees/${employeeId}/link-account`, method: 'POST' },
@@ -202,6 +223,7 @@ test('compte existant : invitation EN ATTENTE, jamais activée sans acceptation'
   const existing = process.env.E2E_EXISTING_ACCOUNT || 'trial@leezr.test'
 
   await loginCompany(page, 'owner@leezr.test')
+  run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
   await page.goto('/company/people', { waitUntil: 'networkidle' })
   await settle(page)
   test.skip(!!(await findRef(page, existing)), `${existing} est déjà membre de cette entreprise`)

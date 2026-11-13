@@ -26,7 +26,7 @@ class MyInvitationController
                 'role' => $m->companyRole?->name,
                 'invited_by' => ($i = $inviters->get($m->invited_by)) ? trim($i->first_name.' '.$i->last_name) : null,
                 'invited_at' => $m->acceptance_pending_at?->toIso8601String(),
-                'expires_at' => $m->invitation_expires_at?->toIso8601String(),
+                'expires_at' => MembershipInvitation::expiresAt($m)?->toIso8601String(),
             ])->values(),
         ]);
     }

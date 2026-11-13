@@ -51,10 +51,7 @@ class DocumentCampaignController extends Controller
 
     public function preview(Request $request, DocumentCampaignService $service): JsonResponse
     {
-        $validated = $request->validate([
-            'targeting' => ['required', 'array'],
-            'targeting.mode' => ['required', 'string', 'in:all,department,employees,persons,single'],
-        ]);
+        $validated = $request->validate($this->targetingRules());
         $company = $request->attributes->get('company');
 
         return response()->json($service->preview($company, $validated['targeting']));
@@ -62,10 +59,8 @@ class DocumentCampaignController extends Controller
 
     public function store(Request $request, DocumentCampaignService $service): JsonResponse
     {
-        $validated = $request->validate([
+        $validated = $request->validate($this->targetingRules() + [
             'document_type_code' => ['required', 'string'],
-            'targeting' => ['required', 'array'],
-            'targeting.mode' => ['required', 'string', 'in:all,department,employees,persons,single'],
             'name' => ['nullable', 'string', 'max:160'],
             'message' => ['nullable', 'string', 'max:2000'],
             'due_date' => ['nullable', 'date', 'after:today'],
@@ -81,7 +76,7 @@ class DocumentCampaignController extends Controller
         ]);
 
         // Lancement ASYNCHRONE fiable (idempotent + verrouillé côté service).
-        LaunchDocumentCampaignJob::dispatch($campaign->id);
+        LaunchDocumentCampaignJob::dispatch($campaign->id, (int) $company->id);
 
         $this->publishDomainEvent('document.updated', $company->id, ['type' => 'campaign_launched', 'entity' => 'DocumentCampaign', 'campaign_id' => $campaign->id]);
 
@@ -118,6 +113,31 @@ class DocumentCampaignController extends Controller
         $service->cancel($campaign, $request->user());
 
         return response()->json(['message' => 'Campaign cancelled.']);
+    }
+
+    /**
+     * ADR-770 — targeting rules. Every key the resolver reads MUST be declared here : with a nested
+     * rule (`targeting.mode`), Laravel returns ONLY the validated nested keys, so an undeclared
+     * `department_ids` / `employee_ids` / `person_refs` was silently dropped and a department or
+     * person campaign targeted nobody (0 recipients) through the real HTTP path.
+     */
+    private function targetingRules(): array
+    {
+        return [
+            'targeting' => ['required', 'array'],
+            'targeting.mode' => ['required', 'string', 'in:all,department,employees,persons,single'],
+            'targeting.department_ids' => ['required_if:targeting.mode,department', 'array', 'min:1'],
+            'targeting.department_ids.*' => ['integer'],
+            'targeting.employee_ids' => ['required_if:targeting.mode,employees', 'array', 'min:1'],
+            'targeting.employee_ids.*' => ['integer'],
+            'targeting.person_refs' => ['sometimes', 'array'],
+            'targeting.person_refs.*' => ['string', 'regex:/^(user|employee)-[0-9]+$/'],
+            'targeting.person_ref' => ['sometimes', 'string', 'regex:/^(user|employee)-[0-9]+$/'],
+            'targeting.include_terminated' => ['sometimes', 'boolean'],
+            'targeting.filters' => ['sometimes', 'array'],
+            'targeting.filters.status' => ['sometimes', 'array'],
+            'targeting.filters.status.*' => ['string'],
+        ];
     }
 
     private function find(Request $request, int $id): DocumentCampaign

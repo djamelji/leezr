@@ -34,6 +34,7 @@ class ReviewMemberDocumentUseCase
         // 2. Load target membership
         $membership = $data->company->memberships()->findOrFail($data->membershipId);
         $targetUser = User::findOrFail($membership->user_id);
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($data->company, $targetUser); // ADR-770 : valider LA pièce de la personne
 
         // 3. Load DocumentType by code
         $type = DocumentType::where('code', $data->documentCode)->firstOrFail();

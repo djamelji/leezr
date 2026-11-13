@@ -17,5 +17,8 @@ const shortcuts = computed(() =>
 </script>
 
 <template>
-  <Shortcuts :shortcuts="shortcuts" />
+  <Shortcuts
+    aria-label="Raccourcis"
+    :shortcuts="shortcuts"
+  />
 </template>

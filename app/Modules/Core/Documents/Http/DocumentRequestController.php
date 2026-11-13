@@ -196,7 +196,15 @@ class DocumentRequestController
             abort(422, 'Only requests in "requested" status can be reminded.');
         }
 
-        $docRequest->update(['requested_at' => now()]);
+        // ADR-770 : une relance manuelle est TRACÉE (événement `reminded`, `last_reminded_at`) et ne réécrit
+        // plus `requested_at` — la date de la demande est un fait d'audit, et le cycle des relances
+        // automatiques est calculé à partir d'elle.
+        $docRequest->update(['last_reminded_at' => now()]);
+        \App\Core\Documents\DocumentRequestEvent::create([
+            'company_id' => $company->id, 'document_request_id' => $docRequest->id,
+            'event' => \App\Core\Documents\DocumentRequestEvent::E_REMINDED, 'actor_id' => $request->user()->id,
+            'created_at' => now(), 'metadata' => ['tier' => 'manual'],
+        ]);
 
         $recipient = User::find($docRequest->user_id);
         if ($recipient) {
@@ -214,7 +222,11 @@ class DocumentRequestController
             );
         }
 
-        return response()->json(['message' => 'Reminder sent.']);
+        // Jamais de fausse confirmation : un collaborateur sans compte ne reçoit aucune notification.
+        return response()->json([
+            'message' => $recipient ? 'Reminder sent.' : 'Reminder recorded — this person has no account to notify.',
+            'notified' => (bool) $recipient,
+        ]);
     }
 
     /**

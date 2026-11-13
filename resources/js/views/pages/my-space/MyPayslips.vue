@@ -117,8 +117,10 @@ const download = async p => {
             v-for="(p, i) in group.items"
             :key="p.id"
           >
-            <VDivider v-if="i > 0" />
-            <VListItem :data-test="`my-payslip-${p.id}`">
+            <VListItem
+              :data-test="`my-payslip-${p.id}`"
+              :class="{ 'border-t': i > 0 }"
+            >
               <template #prepend>
                 <VAvatar
                   :color="p.status === 'revoked' ? 'error' : 'primary'"

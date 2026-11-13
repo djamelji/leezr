@@ -191,3 +191,48 @@ export async function selectVuetifyOption(page, selectLabel, optionIndex = 0) {
   await opts.first().waitFor({ state: 'visible', timeout: 5000 })
   await opts.nth(optionIndex).click()
 }
+
+// ── ADR-770 (M7 LOT 4) — classification EXPLICITE du réseau d'un parcours ─────────────────────────
+// Chaque réponse de l'API est rangée dans une de ces trois catégories, jamais ignorée :
+//   • attendue            : statut < 400 ;
+//   • refus de sécurité   : 4xx DÉCLARÉ par le test (statut + chemin + raison) — un profil qui tente
+//                           ce qu'il n'a pas le droit de faire ;
+//   • inattendue          : tout autre 4xx/5xx, toute erreur JavaScript de la page, et tout rapport
+//                           d'erreur envoyé par le frontend (`POST /api/runtime-error` = une vraie
+//                           erreur d'exécution ou un chunk introuvable s'est produit).
+// `assertClean()` échoue s'il reste une seule entrée inattendue. Aucun statut n'est exclu en bloc.
+export function watchNetwork(page, { expectedRefusals = [] } = {}) {
+  const calls = []
+  const refusals = []
+  const unexpected = []
+
+  page.on('response', r => {
+    const url = r.url()
+    if (!url.includes('/api/')) return
+    const path = new URL(url).pathname
+    const method = r.request().method()
+    const status = r.status()
+
+    calls.push({ method, path, status })
+    if (path === '/api/runtime-error') {
+      unexpected.push(`frontend-error-report ${(r.request().postData() || '').slice(0, 300)}`)
+
+      return
+    }
+    if (status < 400) return
+    const rule = expectedRefusals.find(e => e.status === status && (!e.method || e.method === method) && e.path.test(path))
+    if (rule) refusals.push({ method, path, status, reason: rule.reason })
+    else unexpected.push(`${status} ${method} ${path}`)
+  })
+  page.on('pageerror', e => unexpected.push(`pageerror ${String(e).slice(0, 300)}`))
+
+  return {
+    calls,
+    refusals,
+    unexpected,
+    paths: prefix => calls.filter(c => c.path.startsWith(prefix)).map(c => c.path),
+    assertClean(label = 'parcours') {
+      expect(unexpected, `${label} : erreurs réseau/JS inattendues`).toEqual([])
+    },
+  }
+}

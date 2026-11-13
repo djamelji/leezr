@@ -144,8 +144,10 @@ const download = async row => {
           v-for="(row, i) in visible"
           :key="row.id"
         >
-          <VDivider v-if="i > 0" />
-          <VListItem :data-test="`my-signature-${row.id}`">
+          <VListItem
+            :data-test="`my-signature-${row.id}`"
+            :class="{ 'border-t': i > 0 }"
+          >
             <template #prepend>
               <VAvatar
                 :color="meta(row.state).color"

@@ -9,7 +9,7 @@
 //   - owner@leezr.test  : propriétaire (crée la demande de signature par le moteur réel).
 // Le bulletin de démonstration est posé par `E2E_PAYSLIP_ID` (voir le rapport du lot).
 import { expect, test } from '@playwright/test'
-import { apiRequest, loginCompany } from './helpers.js'
+import { apiRequest, loginCompany, watchNetwork } from './helpers.js'
 
 const DIR = 'tests/e2e/__screens__/m7-lot3'
 
@@ -18,24 +18,11 @@ async function settle(page, ms = 1400) {
   await page.waitForTimeout(ms)
 }
 
-/** Enregistre les appels API : `calls` (toutes les URL) et `errors` (4xx / 5xx). */
+/** Réseau classifié (ADR-770) : attendu / refus de sécurité déclaré / inattendu — rien n'est exclu. */
 function watchApi(page) {
-  const calls = []
-  const errors = []
+  const net = watchNetwork(page)
 
-  page.on('response', r => {
-    const url = r.url()
-    if (!url.includes('/api/')) return
-    const path = new URL(url).pathname
-    calls.push(path)
-    // Le rapporteur d'erreurs (sendBeacon, sans jeton CSRF) n'est pas une API métier : les vraies
-    // erreurs d'exécution sont captées ci-dessous par `pageerror` et font échouer le parcours.
-    if (path === '/api/runtime-error') return
-    if (r.status() >= 400) errors.push(`${r.status()} ${r.request().method()} ${path}`)
-  })
-  page.on('pageerror', e => errors.push(`pageerror ${String(e).slice(0, 200)}`))
-
-  return { calls, errors, workforce: () => calls.filter(p => p.startsWith('/api/workforce/')) }
+  return { calls: net.calls.map(c => c.path), errors: net.unexpected, workforce: () => net.paths('/api/workforce/') }
 }
 
 test.describe.configure({ mode: 'serial' })

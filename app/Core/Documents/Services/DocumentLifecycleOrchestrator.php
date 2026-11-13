@@ -64,6 +64,10 @@ class DocumentLifecycleOrchestrator
         CompanyDocumentSetting::query()->chunkById(100, function ($settings) use (&$stats, $phases, $dryRun) {
             foreach ($settings as $setting) {
                 $stats['companies']++;
+                // ADR-770 : relances et renouvellements s'adressent au sujet CANONIQUE de la personne.
+                if (! $dryRun && ($company = \App\Core\Models\Company::withoutGlobalScopes()->find($setting->company_id))) {
+                    PersonDocumentContinuity::reconcile($company);
+                }
                 if (in_array('renew', $phases, true) && $setting->auto_renew_enabled) {
                     $stats['renewed'] += $this->renewPhase($setting, $dryRun);
                 }
@@ -100,6 +104,13 @@ class DocumentLifecycleOrchestrator
                         continue;
                     }
                     $subject = DocumentSubject::fromMemberDocument($doc);
+
+                    // ADR-770 : pièce détenue par un PRÉCÉDENT compte d'une fiche aujourd'hui liée à un autre
+                    // compte — archive du dossier, jamais relancée auprès de la nouvelle personne.
+                    if ($doc->previous_user_id !== null && $subject->is(DocumentSubject::TYPE_EMPLOYEE)
+                        && \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $doc->company_id)->where('id', $subject->id)->whereNotNull('user_id')->exists()) {
+                        continue;
+                    }
 
                     // Garde anti-doublon : ne rouvre pas si une demande est déjà active.
                     $existing = $this->requests->findExisting($doc->company_id, $subject, $type->id);
@@ -263,7 +274,7 @@ class DocumentLifecycleOrchestrator
                     topicKey: $topic,
                     recipients: [$user],
                     payload: $payload + ['link' => '/account-settings/documents'],
-                    company: \App\Core\Models\Company::find($companyId),
+                    company: \App\Core\Models\Company::withoutGlobalScopes()->find($companyId),
                     entityKey: $entityKey,
                 );
             }
@@ -276,7 +287,7 @@ class DocumentLifecycleOrchestrator
                 topicKey: $topic,
                 recipients: $admins,
                 payload: $payload + ['manager_signal' => $subject->is(DocumentSubject::TYPE_USER) ? false : true],
-                company: \App\Core\Models\Company::find($companyId),
+                company: \App\Core\Models\Company::withoutGlobalScopes()->find($companyId),
                 entityKey: $entityKey.':managers',
             );
         }

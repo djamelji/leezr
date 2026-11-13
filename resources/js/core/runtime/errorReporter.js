@@ -6,6 +6,11 @@
 
 const ENDPOINT = '/api/runtime-error'
 
+const BENIGN_MESSAGES = [
+  'ResizeObserver loop completed with undelivered notifications',
+  'ResizeObserver loop limit exceeded',
+]
+
 function buildPayload(type, message, stack) {
   return JSON.stringify({
     type,
@@ -29,6 +34,12 @@ export function initErrorReporter() {
     // Skip chunk errors — handled separately by F3
     const msg = event.message || ''
     if (msg.includes('ChunkLoadError') || msg.includes('Loading chunk'))
+      return
+
+    // ADR-770 : avis BÉNIN du navigateur (une observation de redimensionnement reportée à l'image
+    // suivante — ouverture d'un tiroir, d'un dialogue). Ce n'est pas une erreur applicative ; le
+    // remonter noierait la télémétrie maintenant qu'elle fonctionne. Seul ce message exact est écarté.
+    if (BENIGN_MESSAGES.some(m => msg.startsWith(m)))
       return
 
     send(buildPayload('js_error', msg, event.error?.stack))

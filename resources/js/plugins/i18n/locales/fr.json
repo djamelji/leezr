@@ -4397,8 +4397,8 @@
       "roleUpdateError": "Impossible de modifier le rôle.",
       "stateHint": {
         "none": "Cette personne n'a pas d'accès à l'application.",
-        "invited": "Invitation envoyée — le mot de passe n'a pas encore été défini.",
-        "pending_acceptance": "Invitation envoyée à un compte existant — en attente de son acceptation.",
+        "invited": "Compte créé par invitation — le mot de passe n'a pas encore été défini.",
+        "pending_acceptance": "Compte existant invité — en attente de son acceptation.",
         "active": "Compte activé, aucune connexion enregistrée pour l'instant.",
         "connected": "Le compte est actif et s'est déjà connecté.",
         "suspended": "L'accès est suspendu ; le compte et les données sont conservés.",
@@ -4427,7 +4427,9 @@
       "deliveryFailed": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Relancez l'invitation.",
       "deliverySent": "E-mail d'invitation envoyé le {date}.",
       "deliveryQueued": "E-mail d'invitation en cours d'envoi.",
-      "invitationQueued": "Invitation en cours d'envoi."
+      "invitationQueued": "Invitation en cours d'envoi.",
+      "linkValidUntil": "Lien de définition du mot de passe valable jusqu'au {date}.",
+      "linkExpired": "Le lien de définition du mot de passe a expiré : relancez l'invitation (la personne peut aussi utiliser « mot de passe oublié »)."
     },
     "fields": {
       "name": "Nom",
@@ -4491,7 +4493,10 @@
     "toolsHrHint": "Liste des salariés (import CSV, export, modifications en masse).",
     "toolsFields": "Champs personnalisés",
     "toolsFieldsHint": "Régler les champs du profil des membres.",
-    "invitedNotSent": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Ouvrez la fiche pour la relancer."
+    "invitedNotSent": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Ouvrez la fiche pour la relancer.",
+    "invitedQueued": "Invitation enregistrée. L'e-mail est en file d'attente et n'est pas encore parti.",
+    "invitedPendingQueued": "Ce compte existe déjà : l'invitation est enregistrée, son e-mail est en file d'attente. L'accès sera activé après son acceptation.",
+    "openFile": "Ouvrir la fiche de {name}"
   },
   "home": {
     "title": "Accueil",

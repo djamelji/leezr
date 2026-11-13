@@ -87,7 +87,10 @@ class PersonDocumentController extends Controller
                 $mimeType = $file->getMimeType();
                 $ocrText = null;
             } else {
-                $path = Storage::disk('local')->putFileAs("documents/{$company->id}/subject", new \Illuminate\Http\File($processed->pdfPath), $processed->fileName);
+                // ADR-770 : chemin UNIQUE. Avec `putFileAs($processed->fileName)` tous les collaborateurs sans
+                // compte d'une entreprise partageaient `documents/{company}/subject/{code}.pdf` : le dépôt
+                // de l'un ÉCRASAIT la pièce de l'autre (et toute version précédente).
+                $path = Storage::disk('local')->putFile("documents/{$company->id}/subject", new \Illuminate\Http\File($processed->pdfPath));
                 $fileName = $processed->fileName;
                 $fileSize = $processed->fileSize;
                 $mimeType = $processed->mimeType;
@@ -225,6 +228,9 @@ class PersonDocumentController extends Controller
             $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($ref->id);
             $user = $employee->user_id ? User::find($employee->user_id) : null;
         }
+
+        // ADR-770 : transition de sujet AVANT toute lecture/écriture adressée par personRef.
+        \App\Core\Documents\Services\PersonDocumentContinuity::settle($company, $user, $employee);
 
         $subject = $user !== null ? DocumentSubject::user($user->id) : DocumentSubject::employee($employee->id);
 

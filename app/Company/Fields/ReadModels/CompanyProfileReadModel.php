@@ -30,7 +30,8 @@ class CompanyProfileReadModel
             'jobdomain_mandatory_fields' => static::mandatoryFieldsByJobdomain($company),
             'storage' => StorageQuotaService::usage($company),
             'member_quota' => [
-                'current' => $company->memberships()->count(),
+                // M7 LOT 4 : même chiffre que la règle de quota (les invitations expirées ne comptent pas).
+                'current' => \App\Company\Security\MemberQuota::used($company),
                 'limit' => CompanyEntitlements::memberLimit($company),
             ],
         ];

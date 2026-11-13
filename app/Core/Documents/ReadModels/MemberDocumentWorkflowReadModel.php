@@ -25,6 +25,10 @@ class MemberDocumentWorkflowReadModel
 {
     public static function get(User $member, Company $company, ?string $roleKey, ?User $actor = null, ?int $mergeEmployeeId = null): array
     {
+        // ADR-770 : TRANSITION DE SUJET avant toute lecture — les pièces et demandes de la fiche salarié
+        // liée suivent la personne (un document, une demande, un historique par type).
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $member);
+
         // 1. Resolve documents via existing service (surface effective du membre)
         $documents = DocumentResolverService::resolve(
             $member,
@@ -58,9 +62,13 @@ class MemberDocumentWorkflowReadModel
         if ($mergeEmployeeId !== null) {
             // Charge TOUTES les pièces du sujet employee (y compris les types hors surface de rôle)
             // → garantie « aucun document perdu ».
+            // ADR-770 : ne restent ici que les pièces détenues par un PRÉCÉDENT compte de cette fiche (jamais
+            // transmises au nouveau compte). L'administrateur les garde au dossier ; la personne elle-même
+            // ne les voit pas dans son propre dossier.
             $employeeUploads = MemberDocument::where('company_id', $company->id)
                 ->where('document_subject_type', DocumentSubject::TYPE_EMPLOYEE)
                 ->where('document_subject_id', $mergeEmployeeId)
+                ->when($actor !== null && (int) $actor->id === (int) $member->id, fn ($q) => $q->whereRaw('1 = 0'))
                 ->get()->keyBy('document_type_id');
             $employeeRequests = DocumentRequest::where('company_id', $company->id)
                 ->where('document_subject_type', DocumentSubject::TYPE_EMPLOYEE)

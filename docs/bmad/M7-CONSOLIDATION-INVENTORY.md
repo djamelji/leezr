@@ -94,7 +94,7 @@ La fiche est **majoritairement en lecture seule** et délègue les mutations lou
 | Éditer identité / infos perso | ❌ lecture seule | members/[id], employees/[id] | **GAP** |
 | Champs dynamiques / custom fields | ❌ | members | **GAP** |
 | Credentials (reset/set password) | ❌ | members/[id] | **GAP** |
-| Éditer / générer contrat, avenants | ❌ lecture seule | employees/[id] | **GAP** |
+| Créer / activer / générer un contrat | ❌ lecture seule | employees/[id] | **GAP** (comblé LOT 2). *Les avenants et la modification d'un contrat n'existent dans AUCUNE page : le moteur ne les connaît pas (ADR-574).* |
 | Signatures | ❌ | employees/[id] | **GAP** |
 | Bulletins / paie (endpoint existe) | ❌ UI | documents/payroll | **GAP** |
 | Import / Export / Actions groupées | ❌ | employees/index | **GAP** |
@@ -135,6 +135,10 @@ résout par `personRef` = `user-{id}` | `employee-{id}`, lien `user_id` **explic
 > **Mise à jour LOT 3 (ADR-769)** — livré : « Mon espace » Core (`/company/my-space/:tab` : aperçu, documents, bulletins,
 > signatures), accueil et pointage pilotés par `/profile/space`, `/company/workforce/me` conservé (« Mon activité »),
 > `/account-settings/documents` redirigé. `/home` et `/dashboard` non fusionnés.
+
+> **Mise à jour LOT 4 (ADR-770)** — recette transversale faite. Les deux LISTES historiques restent des surfaces
+> officielles (import / export / actions groupées ; champs personnalisés et quota) : elles ne sont PAS redirigées.
+> État définitif des routes, matrice RBAC vérifiée et défauts qualifiés : ADR-770.
 
 ### LOT 4 — Redirections finales + recette RBAC par facette + E2E + captures avant/après
 - Activer les redirections members/employees **seulement** après parité LOT 2. Matrice de redirections +

@@ -27651,3 +27651,125 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Verdict** : **🟢 GO DEV — LOT 4 possible.** NO-GO PROD inchangé (signature externe, OCR, outillage VPS ; worker de queue requis pour l'envoi des invitations).
 
 **Règles** : DEV uniquement, aucun push, une migration additive, Billing et calcul de paie intacts, LOT 4 non démarré.
+
+---
+
+## ADR-770 — M7 (LOT 4) : recette transversale, sécurité et consolidation finale Company + DMS
+
+**Date** : 2026-11-13
+**Contexte** : dernier lot de M7 (base `a638f333`). Objectif : prouver par des tests réels et par l'inspection du code que Collaborateurs, Documents et Mon espace fonctionnent ensemble sans fuite, perte de fonctionnalité ni régression de permissions — sans reprendre les affirmations des ADR précédents. La recette a trouvé **14 défauts réels**, tous reproduits avant correction.
+
+### 1. État initial
+
+`dev` @ `a638f333`, aucune migration en attente, `typed-router.d.ts` et `DMS-ARCHITECTURE.md` préservés. Tests : sqlite en mémoire, queue `sync`, mail `array`. **Local** : `QUEUE_CONNECTION=database` et **aucun worker** — 13 jobs en attente depuis le 5 novembre (notifications de planning, factures, invitations) : les invitations créées en local n'ont jamais été envoyées. Outillage local présent : `pdftotext`, `tesseract`, ImageMagick, Ghostscript (non vérifié sur le VPS).
+
+### 2. Audit des données de test supprimées (incident ADR-769)
+
+Reconstitution par le journal d'audit (`company_audit_logs`, cible `user` absente de `users`) : **22 comptes** supprimés sur les lots 2 et 3, tous dans l'entreprise 1.
+- 8 créés par mes exécutions (ids 58–65, 12–13 novembre).
+- **14 créés par d'anciennes sessions** (ids 6–19, 17–19 octobre, E2E `company-member-lifecycle`) : jamais activés, aucune connexion ; 10 n'avaient que l'événement `member.added` (rattachement encore présent, supprimé avec eux), 4 avaient déjà été retirés par leur test.
+- Intégrité : 0 ligne orpheline sur `memberships`, `workforce_employees`, `member_documents`, `document_requests`, `company_audit_logs`, `sessions`, `personal_access_tokens`, `workforce_signature_signers`, `published_payslips` ; les 45 clés étrangères vers `users` / `memberships` / `workforce_employees` sont en CASCADE (20), SET NULL (22) ou NO ACTION (3).
+- **Restauration : ni nécessaire ni réalisable.** Les e-mails ne sont pas dans l'audit (seul le motif `e2e.member.<horodatage>@leezr.test` est connu) et ces comptes n'avaient aucune activité. Rien n'a été réinséré dans la base active. L'identification repose sur l'audit : une donnée dépendante sans trace d'audit ne serait pas visible.
+
+**Procédure corrigée** (`tests/e2e/run-ledger.js`, commande `e2e:teardown-run`) : identifiant unique par exécution porté par toutes les données créées ; registre des ids exacts lus dans les réponses de l'API ; démontage qui ne supprime que les lignes du registre, après preuve de propriété (marqueur de l'exécution + date de création), **confiné à l'entreprise déclarée** (scope tenant actif), refusé hors `local`/`testing`, sans aucune suppression par motif. Un compte encore rattaché par une ligne hors registre est conservé. Recommandation maintenue : une instance E2E avec sa propre base (`E2E_BASE_URL`). Les anciens fixtures `e2e:reset-*` (marqueur partagé, bornés à un salarié) ne sont pas repris dans ce lot.
+
+### 3. Cartographie des routes
+
+| Route | Statut | Détail |
+|---|---|---|
+| `/company/people`, `/company/people/:personRef` | cible | `?tab=` conservé ; onglet sans capacité → vue d'ensemble |
+| `/company/documents/:tab`, `/company/documents/hr` | cible | onglets gated par permission |
+| `/company/my-space/:tab` | cible | rubrique sans capacité non rendue |
+| `/home`, `/account-settings/:tab`, `/company/workforce/me` | cibles | inchangées |
+| `/company/my-space`, `/company/documents`, `/account-settings`, `/profile` | **corrigé** | sans onglet, tombaient en 404 → onglet par défaut |
+| `/company/roles` | redirigée | `/company/people?tab=roles` |
+| `/company/workforce/documents` | redirigée | `/company/documents/hr` |
+| `/company/members/:id` | redirigée | fiche unifiée, id Membership résolu côté serveur ; `?legacy=1` |
+| `/company/workforce/employees/:id` | redirigée | `/company/people/employee-:id`, query conservée ; `?legacy=1` |
+| `/account-settings/documents` | redirigée | `/company/my-space/documents` |
+| `/company/members` | **conservée** | réglage des champs personnalisés, affichage du quota |
+| `/company/workforce/employees` | **conservée** | import, export, actions groupées, filtres avancés |
+
+Les deux listes conservées restent atteignables par le menu « Outils » de Collaborateurs (vérifié en navigateur). Historique : liste → fiche → onglet → retour, vérifié.
+
+### 4. Parité People (définitive)
+
+Opérationnel dans People, prouvé par HTTP et navigateur : création d'un salarié sans compte, invitation, acceptation, refus, expiration, relance, annulation, fiche RH pour un membre, liaison fiche ↔ compte, identité et champs dynamiques, informations RH, rôle, suspension, réactivation, retrait, identifiants, contrat (consulter, créer, activer, générer), documents, bulletins, signatures.
+Seulement par les pages historiques : import / export / actions groupées, réglage des champs personnalisés et quota.
+**Inexistant dans tout le produit** : avenants, modification et fin d'un contrat (aucun moteur, ADR-574) ; interface de fin de collaboration (`terminate` existe en API seulement). L'inventaire M7 laissait entendre que les avenants vivaient dans l'ancienne fiche : corrigé.
+
+### 5. Matrice RBAC vérifiée (`M7Lot4RbacMatrixTest`)
+
+Dix profils × 35 appels HTTP directs (350 cellules), plus payloads et isolation : A administrateur · B gestionnaire des comptes sans Workforce · C RH sans Members · D manager d'équipe · E gestionnaire documentaire · F gestionnaire de bulletins sans `documents.view` · G salarié self-service · H compte sans fiche · I administrateur aussi salarié · J membre de deux entreprises. Chaque cellule est une attente explicite (200/201 autorisé, 403 refus légitime, 404 hors périmètre, 422 refus métier).
+- **1 fuite trouvée et corrigée** : `workforce.view` (manager, RH sans facette ACCÈS) ouvrait la fiche — nom, e-mail de connexion, état du compte — de n'importe quel compte SANS fiche salarié (`PersonFileReadModel` : la facette RH était vraie en l'absence de fiche). La facette RH exige désormais une fiche.
+- 0 refus parasite. Self-service : 200 pour les dix profils. Isolation : un non-membre de B reçoit 403 partout ; les ids de B ne résolvent jamais depuis A ; J obtient dans chaque entreprise le rôle de cette entreprise.
+- Navigateur : 4 profils réels (propriétaire, administrateur-salarié, salarié opérationnel, entreprise sans Workforce). Les comptes de recette locaux des autres profils n'ont pas de mot de passe : ils sont couverts par HTTP uniquement.
+- Résiduel : la fiche d'un salarié expose à un profil RH sans facette ACCÈS l'état du compte (`state`, `is_admin`, `is_owner`) et l'e-mail de connexion ; assumé (checklist d'intégration), à réévaluer.
+
+### 6. Cohérence documents / sujets (`M7Lot4DocumentSubjectCoherenceTest`, 9 tests, tous rouges avant)
+
+Cause racine : ADR-761 fait du sujet canonique la clé du DMS, mais rien ne faisait suivre les lignes quand il changeait ; la fusion d'affichage masquait le défaut sur un seul écran. Constaté après liaison fiche → compte : dépôt admin créant une seconde ligne, téléchargement 404 alors que le fichier était affiché, validation impossible, demande réelle masquée par un placeholder, conformité « manquant » pour une pièce déposée, renouvellement adressé à personne, campagne ne suivant plus la personne. **Régression du LOT 3 trouvée** : au retrait d'accès, les pièces adoptées restaient sous l'ex-compte et la fiche RH perdait tout.
+Règle (écrite dans `PersonDocumentContinuity`) : un document courant, une demande, un historique par personne et par type. Adoption à la liaison ; **restitution** à la fiche au retrait d'accès, jamais transmise à un autre compte ; en conflit, la ligne à destination fait foi et l'autre devient son historique (fichier et versions re-pointés, jamais copiés ; événement `merged` avec instantané). Transitions auditées, idempotentes, confinées à une entreprise. Migration additive `2026_11_20_000001_m7_document_subject_transition` (`origin_employee_id`, `previous_user_id`).
+Non traité : bulletins publiés (immuables, lecture multi-sujets) ; fiche reliée à un AUTRE compte (les pièces de l'ancien restent au dossier administrateur, la nouvelle personne est « à fournir » — choix de sécurité, deux lignes peuvent coexister) ; pas de test de concurrence réelle ; les lectures concernées écrivent quand une transition est en attente (migration paresseuse auditée).
+
+### 7. Recette DMS M0→M6 (`M7Lot4DmsRecetteTest`, 8 parcours, vrais PDF)
+
+Coffre, demandes, campagnes, expiration, bulletins (PDF texte multipage, ZIP, scan OCR réel, revue, publication, rectificatif, révocation, self-service), signature interne (cérémonie, scellement, preuves), signature externe (sandbox, HMAC, anti-rejeu). **4 défauts réels**, masqués jusque-là par de faux fichiers ou des appels de service sans HTTP :
+1. **Remplacement destructif** : avec un vrai PDF, le nouveau fichier écrasait l'ancien (nom déterministe `{code}.pdf`) ; la version archivée servait les nouveaux octets. Contredit ADR-756/757.
+2. **Écrasement entre personnes** : tous les salariés sans compte d'une entreprise partageaient le même chemin ; le dépôt de l'un remplaçait la pièce de l'autre (intégrité ET confidentialité).
+3. **Campagne par département ou par personnes = 0 destinataire** par HTTP (les identifiants étaient supprimés par la validation) — c'est le mode proposé par l'interface. Contredit ADR-761.
+4. **Relance manuelle non tracée** : aucun événement, date de demande réécrite, « envoyé » même sans compte à notifier.
+Base locale : 0 ligne affectée par 1 et 2 (lecture seule). **La même vérification est à faire sur le VPS avant toute mise en production.** Signature externe : seuls l'adapter et le sandbox sont prouvés — NO-GO PROD maintenu.
+
+### 8. Invitations (`M7Lot4InvitationLifecycleTest`, 9 tests, 8 rouges avant)
+
+Cycle complet vérifié (nouveau compte, compte existant, acceptation, refus, expiration 410, relance, annulation, limite, SMTP indisponible, queue arrêtée, retry puis échec définitif). Corrections : quota vérifié dans la transaction d'écriture (`MemberQuota::reserve`, ligne entreprise verrouillée) et plus seulement dans le contrôleur ; ré-inviter une invitation expirée la renouvelle au lieu de répondre « déjà membre » ; messages distincts `failed` / `sent` / `queued` (plus de « envoyé » pour un e-mail en file) ; échec définitif inscrit dans `failed_jobs` ; compteur du profil entreprise aligné sur le quota.
+**Compatibilité** : une invitation sans échéance stockée expire à date d'envoi + `members.invitation_ttl_days`, appliquée partout (acceptation, liste, quota, état, commande planifiée) sans réécriture ; l'audit porte `derived_deadline`. 0 ligne concernée en local.
+**Lien de 60 minutes** : pas d'impasse — « mot de passe oublié » fonctionne pour un compte jamais activé, l'administrateur voit `link_expired` et relance hors quota. Trois notions distinctes dans l'API : expiration de l'invitation (`expires_at`, `invitation_expired`), du lien (`link_expires_at`, `link_expired`), fin du membership (`suspended`).
+
+### 9. HTTP 419 du rapporteur d'erreurs
+
+`POST /api/runtime-error` (public, `throttle:10,1`, journal `runtime`). Le frontend poste par `navigator.sendBeacon`, qui ne peut pas porter `X-XSRF-TOKEN` ; depuis l'origine de la SPA (stateful Sanctum) la requête passait par la vérification CSRF → **419**. Preuve HTTP réelle : 419 avec `Origin`, 204 sans. Conséquence : **aucune erreur cliente n'a jamais été journalisée** (le fichier `runtime.log` n'existait pas). Aucun effet sur la session. Déclencheur observé : un chunk introuvable après un build.
+Correctif : exemption CSRF de ce seul chemin (`bootstrap/app.php`), verrouillée par test (aucun joker, login toujours 419 sans jeton). L'avis bénin « ResizeObserver loop… » est écarté à la source. Les E2E classent désormais chaque réponse : attendue, refus de sécurité **déclaré** (statut + chemin + raison), inattendue ; un rapport d'erreur frontend compte comme inattendu. Aucun statut n'est exclu en bloc.
+
+### 10. Jobs, scheduler, queues (`M7Lot4JobsSchedulerTest`)
+
+| Tâche | Planification | Worker requis |
+|---|---|---|
+| `documents:check-expiration` / `auto-renew` / `auto-remind` | quotidien 00:00 / 08:00 / 09:00 | non (cron) |
+| `workforce:signature-expire`, `members:invitations-expire` | horaire | non (cron) |
+| `IngestPayslipBatchJob`, `LaunchDocumentCampaignJob`, `SendMembershipInvitationJob`, notifications | à l'action, queue `default` | **oui** |
+| `ProcessDocumentAiJob` | à chaque dépôt, queue **`ai`** | **oui, sur `ai`** |
+
+Commandes enregistrées une seule fois, idempotentes (double exécution = un effet). Queue arrêtée : lot `uploaded`, campagne `draft`, invitation `queued` jamais `sent` ; rien n'est perdu ni dupliqué au redémarrage. Job en échec : 3 tentatives puis `failed_jobs`. `LaunchDocumentCampaignJob` ne portait pas son tenant : corrigé. **Écart connu** : le cycle de vie documentaire n'est pas sûr en mode tenant strict (jamais activé par l'application) — test ignoré « KNOWN GAP ».
+Prérequis de déploiement : `php artisan queue:work --queue=default,ai --tries=3` permanent ; cron `schedule:run` ; `pdftotext`, `tesseract`, ImageMagick ; SMTP ; disque `local` partagé web/worker ; surveillance de `queue:failed`.
+
+### 11. Performance (`M7Lot4PerformanceTest`, 40 → 800 personnes, 3 300 pour la liste)
+
+Budget : le nombre de requêtes ne croît pas avec la population. **2 N+1 corrigés** : conformité documentaire (60 → 970 requêtes, introduit pendant ce lot par la réconciliation pair à pair, rendu ensembliste : 20 constant) ; file des demandes (20 → 210, membership et rôle résolus ligne par ligne). Constant : liste People 18, fiche 82, `/profile/space` 15, bulletins 8–11, annuaire 16. Limites structurelles mesurées, non refondues : liste People paginée en mémoire (110 ms à 3 300 personnes, correct jusqu'à quelques milliers) ; annuaire des membres non paginé (182 Ko pour 481 comptes) ; fiche à 82 requêtes dont 41 relectures identiques (mémoïsation à faire). Aucun cache ajouté.
+
+### 12. Responsive et accessibilité (`tests/e2e/m7-lot4-recette.spec.js`)
+
+11 surfaces × 3 largeurs (1440, 820, 390) × clair/sombre = 66 combinaisons : aucun débordement horizontal, aucun chargement bloqué, réseau propre. Interactions mobiles : menu, tiroir d'invitation, dialogue plein écran, état vide, chaque onglet annoncé de la fiche. Accessibilité (axe, WCAG 2 A/AA) : les violations **critiques** des surfaces et de la barre commune sont corrigées (nom accessible des boutons-icônes, sémantique des listes). **Restent** : le bouton de fermeture des tiroirs (`@core/AppDrawerHeaderSection`, framework non modifiable par le projet — déclaré dans le test) et des violations « serious » non traitées (contraste, noms d'infobulles et de barres de progression).
+
+### 13. Dette technique
+
+`ControllerSizeInvariantTest` : 3 échecs historiques, **mêmes 15 contrôleurs** (aucun nouveau), 4 usages de `DB::` et 5 `->save()`. Seuils non modifiés. Trois contrôleurs déjà listés ont grossi de 6 à 12 lignes dans ce lot (`MemberDocumentController` 353, `DocumentRequestController` 293, `PersonDocumentController` 259). Trajectoire proposée, par valeur décroissante : `ShiftController` (781) et `SignatureController` (686) → use cases par action ; les trois contrôleurs documentaires → un `PersonDocumentService` commun (ils dupliquent dépôt / versions / téléchargement) ; `EmployeeController` (343) → extraire import/export/bulk ; le reste au fil de l'eau. Aucune refonte engagée.
+
+### 14. Tests et preuves
+
+PHPUnit : `M7Lot4RbacMatrixTest` (3), `M7Lot4DocumentSubjectCoherenceTest` (9), `M7Lot4DmsRecetteTest` (8), `M7Lot4JobsSchedulerTest` (8 + 1 ignoré), `M7Lot4InvitationLifecycleTest` (9), `M7Lot4PerformanceTest` (2), `M7Lot4E2eTeardownOwnershipTest` (4), `M7Lot4RuntimeErrorReporterTest` (2). Suite complète : **4227 verts, 13 ignorés, 3 échecs historiques**. Un test existant ajusté (`DmsM2FoundationsTest`, ancienne doctrine de fusion à l'affichage).
+E2E : `m7-lot4-recette` (5 parcours), `m7-lot3-self-service` (3 parcours relancés), `m7-lot2-people` (3), `company-member-lifecycle` (1) — tous verts, réseau classifié. Captures : `tests/e2e/__screens__/m7-lot4/` (69).
+
+### 15. Matrice GO / NO-GO
+
+- **A. Terminé** : Collaborateurs (liste, fiche opérationnelle), Mon espace, accueil personnel, documents / demandes / campagnes / échéances, import de bulletins, signature interne, invitations, RBAC par facette, continuité des sujets documentaires.
+- **B. Seulement par les pages historiques** : import / export / actions groupées des salariés ; champs personnalisés et quota des membres.
+- **C. Non bloquant** : pagination en mémoire de la liste People ; annuaire non paginé ; fiche à 82 requêtes ; accessibilité « serious » et tiroirs `@core` ; cas « fiche reliée à un autre compte » ; état du compte visible du profil RH ; cycle de vie documentaire en mode strict ; clés d'audit brutes dans l'activité Documents ; anciens fixtures E2E à marqueur partagé ; duplication des trois contrôleurs documentaires.
+- **D. Bloquant DEV** : aucun.
+- **E. Bloquant PROD** : vérifier sur le VPS l'absence de documents déjà écrasés (défauts 7.1 et 7.2) ; worker absent ou n'écoutant pas `ai` ; signature externe non prouvée avec un prestataire réel ; outillage OCR non vérifié sur le serveur ; scheduler PROD à confirmer.
+- **F. Prérequis externes** : prestataire de signature (credentials, eIDAS) ; `pdftotext` / `tesseract` / ImageMagick ; worker `default,ai` + cron ; disque partagé ; SMTP ; 4 migrations additives à appliquer (`2026_11_18`, `_19`, `_20` + `add_imap_identity_to_email_logs` si absente).
+
+**Verdict** : **🟢 GO DEV — M7 clos.** **🔴 NO-GO PROD** tant que les points E et F ne sont pas levés par une vérification sur l'environnement cible. Aucun déploiement lancé.
+
+**Règles** : DEV uniquement, aucun push, une migration additive, aucune donnée supprimée sans preuve de propriété, Billing et calcul de paie intacts, aucun nouveau module.

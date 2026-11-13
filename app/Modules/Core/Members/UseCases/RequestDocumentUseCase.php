@@ -34,6 +34,8 @@ class RequestDocumentUseCase
         ?string $dueDate = null,
         bool $requiresValidation = true,
     ): DocumentRequest {
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($companyId, $subject); // ADR-770
+
         $docType = DocumentType::where('code', $documentTypeCode)
             ->where('scope', DocumentType::SCOPE_COMPANY_USER)
             ->active()

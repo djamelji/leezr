@@ -4397,8 +4397,8 @@
       "roleUpdateError": "Could not change the role.",
       "stateHint": {
         "none": "This person has no access to the application.",
-        "invited": "Invitation sent — the password has not been set yet.",
-        "pending_acceptance": "Invitation sent to an existing account — waiting for acceptance.",
+        "invited": "Account created by invitation — the password has not been set yet.",
+        "pending_acceptance": "Existing account invited — waiting for acceptance.",
         "active": "Account activated, no sign-in recorded yet.",
         "connected": "The account is active and has already signed in.",
         "suspended": "Access is suspended; the account and data are kept.",
@@ -4427,7 +4427,9 @@
       "deliveryFailed": "The invitation is saved, but the e-mail could not be sent. Resend the invitation.",
       "deliverySent": "Invitation e-mail sent on {date}.",
       "deliveryQueued": "Invitation e-mail is being sent.",
-      "invitationQueued": "Invitation is being sent."
+      "invitationQueued": "Invitation is being sent.",
+      "linkValidUntil": "Password setup link valid until {date}.",
+      "linkExpired": "The password setup link has expired: resend the invitation (the person can also use \"forgot password\")."
     },
     "fields": {
       "name": "Name",
@@ -4491,7 +4493,10 @@
     "toolsHrHint": "Employee list (CSV import, export, bulk changes).",
     "toolsFields": "Custom fields",
     "toolsFieldsHint": "Configure member profile fields.",
-    "invitedNotSent": "The invitation is saved, but the e-mail could not be sent. Open the person's file to resend it."
+    "invitedNotSent": "The invitation is saved, but the e-mail could not be sent. Open the person's file to resend it.",
+    "invitedQueued": "Invitation saved. The e-mail is queued and has not been sent yet.",
+    "invitedPendingQueued": "This account already exists: the invitation is saved and its e-mail is queued. Access will be activated once accepted.",
+    "openFile": "Open {name}'s file"
   },
   "home": {
     "title": "Home",

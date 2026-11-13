@@ -17,6 +17,9 @@ use Illuminate\Validation\ValidationException;
  * EXPIRED (the membership is kept for the audit trail but no longer counted). Renewing an
  * expired invitation takes a seat again, so it goes through `assertSeatAvailable()` too.
  *
+ * An account invited and never activated keeps its seat until an administrator removes it : the
+ * account exists and its owner can activate it at any time (« forgot password »), so it IS an access.
+ *
  * Every path that adds an access (Members invitation, Workforce access grant, renewal) asks this
  * class — a company can neither exceed its limit by multiplying invitations nor stay blocked by
  * invitations nobody answered.
@@ -30,11 +33,22 @@ final class MemberQuota
 
     public static function used(Company $company): int
     {
-        return $company->memberships()
-            ->where(fn ($q) => $q->whereNull('acceptance_pending_at')
-                ->orWhereNull('invitation_expires_at')
-                ->orWhere('invitation_expires_at', '>', now()))
-            ->count();
+        // Expired pending acceptances (stored OR derived deadline — see MembershipInvitation::expiresAt)
+        // no longer hold a seat ; everything else does.
+        return MembershipInvitation::whereNotExpired($company->memberships())->count();
+    }
+
+    /**
+     * Check-and-hold, for the transaction that ADDS a membership : the company row is locked first,
+     * so two concurrent invitations cannot both pass the check and exceed the limit together.
+     * (Outside a transaction it degrades to a plain check.)
+     *
+     * @throws ValidationException (422)
+     */
+    public static function reserve(Company $company): void
+    {
+        Company::query()->whereKey($company->id)->lockForUpdate()->first();
+        self::assertSeatAvailable($company);
     }
 
     public static function isFull(Company $company): bool

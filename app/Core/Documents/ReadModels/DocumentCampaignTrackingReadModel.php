@@ -19,6 +19,7 @@ class DocumentCampaignTrackingReadModel
 {
     public static function summary(DocumentCampaign $campaign): array
     {
+        self::settle($campaign);
         $recips = DocumentCampaignRecipient::where('document_campaign_id', $campaign->id)->get();
         $requestIds = $recips->pluck('document_request_id')->filter()->all();
         $requests = DocumentRequest::whereIn('id', $requestIds)->get()->keyBy('id');
@@ -84,6 +85,7 @@ class DocumentCampaignTrackingReadModel
     /** Liste paginée des destinataires (recherche serveur, pas de chargement global des pièces). */
     public static function recipients(DocumentCampaign $campaign, int $page = 1, int $perPage = 25): array
     {
+        self::settle($campaign);
         $query = DocumentCampaignRecipient::where('document_campaign_id', $campaign->id)->orderBy('id');
         $total = $query->count();
         $rows = $query->forPage($page, $perPage)->get();
@@ -110,5 +112,13 @@ class DocumentCampaignTrackingReadModel
         })->values();
 
         return ['items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+    }
+
+    /** ADR-770 : les destinataires suivent la personne quand son sujet canonique change. */
+    private static function settle(DocumentCampaign $campaign): void
+    {
+        if ($company = \App\Core\Models\Company::withoutGlobalScopes()->find($campaign->company_id)) {
+            \App\Core\Documents\Services\PersonDocumentContinuity::reconcile($company);
+        }
     }
 }

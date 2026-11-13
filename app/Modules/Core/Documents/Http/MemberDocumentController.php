@@ -53,6 +53,7 @@ class MemberDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
         $user = User::findOrFail($membership->user_id);
 
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
@@ -103,10 +104,12 @@ class MemberDocumentController extends Controller
                 $mimeType = $file->getMimeType();
                 $ocrText = null;
             } else {
-                $path = Storage::disk('local')->putFileAs(
+                // ADR-770 : chemin UNIQUE (putFile → nom aléatoire), jamais `putFileAs($processed->fileName)` :
+                // le nom produit par le pipeline est déterministe (`{code}.pdf`) → un remplacement
+                // ÉCRASAIT le fichier précédent, que la version archivée continuait de référencer.
+                $path = Storage::disk('local')->putFile(
                     "documents/{$company->id}/{$user->id}",
                     new \Illuminate\Http\File($processed->pdfPath),
-                    $processed->fileName,
                 );
                 $fileName = $processed->fileName;
                 $fileSize = $processed->fileSize;
@@ -182,6 +185,7 @@ class MemberDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
 
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
 
@@ -207,6 +211,7 @@ class MemberDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
 
         $document = MemberDocument::where('company_id', $company->id)
@@ -239,6 +244,7 @@ class MemberDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $membership = $company->memberships()->findOrFail($membershipId);
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
 
         $document = MemberDocument::where('company_id', $company->id)

@@ -16,5 +16,8 @@ const themes = [
 </script>
 
 <template>
-  <ThemeSwitcher :themes="themes" />
+  <ThemeSwitcher
+    aria-label="Thème d'affichage"
+    :themes="themes"
+  />
 </template>

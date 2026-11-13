@@ -58,11 +58,14 @@ class PersonFileReadModel
         // les comptes sans les données RH. Gating serveur strict, jamais d'élargissement implicite.
         $can = [
             'view_access' => $actor->hasCompanyPermission($company, 'members.view'),       // facette ACCÈS
-            'view_hr' => $actor->hasCompanyPermission($company, 'workforce.view')          // facette RH
+            // ADR-770 : la facette RH porte sur une FICHE RH. Sans fiche, `workforce.view` ne donne aucun
+            // droit sur la personne (un manager ou un RH sans facette ACCÈS ouvrait la fiche — nom, e-mail
+            // de connexion, état du compte — de n'importe quel compte sans fiche salarié).
+            'view_hr' => $employee !== null && $actor->hasCompanyPermission($company, 'workforce.view')
                 && self::employeeInScope($company, $actor, $employee),
             'manage_access' => $actor->hasCompanyPermission($company, 'members.invite') || $actor->hasCompanyPermission($company, 'members.manage'),
             'change_role' => $actor->hasCompanyPermission($company, 'members.manage'),
-            'edit_hr' => $actor->hasCompanyPermission($company, 'workforce.manage') && self::employeeInScope($company, $actor, $employee),
+            'edit_hr' => $employee !== null && $actor->hasCompanyPermission($company, 'workforce.manage') && self::employeeInScope($company, $actor, $employee),
             'view_compensation' => $actor->hasCompanyPermission($company, 'workforce.compensation_read'),
             'view_history' => $actor->hasCompanyPermission($company, 'audit.view'),
         ];

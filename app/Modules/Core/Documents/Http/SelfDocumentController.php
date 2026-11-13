@@ -100,6 +100,7 @@ class SelfDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $type = DocumentType::where('code', $code)->firstOrFail();
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $request->user()); // ADR-770
         $document = MemberDocument::where('company_id', $company->id)
             ->where('document_subject_type', DocumentSubject::TYPE_USER)
             ->where('document_subject_id', $request->user()->id)
@@ -123,6 +124,7 @@ class SelfDocumentController extends Controller
     {
         $company = $request->attributes->get('company');
         $type = DocumentType::where('code', $code)->firstOrFail();
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $request->user()); // ADR-770
         $document = MemberDocument::where('company_id', $company->id)
             ->where('document_subject_type', DocumentSubject::TYPE_USER)
             ->where('document_subject_id', $request->user()->id)

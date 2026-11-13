@@ -1,6 +1,12 @@
 // @ts-check
 import { expect, test } from '@playwright/test'
-import { loginCompany, clickAndExpectApi, apiRequest } from './helpers'
+import { loginCompany, clickAndExpectApi } from './helpers'
+import { createRun } from './run-ledger.js'
+
+// ADR-770 : données possédées par cette exécution ; démontage borné au registre.
+const run = createRun('member-lifecycle')
+
+test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
 
 // Full member lifecycle driven by the company owner on the isolated local base:
 //   create member (role Driver) → edit role to Manager → delete — each step real API + persistence.
@@ -8,9 +14,10 @@ import { loginCompany, clickAndExpectApi, apiRequest } from './helpers'
 // Real Sanctum, real RBAC (members.manage), real business guards (owner cannot be removed).
 
 test('owner: create member → change role → delete (persisted, with owner protection)', async ({ page }) => {
-  const email = `e2e.member.${String(Date.now()).slice(-7)}@leezr.test`
+  const email = run.email('member')
 
   await loginCompany(page, 'owner@leezr.test')
+  run.useCompany(await page.evaluate(() => decodeURIComponent((document.cookie.match(/currentCompanyId=([^;]+)/) || [])[1] || '')))
   await page.goto('/company/members', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
 
@@ -21,8 +28,13 @@ test('owner: create member → change role → delete (persisted, with owner pro
   await page.getByLabel('E-mail').fill(email)
   await page.locator('[data-test="member-role-select"]').click()
   await page.getByRole('option', { name: 'Driver' }).first().click()
-  await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
+  const createdResp = await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
     () => page.getByRole('button', { name: 'Ajouter', exact: true }).click())
+  const createdMember = (await createdResp.json()).member
+
+  // Inscrit au registre DÈS la création : un échec ultérieur ne laisse aucun résidu non possédé.
+  run.track('membership', createdMember.id)
+  run.track('user', createdMember.user.id)
 
   await page.goto('/company/members', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
@@ -37,8 +49,7 @@ test('owner: create member → change role → delete (persisted, with owner pro
   // ─── Edit role → Manager ────────────────────────────────────────────────────
   // ADR-768 (M7 LOT 2) : /company/members/:id REDIRIGE vers la fiche Collaborateur unifiée (parité
   // prouvée) — le même formulaire (MemberProfileForm) y vit dans l'onglet « Informations ».
-  const directory = await apiRequest(page, { path: '/api/company/members' })
-  const memberId = directory.json.members.find(m => m.user.email === email).id
+  const memberId = createdMember.id
   await row.locator('[data-test="member-edit"]').click()
   await page.waitForURL(/\/company\/people\/user-\d+/, { timeout: 10000 })
   await page.waitForTimeout(1200)

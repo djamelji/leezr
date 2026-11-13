@@ -43,8 +43,14 @@ class SendMembershipInvitationJob implements ShouldQueue
 
             // Asynchronous worker : let the queue retry a failed transport (the state stays `failed`
             // until an attempt succeeds). On the `sync` connection there is nothing to release to.
-            if ($error !== null && $this->job && $this->job->getConnectionName() !== 'sync' && $this->attempts() < $this->tries) {
-                $this->release($this->backoff[$this->attempts() - 1] ?? 300);
+            if ($error !== null && $this->job && $this->job->getConnectionName() !== 'sync') {
+                if ($this->attempts() < $this->tries) {
+                    $this->release($this->backoff[$this->attempts() - 1] ?? 300);
+                } else {
+                    // M7 LOT 4 : last attempt — the job is recorded in `failed_jobs` (visible to operations,
+                    // replayable with `queue:retry`) ; the membership already says `failed`.
+                    $this->fail(new \RuntimeException('Invitation e-mail not delivered after '.$this->tries.' attempts: '.$error));
+                }
             }
         });
     }

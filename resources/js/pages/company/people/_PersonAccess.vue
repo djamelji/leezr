@@ -244,6 +244,14 @@ const savePassword = async () => {
         class="me-1"
       />
       {{ invitation.delivery === 'sent' ? t('people.access.deliverySent', { date: fmtDateTime(invitation.sent_at) }) : t('people.access.deliveryQueued') }}
+      <!-- M7 LOT 4 : durée du LIEN de définition du mot de passe (nouveau compte) — ce n'est PAS
+           l'expiration de l'invitation : le compte reste invité, un nouveau lien suffit. -->
+      <span
+        v-if="invitation.kind === 'account_setup' && invitation.delivery === 'sent' && invitation.link_expires_at"
+        data-test="person-invitation-link"
+      >
+        {{ invitation.link_expired ? t('people.access.linkExpired') : t('people.access.linkValidUntil', { date: fmtDateTime(invitation.link_expires_at) }) }}
+      </span>
     </div>
 
     <!-- ═══ Rôle (MembershipSecurityPolicy côté serveur) ═══ -->
