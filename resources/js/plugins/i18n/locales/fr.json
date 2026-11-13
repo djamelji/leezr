@@ -1875,7 +1875,17 @@
     "start": "Début",
     "end": "Fin",
     "publishNow": "Publier immédiatement (visible par le salarié)",
-    "manageAccess": "Gérer les accès"
+    "manageAccess": "Gérer les accès",
+    "signature": "Signature",
+    "signaturePending": "En attente de signature",
+    "signatureSigned": "Signé",
+    "signatureDeclined": "Refusé",
+    "signatureExpired": "Expirée",
+    "signatureCancelled": "Annulée",
+    "signatureFailed": "En échec",
+    "signedVersion": "Version signée",
+    "downloadOriginal": "Télécharger l'original",
+    "restricted": "Accès restreint (rémunération)"
   },
   "companyBilling": {
     "title": "Facturation",
@@ -4386,7 +4396,8 @@
       "invited": "Invitation en attente",
       "suspended": "Accès suspendu",
       "none": "Aucun compte",
-      "invitation_expired": "Invitation expirée"
+      "invitation_expired": "Invitation expirée",
+      "linked": "Compte lié"
     },
     "access": {
       "title": "Accès applicatif",
@@ -7226,7 +7237,9 @@
     },
     "myPlanning": "Mon planning",
     "noShifts": "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'aura publié.",
-    "shiftPublished": "Publié"
+    "shiftPublished": "Publié",
+    "downloadMine": "Télécharger",
+    "downloadSigned": "Version signée"
   },
   "employees": {
     "title": "Collaborateurs",

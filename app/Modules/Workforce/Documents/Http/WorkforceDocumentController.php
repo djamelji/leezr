@@ -127,38 +127,14 @@ class WorkforceDocumentController extends Controller
         return Storage::disk($disk)->download($document->file_path, basename($document->file_path));
     }
 
-    /** Scope collaborateur pour les documents individuels (employé/contrat). */
+    /** ADR-771 : périmètre collaborateur + confidentialité de la rémunération — autorité unique. */
     private function assertSubjectScope(Request $request, GeneratedDocument $document): void
     {
-        if ($document->subject_type === 'employee') {
-            abort_unless(
-                WorkforceAccess::canViewEmployeeData($request, (int) $document->subject_id, 'employee'),
-                403,
-                'Not authorized to download this employee document.'
-            );
-        } elseif ($document->subject_type === 'contract') {
-            $employeeId = EmploymentContract::withoutGlobalScopes()
-                ->where('company_id', $document->company_id)
-                ->where('id', $document->subject_id)
-                ->value('employee_id');
-            if ($employeeId) {
-                abort_unless(
-                    WorkforceAccess::canViewEmployeeData($request, (int) $employeeId, 'employee'),
-                    403,
-                    'Not authorized to download this contract.'
-                );
-            }
-        } elseif (in_array($document->subject_type, ['payroll_line', 'payroll_run'], true)) {
-            // C3 (ADR-681): payslips embed salary — downloading one must not bypass
-            // compensation_read via the documents surface. Require it on top of
-            // workforce_documents.view (route middleware).
-            abort_unless(
-                WorkforceAccess::canReadCompensation($request),
-                403,
-                'Not authorized to download payroll documents without compensation access.'
-            );
-        }
-        // leave_request : géré par la permission workforce_documents.view.
+        abort_unless(
+            \App\Modules\Workforce\Documents\Security\GeneratedDocumentAccess::canOpen($request, $document),
+            403,
+            'Not authorized to open this document.'
+        );
     }
 
     // ── Statistics ───────────────────────────────────────────────────

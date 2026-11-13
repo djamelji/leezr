@@ -189,6 +189,45 @@ class GeneratedDocumentReadModel
     }
 
     /**
+     * ADR-771 — the generated documents of a person as shown in her FILE : one row per document
+     * (most recent first), its signature state and, once a signature is really finalised, the
+     * signed version at the same place. Metadata only — never the generation snapshot.
+     *
+     * @param  callable(GeneratedDocument): bool  $canOpen
+     */
+    public static function fileOf(int $companyId, int $employeeId, callable $canOpen): array
+    {
+        $docs = self::forEmployee($employeeId, $companyId);
+        $requests = \App\Modules\Workforce\Signature\Models\SignatureRequest::withoutGlobalScopes()->where('company_id', $companyId)
+            ->whereIn('generated_document_id', $docs->pluck('id'))->orderBy('id')->get()->groupBy('generated_document_id');
+
+        return $docs->sortByDesc(fn ($d) => [$d->generated_at?->getTimestamp(), $d->id])->values()->map(function (GeneratedDocument $d) use ($requests, $canOpen) {
+            $last = $requests->get($d->id)?->last();
+            $signed = \App\Modules\Workforce\Documents\Security\GeneratedDocumentAccess::signedRequest($d);
+
+            return [
+                'id' => $d->id,
+                'label' => $d->template?->name ?? 'Document',
+                'template_code' => $d->template?->code,
+                'subject_type' => $d->subject_type,
+                'contract_id' => $d->subject_type === 'contract' ? (int) $d->subject_id : null,
+                'generated_at' => $d->generated_at?->toIso8601String(),
+                // État de signature VRAI, lu sur les demandes : « signé » seulement si une demande est
+                // complétée et scellée ; un refus, une expiration ou une annulation ne restent pas « en
+                // attente » (la colonne du document n'est qu'une projection, non mise à jour dans ces cas).
+                'signature_status' => $signed !== null ? 'signed' : match ($last?->status) {
+                    'pending', 'partially_signed' => 'pending',
+                    'declined', 'expired', 'cancelled', 'failed' => $last->status,
+                    default => $d->signature_status === 'signed' ? 'pending' : $d->signature_status,
+                },
+                'signature_request' => $last ? ['id' => $last->id, 'status' => $last->status] : null,
+                'signed' => ['available' => $signed !== null, 'signature_request_id' => $signed?->id, 'completed_at' => $signed?->completed_at?->toIso8601String()],
+                'can_download' => (bool) $canOpen($d),
+            ];
+        })->all();
+    }
+
+    /**
      * Statistics for a company's generated documents.
      */
     public static function statistics(int $companyId): array

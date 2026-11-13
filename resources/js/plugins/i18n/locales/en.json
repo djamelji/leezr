@@ -1876,7 +1876,17 @@
     "start": "Start",
     "end": "End",
     "publishNow": "Publish now (visible to the employee)",
-    "manageAccess": "Manage access"
+    "manageAccess": "Manage access",
+    "signature": "Signature",
+    "signaturePending": "Awaiting signature",
+    "signatureSigned": "Signed",
+    "signatureDeclined": "Declined",
+    "signatureExpired": "Expired",
+    "signatureCancelled": "Cancelled",
+    "signatureFailed": "Failed",
+    "signedVersion": "Signed version",
+    "downloadOriginal": "Download the original",
+    "restricted": "Restricted access (compensation)"
   },
   "companyBilling": {
     "title": "Billing",
@@ -4386,7 +4396,8 @@
       "invited": "Invitation pending",
       "suspended": "Access suspended",
       "none": "No account",
-      "invitation_expired": "Invitation expired"
+      "invitation_expired": "Invitation expired",
+      "linked": "Account linked"
     },
     "access": {
       "title": "App access",
@@ -7226,7 +7237,9 @@
     },
     "myPlanning": "My schedule",
     "noShifts": "No upcoming published shift. Your schedule will appear here once your manager publishes it.",
-    "shiftPublished": "Published"
+    "shiftPublished": "Published",
+    "downloadMine": "Download",
+    "downloadSigned": "Signed version"
   },
   "employees": {
     "title": "Employees",

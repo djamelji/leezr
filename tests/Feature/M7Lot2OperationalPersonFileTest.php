@@ -316,7 +316,10 @@ class M7Lot2OperationalPersonFileTest extends TestCase
         $this->assertNull(Membership::withoutGlobalScopes()->find($m->id));
         $this->assertNull($emp->fresh()->user_id);
         $this->assertNotNull(User::find($this->viewer->id));
-        $this->file($this->hr, "employee-{$emp->id}")->assertOk()->assertJsonPath('account.state', 'none');
+        // ADR-771 : un profil RH sans facette comptes ne lit plus le STATUT du compte, seulement le fait
+        // porté par la fiche (plus aucun compte lié) ; le statut reste lisible par la facette comptes.
+        $this->file($this->hr, "employee-{$emp->id}")->assertOk()->assertJsonPath('account.state', null)->assertJsonPath('account.has_account', false);
+        $this->file($this->admin, "employee-{$emp->id}")->assertOk()->assertJsonPath('account.state', 'none');
     }
 
     public function test_invitation_can_be_resent_only_while_it_is_pending(): void

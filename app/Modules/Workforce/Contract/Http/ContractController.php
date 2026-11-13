@@ -254,7 +254,7 @@ class ContractController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($doc, 201);
+        return response()->json(\App\Modules\Workforce\Security\WorkforceAccess::canReadCompensation($request) ? $doc : $doc->makeHidden('generation_snapshot'), 201); // ADR-771 : l'instantané porte la rémunération
     }
 
     /** Résout le contrat métier COURANT du collaborateur (jamais créé automatiquement). */

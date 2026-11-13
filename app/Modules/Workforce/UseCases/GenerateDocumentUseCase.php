@@ -66,6 +66,20 @@ class GenerateDocumentUseCase
             throw new \DomainException('Cannot generate: missing variables: ' . implode(', ', $missingVars));
         }
 
+        // Build idempotency key. ADR-771 : la garde précède la génération du PDF — régénérer un document
+        // déjà émis renvoie l'original sans écrire un second fichier (il restait orphelin sur le disque).
+        $idempotencyKey = "doc:{$template->id}:{$subjectType}:{$subjectId}:{$template->version}";
+
+        // Idempotency guard: return existing document if already generated
+        $existing = GeneratedDocument::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
         // Generate PDF
         $result = $this->pdfGenerator->generate($template, $variables, $companyId);
 
@@ -81,19 +95,6 @@ class GenerateDocumentUseCase
                 'resolver_version' => DocumentVariableResolver::RESOLVER_VERSION,
             ],
         ]);
-
-        // Build idempotency key
-        $idempotencyKey = "doc:{$template->id}:{$subjectType}:{$subjectId}:{$template->version}";
-
-        // Idempotency guard: return existing document if already generated
-        $existing = GeneratedDocument::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('idempotency_key', $idempotencyKey)
-            ->first();
-
-        if ($existing) {
-            return $existing;
-        }
 
         // Atomicité : l'entrée coffre (MemberDocument) et le GeneratedDocument de suivi
         // sont créés ensemble. Le PDF est déjà écrit en amont (dans $result) — aucune

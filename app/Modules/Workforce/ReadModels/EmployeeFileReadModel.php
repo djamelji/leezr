@@ -20,9 +20,9 @@ use Carbon\Carbon;
  */
 class EmployeeFileReadModel
 {
-    public static function overview(Company $company, Employee $employee, bool $canSeeCompensation): array
+    public static function overview(Company $company, Employee $employee, bool $canSeeCompensation, bool $canViewAccess = false): array
     {
-        $employee->loadMissing(['department:id,name', 'jobRole:id,title', 'manager:id,first_name,last_name', 'user:id,name,email']);
+        $employee->loadMissing(['department:id,name', 'jobRole:id,title', 'manager:id,first_name,last_name']);
 
         $hasPlanning = ModuleGate::isActive($company, 'workforce_planning');
         $hasLeave = ModuleGate::isActive($company, 'workforce_leave');
@@ -50,10 +50,10 @@ class EmployeeFileReadModel
             'planning' => $hasPlanning ? static::nextShift($company, $employee) : null,
             'time' => $hasWorkforce ? static::lastClock($company, $employee) : null,
             'leave' => $hasLeave ? static::leaveSummary($company, $employee) : null,
-            'documents' => $hasDocuments ? ['count' => GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)->where('subject_type', 'employee')->where('subject_id', $employee->id)->count()] : null,
+            'documents' => $hasDocuments ? ['count' => GeneratedDocumentReadModel::forEmployee($employee->id, $company->id)->count()] : null,
             // W-HR-UX-1 — état d'INTÉGRATION du collaborateur (checklist guidée sur la fiche). Source unique
             // de vérité : évite à la RH de deviner « quelle est la prochaine étape ».
-            'onboarding' => static::onboardingState($company, $employee, $hasDocuments),
+            'onboarding' => static::onboardingState($company, $employee, $hasDocuments, $canViewAccess),
             'alerts' => static::alerts($company, $employee, $hasLeave),
             'available_sections' => array_values(array_filter([
                 'profile', 'position', 'contract',
@@ -72,7 +72,7 @@ class EmployeeFileReadModel
      * est ACTIVÉ (mot de passe défini), jamais sur une simple invitation. La signature n'est « faite »
      * que sur un document réellement SIGNÉ, jamais sur un simple document généré.
      */
-    private static function onboardingState(Company $company, Employee $employee, bool $hasDocuments): array
+    private static function onboardingState(Company $company, Employee $employee, bool $hasDocuments, bool $canViewAccess = false): array
     {
         $user = $employee->user_id ? \App\Core\Models\User::find($employee->user_id) : null;
         $accountState = 'none';
@@ -84,9 +84,10 @@ class EmployeeFileReadModel
             }
         }
 
-        $signedContract = GeneratedDocument::withoutGlobalScopes()->where('company_id', $company->id)
-            ->where('subject_type', 'employee')->where('subject_id', $employee->id)
-            ->where('signature_status', GeneratedDocument::SIGNATURE_SIGNED)->exists();
+        // ADR-771 : un contrat généré a pour sujet le CONTRAT RH (pas le salarié) — il était ignoré ici,
+        // l'étape « signature du contrat » ne pouvait donc jamais se terminer.
+        $signedContract = GeneratedDocumentReadModel::forEmployee($employee->id, $company->id)
+            ->contains(fn (GeneratedDocument $d) => $d->signature_status === GeneratedDocument::SIGNATURE_SIGNED);
 
         // W-HR-UX-4 §8 — jalon d'intégration « planning » : le premier créneau a-t-il été programmé ?
         // C'est un jalon ONE-TIME de préparation du premier jour (pas une activité récurrente : le
@@ -98,8 +99,11 @@ class EmployeeFileReadModel
             'info' => true,
             'contract' => static::contractSummary($company, $employee, false) !== null,
             'signed_contract' => $signedContract,               // SIGNÉ (pas seulement généré)
-            'account' => in_array($accountState, ['active', 'connected'], true), // ACTIVÉ (pas seulement invité)
-            'account_state' => $accountState,                    // none | invited | active | connected
+            // ADR-771 : l'état d'ACTIVATION du compte (mot de passe défini, connexion) est une information
+            // d'authentification → facette comptes. Sans elle, l'étape ne connaît que le fait porté par
+            // la fiche RH elle-même : un compte y est lié, ou non.
+            'account' => $canViewAccess ? in_array($accountState, ['active', 'connected'], true) : $employee->user_id !== null,
+            'account_state' => $canViewAccess ? $accountState : null, // none | invited | active | connected
             'planning_scheduled' => $planningScheduled,          // 1er créneau programmé (jalon one-time)
             'planning_module' => $hasPlanning,
             'documents_module' => $hasDocuments,

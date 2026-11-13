@@ -207,6 +207,21 @@ function workModelLabel(key) {
 }
 
 // ── Signature status ────────────────────────────────────────
+// ADR-771 — téléchargement de MES documents générés (propriété, aucune permission de gestion).
+async function downloadOwnDocument(doc, signed) {
+  try {
+    const blob = await $api(`/workforce/me/generated-documents/${doc.id}/download${signed ? '?version=signed' : ''}`, { responseType: 'blob' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = `${doc.template?.code || 'document'}-${doc.id}${signed ? '-signe' : ''}.pdf`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  }
+  catch { toast(t('common.error'), 'error') }
+}
+
 function signatureChipProps(status) {
   const map = {
     none: { color: 'secondary', text: t('workforceMe.signatureNone') },
@@ -932,9 +947,31 @@ function signatureChipProps(status) {
                       :color="signatureChipProps(doc.signature_status).color"
                       size="x-small"
                       label
+                      class="me-2"
                     >
                       {{ signatureChipProps(doc.signature_status).text }}
                     </VChip>
+                    <!-- ADR-771 : la personne télécharge SON document (original, et version signée une fois finalisée) -->
+                    <VBtn
+                      v-if="doc.signature_status === 'signed'"
+                      size="small"
+                      variant="tonal"
+                      color="success"
+                      class="me-1"
+                      data-test="me-document-signed"
+                      @click="downloadOwnDocument(doc, true)"
+                    >
+                      {{ t('workforceMe.downloadSigned') }}
+                    </VBtn>
+                    <IconBtn
+                      size="small"
+                      :aria-label="t('workforceMe.downloadMine')"
+                      :title="t('workforceMe.downloadMine')"
+                      data-test="me-document-download"
+                      @click="downloadOwnDocument(doc, false)"
+                    >
+                      <VIcon icon="tabler-download" />
+                    </IconBtn>
                   </template>
                 </VListItem>
               </VList>

@@ -8,9 +8,11 @@ use App\Core\Documents\DocumentRequestEvent;
 use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\MemberDocument;
+use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Notifications\NotificationDispatcher;
+use App\Core\Tenancy\CompanyContext;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -61,21 +63,42 @@ class DocumentLifecycleOrchestrator
     {
         $stats = ['renewed' => 0, 'reminded' => 0, 'skipped' => 0, 'companies' => 0];
 
-        CompanyDocumentSetting::query()->chunkById(100, function ($settings) use (&$stats, $phases, $dryRun) {
-            foreach ($settings as $setting) {
-                $stats['companies']++;
-                // ADR-770 : relances et renouvellements s'adressent au sujet CANONIQUE de la personne.
-                if (! $dryRun && ($company = \App\Core\Models\Company::withoutGlobalScopes()->find($setting->company_id))) {
-                    PersonDocumentContinuity::reconcile($company);
+        // ADR-771 (tenant strict, ADR-733) : la SEULE lecture inter-tenant est l'énumération des
+        // entreprises configurées, DÉCLARÉE par `runGlobal` (ids uniquement, par pages). Tout le reste
+        // — réconciliation, renouvellements, relances, notifications — s'exécute DANS le contexte de
+        // l'entreprise (`runFor`) : le scope tenant filtre, et une requête qui sortirait de
+        // l'entreprise lèverait en mode strict au lieu de lire les autres.
+        $cursor = 0;
+        do {
+            $page = CompanyContext::runGlobal(fn () => CompanyDocumentSetting::query()
+                ->where('id', '>', $cursor)->orderBy('id')->limit(100)->get(['id', 'company_id']));
+
+            foreach ($page as $row) {
+                $cursor = (int) $row->id;
+                $company = Company::withoutGlobalScopes()->find($row->company_id);
+                if ($company === null) {
+                    continue; // réglage orphelin : aucune entreprise à traiter
                 }
-                if (in_array('renew', $phases, true) && $setting->auto_renew_enabled) {
-                    $stats['renewed'] += $this->renewPhase($setting, $dryRun);
-                }
-                if (in_array('remind', $phases, true) && $setting->auto_remind_enabled) {
-                    $stats['reminded'] += $this->remindPhase($setting, $dryRun);
-                }
+
+                CompanyContext::runFor($company, function (Company $company) use (&$stats, $phases, $dryRun) {
+                    $setting = CompanyDocumentSetting::where('company_id', $company->id)->first();
+                    if ($setting === null) {
+                        return;
+                    }
+                    $stats['companies']++;
+                    // ADR-770 : relances et renouvellements s'adressent au sujet CANONIQUE de la personne.
+                    if (! $dryRun) {
+                        PersonDocumentContinuity::reconcile($company);
+                    }
+                    if (in_array('renew', $phases, true) && $setting->auto_renew_enabled) {
+                        $stats['renewed'] += $this->renewPhase($setting, $dryRun);
+                    }
+                    if (in_array('remind', $phases, true) && $setting->auto_remind_enabled) {
+                        $stats['reminded'] += $this->remindPhase($setting, $dryRun);
+                    }
+                });
             }
-        });
+        } while ($page->count() === 100);
 
         Log::info('[dms.lifecycle] run complete', $stats + ['dry_run' => $dryRun]);
 
@@ -274,7 +297,7 @@ class DocumentLifecycleOrchestrator
                     topicKey: $topic,
                     recipients: [$user],
                     payload: $payload + ['link' => '/account-settings/documents'],
-                    company: \App\Core\Models\Company::withoutGlobalScopes()->find($companyId),
+                    company: Company::withoutGlobalScopes()->find($companyId),
                     entityKey: $entityKey,
                 );
             }
@@ -287,7 +310,7 @@ class DocumentLifecycleOrchestrator
                 topicKey: $topic,
                 recipients: $admins,
                 payload: $payload + ['manager_signal' => $subject->is(DocumentSubject::TYPE_USER) ? false : true],
-                company: \App\Core\Models\Company::withoutGlobalScopes()->find($companyId),
+                company: Company::withoutGlobalScopes()->find($companyId),
                 entityKey: $entityKey.':managers',
             );
         }

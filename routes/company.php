@@ -540,6 +540,8 @@ Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')
     Route::post('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'createLeave']);
     Route::get('/leave-balances', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveBalances']);
     Route::get('/documents', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'documents']);
+    // ADR-771 : la personne télécharge SES documents générés (original ou version signée) — propriété.
+    Route::get('/generated-documents/{id}/download', [\App\Modules\Workforce\Documents\Http\EmployeeGeneratedDocumentController::class, 'downloadOwn'])->whereNumber('id');
 });
 
 // ── Workforce Dashboard ──────────────────────────────────────
@@ -625,7 +627,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));
     // W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche (réutilise l'invitation Members, gated members.invite).
-    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware([$perm('workforce.view'), $employeeScope]);
+    // ADR-771 : l'état d'accès (e-mail du compte, statut, rôle, motif de suspension) est une donnée de
+    // COMPTE — facette comptes, plus `workforce.view`. Un gestionnaire de comptes sans droit RH y accède.
+    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware('company.access:use-any-permission,members.view|members.invite|members.manage');
     Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     // SECURITY-1 (ADR-688): access lifecycle — sensitive, gated members.manage.
@@ -841,6 +845,12 @@ Route::prefix('workforce/documents')->middleware('company.access:use-module,work
     Route::post('payslip-drafts', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generatePayslipDrafts'])->middleware($perm('workforce_documents.generate'));
     Route::post('payslip-official', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'generateOfficialPayslips'])->middleware($perm('workforce_documents.generate'));
     Route::get('payroll-run/{runId}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'forPayrollRun'])->middleware($perm('workforce_documents.view'));
+    // ADR-771 — dossier d'un collaborateur : ses documents générés (contrat compris), par RÉFÉRENCE ;
+    // la version signée au même endroit. Périmètre + confidentialité de la rémunération : autorité unique.
+    $g = \App\Modules\Workforce\Documents\Http\EmployeeGeneratedDocumentController::class;
+    $open = \App\Modules\Workforce\Documents\Security\EnsureCanOpenGeneratedDocument::class;
+    Route::get('by-employee/{employeeId}', [$g, 'byEmployee'])->whereNumber('employeeId')->middleware([$perm('workforce_documents.view'), \App\Modules\Workforce\Security\EnsureEmployeeInScope::class]);
+    Route::get('{id}/signed', [$g, 'signed'])->whereNumber('id')->middleware([$perm('workforce_documents.view'), $open]);
     Route::get('{id}/download', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'download'])->middleware($perm('workforce_documents.view')); // ADR-634 : téléchargement authentifié
     Route::get('{id}', [\App\Modules\Workforce\Documents\Http\WorkforceDocumentController::class, 'show'])->middleware($perm('workforce_documents.view'));
 });
@@ -888,7 +898,7 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     Route::get('certificates', [$s, 'certificates'])->middleware($perm('workforce_signature.view_evidence'));
     Route::get('{id}/evidence-package', [$s, 'evidencePackage'])->whereNumber('id')->middleware($perm('workforce_signature.view_evidence'));
     Route::get('{id}/evidence', [$s, 'evidence'])->whereNumber('id')->middleware($perm('workforce_signature.view_evidence'));
-    Route::get('{id}/download', [$s, 'downloadSigned'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
+    Route::get('{id}/download', [$s, 'downloadSigned'])->whereNumber('id')->middleware([$perm('workforce_signature.view'), \App\Modules\Workforce\Documents\Security\EnsureCanOpenGeneratedDocument::class.':signature']); // ADR-771
     Route::get('{id}/verify', [$s, 'verify'])->whereNumber('id')->middleware($perm('workforce_signature.view'));
     Route::post('{id}/cancel', [$s, 'cancel'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));
     Route::post('{id}/remind', [$s, 'remind'])->whereNumber('id')->middleware($perm('workforce_signature.manage'));

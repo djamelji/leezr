@@ -177,14 +177,14 @@ class EmployeeController extends Controller
         $company = \App\Core\Models\Company::withoutGlobalScopes()->findOrFail($companyId);
 
         return response()->json(\App\Modules\Workforce\ReadModels\EmployeeFileReadModel::overview(
-            $company, $employee, WorkforceAccess::canReadCompensation($request),
+            $company, $employee, WorkforceAccess::canReadCompensation($request), WorkforceAccess::can($request, 'members.view'),
         ));
     }
 
     public function show(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-        $employee = EmployeeReadModel::detail($companyId, $id, WorkforceAccess::canReadCompensation($request));
+        $employee = EmployeeReadModel::detail($companyId, $id, WorkforceAccess::canReadCompensation($request), WorkforceAccess::can($request, 'members.view'));
 
         if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);

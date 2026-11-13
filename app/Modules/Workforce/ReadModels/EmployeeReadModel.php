@@ -76,13 +76,17 @@ class EmployeeReadModel
             ->when($visibleIds !== null, fn (Builder $q) => $q->whereIn('id', $visibleIds));
     }
 
-    public static function detail(int $companyId, int $employeeId, bool $canSeeCompensation = false): ?Employee
+    /**
+     * @param  bool  $withAccount  ADR-771 : l'identité de CONNEXION du compte lié (e-mail, nom du compte)
+     *                             appartient à la facette comptes (`members.view`) ou à la personne
+     *                             elle-même — jamais à `workforce.view` seul.
+     */
+    public static function detail(int $companyId, int $employeeId, bool $canSeeCompensation = false, bool $withAccount = false): ?Employee
     {
         // ADR-634 : la compensation des contrats n'est chargée que sous workforce.compensation_read.
         // P2 (ADR-684) : le taux de référence du poste (default_hourly_rate_cents) est aussi de
         // la compensation → ne le charger que sous compensation_read (sinon titre seul).
         $with = [
-            'user:id,name,email',
             'department:id,name',
             'jobRole:id,title'.($canSeeCompensation ? ',default_hourly_rate_cents' : ''),
             'manager:id,first_name,last_name',
@@ -91,6 +95,9 @@ class EmployeeReadModel
         ];
         if ($canSeeCompensation) {
             $with['contracts.compensationPlans'] = fn ($q) => $q->orderByDesc('effective_from');
+        }
+        if ($withAccount) {
+            $with[] = 'user:id,name,email';
         }
 
         return Employee::withoutCompanyScope()

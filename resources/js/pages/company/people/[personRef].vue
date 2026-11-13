@@ -82,7 +82,14 @@ const accountMeta = computed(() => ({
   invitation_expired: { color: 'secondary', label: t('people.account.invitation_expired') },
   suspended: { color: 'error', label: t('people.account.suspended') },
   none: { color: 'secondary', label: t('people.account.none') },
-}[store.account.state] || { color: 'secondary', label: store.account.state }))
+}[store.account.state] || (store.account.state
+  ? { color: 'secondary', label: store.account.state }
+
+  // ADR-771 : sans la facette comptes, le serveur ne dit que ce que porte la fiche RH — un compte y
+  // est lié, ou non (ni statut, ni rôle, ni e-mail de connexion).
+  : store.account.has_account
+    ? { color: 'info', label: t('people.account.linked') }
+    : { color: 'secondary', label: t('people.account.none') })))
 
 // ── Actions d'en-tête (déclaratives, filtrées par les capacités serveur) ──
 const openHrLink = mode => { hrLinkMode.value = mode; hrLinkOpen.value = true }
@@ -362,12 +369,12 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                 <MemberDocumentsWorkflowPanel
                   v-if="can('documents.view') && store.personRef"
                   :resource-base="`/company/people/${store.personRef}`"
-                  :supports-requests="!!store.membershipId"
+                  :supports-requests="!!store.userId"
                   :can-edit="can('documents.manage')"
                   @create-custom-type="docTypeDrawerOpen = true"
                 />
                 <EmployeeDocumentsSection
-                  v-if="store.employeeId && store.employment?.documents"
+                  v-if="store.employeeId && store.employment?.documents && can('workforce_documents.view')"
                   :employee-id="store.employeeId"
                   class="mt-6"
                 />

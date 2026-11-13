@@ -80,9 +80,20 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /**
+     * ADR-771 : « ce compte est-il membre de CETTE entreprise ? » est la question qui ÉTABLIT le
+     * contexte tenant (SetCompanyContext l'appelle avant de le lier). Elle porte donc son périmètre
+     * elle-même — compte ET entreprise explicites — au lieu de dépendre d'un contexte déjà lié :
+     * en mode tenant strict, toute requête HTTP échouait ici.
+     */
+    private function membershipsIn(Company $company): HasMany
+    {
+        return $this->memberships()->withoutGlobalScopes()->where('company_id', $company->id);
+    }
+
     public function membershipFor(Company $company): ?Membership
     {
-        return $this->memberships()->where('company_id', $company->id)->first();
+        return $this->membershipsIn($company)->first();
     }
 
     public function roleIn(Company $company): ?string
@@ -92,7 +103,7 @@ class User extends Authenticatable
 
     public function isMemberOf(Company $company): bool
     {
-        return $this->memberships()->where('company_id', $company->id)->exists();
+        return $this->membershipsIn($company)->exists();
     }
 
     public function isOwnerOf(Company $company): bool

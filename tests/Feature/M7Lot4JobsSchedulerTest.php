@@ -285,20 +285,22 @@ class M7Lot4JobsSchedulerTest extends TestCase
     }
 
     /**
-     * KNOWN GAP (not masked) : the document lifecycle (`documents:check-expiration|auto-renew|auto-remind`)
-     * reads tenant models across companies WITHOUT declaring it (`CompanyContext::runGlobal`/`runFor`).
-     * It works because strict tenancy is opt-in and never enabled by the application ; it would throw
-     * the day strict mode is switched on. Reported as skipped while the gap exists, green once fixed.
+     * ADR-771 — formerly a KNOWN GAP reported as skipped (ADR-770) : the document lifecycle read tenant
+     * models across companies without declaring it and threw under strict tenancy. The orchestrator
+     * now enumerates the companies in a declared global block and works inside each company context.
+     * No skip path any more : a missing tenant context FAILS this test.
      */
     public function test_document_lifecycle_commands_under_strict_tenancy(): void
     {
         \App\Core\Documents\CompanyDocumentSetting::updateOrCreate(['company_id' => $this->company->id], ['auto_renew_enabled' => true, 'renew_days_before' => 30, 'auto_remind_enabled' => true, 'remind_after_days' => 7]);
         CompanyContext::$strict = true;
         try {
-            app(\App\Core\Documents\Services\DocumentLifecycleOrchestrator::class)->run(['renew', 'remind']);
-        } catch (\App\Core\Tenancy\MissingTenantContextException $e) {
-            CompanyContext::$strict = false;
-            $this->markTestSkipped('KNOWN GAP — document lifecycle is not strict-tenancy safe: '.$e->getMessage());
+            $stats = app(\App\Core\Documents\Services\DocumentLifecycleOrchestrator::class)->run(['renew', 'remind']);
+            $this->assertSame(1, $stats['companies'], 'the configured company was processed, inside its own context');
+            // The three scheduled commands go through the same authority.
+            foreach (['documents:check-expiration', 'documents:auto-renew', 'documents:auto-remind'] as $command) {
+                $this->artisan($command)->assertSuccessful();
+            }
         } finally {
             CompanyContext::$strict = false;
         }

@@ -11,6 +11,7 @@ use App\Core\Documents\DocumentVersion;
 use App\Core\Documents\MemberDocument;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Tenancy\CompanyContext;
 use App\Core\Workforce\Employee;
 use Illuminate\Support\Facades\DB;
 
@@ -54,50 +55,65 @@ class PersonDocumentContinuity
     /** Bring the rows of the person behind this account onto her canonical subject. */
     public static function adopt(Company $company, User $user): int
     {
-        $moved = self::releaseStale($company, userId: $user->id);
+        return self::within($company, function () use ($company, $user) {
+            $moved = self::releaseStale($company, userId: $user->id);
 
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('user_id', $user->id)->first();
-        if ($employee === null) {
-            return $moved;
-        }
+            $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('user_id', $user->id)->first();
+            if ($employee === null) {
+                return $moved;
+            }
 
-        return $moved + self::adoptPair($company, $employee, (int) $user->id);
+            return $moved + self::adoptPair($company, $employee, (int) $user->id);
+        });
+    }
+
+    /**
+     * ADR-771 (tenant strict) : every transition runs INSIDE the context of its company, whoever
+     * calls it (HTTP, job, command, another company's request). The tenant scope then filters every
+     * model touched here, and nothing can be read or moved outside that company.
+     */
+    private static function within(Company $company, \Closure $fn): int
+    {
+        return CompanyContext::id() === (int) $company->id ? (int) $fn() : (int) CompanyContext::runFor($company, $fn);
     }
 
     /** Company-wide : release what belongs to unlinked records, adopt what belongs to linked ones. */
     public static function reconcile(Company $company): int
     {
-        $moved = self::releaseStale($company);
+        return self::within($company, function () use ($company) {
+            $moved = self::releaseStale($company);
 
-        $linked = Employee::withoutGlobalScopes()->where('company_id', $company->id)->whereNotNull('user_id')->pluck('user_id', 'id');
-        if ($linked->isEmpty()) {
-            return $moved;
-        }
-
-        $pendingIds = collect()
-            ->merge(self::employeeRows(MemberDocument::query(), $company, $linked->keys()->all())->pluck('document_subject_id'))
-            ->merge(self::employeeRows(DocumentRequest::query(), $company, $linked->keys()->all())->pluck('document_subject_id'))
-            ->merge(DocumentCampaignRecipient::where('company_id', $company->id)->where('document_subject_type', DocumentSubject::TYPE_EMPLOYEE)->whereIn('document_subject_id', $linked->keys())->pluck('document_subject_id'))
-            ->unique();
-        // Rows written for a linked account but not yet stamped with their HR record : stamped
-        // SET-BASED (two statements for the whole company, whatever its size). Doing it pair by
-        // pair made the first company-wide read cost ~8 queries per linked person (N+1).
-        foreach ([(new MemberDocument)->getTable(), (new DocumentRequest)->getTable()] as $table) {
-            DB::table($table)->where('company_id', $company->id)->whereNull('origin_employee_id')->whereIn('user_id', $linked->values()->all())
-                ->update(['origin_employee_id' => DB::raw(
-                    '(select e.id from workforce_employees e where e.company_id = '.$table.'.company_id and e.user_id = '.$table.'.user_id limit 1)'
-                )]);
-        }
-
-        // Only the HR records that still hold rows of their own need a real transition.
-        foreach ($linked as $employeeId => $userId) {
-            if ($pendingIds->contains($employeeId)) {
-                $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('id', $employeeId)->get()->first();
-                $moved += $employee ? self::adoptPair($company, $employee, (int) $userId) : 0;
+            $linked = Employee::withoutGlobalScopes()->where('company_id', $company->id)->whereNotNull('user_id')->pluck('user_id', 'id');
+            if ($linked->isEmpty()) {
+                return $moved;
             }
-        }
 
-        return $moved;
+            $pendingIds = collect()
+                ->merge(self::employeeRows(MemberDocument::query(), $company, $linked->keys()->all())->pluck('document_subject_id'))
+                ->merge(self::employeeRows(DocumentRequest::query(), $company, $linked->keys()->all())->pluck('document_subject_id'))
+                ->merge(DocumentCampaignRecipient::where('company_id', $company->id)->where('document_subject_type', DocumentSubject::TYPE_EMPLOYEE)->whereIn('document_subject_id', $linked->keys())->pluck('document_subject_id'))
+                ->unique();
+            // Rows written for a linked account but not yet stamped with their HR record : stamped
+            // SET-BASED (two statements for the whole company, whatever its size). Doing it pair by
+            // pair made the first company-wide read cost ~8 queries per linked person (N+1).
+            foreach ([(new MemberDocument)->getTable(), (new DocumentRequest)->getTable()] as $table) {
+                DB::table($table)->where('company_id', $company->id)->whereNull('origin_employee_id')->whereIn('user_id', $linked->values()->all())
+                    ->update(['origin_employee_id' => DB::raw(
+                        '(select e.id from workforce_employees e where e.company_id = '.$table.'.company_id and e.user_id = '.$table.'.user_id limit 1)'
+                    )]);
+            }
+
+            // Only the HR records that still hold rows of their own need a real transition.
+            foreach ($linked as $employeeId => $userId) {
+                if ($pendingIds->contains($employeeId)) {
+                    $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('id', $employeeId)->get()->first();
+                    $moved += $employee ? self::adoptPair($company, $employee, (int) $userId) : 0;
+                }
+            }
+
+            return $moved;
+    
+        });
     }
 
     /** Settle ONE person addressed by her HR record and/or her account (admin paths by personRef). */
@@ -108,7 +124,7 @@ class PersonDocumentContinuity
         }
 
         // HR record without account : rows a former account still holds for it come back.
-        return $employee !== null ? self::releaseStale($company, employeeId: (int) $employee->id) : 0;
+        return $employee !== null ? self::within($company, fn () => self::releaseStale($company, employeeId: (int) $employee->id)) : 0;
     }
 
     /** Settle the person behind a document subject (paths that only know the subject). */
@@ -124,7 +140,7 @@ class PersonDocumentContinuity
             return $user ? self::adopt($company, $user) : 0;
         }
         if ($subject->is(DocumentSubject::TYPE_EMPLOYEE)) {
-            return self::releaseStale($company, employeeId: (int) $subject->id);
+            return self::within($company, fn () => self::releaseStale($company, employeeId: (int) $subject->id));
         }
 
         return 0;
@@ -133,7 +149,7 @@ class PersonDocumentContinuity
     /** Explicit release, for a caller that removes the link itself. */
     public static function release(Company $company, int $employeeId, int $userId): int
     {
-        return self::releaseStale($company, userId: $userId, employeeId: $employeeId, force: true);
+        return self::within($company, fn () => self::releaseStale($company, userId: $userId, employeeId: $employeeId, force: true));
     }
 
     // ─── Adoption ───────────────────────────────────────────────────────────

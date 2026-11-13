@@ -34,6 +34,12 @@ class FinalizeSignatureRequestUseCase
 
     public function execute(SignatureRequest $request): SignatureRequest
     {
+        // ADR-771 : IDEMPOTENCE — une finalisation rejouée (webhook répété, relance) sur une demande déjà
+        // complétée et scellée ne refait rien : même fichier, même état, aucun événement de plus.
+        if ($request->status === SignatureRequest::STATUS_COMPLETED && $request->signed_document_path !== null) {
+            return $request;
+        }
+
         $document = GeneratedDocument::withoutGlobalScopes()->with('template')->findOrFail($request->generated_document_id);
 
         // 1. Intégrité : l'empreinte du source doit correspondre à celle figée à la demande.

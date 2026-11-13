@@ -53,7 +53,7 @@ class EmployeeSelfController
             ->first();
 
         return response()->json([
-            'employee' => EmployeeReadModel::detail($companyId, $employee->id),
+            'employee' => EmployeeReadModel::detail($companyId, $employee->id, withAccount: true), // son propre compte
             'today_clock' => $todayEntry ? [
                 'id' => $todayEntry->id,
                 'status' => $todayEntry->status,

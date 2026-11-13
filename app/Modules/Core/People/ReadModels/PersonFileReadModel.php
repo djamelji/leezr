@@ -107,14 +107,14 @@ class PersonFileReadModel
 
         // ── Identité : User prioritaire (compte), repli sur la fiche RH. Les champs d'origine RH
         // (téléphone, e-mail de contact RH) ne sont exposés qu'avec la facette RH. ──
-        $identity = self::identity($user, $employee, $can['view_hr']);
+        $identity = self::identity($user, $employee, $can['view_hr'], $can['view_access']);
 
         // ── Accès & autorisations ──
         $account = self::account($company, $user, $membership, $employee, $can['view_access']);
 
         // ── Emploi (réutilise EmployeeFileReadModel — gated module ET facette RH `workforce.view`) ──
         $employment = ($employee && $hasWorkforce && $can['view_hr'])
-            ? \App\Modules\Workforce\ReadModels\EmployeeFileReadModel::overview($company, $employee, $can['view_compensation'])
+            ? \App\Modules\Workforce\ReadModels\EmployeeFileReadModel::overview($company, $employee, $can['view_compensation'], $can['view_access'])
             : null;
 
         // ── Onglets disponibles (module + permission + existence des données) ──
@@ -149,7 +149,7 @@ class PersonFileReadModel
             'person_ref' => (string) $canonical,
             'user_id' => $user?->id,
             'employee_id' => $employee?->id,
-            'membership_id' => $membership?->id,
+            'membership_id' => $can['view_access'] ? $membership?->id : null, // ADR-771 : le rattachement est une donnée de compte
             'identity' => $identity,
             'account' => $account,
             'employment' => $employment,
@@ -182,18 +182,28 @@ class PersonFileReadModel
         return $scope === null || in_array($employee->id, $scope, true);
     }
 
-    private static function identity(?User $user, ?Employee $employee, bool $canHr): array
+    /**
+     * ADR-771 — deux identités distinctes :
+     *   - identité RH (nom porté par la fiche, coordonnées professionnelles) → facette RH ;
+     *   - identité de CONNEXION (e-mail et nom du compte) → facette comptes.
+     * Un acteur RH sans facette comptes ne voit que l'identité RH ; un gestionnaire de comptes sans
+     * facette RH ne voit que l'identité du compte.
+     */
+    private static function identity(?User $user, ?Employee $employee, bool $canHr, bool $canViewAccess): array
     {
-        $first = $user?->first_name ?: $employee?->first_name;
-        $last = $user?->last_name ?: $employee?->last_name;
+        $account = $canViewAccess ? $user : null;
+        $record = $canHr ? $employee : null;
+        // Le nom du compte prime quand il est visible (parcours unifié) ; sinon le nom de la fiche RH.
+        $first = $account?->first_name ?: ($record?->first_name ?: $account?->first_name);
+        $last = $account?->last_name ?: ($record?->last_name ?: $account?->last_name);
 
         return [
             'first_name' => $first,
             'last_name' => $last,
-            'display_name' => trim(($first ?? '').' '.($last ?? '')) ?: ($user?->email ?? $employee?->email ?? '—'),
-            'login_email' => $user?->email,                        // identité de connexion (User)
-            'contact_email' => $canHr ? $employee?->email : null,  // e-mail RH (contact) — facette RH
-            'phone' => $canHr ? $employee?->phone : null,          // téléphone RH — facette RH
+            'display_name' => trim(($first ?? '').' '.($last ?? '')) ?: ($account?->email ?? $record?->email ?? '—'),
+            'login_email' => $account?->email,                     // identité de connexion — facette comptes
+            'contact_email' => $record?->email,                    // e-mail professionnel (fiche RH) — facette RH
+            'phone' => $record?->phone,                            // téléphone (fiche RH) — facette RH
             'avatar' => $user?->avatar,
         ];
     }
@@ -216,16 +226,27 @@ class PersonFileReadModel
 
         $role = $membership?->companyRole;
 
+        // ADR-771 : le statut du rattachement (actif, suspendu, invité, en attente), le rôle, les
+        // drapeaux administratifs et l'état d'authentification appartiennent à la facette comptes.
+        // Sans elle, seule subsiste l'information portée par la fiche RH : un compte y est lié.
+        if (! $canViewAccess) {
+            return [
+                'state' => null, 'invitation' => null, 'has_access' => null, 'is_owner' => null, 'is_admin' => null,
+                'role' => null, 'effective_permissions' => null,
+                'has_account' => (bool) $user,
+                'grant_email' => null,
+            ];
+        }
+
         return [
             'state' => $state,
-            // M7 LOT 3 : envoi réel de l'invitation (queued | sent | failed) + échéance — facette ACCÈS uniquement.
-            'invitation' => $canViewAccess ? \App\Company\Security\MembershipInvitation::summary($membership) : null,
+            'invitation' => \App\Company\Security\MembershipInvitation::summary($membership),
             'has_access' => $membership && ! $membership->isSuspended(),
             'is_owner' => (bool) $membership?->isOwner(),
             'is_admin' => (bool) $membership?->isAdmin(),
-            // Rôle + permissions EFFECTIVES — uniquement si l'acteur peut consulter l'accès.
-            'role' => ($canViewAccess && $role) ? ['id' => $role->id, 'name' => $role->name, 'is_administrative' => (bool) $role->is_administrative] : null,
-            'effective_permissions' => ($canViewAccess && $role) ? $role->permissions->pluck('key')->values()->all() : null,
+            'role' => $role ? ['id' => $role->id, 'name' => $role->name, 'is_administrative' => (bool) $role->is_administrative] : null,
+            'effective_permissions' => $role ? $role->permissions->pluck('key')->values()->all() : null,
+            'has_account' => (bool) $user,
             // E-mail employé = cible de l'invitation quand la fiche RH n'a pas encore de compte.
             'grant_email' => $employee && ! $user ? $employee->email : null,
         ];

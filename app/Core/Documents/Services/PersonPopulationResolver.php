@@ -27,6 +27,12 @@ class PersonPopulationResolver
 {
     public static function forCompany(Company $company, bool $includeTerminated = false): Collection
     {
+        // ADR-771 (tenant strict) : la population d'une entreprise se résout DANS son contexte, quel
+        // que soit l'appelant (HTTP, job de campagne, commande planifiée).
+        if (\App\Core\Tenancy\CompanyContext::id() !== (int) $company->id) {
+            return \App\Core\Tenancy\CompanyContext::runFor($company, fn () => self::forCompany($company, $includeTerminated));
+        }
+
         // ADR-770 : la population canonique suppose des lignes rattachées au sujet canonique.
         PersonDocumentContinuity::reconcile($company);
 

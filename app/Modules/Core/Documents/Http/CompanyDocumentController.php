@@ -164,10 +164,13 @@ class CompanyDocumentController extends Controller
             ->where('document_type_id', $type->id)
             ->firstOrFail();
 
-        // Delete physical file
-        if ($document->file_path) {
-            Storage::disk('local')->delete($document->file_path);
-        }
+        // ADR-771 : RETRAIT tracé et non destructif. Le document quitte le coffre (l'emplacement redevient
+        // « à fournir »), mais le fichier et ses versions archivées restent sur le disque, et le retrait
+        // est journalisé avec l'empreinte — avant, le fichier était supprimé sans aucune trace.
+        app(\App\Core\Audit\AuditLogger::class)->logCompany($company->id, 'document.company_withdrawn', 'company_document', (string) $document->id, [
+            'actorId' => $request->user()->id, 'actorType' => 'user', 'severity' => 'warning',
+            'metadata' => ['type' => $type->code, 'file_path' => $document->file_path, 'file_sha256' => $document->file_sha256, 'file_name' => $document->file_name],
+        ]);
 
         $document->delete();
 

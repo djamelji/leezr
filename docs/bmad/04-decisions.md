@@ -27773,3 +27773,123 @@ E2E : `m7-lot4-recette` (5 parcours), `m7-lot3-self-service` (3 parcours relanc�
 **Verdict** : **🟢 GO DEV — M7 clos.** **🔴 NO-GO PROD** tant que les points E et F ne sont pas levés par une vérification sur l'environnement cible. Aucun déploiement lancé.
 
 **Règles** : DEV uniquement, aucun push, une migration additive, aucune donnée supprimée sans preuve de propriété, Billing et calcul de paie intacts, aucun nouveau module.
+
+---
+
+## ADR-771 — Intégrité documentaire et préparation à la production
+
+**Date** : 2026-11-13
+**Contexte** : après ADR-770 (`f3e13ed2`). Pas de refonte : vérifier les invariants documentaires, corriger les défauts de confidentialité, préparer factuellement la production. Lot repris après interruption ; exécution séquentielle.
+
+### 1. Contrat généré → dossier → signature
+
+Constat : un contrat généré a pour sujet le **contrat RH** (`subject_type = contract`), pas le salarié. La fiche interrogeait `subject_type = employee` : **le contrat généré n'apparaissait pas dans le dossier du collaborateur**, et l'étape d'intégration « signature du contrat » ne pouvait jamais se terminer. La personne voyait son contrat dans « Mon activité » mais **ne pouvait pas le télécharger**.
+
+| Étape | État après ADR-771 |
+|---|---|
+| Génération | idempotente par (version du modèle, contrat) : redemander renvoie l'original. La garde précède désormais l'écriture du PDF (un second fichier orphelin était écrit à chaque redemande). |
+| Classement | `GET /workforce/documents/by-employee/{id}` : tous les documents générés de la personne (contrat compris), **par référence**, avec ou sans compte, sans téléversement ni copie. L'entrée de coffre historique d'une personne liée est un lien vers le même fichier. |
+| Signature demandée | état lu sur les **demandes réelles** : un refus, une expiration ou une annulation ne restent pas « en attente » (la colonne du document n'est qu'une projection, non mise à jour dans ces cas). |
+| Signature finalisée | version signée servie au même endroit (`…/{id}/signed`), uniquement si une demande est complétée ET scellée. L'original n'est jamais remplacé et reste téléchargeable ; la demande reste liée à son empreinte. |
+| Preuves | conservées ; réservées à `workforce_signature.view_evidence`. |
+| Rejeu | `FinalizeSignatureRequestUseCase` est idempotent (il levait une exception sur une demande déjà complétée) : même fichier, même état, aucun événement de plus. |
+| Self-service | `GET /workforce/me/generated-documents/{id}/download[?version=signed]` : la personne télécharge SES documents (propriété). |
+| RH ≠ signature | activer le contrat RH ne marque rien comme signé ; signer n'active pas le contrat. |
+
+Limite : la dernière étape n'est prouvée qu'avec le moteur **interne**. Signature externe : NO-GO PROD inchangé.
+
+**Droits** (`GeneratedDocumentAccess`, autorité unique) : périmètre du collaborateur (RH, soi, équipe) **et**, pour un document qui porte la rémunération (contrat, bulletin), `workforce.compensation_read`. Avant, un RH ou un manager sans accès paie pouvait télécharger le contrat, donc lire le salaire. La réponse de génération ne renvoie plus l'instantané (qui contient le salaire) sans ce droit.
+
+| Profil | Voit la ligne | Original / signé | Preuves |
+|---|---|---|---|
+| RH avec accès paie, propriétaire | oui | oui | selon `view_evidence` |
+| RH ou manager sans accès paie | oui (dans son périmètre) | **non (403)** | non |
+| `documents.view` seul | non (403) | non | non |
+| La personne | oui (self) | oui, les siens | non |
+| Autre entreprise | 404 | 404 | 404 |
+
+### 2. Coffre de l'entreprise
+
+Réel et propre : identité documentaire `CompanyDocument`, stockage `documents/{company}/company/`, jamais dans un dossier de salarié. Vérifié par HTTP avec de vrais fichiers : dépôt, type, échéance facultative, consultation, téléchargement, remplacement non destructif (l'ancienne version sert ses octets d'origine), dédoublonnage par empreinte, historique, conformité (manquant / valide / expiré), isolation.
+- **Corrigé** : le retrait supprimait le fichier sans aucune trace. Il est désormais journalisé (empreinte, chemin) et ne supprime plus le fichier ni les versions.
+- **Fonctions réservées aux personnes** (adaptations à prévoir, non faites) : demandes documentaires et circuit de validation, renouvellement et relances planifiés, campagnes. Un document d'entreprise qui expire est signalé par la conformité mais aucune demande de renouvellement n'est ouverte (figé par test). Adaptation nécessaire : accepter le sujet `company` dans `DocumentRequestService` et `DocumentLifecycleOrchestrator`, et désigner le destinataire (détenteurs de `documents.manage`).
+
+### 3. Confidentialité des informations de compte
+
+`workforce.view` héritait de fait de `members.view` : la fiche et l'API Workforce exposaient à un RH ou à un manager l'e-mail de connexion, le nom du compte, le statut du rattachement (dont « suspendu » et son motif), le rôle, les drapeaux administrateur/propriétaire et l'état d'authentification.
+
+| Donnée | Facette |
+|---|---|
+| Nom porté par la fiche, e-mail et téléphone professionnels, emploi | RH |
+| E-mail et nom du compte, statut du rattachement, rôle, invitation, mot de passe défini, dernière connexion | comptes (`members.view`) |
+| « Un compte est lié à cette fiche » | RH (porté par la fiche elle-même) |
+
+Corrections : `PersonFileReadModel`, `EmployeeReadModel::detail`, `EmployeeFileReadModel` (l'étape d'intégration « accès » ne révèle plus l'état d'activation) ; `GET /workforce/employees/{id}/access` passe à la facette comptes (c'était aussi un 403 parasite pour un gestionnaire de comptes sans droit RH).
+
+### 4. Tenant strict
+
+Le mode strict (`CompanyContext::$strict`, ADR-733) fait lever toute requête tenant sans contexte. Le test ignoré dans ADR-770 est **réactivé sans réduction** et vert : le cycle de vie documentaire n'énumère plus que les entreprises configurées (lecture inter-tenant déclarée) et traite chacune dans son contexte.
+**Défaut trouvé en l'exerçant par HTTP** : `SetCompanyContext` vérifiait l'appartenance avant de lier le contexte — en mode strict, **toute requête HTTP échouait**. `User::membershipFor` / `isMemberOf` portent désormais explicitement leur périmètre (compte + entreprise).
+`Adr771TenantStrictDocumentsTest` (4) : cycle complet A/B (salarié sans compte, salarié lié, membre des deux entreprises, dépôt, versions archivées, validation, refus, retrait d'accès), tâches planifiées, transitions de sujet — lignes et fichiers de B identiques avant/après.
+
+### 5. Audit d'intégrité non destructif
+
+`php artisan documents:integrity-audit [--company=] [--format=json] [--output=] [--limit=] [--orphans]`. Lecture seule (SELECT et lecture de fichiers en flux ; le rapport `--output` est la seule écriture). Couvre documents déposés, versions, coffre entreprise, bulletins publiés, documents générés, versions signées.
+
+| Classe | Règle |
+|---|---|
+| `corruption_demontree` | empreinte enregistrée ≠ fichier présent ; plusieurs versions déclarées différentes sur un même fichier |
+| `suspect` | chemin partagé entre références ; chemin déterministe ancien ; empreinte absente ; taille différente |
+| `manquant` | fichier absent |
+| `incoherence_tenant` | rangé sous le dossier d'une autre entreprise |
+| `orphelin` | (option) fichier sans référence |
+
+Code de sortie 2 s'il existe une corruption démontrée. Testé avec de vrais fichiers : chaque anomalie fabriquée est classée exactement, base et disque identiques avant/après. **Base locale** : 0 corruption démontrée, 4 manquants et 19 suspects (lignes de démonstration aux tailles factices), 9 orphelins. **Non exécuté sur un environnement distant.**
+
+### 6. Cycle de vie des personnes
+
+Couvert par `M7Lot4DocumentSubjectCoherenceTest` (liaison, retrait, re-liaison, autre compte) et par les tests ci-dessus (contrats, strict). Bulletins : série de la personne sur tous ses sujets (ADR-769).
+
+### 7. Tests
+
+`Adr771AccountConfidentialityTest` (4), `Adr771GeneratedContractFilingTest` (8), `Adr771CompanyVaultTest` (3), `Adr771TenantStrictDocumentsTest` (4), `Adr771DocumentIntegrityAuditTest` (2) ; `M7Lot4JobsSchedulerTest` (test strict réactivé). E2E : `adr771-generated-documents` + parcours LOT 2 / LOT 3 concernés. Un test existant ajusté (`M7Lot2OperationalPersonFileTest` : le statut du compte n'est plus lisible par le profil RH).
+
+### 8. Checklist de préparation PROD (audit de code et de configuration uniquement)
+
+| Point | Constat dans le dépôt | Sur l'environnement cible |
+|---|---|---|
+| Queue `default` | `QUEUE_CONNECTION=database` ; unité systemd `leezr-queue-default-{env}` définie par le script de déploiement | **non vérifié** |
+| Queue `ai` | `ProcessDocumentAiJob` y est routé ; unité `leezr-queue-ai-{env}` définie | **non vérifié** |
+| Scheduler | 5 tâches documentaires/signature/invitations enregistrées ; `schedule:run` confié au cron ISPConfig | **non vérifié** |
+| Stockage | disque `local` ; `storage` partagé entre releases | **non vérifié** (partage web/worker) |
+| SMTP | `MAIL_MAILER=log` par défaut | **non vérifié** |
+| OCR | le script vérifie ImageMagick et Tesseract ; `pdftotext` (poppler) non contrôlé par le script | **non vérifié** |
+| Secrets | signature externe : `SIGNATURE_EXTERNAL_API_BASE`, `_WEBHOOK_SECRET`, `_CERTIFIED` | **non vérifié** |
+| Signature externe | adapter et sandbox seulement | **NO-GO** |
+| Migrations | 5 additives depuis `76d4a94f` (`2026_11_08` IMAP si absente, `_18`, `_19` invitations, `_20` sujets) ; `migrate --force` après sauvegarde dans le script | **non vérifié** |
+| Intégrité des fichiers | commande d'audit disponible | **non exécuté** |
+
+### 9. Défauts résiduels
+
+1. Salarié sans compte : aucun circuit de validation, sa pièce reste « soumise » et n'est jamais renouvelée automatiquement (figé par test).
+2. Coffre entreprise : pas de demande, de renouvellement automatique ni de campagne (§2).
+3. La colonne `signature_status` du document n'est pas mise à jour sur refus / expiration / annulation ; la fiche lit l'état réel, le registre RH affiche encore la projection.
+4. `POST /workforce/employees/{id}/terminate` renvoie 500 si le salarié a un contrat en brouillon (API sans interface).
+5. Les entrées de coffre sans type créées à la génération sont des liens invisibles, sans empreinte.
+6. Reportés d'ADR-770 : pagination en mémoire de la liste, fiche à 82 requêtes, accessibilité « serious », anciens scripts E2E à marqueur partagé, trois échecs historiques de `ControllerSizeInvariantTest`.
+
+### 10. Verdict
+
+**🟢 GO DEV.** **🔴 NO-GO PROD.**
+
+Conditions de GO PROD, chacune vérifiable sur l'environnement cible :
+1. `documents:integrity-audit --format=json` exécuté : 0 `corruption_demontree`, et chaque `suspect` / `manquant` examiné.
+2. Workers `default` **et** `ai` actifs (`systemctl is-active`), `queue:failed` vide, un job de test traité sur chaque queue.
+3. Cron `schedule:run` présent une seule fois ; `schedule:list` montre les 5 tâches ; une exécution constatée dans les logs.
+4. `pdftotext`, `tesseract`, `magick` présents pour l'utilisateur PHP ; un bulletin scanné de test part en revue ou est reconnu.
+5. Un e-mail d'invitation réellement reçu (état `sent`).
+6. Migrations appliquées après sauvegarde ; `migrate:status` sans attente.
+7. Disque partagé : un fichier déposé par le web est lisible par le worker.
+8. Signature externe : laissée désactivée, ou prestataire réel connecté avec une finalisation de bout en bout prouvée.
+
+**Règles** : DEV uniquement, aucun push, aucune migration nouvelle dans ce lot, aucune donnée ni aucun fichier supprimé, Billing et calcul de paie intacts, aucun déploiement.
