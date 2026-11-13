@@ -17,6 +17,7 @@ import { createJournal } from './journal'
 import { createScheduler } from './scheduler'
 import { buildSnapshot } from './invariants'
 import { bootMachine } from './bootMachine'
+import { reloadTenantScoped, resetTenantScoped } from './tenantScoped'
 import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
 import { createChannelRouter } from '@/core/realtime/ChannelRouter'
 import { domainEventBus } from '@/core/realtime/DomainEventBus'
@@ -230,6 +231,9 @@ export const useRuntimeStore = defineStore('runtime', {
       // ADR-125: Disconnect SSE before switch (company channel changes)
       this._disconnectRealtime()
 
+      // ADR-769 : purge des états PERSONNELS de l'entreprise quittée avant tout rechargement.
+      resetTenantScoped()
+
       // Force reboot via bootMachine (same scope, force=true)
       const promise = bootMachine.prepareBoot('company', true)
 
@@ -246,6 +250,7 @@ export const useRuntimeStore = defineStore('runtime', {
         notifStore.$reset()
         this._initRealtime()
         notifStore.fetchUnreadCount().catch(() => {})
+        reloadTenantScoped()
       }
     },
 

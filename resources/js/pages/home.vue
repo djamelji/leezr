@@ -9,6 +9,7 @@ import { useCan } from '@/composables/useCan'
 import { useWorkforceClockStore } from '@/core/stores/workforce-clock'
 import { useEmployeeHomeStore } from '@/modules/company/home/employee-home.store'
 import { useOperationalHomeStore } from '@/modules/company/home/home.store'
+import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
 
@@ -18,10 +19,15 @@ const { can, canModule } = useCan()
 const clock = useWorkforceClockStore()
 const emp = useEmployeeHomeStore()
 const homeStore = useOperationalHomeStore()
+const space = usePersonalSpaceStore()
 
 // ── Capacités (déduites des modules + permissions, jamais de rôle codé en dur) ──
-const canWorkforce = computed(() => canModule('workforce'))
-const canDocuments = computed(() => canModule('core.documents') && can('documents.view'))
+// ADR-769 (M7 LOT 3) : les capacités PERSONNELLES viennent du serveur (`/profile/space`) — mes
+// documents et mes signatures ne dépendent d'aucune permission de gestion (`documents.view` n'a rien
+// à voir avec MES documents), et le bloc Workforce n'existe que si une fiche salarié m'est liée.
+const canWorkforce = computed(() => space.can('time_clock'))
+const canDocuments = computed(() => space.can('documents'))
+const canSignatures = computed(() => space.can('signatures'))
 const canDeliveries = computed(() => canModule('logistics_shipments') && can('shipments.view_own'))
 const isEmployee = computed(() => !!clock.employee)
 
@@ -65,10 +71,13 @@ const relDay = iso => {
 // ── Cartes d'action (compteurs réels, liens vers l'outil concerné) ──
 const actionCards = computed(() => {
   const out = []
-  if (canWorkforce.value && isEmployee.value)
-    out.push({ key: 'leaves', icon: 'tabler-beach', color: 'info', value: emp.pendingLeaves, label: t('employeeHome.cards.leavesPending'), to: '/company/workforce/me', loading: emp.loadingWorkforce })
+  const mySpace = tab => ({ name: 'company-my-space-tab', params: { tab } })
+  if (canSignatures.value && space.counts.signatures_to_sign > 0)
+    out.push({ key: 'signatures', icon: 'tabler-writing-sign', color: 'info', value: space.counts.signatures_to_sign, label: t('employeeHome.cards.signaturesToSign'), to: mySpace('signatures'), loading: false })
   if (canDocuments.value)
-    out.push({ key: 'docs', icon: 'tabler-file-text', color: 'warning', value: emp.docsToProvide, label: t('employeeHome.cards.docsToProvide'), to: '/company/profile/documents', loading: emp.loadingDocs })
+    out.push({ key: 'docs', icon: 'tabler-file-text', color: 'warning', value: space.counts.document_requests ?? 0, label: t('employeeHome.cards.docsToProvide'), to: mySpace('documents'), loading: space.loading })
+  if (space.can('leave') && isEmployee.value)
+    out.push({ key: 'leaves', icon: 'tabler-beach', color: 'info', value: emp.pendingLeaves, label: t('employeeHome.cards.leavesPending'), to: '/company/workforce/me', loading: emp.loadingWorkforce })
   if (canDeliveries.value)
     out.push({ key: 'deliveries', icon: 'tabler-truck-delivery', color: 'primary', value: emp.deliveriesCount, label: t('employeeHome.cards.myDeliveries'), to: '/company/my-deliveries', loading: emp.loadingDeliveries })
 
@@ -94,12 +103,15 @@ const saveAndResolve = async () => {
 
 onMounted(async () => {
   homeStore.loadDashboard()
+  if (canDeliveries.value) emp.loadDeliveries()
+
+  // Une seule réponse serveur décide de ce qui est chargé : aucune API Workforce n'est appelée
+  // sans module actif ET fiche salarié liée.
+  await space.load()
   if (canWorkforce.value) {
     await clock.fetchProfile()
-    if (clock.employee) emp.loadWorkforce()
+    if (clock.employee) emp.loadWorkforce({ planning: space.can('planning'), leave: space.can('leave') })
   }
-  if (canDocuments.value) emp.loadDocuments()
-  if (canDeliveries.value) emp.loadDeliveries()
 })
 </script>
 
@@ -116,7 +128,7 @@ onMounted(async () => {
     <!-- ═══ AUJOURD'HUI : prochain shift + pointage (employé Workforce) ═══ -->
     <VRow v-if="canWorkforce && isEmployee" class="mb-2">
       <!-- Prochain shift -->
-      <VCol cols="12" md="7">
+      <VCol v-if="space.can('planning')" cols="12" md="7">
         <VCard class="h-100" border flat>
           <VCardText class="d-flex flex-column h-100">
             <div class="d-flex align-center gap-2 mb-3">
@@ -146,7 +158,7 @@ onMounted(async () => {
       </VCol>
 
       <!-- Pointage -->
-      <VCol cols="12" md="5">
+      <VCol cols="12" :md="space.can('planning') ? 5 : 12">
         <VCard class="h-100" border flat>
           <VCardText class="d-flex flex-column h-100">
             <div class="d-flex align-center justify-space-between gap-2 mb-3">
@@ -190,7 +202,7 @@ onMounted(async () => {
     </VRow>
 
     <!-- ═══ Mes soldes de congés ═══ -->
-    <VCard v-if="canWorkforce && isEmployee && clock.leaveBalances.length" border flat class="mb-2">
+    <VCard v-if="space.can('leave') && isEmployee && clock.leaveBalances.length" border flat class="mb-2">
       <VCardText>
         <div class="d-flex align-center gap-2 mb-3">
           <VIcon icon="tabler-sun" color="info" size="20" />
@@ -206,11 +218,12 @@ onMounted(async () => {
     </VCard>
 
     <!-- ═══ État vide intelligent (ni salarié, ni activité) ═══ -->
-    <VCard v-if="!hasOperational && !homeStore.isLoading" border flat class="mb-2">
+    <VCard v-if="!hasOperational && !homeStore.isLoading && space.ready" border flat class="mb-2">
       <VCardText class="text-center py-8">
         <VAvatar color="primary" variant="tonal" size="64" class="mb-3"><VIcon icon="tabler-coffee" size="32" /></VAvatar>
         <div class="text-h6 mb-1">{{ t('employeeHome.empty.title') }}</div>
         <div class="text-body-2 text-medium-emphasis">{{ t('employeeHome.empty.hint') }}</div>
+        <VBtn class="mt-4" variant="tonal" :to="{ name: 'company-my-space-tab', params: { tab: 'overview' } }" prepend-icon="tabler-user-circle" data-test="home-my-space">{{ t('mySpace.title') }}</VBtn>
       </VCardText>
     </VCard>
 

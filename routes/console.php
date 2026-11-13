@@ -145,6 +145,15 @@ Schedule::command('workforce:signature-expire')->hourly()->withoutOverlapping()
     ->onSuccess(SI::onSuccess('workforce:signature-expire'))
     ->onFailure(SI::onFailure('workforce:signature-expire'));
 
+// ── Members invitations (M7 LOT 3) ───────────────────────
+// Trace (audit) the pending invitations whose validity has passed — hourly, idempotent.
+Schedule::command('members:invitations-expire')->hourly()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/members-invitations-expire.log'))
+    ->when(SI::enabled('members:invitations-expire'))
+    ->before(SI::before('members:invitations-expire'))
+    ->onSuccess(SI::onSuccess('members:invitations-expire'))
+    ->onFailure(SI::onFailure('members:invitations-expire'));
+
 // ── Workflow Engine (ADR-437) ────────────────────────────
 // Reset daily execution counters at midnight
 Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping()

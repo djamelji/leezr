@@ -79,6 +79,7 @@ const accountMeta = computed(() => ({
   active: { color: 'success', label: t('people.account.active') },
   invited: { color: 'warning', label: t('people.account.invited') },
   pending_acceptance: { color: 'warning', label: t('people.account.pending_acceptance') },
+  invitation_expired: { color: 'secondary', label: t('people.account.invitation_expired') },
   suspended: { color: 'error', label: t('people.account.suspended') },
   none: { color: 'secondary', label: t('people.account.none') },
 }[store.account.state] || { color: 'secondary', label: store.account.state }))

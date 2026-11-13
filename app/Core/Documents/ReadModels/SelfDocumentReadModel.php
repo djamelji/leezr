@@ -28,6 +28,9 @@ class SelfDocumentReadModel
 
         $roleKey = $membership->companyRole?->key;
 
+        // ADR-769 : continuité — les pièces déposées sur ma fiche salarié AVANT mon compte sont les miennes.
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $user);
+
         // 2. Resolve documents via existing pipeline, scoped to company_user
         $documents = DocumentResolverService::resolve(
             $user,

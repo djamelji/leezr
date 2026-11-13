@@ -111,10 +111,11 @@ const restore = async () => {
 
         <template v-else-if="access">
           <!-- ADR-768 : compte pré-existant — invitation EN ATTENTE d'acceptation (aucun accès activé) -->
-          <template v-if="state === 'pending_acceptance'">
+          <template v-if="state === 'pending_acceptance' || state === 'invitation_expired'">
             <VAlert type="warning" variant="tonal" density="compact" class="mb-3">
               <VIcon icon="tabler-hourglass" start size="16" />
-              {{ t('people.access.pendingNotice') }}
+              {{ state === 'invitation_expired' ? t('people.access.expiredNotice') : t('people.access.pendingNotice') }}
+              <div v-if="access.invitation?.delivery === 'failed'" class="text-caption mt-1">{{ t('people.access.deliveryFailed') }}</div>
             </VAlert>
             <VBtn
               variant="tonal"

@@ -43,6 +43,10 @@ final class AuditAction
     public const MEMBER_INVITATION_SENT = 'member.invitation_sent';
     public const MEMBER_INVITATION_ACCEPTED = 'member.invitation_accepted';
     public const MEMBER_INVITATION_DECLINED = 'member.invitation_declined';
+    public const MEMBER_INVITATION_DELIVERED = 'member.invitation_delivered';
+    public const MEMBER_INVITATION_DELIVERY_FAILED = 'member.invitation_delivery_failed';
+    public const MEMBER_INVITATION_EXPIRED = 'member.invitation_expired';
+    public const MEMBER_INVITATION_RENEWED = 'member.invitation_renewed';
 
     // ─── User profile (self-service) ─────────────────────
     public const USER_PROFILE_UPDATED = 'user.profile_updated';

@@ -13,6 +13,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { $api } from '@/utils/api'
+import { registerTenantScoped } from '@/core/runtime/tenantScoped'
 
 export const useEmployeeHomeStore = defineStore('employee-home', () => {
   const shifts = ref([])
@@ -33,18 +34,25 @@ export const useEmployeeHomeStore = defineStore('employee-home', () => {
   })
   const nextShift = computed(() => upcomingShifts.value[0] || null)
 
-  async function loadWorkforce() {
+  // ADR-769 : chaque sous-appel suit une capacité annoncée par le serveur (planning / congés).
+  async function loadWorkforce({ planning = true, leave = true } = {}) {
     loadingWorkforce.value = true
-    try {
-      const d = await $api('/workforce/me/shifts?days=14')
-      shifts.value = Array.isArray(d.shifts) ? d.shifts : []
+    if (planning) {
+      try {
+        const d = await $api('/workforce/me/shifts?days=14')
+
+        shifts.value = Array.isArray(d.shifts) ? d.shifts : []
+      }
+      catch { shifts.value = [] }
     }
-    catch { shifts.value = [] }
-    try {
-      const l = await $api('/workforce/me/leaves?status=pending&perPage=1')
-      pendingLeaves.value = l.total ?? (Array.isArray(l.data) ? l.data.length : 0)
+    if (leave) {
+      try {
+        const l = await $api('/workforce/me/leaves?status=pending&perPage=1')
+
+        pendingLeaves.value = l.total ?? (Array.isArray(l.data) ? l.data.length : 0)
+      }
+      catch { pendingLeaves.value = 0 }
     }
-    catch { pendingLeaves.value = 0 }
     loadingWorkforce.value = false
   }
 
@@ -75,6 +83,8 @@ export const useEmployeeHomeStore = defineStore('employee-home', () => {
     docsToProvide.value = 0
     deliveriesCount.value = 0
   }
+
+  registerTenantScoped('employee-home', { reset })
 
   return {
     shifts, pendingLeaves, docsToProvide, deliveriesCount,

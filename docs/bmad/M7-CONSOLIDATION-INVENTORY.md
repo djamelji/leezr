@@ -132,6 +132,10 @@ résout par `personRef` = `user-{id}` | `employee-{id}`, lien `user_id` **explic
 - Regrouper « Mes documents / Mes demandes / Mes bulletins / Mes signatures » dans l'espace collaborateur
   (`/company/workforce/me`) sans fragmenter `/home` `/profile` `/dashboard`. **Ne pas** fusionner `/home` et `/dashboard`.
 
+> **Mise à jour LOT 3 (ADR-769)** — livré : « Mon espace » Core (`/company/my-space/:tab` : aperçu, documents, bulletins,
+> signatures), accueil et pointage pilotés par `/profile/space`, `/company/workforce/me` conservé (« Mon activité »),
+> `/account-settings/documents` redirigé. `/home` et `/dashboard` non fusionnés.
+
 ### LOT 4 — Redirections finales + recette RBAC par facette + E2E + captures avant/après
 - Activer les redirections members/employees **seulement** après parité LOT 2. Matrice de redirections +
   matrice RBAC + recette E2E (company sans workforce, employee sans user, RH sans members, manager limité, multi-company…).

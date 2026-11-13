@@ -9,8 +9,7 @@ use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Workforce\Employee;
-use App\Core\Billing\CompanyEntitlements;
-use Illuminate\Support\Facades\Password;
+use App\Company\Security\MemberQuota;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -41,7 +40,8 @@ class EmployeeAccessService
         if ($user && $membership) {
             if ($membership->isPendingAcceptance()) {
                 // M7 LOT 2 : compte pré-existant invité, acceptation par la personne en attente.
-                $state = 'pending_acceptance';
+                // M7 LOT 3 : passé l'échéance, l'invitation est expirée (plus acceptable, relançable).
+                $state = MembershipInvitation::isExpired($membership) ? 'invitation_expired' : 'pending_acceptance';
             } elseif ($membership->isSuspended()) {
                 // SECURITY-1 : accès suspendu (membership + données conservés).
                 $state = 'suspended';
@@ -73,7 +73,9 @@ class EmployeeAccessService
             'assignable_roles' => CompanyRole::where('company_id', $company->id)
                 ->where('is_administrative', false)     // jamais de privilège admin par défaut
                 ->get(['id', 'name', 'key'])->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->all(),
-            'can_resend' => in_array($state, ['invited', 'pending_acceptance'], true),
+            'can_resend' => in_array($state, ['invited', 'pending_acceptance', 'invitation_expired'], true),
+            // M7 LOT 3 : état RÉEL de l'envoi (queued | sent | failed) et échéance — null si l'accès est actif.
+            'invitation' => MembershipInvitation::summary($membership),
             // Actions autorisées (sécurité admin : owner/soi/dernier admin protégés).
             'can_suspend' => $hasActiveAccess && ! $protected,
             'can_restore' => (bool) ($membership && $membership->isSuspended() && ! $membership->isPendingAcceptance()),
@@ -265,10 +267,10 @@ class EmployeeAccessService
         $employee->user_id = $user->id;
         $employee->save();
 
-        // Invitation (définition du mot de passe) uniquement pour un nouveau compte sans mot de passe.
-        if ($isNewUser && ! $user->password_set_at) {
-            $token = Password::broker('users')->createToken($user);
-            $user->sendPasswordResetNotification($token);
+        // M7 LOT 3 : l'e-mail (invitation à accepter, ou définition du mot de passe d'un nouveau compte)
+        // part par la file et son issue est enregistrée — une panne SMTP n'est plus une 500.
+        if (MembershipInvitation::kind($membership) !== null) {
+            MembershipInvitation::deliver($company, $membership, User::find($actorId));
         }
 
         app(\App\Core\Audit\AuditLogger::class)->logCompany(
@@ -280,31 +282,27 @@ class EmployeeAccessService
         return $this->status($company, $employee->refresh());
     }
 
-    /** Relance l'invitation (uniquement si compte invité, mot de passe non défini). */
+    /**
+     * Relance l'invitation : compte pré-existant en attente (nouvelle échéance, jamais un lien de mot de
+     * passe) ou compte invité sans mot de passe. L'autorité `MembershipInvitation` enregistre l'issue RÉELLE
+     * de l'envoi (M7 LOT 3) — exposée dans `status().invitation`.
+     */
     public function resendInvitation(Company $company, Employee $employee): array
     {
-        $user = $employee->user_id ? User::find($employee->user_id) : null;
-        $pending = $user ? Membership::where('company_id', $company->id)->where('user_id', $user->id)->whereNotNull('acceptance_pending_at')->first() : null;
-        if ($pending) {
-            // M7 LOT 2 : compte pré-existant → on relance l'INVITATION (jamais un lien de mot de passe).
-            MembershipInvitation::resend($company, $pending, request()?->user());
-
-            return $this->status($company, $employee);
-        }
-        if (! $user || $user->password_set_at) {
+        $membership = $employee->user_id
+            ? Membership::where('company_id', $company->id)->where('user_id', $employee->user_id)->with('user')->get()->first()
+            : null;
+        if (! $membership || MembershipInvitation::kind($membership) === null) {
             throw ValidationException::withMessages(['access' => 'Aucune invitation en attente pour ce collaborateur.']);
         }
-        $token = Password::broker('users')->createToken($user);
-        $user->sendPasswordResetNotification($token);
+        MembershipInvitation::resend($company, $membership, request()?->user());
 
         return $this->status($company, $employee);
     }
 
+    /** Règle de quota UNIQUE (M7 LOT 3) : voir MemberQuota. */
     private function assertMemberLimit(Company $company): void
     {
-        $limit = CompanyEntitlements::memberLimit($company);
-        if ($limit !== null && $company->memberships()->count() >= $limit) {
-            throw ValidationException::withMessages(['access' => "Limite de membres atteinte ({$limit}). Impossible d'ajouter un accès."]);
-        }
+        MemberQuota::assertSeatAvailable($company);
     }
 }

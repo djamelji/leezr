@@ -90,7 +90,7 @@ class PeopleListReadModel
     private static function rowFromMembership(Membership $m): array
     {
         $u = $m->user;
-        $state = $m->isPendingAcceptance() ? 'pending_acceptance' : ($m->isSuspended() ? 'suspended' : (! $u->password_set_at ? 'invited' : ($u->last_login_at ? 'connected' : 'active')));
+        $state = $m->isPendingAcceptance() ? (\App\Company\Security\MembershipInvitation::isExpired($m) ? 'invitation_expired' : 'pending_acceptance') : ($m->isSuspended() ? 'suspended' : (! $u->password_set_at ? 'invited' : ($u->last_login_at ? 'connected' : 'active')));
 
         return [
             'person_ref' => (string) PersonRef::forUser($u->id),

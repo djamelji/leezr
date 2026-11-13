@@ -9,7 +9,6 @@ use App\Core\Audit\AuditLogger;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -52,24 +51,17 @@ class MemberAccessLifecycleUseCase
         return $membership;
     }
 
-    /** Re-send the invitation : pending acceptance, or an account that never defined its password. */
-    public function resendInvitation(Company $company, Membership $membership, User $actor): void
+    /**
+     * Re-send the invitation : pending acceptance (new deadline), or an account that never defined
+     * its password. Returns the REAL delivery summary (M7 LOT 3) — `failed` when the e-mail could
+     * not be sent, never a false confirmation.
+     */
+    public function resendInvitation(Company $company, Membership $membership, User $actor): array
     {
-        // Pre-existing account awaiting acceptance : re-send the INVITATION (never a password link).
-        if ($membership->isPendingAcceptance()) {
-            MembershipInvitation::resend($company, $membership, $actor);
-            $this->log($company, $membership, $actor, 'member.invitation_resent', []);
+        $summary = MembershipInvitation::resend($company, $membership, $actor);
+        $this->log($company, $membership, $actor, 'member.invitation_resent', ['delivery' => $summary['delivery'] ?? null]);
 
-            return;
-        }
-
-        $user = $membership->user;
-        if (! $user || $user->password_set_at) {
-            throw ValidationException::withMessages(['access' => 'Aucune invitation en attente pour ce compte.']);
-        }
-
-        $user->sendPasswordResetNotification(Password::broker('users')->createToken($user));
-        $this->log($company, $membership, $actor, 'member.invitation_resent', []);
+        return $summary;
     }
 
     private function assertNotOwner(Membership $membership): void

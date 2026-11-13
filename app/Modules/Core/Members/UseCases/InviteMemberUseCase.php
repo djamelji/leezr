@@ -9,7 +9,6 @@ use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 
 /**
  * ADR-767 — invitation of a member (`POST /company/members`).
@@ -38,7 +37,7 @@ class InviteMemberUseCase
             return null;
         }
 
-        return DB::transaction(function () use ($company, $data, $role, $user, $actor) {
+        $membership = DB::transaction(function () use ($company, $data, $role, $user, $actor) {
             $isNewUser = $user === null;
             $user ??= User::create([
                 'first_name' => $data['first_name'] ?? explode('@', $data['email'])[0],
@@ -53,16 +52,21 @@ class InviteMemberUseCase
                 'company_role_id' => $role->id,
             ]);
 
-            if ($isNewUser) {
-                // Account created by this invitation: defining its password is the acceptance.
-                $user->sendPasswordResetNotification(Password::broker('users')->createToken($user));
-            } else {
+            if (! $isNewUser) {
                 // M7 LOT 2: a PRE-EXISTING account is never attached silently — the membership stays
                 // pending (no access) until its owner accepts the invitation himself.
                 MembershipInvitation::requireAcceptance($company, $membership, $actor);
             }
+            // An account created by this invitation : defining its password is the acceptance.
 
-            return $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name,is_administrative']);
+            return $membership;
         });
+
+        // M7 LOT 3 : the e-mail leaves AFTER the commit, through the queue, and its outcome is
+        // recorded on the membership — a mail outage neither rolls the invitation back nor
+        // surfaces as an HTTP 500 (see MembershipInvitation::deliver).
+        MembershipInvitation::deliver($company, $membership, $actor);
+
+        return $membership->load(['user:id,first_name,last_name,email,avatar,password_set_at', 'companyRole:id,key,name,is_administrative']);
     }
 }

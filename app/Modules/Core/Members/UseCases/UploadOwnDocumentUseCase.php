@@ -94,6 +94,9 @@ class UploadOwnDocumentUseCase
             ]);
         }
 
+        // ADR-769 : continuité — remplacer MA pièce déposée avant mon compte, jamais créer un doublon.
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($data->company, $data->user);
+
         // 6. Check existing document for delta calculation
         $existing = MemberDocument::where('company_id', $data->company->id)
             ->where('user_id', $data->user->id)

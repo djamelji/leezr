@@ -42,7 +42,7 @@ export const useMembersStore = defineStore('companyMembers', {
       })
 
       // ADR-768 : compte pré-existant → invitation en attente d'acceptation (pas d'accès activé).
-      const member = { ...hydrateMember(data.member), _pendingAcceptance: !!data.pending_acceptance }
+      const member = { ...hydrateMember(data.member), _pendingAcceptance: !!data.pending_acceptance, _invitationDelivery: data.invitation?.delivery ?? null }
 
       this._members.push(member)
       this._memberCount++

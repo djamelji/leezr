@@ -200,7 +200,8 @@ class PersonFileReadModel
         $state = 'none';
         if ($user && $membership) {
             if ($membership->isPendingAcceptance()) {
-                $state = 'pending_acceptance'; // M7 LOT 2 : invitation non encore acceptée par la personne
+                // M7 LOT 2 : invitation non encore acceptée par la personne ; M7 LOT 3 : expirée passé l'échéance.
+                $state = \App\Company\Security\MembershipInvitation::isExpired($membership) ? 'invitation_expired' : 'pending_acceptance';
             } elseif ($membership->isSuspended()) {
                 $state = 'suspended';
             } elseif (! $user->password_set_at) {
@@ -214,6 +215,8 @@ class PersonFileReadModel
 
         return [
             'state' => $state,
+            // M7 LOT 3 : envoi réel de l'invitation (queued | sent | failed) + échéance — facette ACCÈS uniquement.
+            'invitation' => $canViewAccess ? \App\Company\Security\MembershipInvitation::summary($membership) : null,
             'has_access' => $membership && ! $membership->isSuspended(),
             'is_owner' => (bool) $membership?->isOwner(),
             'is_admin' => (bool) $membership?->isAdmin(),

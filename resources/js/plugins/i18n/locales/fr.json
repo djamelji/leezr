@@ -181,7 +181,7 @@
       "documentation": "Centre d'aide",
       "documents": "Documents",
       "workflows": "Workflows",
-      "workforce-me": "Mon espace",
+      "workforce-me": "Mon activité",
       "workforce-employees": "Collaborateurs",
       "workforce-time": "Temps de travail",
       "workforce-leave": "Congés & absences",
@@ -194,7 +194,8 @@
       "workforce-settings": "Paramètres",
       "workforce-contract-templates": "Contrats de travail",
       "workforce-signature": "Signatures",
-      "workforce-home": "Accueil"
+      "workforce-home": "Accueil",
+      "my-space": "Mon espace"
     }
   },
   "roles": {
@@ -4351,7 +4352,8 @@
     "cards": {
       "leavesPending": "Congés en attente",
       "docsToProvide": "Documents à régulariser",
-      "myDeliveries": "Mes livraisons"
+      "myDeliveries": "Mes livraisons",
+      "signaturesToSign": "Signatures à effectuer"
     },
     "empty": {
       "title": "Rien d'urgent pour l'instant",
@@ -4383,7 +4385,8 @@
       "active": "Compte activé",
       "invited": "Invitation en attente",
       "suspended": "Accès suspendu",
-      "none": "Aucun compte"
+      "none": "Aucun compte",
+      "invitation_expired": "Invitation expirée"
     },
     "access": {
       "title": "Accès applicatif",
@@ -4398,7 +4401,8 @@
         "pending_acceptance": "Invitation envoyée à un compte existant — en attente de son acceptation.",
         "active": "Compte activé, aucune connexion enregistrée pour l'instant.",
         "connected": "Le compte est actif et s'est déjà connecté.",
-        "suspended": "L'accès est suspendu ; le compte et les données sont conservés."
+        "suspended": "L'accès est suspendu ; le compte et les données sont conservés.",
+        "invitation_expired": "L'invitation n'a pas été acceptée à temps. Elle peut être relancée ou annulée."
       },
       "grant": "Donner accès",
       "resend": "Relancer l'invitation",
@@ -4417,7 +4421,13 @@
       "passwordShared": "Ce compte est aussi utilisé dans une autre entreprise : le mot de passe ne peut pas être imposé d'ici. Le lien de réinitialisation reste disponible.",
       "suspendTitle": "Suspendre l'accès",
       "suspendHint": "La personne ne pourra plus se connecter à votre entreprise. Rien n'est supprimé ; l'accès peut être réactivé à tout moment.",
-      "suspendReason": "Motif (facultatif)"
+      "suspendReason": "Motif (facultatif)",
+      "expiredNotice": "Cette invitation a expiré sans être acceptée : elle ne donne aucun accès et ne compte plus dans votre nombre de membres. Relancez-la pour lui donner une nouvelle échéance, ou annulez-la.",
+      "validUntil": " Invitation valable jusqu'au {date}.",
+      "deliveryFailed": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Relancez l'invitation.",
+      "deliverySent": "E-mail d'invitation envoyé le {date}.",
+      "deliveryQueued": "E-mail d'invitation en cours d'envoi.",
+      "invitationQueued": "Invitation en cours d'envoi."
     },
     "fields": {
       "name": "Nom",
@@ -4480,7 +4490,8 @@
     "toolsHr": "Import, export et actions groupées",
     "toolsHrHint": "Liste des salariés (import CSV, export, modifications en masse).",
     "toolsFields": "Champs personnalisés",
-    "toolsFieldsHint": "Régler les champs du profil des membres."
+    "toolsFieldsHint": "Régler les champs du profil des membres.",
+    "invitedNotSent": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Ouvrez la fiche pour la relancer."
   },
   "home": {
     "title": "Accueil",
@@ -6104,7 +6115,8 @@
       "workflowResetCounters": "Réinitialiser les compteurs quotidiens",
       "leaveAccrue": "Acquisition mensuelle des congés",
       "leaveConsumeDue": "Consommation des congés à échéance",
-      "signatureExpire": "Expiration des demandes de signature échues"
+      "signatureExpire": "Expiration des demandes de signature échues",
+      "membersInvitationsExpire": "Expiration des invitations de membres"
     },
     "categories": {
       "documents": "Documents",
@@ -8947,7 +8959,8 @@
       "connected": "Connecté",
       "account_without_membership": "Compte à ré-associer",
       "suspended": "Accès suspendu",
-      "pending_acceptance": "En attente d'acceptation"
+      "pending_acceptance": "En attente d'acceptation",
+      "invitation_expired": "Invitation expirée"
     },
     "card": {
       "title": "Accès & compte",
@@ -9092,6 +9105,80 @@
     "none": "Vous n'avez aucune invitation en attente.",
     "signInFirst": "Connectez-vous avec votre compte pour consulter vos invitations.",
     "signIn": "Se connecter",
-    "backToApp": "Retour à l'application"
+    "backToApp": "Retour à l'application",
+    "expired": "L'invitation de {company} a expiré. Demandez à l'entreprise de vous la renvoyer.",
+    "validUntil": " Valable jusqu'au {date}."
+  },
+  "mySpace": {
+    "title": "Mon espace",
+    "subtitle": "Vos documents, bulletins, signatures et informations personnelles dans cette entreprise.",
+    "loadError": "Impossible de charger ces informations.",
+    "noEmployee": "Aucune fiche salarié n'est rattachée à votre compte dans cette entreprise : planning, pointage et congés ne sont pas proposés.",
+    "tabs": {
+      "overview": "Aperçu",
+      "documents": "Mes documents",
+      "payslips": "Mes bulletins",
+      "signatures": "Mes signatures"
+    },
+    "entries": {
+      "documents": {
+        "title": "Mes documents",
+        "hint": "Documents demandés, déposés, refusés ou à renouveler.",
+        "badge": "{n} à fournir | {n} à fournir"
+      },
+      "payslips": {
+        "title": "Mes bulletins de paie",
+        "hint": "Consultation et téléchargement, par année."
+      },
+      "signatures": {
+        "title": "Mes signatures",
+        "hint": "Documents à signer et documents signés.",
+        "badge": "{n} à signer | {n} à signer"
+      },
+      "activity": {
+        "title": "Mon activité"
+      },
+      "activityParts": {
+        "planning": "Planning",
+        "time": "Pointage",
+        "leave": "Congés",
+        "documents": "Documents RH"
+      },
+      "profile": {
+        "title": "Mon profil",
+        "hint": "Identité, photo et préférences."
+      },
+      "security": {
+        "title": "Sécurité du compte",
+        "hint": "Mot de passe et double authentification."
+      }
+    },
+    "documents": {
+      "emptyTitle": "Aucun document ne vous est demandé",
+      "emptyHint": "Les documents demandés par votre entreprise apparaîtront ici."
+    },
+    "payslips": {
+      "emptyTitle": "Aucun bulletin disponible",
+      "emptyHint": "Vos bulletins apparaîtront ici dès leur publication.",
+      "corrected": "Rectificatif v{n}"
+    },
+    "signatures": {
+      "emptyTitle": "Aucune signature",
+      "emptyHint": "Les documents que vous devez signer apparaîtront ici.",
+      "state": {
+        "to_sign": "À signer",
+        "in_progress": "En cours",
+        "signed": "Signé",
+        "declined": "Refusé",
+        "expired": "Expiré",
+        "cancelled": "Annulé",
+        "failed": "En échec"
+      },
+      "before": "À signer avant le {date}",
+      "actedOn": "Traité le {date}",
+      "sentOn": "Envoyé le {date}",
+      "external": "signature gérée par le prestataire, via l'e-mail reçu",
+      "sign": "Signer"
+    }
   }
 }

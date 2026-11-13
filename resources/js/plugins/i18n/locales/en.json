@@ -181,7 +181,7 @@
       "documentation": "Help Center",
       "documents": "Documents",
       "workflows": "Workflows",
-      "workforce-me": "My Space",
+      "workforce-me": "My work",
       "workforce-employees": "Employees",
       "workforce-time": "Working time",
       "workforce-leave": "Leave & absences",
@@ -194,7 +194,8 @@
       "workforce-settings": "Settings",
       "workforce-contract-templates": "Employment contracts",
       "workforce-signature": "Signatures",
-      "workforce-home": "Home"
+      "workforce-home": "Home",
+      "my-space": "My space"
     }
   },
   "roles": {
@@ -4351,7 +4352,8 @@
     "cards": {
       "leavesPending": "Leave requests pending",
       "docsToProvide": "Documents to provide",
-      "myDeliveries": "My deliveries"
+      "myDeliveries": "My deliveries",
+      "signaturesToSign": "Signatures to complete"
     },
     "empty": {
       "title": "Nothing urgent right now",
@@ -4383,7 +4385,8 @@
       "active": "Account activated",
       "invited": "Invitation pending",
       "suspended": "Access suspended",
-      "none": "No account"
+      "none": "No account",
+      "invitation_expired": "Invitation expired"
     },
     "access": {
       "title": "App access",
@@ -4398,7 +4401,8 @@
         "pending_acceptance": "Invitation sent to an existing account — waiting for acceptance.",
         "active": "Account activated, no sign-in recorded yet.",
         "connected": "The account is active and has already signed in.",
-        "suspended": "Access is suspended; the account and data are kept."
+        "suspended": "Access is suspended; the account and data are kept.",
+        "invitation_expired": "The invitation was not accepted in time. It can be resent or cancelled."
       },
       "grant": "Grant access",
       "resend": "Resend invitation",
@@ -4417,7 +4421,13 @@
       "passwordShared": "This account is also used in another company: a password cannot be imposed from here. The reset link remains available.",
       "suspendTitle": "Suspend access",
       "suspendHint": "The person will no longer be able to sign in to your company. Nothing is deleted; access can be restored at any time.",
-      "suspendReason": "Reason (optional)"
+      "suspendReason": "Reason (optional)",
+      "expiredNotice": "This invitation expired without being accepted: it grants no access and no longer counts towards your member limit. Resend it to give it a new deadline, or cancel it.",
+      "validUntil": " Invitation valid until {date}.",
+      "deliveryFailed": "The invitation is saved, but the e-mail could not be sent. Resend the invitation.",
+      "deliverySent": "Invitation e-mail sent on {date}.",
+      "deliveryQueued": "Invitation e-mail is being sent.",
+      "invitationQueued": "Invitation is being sent."
     },
     "fields": {
       "name": "Name",
@@ -4480,7 +4490,8 @@
     "toolsHr": "Import, export and bulk actions",
     "toolsHrHint": "Employee list (CSV import, export, bulk changes).",
     "toolsFields": "Custom fields",
-    "toolsFieldsHint": "Configure member profile fields."
+    "toolsFieldsHint": "Configure member profile fields.",
+    "invitedNotSent": "The invitation is saved, but the e-mail could not be sent. Open the person's file to resend it."
   },
   "home": {
     "title": "Home",
@@ -6104,7 +6115,8 @@
       "workflowResetCounters": "Reset workflow daily counters",
       "leaveAccrue": "Monthly leave accrual",
       "leaveConsumeDue": "Consume due leaves",
-      "signatureExpire": "Expire overdue signature requests"
+      "signatureExpire": "Expire overdue signature requests",
+      "membersInvitationsExpire": "Member invitations expiry"
     },
     "categories": {
       "documents": "Documents",
@@ -8947,7 +8959,8 @@
       "connected": "Connected",
       "account_without_membership": "Account to re-link",
       "suspended": "Access suspended",
-      "pending_acceptance": "Pending acceptance"
+      "pending_acceptance": "Pending acceptance",
+      "invitation_expired": "Invitation expired"
     },
     "card": {
       "title": "Access & account",
@@ -9092,6 +9105,80 @@
     "none": "You have no pending invitation.",
     "signInFirst": "Sign in with your account to see your invitations.",
     "signIn": "Sign in",
-    "backToApp": "Back to the app"
+    "backToApp": "Back to the app",
+    "expired": "The invitation from {company} has expired. Ask the company to send it again.",
+    "validUntil": " Valid until {date}."
+  },
+  "mySpace": {
+    "title": "My space",
+    "subtitle": "Your documents, payslips, signatures and personal information in this company.",
+    "loadError": "Unable to load this information.",
+    "noEmployee": "No employee record is linked to your account in this company: planning, time clock and leave are not offered.",
+    "tabs": {
+      "overview": "Overview",
+      "documents": "My documents",
+      "payslips": "My payslips",
+      "signatures": "My signatures"
+    },
+    "entries": {
+      "documents": {
+        "title": "My documents",
+        "hint": "Requested, submitted, rejected or expiring documents.",
+        "badge": "{n} to provide | {n} to provide"
+      },
+      "payslips": {
+        "title": "My payslips",
+        "hint": "View and download, by year."
+      },
+      "signatures": {
+        "title": "My signatures",
+        "hint": "Documents to sign and signed documents.",
+        "badge": "{n} to sign | {n} to sign"
+      },
+      "activity": {
+        "title": "My work"
+      },
+      "activityParts": {
+        "planning": "Planning",
+        "time": "Time clock",
+        "leave": "Leave",
+        "documents": "HR documents"
+      },
+      "profile": {
+        "title": "My profile",
+        "hint": "Identity, photo and preferences."
+      },
+      "security": {
+        "title": "Account security",
+        "hint": "Password and two-factor authentication."
+      }
+    },
+    "documents": {
+      "emptyTitle": "No document is requested from you",
+      "emptyHint": "Documents requested by your company will appear here."
+    },
+    "payslips": {
+      "emptyTitle": "No payslip available",
+      "emptyHint": "Your payslips will appear here once published.",
+      "corrected": "Correction v{n}"
+    },
+    "signatures": {
+      "emptyTitle": "No signature",
+      "emptyHint": "Documents you need to sign will appear here.",
+      "state": {
+        "to_sign": "To sign",
+        "in_progress": "In progress",
+        "signed": "Signed",
+        "declined": "Declined",
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "failed": "Failed"
+      },
+      "before": "To sign before {date}",
+      "actedOn": "Handled on {date}",
+      "sentOn": "Sent on {date}",
+      "external": "signature handled by the provider, through the e-mail you received",
+      "sign": "Sign"
+    }
   }
 }

@@ -21,11 +21,19 @@ class Membership extends Model
         'suspension_reason',
         'acceptance_pending_at',
         'invited_by',
+        'invitation_delivery_status',
+        'invitation_sent_at',
+        'invitation_delivery_error',
+        'invitation_expires_at',
+        'invitation_expired_at',
     ];
 
     protected $casts = [
         'suspended_at' => 'datetime',
         'acceptance_pending_at' => 'datetime',
+        'invitation_sent_at' => 'datetime',
+        'invitation_expires_at' => 'datetime',
+        'invitation_expired_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

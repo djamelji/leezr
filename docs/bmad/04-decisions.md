@@ -27579,3 +27579,75 @@ Quatre opérations restent **conceptuellement distinctes** : terminer l'emploi (
 **Verdict** : **🟢 GO DEV — LOT 3 possible.** NO-GO PROD inchangé (ADR-765, ADR-767).
 
 **Règles** : DEV uniquement, aucun push, une migration additive, aucune interface historique supprimée, Billing et paie intacts, LOT 3 et LOT 4 non démarrés.
+
+---
+
+## ADR-769 — M7 (LOT 3) : self-service unifié (Mon espace, documents, bulletins, signatures) et stabilisation des invitations
+
+**Date** : 2026-11-13
+**Contexte** : après ADR-768 (`ed58cf2b`), le self-service était éclaté et dépendait de conditions sans rapport avec la personne : « Mon espace » n'existait qu'avec Workforce ; « Mes documents » n'apparaissait dans les paramètres du compte que si un document était demandé, et « Mes bulletins » y était imbriqué (donc invisible sans document demandé) ; « Mes signatures » n'avait aucune surface (lien reçu par e-mail uniquement) ; l'accueil conditionnait MES documents à `documents.view` et pointait vers le profil de l'entreprise ; le widget de pointage appelait `/workforce/me` dans toute entreprise.
+
+### Matrice de consolidation (avant → après)
+
+| Capacité | Avant (route · condition) | Défaut constaté | Après |
+|---|---|---|---|
+| Accueil personnel | `/home` · modules + `documents.view` | carte documents gated par une permission de gestion, lien vers `/company/profile/documents` (profil ENTREPRISE) | `/home` piloté par `/profile/space` ; cartes documents et signatures vers Mon espace |
+| Mon espace | `/company/workforce/me` · module Workforce | inexistant sans Workforce | `/company/my-space/:tab` (Core) : aperçu, documents, bulletins, signatures |
+| Mes documents + demandes | `/account-settings/documents` · onglet masqué sans document | une pièce déposée sur la fiche salarié AVANT le compte disparaissait après rattachement ; un nouveau dépôt créait un doublon | onglet de Mon espace ; continuité `PersonDocumentContinuity` ; ancien lien redirigé |
+| Mes bulletins | bloc dans l'onglet Documents | invisible sans document demandé ; bulletins publiés sur la fiche avant le compte perdus après rattachement (fiche RH comprise) | onglet dédié, par année ; série complète de la personne quel que soit le sujet |
+| Mes signatures | aucune (e-mail) | pas de liste, pas d'état, pas de document signé | onglet dédié (`/workforce/signature/me`) |
+| Mon emploi, planning, temps, congés | `/company/workforce/me` | — | inchangé (libellé de nav « Mon activité »), atteint depuis Mon espace |
+| Profil, sécurité, préférences | `/account-settings/:tab` | — | inchangé (seul lieu de ces formulaires) |
+| Mes invitations | bandeau global + `/invitations` | échec SMTP = 500, pas d'expiration, quota ambigu | voir « Invitations » |
+| Pointage (navbar, accueil, dashboard) | appel `/workforce/me` systématique | 403 dans une entreprise sans Workforce, 404 sans fiche | aucun appel sans capacité annoncée |
+
+### Décisions
+
+1. **Le self-service est une relation de PROPRIÉTÉ, jamais une permission.** `PersonalSpaceReadModel` (`GET /profile/space`) dit ce que la personne connectée peut utiliser pour elle-même dans l'entreprise courante : capacités (modules actifs + fiche salarié EXPLICITEMENT liée et active) et compteurs. Un propriétaire ou un administrateur y obtient exactement ce qu'obtient un membre ordinaire. Aucune fiche salarié n'est créée ni devinée.
+2. **Une seule réponse serveur pilote le client** : navigation personnelle, accueil et pointage consultent `usePersonalSpaceStore` ; aucune API Workforce n'est appelée sans capacité (`time_clock`, `planning`, `leave`). Une rubrique indisponible n'est pas rendue, même par URL directe.
+3. **Trois responsabilités distinctes** : `/home` (quoi faire maintenant), Mon espace (mes documents, bulletins, signatures + accès à mon activité et à mon compte), `/account-settings` (identité, sécurité, préférences). Aucun formulaire dupliqué : `AccountSettingsDocuments` est réutilisé tel quel ; le bloc bulletins en est extrait (`MyPayslips`).
+4. **Navigation** : entrée Core `my-space` (groupe Compte, sans permission ni rôle) ; l'entrée Workforce `workforce-me` est conservée (mêmes clés, mêmes tests) et relibellée « Mon activité ».
+5. **Mes signatures** (`MySignatureReadModel`, `MySignatureController`) : lignes signataire qui désignent le compte ou la fiche liée ; état personnel dérivé des états réels du moteur (à signer, en cours, signé, refusé, expiré, annulé, en échec). Actions réellement supportées : ouvrir la cérémonie EXISTANTE (`OpenMySignatureUseCase` émet un lien à usage unique vers `/sign/{token}` pour SA propre ligne, comme une relance — rien n'est signé par cet écran ; consentement, refus et preuve restent dans le moteur) et télécharger le document signé. Une demande portée par un prestataire distant (`SealsDocumentRemotely`) est affichée sans aucune action : le prestataire externe M6 reste NO-GO PROD.
+6. **Bulletins** : le self-service et la fiche RH listent la série de la PERSONNE sur tous ses sujets (`employee:{id}` et `user:{id}`). `documents.view` n'intervient jamais.
+7. **Continuité documentaire** (`PersonDocumentContinuity::adopt`) : quand un compte est lié à une fiche, les pièces et demandes de la fiche sont re-rattachées au compte — même ligne, même fichier, mêmes versions, rien de copié ni supprimé ; un type déjà détenu par le compte n'est pas écrasé. Appelé au rattachement explicite et, par sécurité, à l'entrée des chemins self-service (un simple test d'existence dans le cas normal).
+8. **Multi-entreprise** : le sélecteur recharge la page ; pour un changement reçu d'un autre onglet (diffusion sans rechargement), le runtime purge puis recharge les états personnels enregistrés (`tenantScoped` : pointage, accueil, Mon espace).
+
+### Invitations (stabilisation ADR-768)
+
+- **Envoi** : l'e-mail part après le commit par `SendMembershipInvitationJob` (3 tentatives). État persisté `queued` / `sent` / `failed` avec horodatage et dernier message ; échec loggé et audité ; la réponse et l'interface disent « invitation créée, e-mail non envoyé — relancer ». Plus de 500 sur panne SMTP, jamais de fausse confirmation. Couvre compte existant, nouveau compte et accès Workforce.
+- **Expiration** : `config('members.invitation_ttl_days')` (`MEMBERS_INVITATION_TTL_DAYS`, 14 jours). Une invitation expirée n'est plus proposée ni acceptable (410 `invitation_expired`), s'affiche « expirée », peut être relancée (nouvelle échéance) ou annulée. Commande horaire `members:invitations-expire` (audit seul, rien n'est supprimé). Les nouveaux comptes restent sur la durée du lien de mot de passe.
+- **Quotas** : autorité unique `MemberQuota`. En attente et acceptée occupent une place ; refusée, annulée et expirée la libèrent. Appliquée à l'invitation Members, à l'accès Workforce et à la relance.
+- **Comptes existants** : acceptation explicite conservée, aucune activation silencieuse.
+- Migration additive `2026_11_19_000001_m7_membership_invitation_delivery`.
+
+### Matrice RBAC du self-service
+
+| Capacité | Condition | Permission consultée |
+|---|---|---|
+| Profil, sécurité, invitations | membre de l'entreprise (invitations : compte authentifié) | aucune |
+| Mes documents, mes demandes | module `core.documents` | aucune (propriété du sujet) |
+| Mes bulletins | module `core.documents` | aucune — jamais `documents.view` |
+| Mes signatures | module `workforce_signature` + ligne signataire à moi | aucune — `workforce_signature.*` ne donne rien de plus ici |
+| Mon emploi, pointage | module `workforce` + fiche salarié liée et active | aucune |
+| Planning / congés | + module `workforce_planning` / `workforce_leave` | aucune |
+| Documents, bulletins, signatures d'AUTRUI | fiche Collaborateur (ADR-768) | autorités inchangées (`DocumentAccessPolicy`, `workforce_signature.view`) |
+
+### Tests
+
+- `M7Lot3SelfServiceTest` (11) : entreprise sans Workforce, navigation par modules, administrateur aussi salarié, compte sans fiche (aucune fiche créée), salarié sorti, bulletins antérieurs au compte (échouait avant correction), versions / retrait / `documents.view`, documents antérieurs au compte sans doublon (échouait avant correction), signatures (7 états, actions supportées, prestataire distant), changement d'entreprise, compteurs par entreprise.
+- `M7Lot3InvitationStabilizationTest` (8) : SMTP indisponible, envoi normal, expiration, relance, quotas, chemin Workforce, isolation.
+- E2E `tests/e2e/m7-lot3-self-service.spec.js` (4), avec enregistrement de toutes les réponses API : entreprise sans Workforce (aucun appel Workforce, aucun 4xx/5xx), administrateur aussi salarié, signature créée par le moteur réel puis ouverte depuis Mes signatures, captures. Captures : `tests/e2e/__screens__/m7-lot3/`.
+
+### Défauts résiduels
+
+1. Une demande documentaire de la fiche n'est pas adoptée si le compte en possède déjà une du même type (pas de fusion d'historique) ; la vue administrateur continue de les fusionner à la lecture.
+2. Les bulletins publiés ne sont pas re-rattachés (enregistrements immuables) : la série est reconstituée à la lecture sur tous les sujets.
+3. « Mon activité » (`/company/workforce/me`) reste une page de 1 000 lignes non découpée ; contrats personnels et documents RH y vivent.
+4. Le rapporteur d'erreurs frontend (`/api/runtime-error`, sendBeacon) répond 419 faute de jeton CSRF — antérieur au lot.
+5. Invitations : lien d'un nouveau compte valable 60 minutes ; un compte jamais activé garde sa place jusqu'à son retrait ; ré-inviter l'e-mail d'une invitation expirée répond « déjà membre » (passer par la relance) ; les invitations LOT 2 déjà en attente n'ont pas d'échéance (pas de backfill) ; en file asynchrone l'état reste `queued` jusqu'au passage du worker.
+6. Les invitations en attente ne sont pas rappelées dans `/account-settings` (bandeau global et page `/invitations` uniquement).
+7. Les 3 échecs historiques de `ControllerSizeInvariantTest` restent suivis séparément.
+
+**Verdict** : **🟢 GO DEV — LOT 4 possible.** NO-GO PROD inchangé (signature externe, OCR, outillage VPS ; worker de queue requis pour l'envoi des invitations).
+
+**Règles** : DEV uniquement, aucun push, une migration additive, Billing et calcul de paie intacts, LOT 4 non démarré.

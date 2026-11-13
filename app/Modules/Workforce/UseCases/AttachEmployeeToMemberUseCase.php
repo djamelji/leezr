@@ -61,6 +61,7 @@ class AttachEmployeeToMemberUseCase
 
         $employee->user_id = $user->id;
         $employee->save();
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $user); // ADR-769 : les pièces de la fiche suivent la personne
         $this->log($company, $employee, $actor, 'employee.account_linked');
 
         return $employee;

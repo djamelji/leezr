@@ -53,7 +53,14 @@ async function answer(inv, action) {
       emit('declined', inv)
     }
   }
-  catch (e) { toast(e?.data?.message || t('invitations.error'), 'error') }
+  catch (e) {
+    // M7 LOT 3 : invitation expirée entre l'affichage et le clic → message clair, liste rafraîchie.
+    if ((e?.status ?? e?.response?.status) === 410 || e?.data?.code === 'invitation_expired') {
+      toast(t('invitations.expired', { company: inv.company?.name }), 'warning')
+      await load()
+    }
+    else { toast(e?.data?.message || t('invitations.error'), 'error') }
+  }
   finally { busyId.value = null }
 }
 
@@ -124,6 +131,7 @@ onMounted(load)
           </div>
           <div class="text-caption text-medium-emphasis">
             {{ t('invitations.noAccessUntilAccepted') }}
+            <span v-if="inv.expires_at">{{ t('invitations.validUntil', { date: new Date(inv.expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }) }}</span>
           </div>
         </div>
         <div class="d-flex gap-2">

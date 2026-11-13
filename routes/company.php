@@ -267,6 +267,8 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
         ->whereNumber('id')->middleware('company.access:use-permission,members.invite');
 
     // User profile (personal data, no additional permission needed)
+    // ADR-769 (M7 LOT 3) — « Mon espace » : capacités personnelles réelles (pilote la navigation self-service).
+    Route::get('/profile/space', [\App\Modules\Core\Members\Http\PersonalSpaceController::class, 'show']);
     Route::get('/profile', [UserProfileController::class, 'show']);
     Route::put('/profile', [UserProfileController::class, 'update']);
     Route::put('/profile/password', [UserProfileController::class, 'updatePassword']);
@@ -866,6 +868,12 @@ Route::prefix('workforce/signature')->middleware('company.access:use-module,work
     $perm = fn (string $key) => 'company.access:use-permission,'.$key;
     $s = \App\Modules\Workforce\Signature\Http\SignatureController::class;
     // Routes littérales AVANT {id} pour éviter la capture.
+    // ADR-769 (M7 LOT 3) — « Mes signatures » : self-service par PROPRIÉTÉ de la ligne signataire (aucune
+    // permission de gestion consultée ; un administrateur n'y voit que ses propres signatures).
+    $me = \App\Modules\Workforce\Signature\Http\MySignatureController::class;
+    Route::get('me', [$me, 'index']);
+    Route::post('me/{id}/open', [$me, 'open'])->whereNumber('id')->middleware('throttle:20,1');
+    Route::get('me/{id}/download', [$me, 'download'])->whereNumber('id');
     Route::get('options', [$s, 'options'])->middleware($perm('workforce_signature.view'));
     Route::get('eligible-documents', [$s, 'eligibleDocuments'])->middleware($perm('workforce_signature.request'));
     Route::get('by-employee/{employeeId}', [$s, 'byEmployee'])->whereNumber('employeeId')->middleware($perm('workforce_signature.view'));

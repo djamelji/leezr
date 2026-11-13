@@ -8,8 +8,13 @@ use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Workforce\Employee;
+use App\Jobs\Members\SendMembershipInvitationJob;
 use App\Notifications\Members\CompanyInvitationNotification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -22,12 +27,26 @@ use Illuminate\Validation\ValidationException;
  * already keeps it out. Only the recipient — authenticated as that very account — activates it.
  * An account created BY the invitation keeps the historical flow (setting its password is the
  * explicit acceptance).
+ *
+ * M7 LOT 3 — this class is also the single authority for the DELIVERY of the invitation e-mail
+ * (queued job, persisted `queued` / `sent` / `failed` state, retry, audit — a mail outage is never
+ * an HTTP 500 nor a false confirmation) and for its EXPIRY (`members.invitation_ttl_days`).
  */
 class MembershipInvitation
 {
     public const REASON = 'pending_acceptance';
 
-    /** Marks a freshly created membership of a pre-existing account as pending and notifies its owner. */
+    public const DELIVERY_QUEUED = 'queued';
+    public const DELIVERY_SENT = 'sent';
+    public const DELIVERY_FAILED = 'failed';
+
+    public const KIND_ACCEPTANCE = 'acceptance';
+    public const KIND_ACCOUNT_SETUP = 'account_setup';
+
+    /**
+     * Marks a freshly created membership of a pre-existing account as pending, with its deadline.
+     * The e-mail is NOT sent here : the caller invokes `deliver()` once its own writes are committed.
+     */
     public static function requireAcceptance(Company $company, Membership $membership, ?User $actor): Membership
     {
         $membership->forceFill([
@@ -36,9 +55,9 @@ class MembershipInvitation
             'suspended_at' => now(),
             'suspended_by' => $actor?->id,
             'suspension_reason' => self::REASON,
+            'invitation_expires_at' => now()->addDays(self::ttlDays()),
+            'invitation_expired_at' => null,
         ])->save();
-
-        self::notify($company, $membership, $actor);
 
         app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_INVITATION_SENT, 'membership', (string) $membership->id, [
             'actorId' => $actor?->id, 'actorType' => 'user',
@@ -48,13 +67,187 @@ class MembershipInvitation
         return $membership;
     }
 
-    /** Re-sends the invitation e-mail of a pending membership. */
-    public static function resend(Company $company, Membership $membership, ?User $actor): void
+    /**
+     * Re-sends the invitation of a membership (pending acceptance, or account that never defined its
+     * password). A pending acceptance gets a NEW deadline ; renewing an EXPIRED one takes a seat
+     * again, so the quota is checked first. Returns the delivery summary (never a false « sent »).
+     *
+     * @throws ValidationException (422) nothing to re-send / member limit reached
+     */
+    public static function resend(Company $company, Membership $membership, ?User $actor): array
     {
-        if (! $membership->isPendingAcceptance()) {
+        if ($membership->isPendingAcceptance()) {
+            $wasExpired = self::isExpired($membership);
+            if ($wasExpired) {
+                MemberQuota::assertSeatAvailable($company);
+            }
+            $membership->forceFill(['invitation_expires_at' => now()->addDays(self::ttlDays()), 'invitation_expired_at' => null])->save();
+            if ($wasExpired) {
+                app(AuditLogger::class)->logCompany($company->id, AuditAction::MEMBER_INVITATION_RENEWED, 'membership', (string) $membership->id, [
+                    'actorId' => $actor?->id, 'actorType' => 'user', 'metadata' => ['user_id' => $membership->user_id],
+                ]);
+            }
+        }
+
+        return self::deliver($company, $membership, $actor);
+    }
+
+    // ── Delivery (M7 LOT 3) ─────────────────────────────────────────────────
+
+    /** Validity, in days, of an invitation awaiting acceptance (config `members.invitation_ttl_days`). */
+    public static function ttlDays(): int
+    {
+        return max(1, (int) config('members.invitation_ttl_days', 14));
+    }
+
+    /** `acceptance` (pre-existing account) | `account_setup` (account created by the invitation) | null. */
+    public static function kind(Membership $membership): ?string
+    {
+        if ($membership->isPendingAcceptance()) {
+            return self::KIND_ACCEPTANCE;
+        }
+        $user = $membership->user ?? User::find($membership->user_id);
+
+        return $user && ! $user->password_set_at ? self::KIND_ACCOUNT_SETUP : null;
+    }
+
+    /**
+     * Hands the invitation e-mail to the queue and returns the delivery summary. The state is
+     * `queued` until a worker sends it ; on the `sync` connection the outcome (`sent` / `failed`) is
+     * already known when this returns. A transport failure is recorded — never thrown to the caller.
+     *
+     * @throws ValidationException (422) when the membership has no invitation to send
+     */
+    public static function deliver(Company $company, Membership $membership, ?User $actor): array
+    {
+        if (self::kind($membership) === null) {
             throw ValidationException::withMessages(['access' => 'Aucune invitation en attente pour ce compte.']);
         }
-        self::notify($company, $membership, $actor);
+
+        $membership->forceFill(['invitation_delivery_status' => self::DELIVERY_QUEUED, 'invitation_delivery_error' => null])->save();
+
+        try {
+            SendMembershipInvitationJob::dispatch($company->id, $membership->id, $actor?->id);
+        } catch (\Throwable $e) {
+            // The queue itself is unreachable : the invitation exists, its e-mail is not on its way.
+            self::recordFailure($membership, $actor?->id, $e);
+        }
+
+        return self::summary($membership->refresh());
+    }
+
+    /**
+     * Sends the e-mail NOW (called by the job) and records the outcome on the membership.
+     * Returns null on success, the short error on failure.
+     */
+    public static function sendNow(Membership $membership, ?int $actorId): ?string
+    {
+        $recipient = $membership->user ?? User::find($membership->user_id);
+        $kind = self::kind($membership);
+        if (! $recipient || $kind === null) {
+            return null; // accepted / activated meanwhile : nothing to send
+        }
+
+        try {
+            if ($kind === self::KIND_ACCEPTANCE) {
+                $actor = $actorId ? User::find($actorId) : null;
+                Notification::sendNow($recipient, new CompanyInvitationNotification(
+                    companyName: (string) ($membership->company?->name ?? ''),
+                    inviterName: $actor ? (trim($actor->first_name.' '.$actor->last_name) ?: null) : null,
+                    url: url('/invitations'),
+                ));
+            } else {
+                $recipient->sendPasswordResetNotification(Password::broker('users')->createToken($recipient));
+            }
+        } catch (\Throwable $e) {
+            return self::recordFailure($membership, $actorId, $e);
+        }
+
+        $membership->forceFill(['invitation_delivery_status' => self::DELIVERY_SENT, 'invitation_sent_at' => now(), 'invitation_delivery_error' => null])->save();
+        app(AuditLogger::class)->logCompany($membership->company_id, AuditAction::MEMBER_INVITATION_DELIVERED, 'membership', (string) $membership->id, [
+            'actorId' => $actorId, 'actorType' => $actorId ? 'user' : 'system', 'metadata' => ['user_id' => $membership->user_id, 'kind' => $kind],
+        ]);
+
+        return null;
+    }
+
+    private static function recordFailure(Membership $membership, ?int $actorId, \Throwable $e): string
+    {
+        $error = Str::limit(trim(preg_replace('/\s+/', ' ', $e->getMessage())) ?: class_basename($e), 250, '…');
+        $membership->forceFill(['invitation_delivery_status' => self::DELIVERY_FAILED, 'invitation_delivery_error' => $error])->save();
+
+        Log::warning('[members.invitation] e-mail delivery failed', [
+            'company_id' => $membership->company_id, 'membership_id' => $membership->id, 'user_id' => $membership->user_id, 'error' => $error,
+        ]);
+        app(AuditLogger::class)->logCompany($membership->company_id, AuditAction::MEMBER_INVITATION_DELIVERY_FAILED, 'membership', (string) $membership->id, [
+            'actorId' => $actorId, 'actorType' => $actorId ? 'user' : 'system', 'severity' => 'warning',
+            'metadata' => ['user_id' => $membership->user_id, 'error' => $error],
+        ]);
+
+        return $error;
+    }
+
+    /**
+     * What an administrator may know about the invitation of a membership (null when the access is
+     * already active : nothing pending). Shape shared by every API that exposes it.
+     *
+     * @return array{kind: string, delivery: ?string, sent_at: ?string, error: ?string, expires_at: ?string, expired: bool}|null
+     */
+    public static function summary(?Membership $membership): ?array
+    {
+        if (! $membership || ($kind = self::kind($membership)) === null) {
+            return null;
+        }
+
+        return [
+            'kind' => $kind,
+            'delivery' => $membership->invitation_delivery_status,
+            'sent_at' => $membership->invitation_sent_at?->toIso8601String(),
+            'error' => $membership->invitation_delivery_status === self::DELIVERY_FAILED ? $membership->invitation_delivery_error : null,
+            'expires_at' => $kind === self::KIND_ACCEPTANCE ? $membership->invitation_expires_at?->toIso8601String() : null,
+            'expired' => self::isExpired($membership),
+        ];
+    }
+
+    // ── Expiry (M7 LOT 3) ───────────────────────────────────────────────────
+
+    /** A pending acceptance whose deadline has passed : can no longer be accepted, frees its seat. */
+    public static function isExpired(Membership $membership): bool
+    {
+        return $membership->isPendingAcceptance()
+            && $membership->invitation_expires_at !== null
+            && $membership->invitation_expires_at->isPast();
+    }
+
+    /** Is it an EXPIRED invitation of this very user ? (clear 410 instead of an anonymous 404) */
+    public static function isOwnExpired(User $user, int $membershipId): bool
+    {
+        $membership = self::ownPending($user, $membershipId);
+
+        return $membership !== null && self::isExpired($membership);
+    }
+
+    /**
+     * Writes the audit event of every expired invitation not traced yet (scheduled task). Cross-
+     * tenant system read ; each event carries the membership's own company. Idempotent.
+     */
+    public static function traceExpired(): int
+    {
+        $due = Membership::withoutGlobalScopes()
+            ->whereNotNull('acceptance_pending_at')
+            ->whereNotNull('invitation_expires_at')->where('invitation_expires_at', '<', now())
+            ->whereNull('invitation_expired_at')
+            ->get();
+
+        foreach ($due as $membership) {
+            $membership->forceFill(['invitation_expired_at' => now()])->save();
+            app(AuditLogger::class)->logCompany($membership->company_id, AuditAction::MEMBER_INVITATION_EXPIRED, 'membership', (string) $membership->id, [
+                'actorType' => 'system', 'severity' => 'notice',
+                'metadata' => ['user_id' => $membership->user_id, 'invited_by' => $membership->invited_by, 'expired_at' => $membership->invitation_expires_at?->toIso8601String()],
+            ]);
+        }
+
+        return $due->count();
     }
 
     /**
@@ -76,6 +269,7 @@ class MembershipInvitation
         return Membership::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->whereNotNull('acceptance_pending_at')
+            ->where(fn ($q) => $q->whereNull('invitation_expires_at')->orWhere('invitation_expires_at', '>', now())) // expired : no longer acceptable
             ->with(['company:id,name', 'companyRole:id,name'])
             ->orderBy('acceptance_pending_at')
             ->get();
@@ -85,12 +279,14 @@ class MembershipInvitation
     public static function accept(User $user, int $membershipId): ?Membership
     {
         $membership = self::ownPending($user, $membershipId);
-        if (! $membership) {
-            return null;
+        if (! $membership || self::isExpired($membership)) {
+            return null; // an expired invitation is never activated (the caller answers 410)
         }
 
         $membership->forceFill([
             'acceptance_pending_at' => null,
+            'invitation_expires_at' => null,
+            'invitation_expired_at' => null,
             'suspended_at' => null,
             'suspended_by' => null,
             'suspension_reason' => null,
@@ -133,15 +329,5 @@ class MembershipInvitation
             ->whereNotNull('acceptance_pending_at')
             ->where('id', $membershipId)
             ->first();
-    }
-
-    private static function notify(Company $company, Membership $membership, ?User $actor): void
-    {
-        $recipient = $membership->user ?? User::find($membership->user_id);
-        $recipient?->notify(new CompanyInvitationNotification(
-            companyName: (string) $company->name,
-            inviterName: $actor ? (trim($actor->first_name.' '.$actor->last_name) ?: null) : null,
-            url: url('/invitations'),
-        ));
     }
 }

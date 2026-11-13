@@ -6,13 +6,13 @@ use App\Company\Fields\ReadModels\CompanyUserProfileReadModel;
 use App\Company\RBAC\CompanyRole;
 use App\Company\RBAC\MembershipSecurityPolicy;
 use App\Company\Security\GlobalIdentityPolicy;
+use App\Company\Security\MemberQuota;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
 use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
-use App\Core\Billing\CompanyEntitlements;
 use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Core\Security\SecurityDetector;
 use App\Modules\Core\Members\Http\Requests\StoreMemberRequest;
@@ -82,13 +82,9 @@ class MembershipController extends Controller
     {
         $company = $request->attributes->get('company');
 
-        $limit = CompanyEntitlements::memberLimit($company);
-        if ($limit !== null && $company->memberships()->count() >= $limit) {
-            return response()->json([
-                'message' => __('Member limit reached.'),
-                'current' => $company->memberships()->count(),
-                'limit' => $limit,
-            ], 422);
+        // M7 LOT 3 : règle de quota UNIQUE (MemberQuota) — les invitations en attente comptent, les expirées non.
+        if (MemberQuota::isFull($company)) {
+            return response()->json(['message' => __('Member limit reached.'), 'current' => MemberQuota::used($company), 'limit' => MemberQuota::limit($company)], 422);
         }
 
         // ADR-767 : l'attribution du rôle passe par l'autorité serveur UNIQUE (anti-escalade,
@@ -119,6 +115,8 @@ class MembershipController extends Controller
             ],
             // ADR-768 : compte pré-existant → invitation EN ATTENTE d'acceptation (aucun accès encore).
             'pending_acceptance' => $membership->isPendingAcceptance(),
+            // M7 LOT 3 : état RÉEL de l'envoi de l'e-mail (queued | sent | failed) — jamais de fausse confirmation.
+            'invitation' => \App\Company\Security\MembershipInvitation::summary($membership),
         ], 201);
     }
 

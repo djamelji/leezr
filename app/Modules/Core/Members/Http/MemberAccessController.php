@@ -31,9 +31,13 @@ class MemberAccessController
 
     public function resendInvitation(Request $request, int $id): JsonResponse
     {
-        $this->lifecycle->resendInvitation($request->attributes->get('company'), $this->membership($request, $id), $request->user());
+        $summary = $this->lifecycle->resendInvitation($request->attributes->get('company'), $this->membership($request, $id), $request->user());
 
-        return response()->json(['message' => 'Invitation sent.']);
+        // M7 LOT 3 : la réponse dit ce qui s'est RÉELLEMENT passé (queued | sent | failed).
+        return response()->json([
+            'message' => ($summary['delivery'] ?? null) === 'failed' ? 'Invitation kept, but the e-mail could not be sent.' : 'Invitation sent.',
+            'invitation' => $summary,
+        ]);
     }
 
     private function membership(Request $request, int $id): Membership

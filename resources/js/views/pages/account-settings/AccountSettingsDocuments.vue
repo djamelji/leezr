@@ -25,27 +25,8 @@ const downloadingCode = ref(null)
 const isViewerOpen = ref(false)
 const viewerDocument = ref(null)
 
-// ADR-763 (M5.1) — Mes bulletins (self-service : chaque salarié ne voit QUE les siens).
-const payslips = ref([])
-
-const fetchPayslips = async () => {
-  try { payslips.value = (await $api('/profile/payslips')).payslips || [] }
-  catch { payslips.value = [] }
-}
-
-const downloadPayslip = async p => {
-  try {
-    const blob = await $api(`/profile/payslips/${p.id}/download`, { responseType: 'blob' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-
-    a.href = url; a.download = `bulletin-${p.period}.pdf`; a.click()
-    URL.revokeObjectURL(url)
-  }
-  catch { toast(t('common.error'), 'error') }
-}
-
-onMounted(fetchPayslips)
+// ADR-769 (M7 LOT 3) : « Mes bulletins » vit dans son propre onglet de Mon espace (MyPayslips.vue) —
+// il n'est plus conditionné à l'existence de documents demandés.
 
 // ─── Upload confirmation dialog (ADR-406 S4) ────────────
 const isUploadDialogOpen = ref(false)
@@ -159,61 +140,6 @@ const handleViewerDownload = () => {
 
 <template>
   <VRow>
-    <!-- ADR-763 (M5.1) : Mes bulletins de paie -->
-    <VCol
-      v-if="payslips.length"
-      cols="12"
-    >
-      <VCard :title="t('documents.payslip.myPayslips')">
-        <VCardText>
-          <VTable density="compact">
-            <thead>
-              <tr>
-                <th>{{ t('documents.payslip.period') }}</th>
-                <th>{{ t('documents.payslip.source') }}</th>
-                <th>{{ t('documents.payslip.statusCol') }}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="p in payslips"
-                :key="p.id"
-              >
-                <td class="font-weight-medium">
-                  {{ p.period }}
-                  <VChip
-                    v-if="p.version_no > 1"
-                    size="x-small"
-                    class="ms-2"
-                  >
-                    v{{ p.version_no }}
-                  </VChip>
-                </td>
-                <td>{{ p.source === 'external_import' ? t('documents.payslip.external') : t('documents.payslip.generated') }}</td>
-                <td>
-                  <VChip
-                    size="x-small"
-                    :color="p.status === 'revoked' ? 'error' : 'success'"
-                  >
-                    {{ p.status === 'revoked' ? t('documents.payslip.revoked') : t('documents.payslip.available') }}
-                  </VChip>
-                </td>
-                <td class="text-end">
-                  <VBtn
-                    v-if="p.can_download"
-                    size="small"
-                    variant="text"
-                    icon="tabler-download"
-                    @click="downloadPayslip(p)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </VTable>
-        </VCardText>
-      </VCard>
-    </VCol>
     <VCol cols="12">
       <VCard :title="t('documents.myDocuments')">
         <VCardText class="pt-0">

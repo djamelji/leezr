@@ -58,7 +58,31 @@ const run = async (key, fn, successKey, after = 'changed') => {
 
 const saveRole = () => run('role', () => store.changeRole(selectedRole.value), 'people.access.roleUpdated')
 const restore = () => run('restore', () => store.restoreAccess(), 'people.access.restored')
-const resend = () => run('resend', () => store.resendInvitation(), 'people.access.invitationResent')
+
+// M7 LOT 3 — état RÉEL de l'invitation (envoi de l'e-mail, échéance), fourni par le serveur.
+const invitation = computed(() => account.value.invitation || null)
+const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '')
+const fmtDateTime = iso => (iso ? new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
+
+// Relance : le serveur renvoie l'issue réelle de l'envoi — jamais de « envoyé » si l'e-mail a échoué.
+const resend = async () => {
+  if (busy.value) return
+  busy.value = 'resend'
+  try {
+    const res = await store.resendInvitation()
+    const delivery = res?.invitation?.delivery
+
+    if (delivery === 'failed') toast(t('people.access.deliveryFailed'), 'warning')
+    else toast(t(delivery === 'queued' ? 'people.access.invitationQueued' : 'people.access.invitationResent'), 'success')
+    emit('changed')
+  }
+  catch (e) {
+    const errors = e?.data?.errors
+
+    toast((errors ? Object.values(errors)[0]?.[0] : null) || e?.data?.message || t('common.error'), 'error')
+  }
+  finally { busy.value = null }
+}
 
 const suspendDialog = ref(false)
 const suspendReason = ref('')
@@ -132,7 +156,7 @@ const savePassword = async () => {
           {{ t('people.access.grant') }}
         </VBtn>
         <VBtn
-          v-if="hasMembership && can.invite && ['invited', 'pending_acceptance'].includes(account.state)"
+          v-if="hasMembership && can.invite && ['invited', 'pending_acceptance', 'invitation_expired'].includes(account.state)"
           variant="tonal"
           prepend-icon="tabler-mail-forward"
           :loading="busy === 'resend'"
@@ -172,7 +196,7 @@ const savePassword = async () => {
           data-test="person-remove"
           @click="remove"
         >
-          {{ account.state === 'pending_acceptance' ? t('people.access.cancelInvitation') : t('people.access.remove') }}
+          {{ ['pending_acceptance', 'invitation_expired'].includes(account.state) ? t('people.access.cancelInvitation') : t('people.access.remove') }}
         </VBtn>
       </div>
     </div>
@@ -185,7 +209,42 @@ const savePassword = async () => {
       class="mb-4"
     >
       {{ t('people.access.pendingNotice') }}
+      <span v-if="invitation?.expires_at">{{ t('people.access.validUntil', { date: fmtDate(invitation.expires_at) }) }}</span>
     </VAlert>
+    <VAlert
+      v-else-if="account.state === 'invitation_expired'"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      data-test="person-invitation-expired"
+    >
+      {{ t('people.access.expiredNotice') }}
+    </VAlert>
+
+    <!-- M7 LOT 3 : état RÉEL de l'envoi de l'e-mail d'invitation -->
+    <VAlert
+      v-if="invitation?.delivery === 'failed'"
+      type="error"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      data-test="person-invitation-delivery-failed"
+    >
+      {{ t('people.access.deliveryFailed') }}
+    </VAlert>
+    <div
+      v-else-if="invitation?.delivery"
+      class="text-body-2 text-medium-emphasis mb-4"
+      data-test="person-invitation-delivery"
+    >
+      <VIcon
+        :icon="invitation.delivery === 'sent' ? 'tabler-mail-check' : 'tabler-mail-fast'"
+        size="16"
+        class="me-1"
+      />
+      {{ invitation.delivery === 'sent' ? t('people.access.deliverySent', { date: fmtDateTime(invitation.sent_at) }) : t('people.access.deliveryQueued') }}
+    </div>
 
     <!-- ═══ Rôle (MembershipSecurityPolicy côté serveur) ═══ -->
     <template v-if="hasMembership">

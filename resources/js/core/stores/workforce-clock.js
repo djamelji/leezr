@@ -7,6 +7,8 @@
  */
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
+import { registerTenantScoped } from '@/core/runtime/tenantScoped'
 
 export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   // State
@@ -152,6 +154,18 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
 
   // Actions
   async function fetchProfile() {
+    // ADR-769 : le pointage n'existe que si le serveur l'annonce (module Workforce actif ET fiche
+    // salarié explicitement liée). Sinon AUCUN appel à /workforce/me — plus de 403 parasite dans une
+    // entreprise sans Workforce, ni de 404 pour un compte sans fiche.
+    const space = usePersonalSpaceStore()
+
+    await space.load()
+    if (!space.can('time_clock')) {
+      reset()
+
+      return
+    }
+
     loading.value = true
     error.value = null
     try {
@@ -260,6 +274,8 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     loading.value = false
     error.value = null
   }
+
+  registerTenantScoped('workforce-clock', { reset, reload: fetchProfile })
 
   return {
     // State

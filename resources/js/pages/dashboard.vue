@@ -32,7 +32,7 @@ const showPriorities = computed(() => canModule('workforce') && can('workforce.v
 // jamais un rôle codé en dur. Le store clock est déjà alimenté par le widget navbar.
 const clock = useWorkforceClockStore()
 const isEmployee = computed(() => !!clock.employee)
-const showMySpace = computed(() => canModule('workforce') && isEmployee.value)
+const showMySpace = computed(() => isEmployee.value) // ADR-769 : `clock.employee` n'existe que si le serveur annonce la capacité
 
 const canEdit = computed(() => auth.isAdministrative)
 const companyName = computed(() => auth.currentCompany?.name || '')
@@ -53,7 +53,8 @@ onMounted(() => {
     complianceStore.fetchCompliance()
   // Résout « suis-je salarié ? » pour proposer l'accès à l'espace opérationnel (idempotent :
   // le widget navbar peut l'avoir déjà fait ; firstOrFail → 404 silencieux si non-salarié).
-  if (canModule('workforce') && !clock.employee)
+  // ADR-769 : le store décide (capacités serveur) — aucun appel Workforce sans module ni fiche liée.
+  if (!clock.employee)
     clock.fetchProfile()
 })
 

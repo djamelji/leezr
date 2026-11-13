@@ -219,6 +219,15 @@ class ScheduledTaskRegistry
             'cron' => '0 * * * *',
             'expected_interval_minutes' => 60,
         ],
+        // M7 LOT 3 — trace d'audit des invitations de membres expirées
+        'members:invitations-expire' => [
+            'command' => 'members:invitations-expire',
+            'description' => 'automations.tasks.membersInvitationsExpire',
+            'category' => 'system',
+            'frequency' => 'hourly',
+            'cron' => '0 * * * *',
+            'expected_interval_minutes' => 60,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

@@ -24,23 +24,21 @@ class PublishedPayslipController extends Controller
     public function person(Request $request, string $personRef, DocumentAccessPolicy $policy): JsonResponse
     {
         $company = $request->attributes->get('company');
-        [$subject] = $this->resolve($company, $personRef);
+        [$subject, $subjects] = $this->resolve($company, $personRef);
 
         // Lister les bulletins d'autrui = accès payroll (pas documents.view générique).
         if (! $policy->canAccess($request->user(), $company, $subject, 'payslip', DocumentAccessPolicy::OP_VIEW_METADATA)) {
             abort(403);
         }
 
-        return response()->json(['payslips' => $this->listFor($company->id, $subject, $request->user(), $company, $policy)]);
+        return response()->json(['payslips' => $this->listFor($company->id, $subject, $request->user(), $company, $policy, $subjects)]);
     }
 
     public function downloadPerson(Request $request, string $personRef, int $id, DocumentAccessPolicy $policy, AuditLogger $audit)
     {
         $company = $request->attributes->get('company');
-        [$subject] = $this->resolve($company, $personRef);
-        $payslip = PublishedPayslip::where('company_id', $company->id)
-            ->where('document_subject_type', $subject->type)->where('document_subject_id', $subject->id)
-            ->findOrFail($id);
+        [$subject, $subjects] = $this->resolve($company, $personRef);
+        $payslip = $this->ofSubjects(PublishedPayslip::where('company_id', $company->id), $subjects)->findOrFail($id);
 
         abort_if($payslip->revoked_at !== null, 410, 'This payslip has been revoked.'); // retrait : plus consultable
         if (! $policy->canAccess($request->user(), $company, $subject, 'payslip', DocumentAccessPolicy::OP_DOWNLOAD)) {
@@ -57,28 +55,31 @@ class PublishedPayslipController extends Controller
         $company = $request->attributes->get('company');
         $subject = DocumentSubject::user((int) $request->user()->id);
 
-        return response()->json(['payslips' => $this->listFor($company->id, $subject, $request->user(), $company, $policy)]);
+        return response()->json(['payslips' => $this->listFor($company->id, $subject, $request->user(), $company, $policy, $this->ownSubjects($request))]);
     }
 
     public function downloadSelf(Request $request, int $id)
     {
         $company = $request->attributes->get('company');
         // Self : rattaché au sujet user de l'acteur (jamais celui d'un autre).
-        $payslip = PublishedPayslip::where('company_id', $company->id)
-            ->where('document_subject_type', DocumentSubject::TYPE_USER)
-            ->where('document_subject_id', $request->user()->id)
-            ->findOrFail($id);
+        $payslip = $this->ofSubjects(PublishedPayslip::where('company_id', $company->id), $this->ownSubjects($request))->findOrFail($id);
         abort_if($payslip->revoked_at !== null, 410, 'This payslip has been revoked.');
 
         return Storage::disk('local')->download($payslip->file_path, $payslip->file_name);
     }
 
-    private function listFor(int $companyId, DocumentSubject $subject, $actor, $company, DocumentAccessPolicy $policy): array
+    /**
+     * ADR-769 : the payslips of a PERSON, whatever subject they were published under. A payslip
+     * published to an HR record before its account existed (subject `employee`) still belongs to the
+     * person once the account is linked (canonical subject `user`) — it must not vanish.
+     *
+     * @param  list<DocumentSubject>|null  $subjects
+     */
+    private function listFor(int $companyId, DocumentSubject $subject, $actor, $company, DocumentAccessPolicy $policy, ?array $subjects = null): array
     {
         $canDownload = $policy->canAccess($actor, $company, $subject, 'payslip', DocumentAccessPolicy::OP_DOWNLOAD);
 
-        return PublishedPayslip::where('company_id', $companyId)
-            ->where('document_subject_type', $subject->type)->where('document_subject_id', $subject->id)
+        return $this->ofSubjects(PublishedPayslip::where('company_id', $companyId), $subjects ?: [$subject])
             ->current()
             ->orderByDesc('period')
             ->get()
@@ -94,7 +95,27 @@ class PublishedPayslipController extends Controller
             ])->values()->all();
     }
 
-    /** @return array{0:DocumentSubject} */
+    /** @param list<DocumentSubject> $subjects */
+    private function ofSubjects($query, array $subjects)
+    {
+        return $query->where(function ($q) use ($subjects) {
+            foreach ($subjects as $s) {
+                $q->orWhere(fn ($w) => $w->where('document_subject_type', $s->type)->where('document_subject_id', $s->id));
+            }
+        });
+    }
+
+    /** Subjects of the CONNECTED person in this company : her account + the HR record explicitly linked to it. */
+    private function ownSubjects(Request $request): array
+    {
+        $company = $request->attributes->get('company');
+        $employee = \App\Core\Workforce\Employee::withoutGlobalScopes()
+            ->where('company_id', $company->id)->where('user_id', $request->user()->id)->first();
+
+        return PersonSubjectResolver::resolve($company, $request->user(), $employee)['subjects'];
+    }
+
+    /** @return array{0:DocumentSubject, 1:list<DocumentSubject>} */
     private function resolve($company, string $personRef): array
     {
         $ref = PersonRef::parse($personRef);
@@ -103,6 +124,6 @@ class PublishedPayslipController extends Controller
         $resolved = PersonSubjectResolver::resolve($company, $ids['user'], $ids['employee']);
         abort_if($resolved['canonical'] === null, 422);
 
-        return [$resolved['canonical']];
+        return [$resolved['canonical'], $resolved['subjects']];
     }
 }

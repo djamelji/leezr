@@ -37,7 +37,9 @@ const openInvite = async () => {
 const onMemberAdded = member => {
   inviteOpen.value = false
   // Un compte déjà existant n'est PAS activé : il doit accepter l'invitation.
-  toast(t(member?._pendingAcceptance ? 'peopleList.invitedPending' : 'peopleList.invited'), member?._pendingAcceptance ? 'info' : 'success')
+  // M7 LOT 3 : jamais de fausse confirmation — si l'e-mail n'a pas pu partir, on le dit.
+  if (member?._invitationDelivery === 'failed') toast(t('peopleList.invitedNotSent'), 'warning')
+  else toast(t(member?._pendingAcceptance ? 'peopleList.invitedPending' : 'peopleList.invited'), member?._pendingAcceptance ? 'info' : 'success')
   reload()
 }
 const onEmployeeCreated = emp => {
@@ -66,9 +68,10 @@ const ACCOUNT_META = {
   active: { color: 'success', label: 'people.account.active' },
   invited: { color: 'warning', label: 'people.account.invited' },
   pending_acceptance: { color: 'warning', label: 'people.account.pending_acceptance' },
+  invitation_expired: { color: 'secondary', label: 'people.account.invitation_expired' },
   suspended: { color: 'error', label: 'people.account.suspended' },
 }
-const accountStates = ['connected', 'active', 'invited', 'pending_acceptance', 'suspended']
+const accountStates = ['connected', 'active', 'invited', 'pending_acceptance', 'invitation_expired', 'suspended']
 const employmentStates = ['active', 'inactive', 'on_leave', 'suspended', 'terminated']
 
 const headers = computed(() => {

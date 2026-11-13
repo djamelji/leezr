@@ -20,7 +20,7 @@ class WorkforceModule implements ModuleDefinition
                 navItems: [
                     // W-HR-UX-7 : « Mon espace » (self-service du membre connecté) rejoint le groupe
                     // personnel « Compte » — séparé du RH management (ne pas mélanger Company/Employee).
-                    ['key' => 'workforce-me', 'title' => 'My Space', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-user-circle', 'surface' => 'hr', 'group' => 'account', 'sort' => 5],
+                    ['key' => 'workforce-me', 'title' => 'My Work', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-calendar-time', 'surface' => 'hr', 'group' => 'account', 'sort' => 5],
                     // PRODUCT-UX-3 (P3-B) : l'accueil RH « À traiter » est consolidé dans l'accueil
                     // Company unique (/dashboard, section fixe en tête). Plus d'entrée de nav propre ;
                     // la route company-workforce redirige vers /dashboard (deep-link compat).

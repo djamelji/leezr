@@ -26,12 +26,18 @@ class MyInvitationController
                 'role' => $m->companyRole?->name,
                 'invited_by' => ($i = $inviters->get($m->invited_by)) ? trim($i->first_name.' '.$i->last_name) : null,
                 'invited_at' => $m->acceptance_pending_at?->toIso8601String(),
+                'expires_at' => $m->invitation_expires_at?->toIso8601String(),
             ])->values(),
         ]);
     }
 
     public function accept(Request $request, int $id): JsonResponse
     {
+        // M7 LOT 3 : une invitation expirée n'est plus acceptable — réponse claire (410), jamais d'activation.
+        if (MembershipInvitation::isOwnExpired($request->user(), $id)) {
+            return response()->json(['message' => 'This invitation has expired. Ask the company to send it again.', 'code' => 'invitation_expired'], 410);
+        }
+
         $membership = MembershipInvitation::accept($request->user(), $id);
         abort_if($membership === null, 404, 'Invitation not found.');
 

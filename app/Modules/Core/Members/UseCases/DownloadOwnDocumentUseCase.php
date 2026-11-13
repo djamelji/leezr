@@ -30,6 +30,8 @@ class DownloadOwnDocumentUseCase
             abort(404);
         }
 
+        \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $user); // ADR-769 : continuité compte ↔ fiche salarié
+
         // 4. Load MemberDocument for (company_id, user_id, document_type_id)
         $document = MemberDocument::where('company_id', $company->id)
             ->where('user_id', $user->id)
