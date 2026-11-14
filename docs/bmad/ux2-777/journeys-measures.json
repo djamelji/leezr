@@ -1,0 +1,75 @@
+{
+ "ajout_sans_acces": {
+  "clicks": 3,
+  "fields": 2,
+  "pages": 1,
+  "seconds": 0.6
+ },
+ "rubriques_fiche_sans_compte": [
+  "overview",
+  "profile",
+  "documents",
+  "time",
+  "access"
+ ],
+ "trouver": {
+  "clicks": 1,
+  "fields": 1,
+  "pages": 1,
+  "seconds": 0.9
+ },
+ "modifier": {
+  "clicks": 2,
+  "fields": 1,
+  "pages": 0,
+  "seconds": 1.1
+ },
+ "generer_contrat": {
+  "clicks": 3,
+  "fields": 0,
+  "pages": 0,
+  "seconds": 1.4
+ },
+ "deposer_document": {
+  "clicks": 3,
+  "fields": 1,
+  "pages": 0,
+  "seconds": 1.5
+ },
+ "ajout_avec_acces": {
+  "clicks": 5,
+  "fields": 4,
+  "pages": 1,
+  "seconds": 1.1
+ },
+ "suspendre_acces": {
+  "clicks": 3,
+  "fields": 1,
+  "pages": 0,
+  "seconds": 0.9
+ },
+ "inviter_compte_existant": {
+  "clicks": 6,
+  "fields": 4,
+  "pages": 1,
+  "seconds": 1.1
+ },
+ "trouver_bulletin": {
+  "clicks": 1,
+  "fields": 0,
+  "pages": 0,
+  "seconds": 0.1
+ },
+ "teardown": {
+  "run_id": "rmwfyr5ns92828y",
+  "dry_run": false,
+  "deleted": [
+   "employee:1751",
+   "employee:1752",
+   "membership:86",
+   "user:76"
+  ],
+  "skipped": []
+ },
+ "network": []
+}

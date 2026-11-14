@@ -18,8 +18,15 @@ async function settle(page, ms = 1200) {
   await page.waitForLoadState('networkidle').catch(() => {})
   await page.waitForTimeout(ms)
 }
+// ADR-777 (UX2) : la fiche range ses sections en cinq rubriques — l'ancienne section ouvre sa rubrique.
+const GROUP_OF = {
+  'Informations': 'Informations & emploi', 'Emploi': 'Informations & emploi',
+  'Contrat': 'Documents & contrats', 'Documents': 'Documents & contrats', 'Bulletins de paie': 'Documents & contrats',
+  'Planning': 'Temps & absences', 'Temps & pointage': 'Temps & absences', 'Congés & absences': 'Temps & absences',
+  'Historique': "Vue d'ensemble",
+}
 const openTab = async (page, name) => {
-  await page.getByRole('tab', { name }).first().click()
+  await page.getByRole('tab', { name: GROUP_OF[name] || name }).first().click()
   await page.waitForTimeout(700)
 }
 const person = async (page, ref) => (await apiRequest(page, { path: `/api/company/people/${ref}` })).json
@@ -47,15 +54,17 @@ test('compte : inviter → éditer identité → rôle → suspendre → réacti
   await settle(page)
 
   // ─── Inviter EN PLACE (plus de renvoi vers /company/members) ───
-  await page.locator('[data-test="people-new"]').click()
-  await page.locator('[data-test="people-invite"]').click()
-  await page.getByLabel('Prénom').fill('E2E')
-  await page.getByLabel('Nom', { exact: true }).fill('People')
-  await page.getByLabel('E-mail').fill(email)
-  await page.locator('[data-test="member-role-select"]').click()
+  // ADR-777 (UX2) : parcours unique « Ajouter une personne » — accès oui, sans fiche salarié.
+  await page.locator('[data-test="people-add"]').click()
+  await page.locator('[data-test="person-add-first-name"] input').fill('E2E')
+  await page.locator('[data-test="person-add-last-name"] input').fill('People')
+  await page.locator('[data-test="person-add-access-yes"] input').check()
+  await page.locator('[data-test="person-add-email"] input').fill(email)
+  await page.locator('[data-test="person-add-staff"] input').uncheck()
+  await page.locator('[data-test="person-add-role"]').click()
   await page.getByRole('option', { name: 'Driver' }).first().click()
   const created = await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
-    () => page.getByRole('button', { name: 'Ajouter', exact: true }).click())
+    () => page.locator('[data-test="person-add-submit"]').click())
   const createdBody = await created.json()
   run.track('membership', createdBody.member.id)
   run.track('user', createdBody.member.user.id)
@@ -64,6 +73,9 @@ test('compte : inviter → éditer identité → rôle → suspendre → réacti
 
   const ref = await findRef(page, email)
   expect(ref, 'la personne est dans la liste unifiée').toMatch(/^user-\d+$/)
+  // ADR-777 (UX2) : l'ajout ouvre directement la fiche créée — retour à la liste pour la recherche.
+  await page.goto('/company/people', { waitUntil: 'networkidle' })
+  await settle(page)
   await page.getByPlaceholder('Rechercher un collaborateur…').fill(email)
   await expect(page.locator('tr', { hasText: email }), 'visible dans la liste (recherche)').toBeVisible({ timeout: 10000 })
 
@@ -123,13 +135,14 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
   await settle(page)
 
   // ─── Créer une fiche salarié SANS compte, en place ───
-  await page.locator('[data-test="people-new"]').click()
-  await page.locator('[data-test="people-create-employee"]').click()
-  await page.locator('[data-test="emp-first-name"] input').fill('Lina')
-  await page.locator('[data-test="emp-last-name"] input').fill(lastName)
+  // ADR-777 (UX2) : parcours unique — accès non → fiche salarié sans compte.
+  await page.locator('[data-test="people-add"]').click()
+  await page.locator('[data-test="person-add-first-name"] input').fill('Lina')
+  await page.locator('[data-test="person-add-last-name"] input').fill(lastName)
+  await page.locator('[data-test="person-add-access-no"] input').check()
   const [resp] = await Promise.all([
     page.waitForResponse(r => r.url().includes('/workforce/employees') && r.request().method() === 'POST', { timeout: 20000 }),
-    page.locator('[data-test="emp-submit"]').click(),
+    page.locator('[data-test="person-add-submit"]').click(),
   ])
   expect(resp.status()).toBe(201)
   const employeeId = (await resp.json()).id
@@ -198,16 +211,9 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
 
   await page.goto(`/company/people/${ref}`, { waitUntil: 'networkidle' })
   await settle(page)
-  // Barre d'actions adaptative : selon la largeur disponible (nom long), l'action est directe ou
-  // repliée dans le menu « ⋮ ».
-  const direct = page.locator('[data-test="person-link-account"]')
-  if (await direct.isVisible().catch(() => false)) {
-    await direct.click()
-  }
-  else {
-    await page.locator('[data-test="person-header"] button:has(.tabler-dots-vertical)').locator('visible=true').first().click()
-    await page.locator('.v-overlay-container .v-list-item', { hasText: 'Rattacher à un compte' }).first().click()
-  }
+  // ADR-777 (UX2) : action libellée du menu « Actions » de la fiche.
+  await page.locator('[data-test="person-actions-menu"]').click()
+  await page.locator('[data-test="person-action-link-account"]').click()
   await page.locator('[data-test="hr-link-account"]').click()
   await page.getByRole('option', { name: new RegExp(target.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).first().click()
   await clickAndExpectApi(page, { urlIncludes: `/workforce/employees/${employeeId}/link-account`, method: 'POST' },
@@ -228,15 +234,17 @@ test('compte existant : invitation EN ATTENTE, jamais activée sans acceptation'
   await settle(page)
   test.skip(!!(await findRef(page, existing)), `${existing} est déjà membre de cette entreprise`)
 
-  await page.locator('[data-test="people-new"]').click()
-  await page.locator('[data-test="people-invite"]').click()
-  await page.getByLabel('Prénom').fill('Compte')
-  await page.getByLabel('Nom', { exact: true }).fill('Existant')
-  await page.getByLabel('E-mail').fill(existing)
-  await page.locator('[data-test="member-role-select"]').click()
+  // ADR-777 (UX2) : parcours unique « Ajouter une personne » — accès oui, sans fiche salarié.
+  await page.locator('[data-test="people-add"]').click()
+  await page.locator('[data-test="person-add-first-name"] input').fill('Compte')
+  await page.locator('[data-test="person-add-last-name"] input').fill('Existant')
+  await page.locator('[data-test="person-add-access-yes"] input').check()
+  await page.locator('[data-test="person-add-email"] input').fill(existing)
+  await page.locator('[data-test="person-add-staff"] input').uncheck()
+  await page.locator('[data-test="person-add-role"]').click()
   await page.getByRole('option', { name: 'Driver' }).first().click()
   const res = await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
-    () => page.getByRole('button', { name: 'Ajouter', exact: true }).click())
+    () => page.locator('[data-test="person-add-submit"]').click())
   const body = await res.json()
   expect(body.pending_acceptance, 'compte existant : en attente').toBe(true)
 

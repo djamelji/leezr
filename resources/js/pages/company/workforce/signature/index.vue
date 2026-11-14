@@ -41,7 +41,7 @@ const TABS = [
   { key: 'declined', label: 'signature.tabs.declined' },
   { key: 'expired', label: 'signature.tabs.expired' },
 ]
-const currentTab = ref('')
+const currentTab = ref(typeof useRoute().query.status === 'string' ? useRoute().query.status : '') // ADR-777 : lien filtré depuis l'accueil
 const search = ref('')
 
 const headers = [

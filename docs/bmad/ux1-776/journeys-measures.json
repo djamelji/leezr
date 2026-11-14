@@ -5,7 +5,7 @@
   "visibles": 7
  },
  "ajouter_personne": {
-  "clicks": 4,
+  "clicks": 5,
   "pages": 1,
   "path": [
    "/dashboard",
@@ -45,11 +45,11 @@
   ]
  },
  "teardown": {
-  "run_id": "rmwfw47apqxdkoy",
+  "run_id": "rmwfyvqmjtatc0a",
   "dry_run": false,
   "deleted": [
-   "membership:77",
-   "user:70"
+   "membership:88",
+   "user:77"
   ],
   "skipped": []
  },

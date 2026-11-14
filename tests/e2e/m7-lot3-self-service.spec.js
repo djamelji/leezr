@@ -76,7 +76,7 @@ test('administrateur AUSSI salarié : accueil, Mon espace, documents, bulletins 
   // Il administre toujours son entreprise…
   await page.goto('/company/people', { waitUntil: 'domcontentloaded' })
   await settle(page)
-  await expect(page.locator('[data-test="people-new"]'), 'reste administrateur').toBeVisible()
+  await expect(page.locator('[data-test="people-add"]'), 'reste administrateur').toBeVisible()
 
   // …et dispose de son accueil personnel (pointage, planning).
   await page.goto('/home', { waitUntil: 'domcontentloaded' })

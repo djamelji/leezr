@@ -10,9 +10,11 @@ import { useConfirm } from '@/composables/useConfirm'
 
 const props = defineProps({
   accountMeta: { type: Object, required: true },
+  // ADR-777 : action demandée depuis le menu « Actions » de la fiche (ex. `suspend`).
+  intent: { type: String, default: null },
 })
 
-const emit = defineEmits(['changed', 'removed', 'grant'])
+const emit = defineEmits(['changed', 'removed', 'grant', 'intent-handled'])
 
 const { t } = useI18n()
 const store = usePersonStore()
@@ -85,6 +87,10 @@ const resend = async () => {
 }
 
 const suspendDialog = ref(false)
+watch(() => props.intent, intent => {
+  if (intent === 'suspend' && store.can.suspend_access) suspendDialog.value = true
+  if (intent) emit('intent-handled')
+}, { immediate: true })
 const suspendReason = ref('')
 const suspend = async () => {
   suspendDialog.value = false

@@ -6,7 +6,6 @@
 // sections et actions visibles viennent du serveur (`available_sections`, `can.*`).
 import { useRoute, useRouter } from 'vue-router'
 import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
-import SmartActionBar from '@/core/components/SmartActionBar.vue'
 import ErrorState from '@/core/components/ErrorState.vue'
 import { usePersonStore } from '@/modules/company/people/person.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
@@ -58,21 +57,46 @@ const loadEmployee = async () => {
   catch { employee.value = null }
 }
 
-// ── Onglets : le serveur décide des sections ; « employment » se décline en Emploi + Contrat. ──
-const TAB_ICONS = {
-  overview: 'tabler-layout-dashboard', personal: 'tabler-user', access: 'tabler-key',
-  employment: 'tabler-briefcase', contract: 'tabler-file-text', planning: 'tabler-calendar',
-  time: 'tabler-clock', leave: 'tabler-beach', documents: 'tabler-file-certificate',
-  payslips: 'tabler-receipt', history: 'tabler-history',
-}
-const TAB_ORDER = ['overview', 'personal', 'access', 'employment', 'contract', 'planning', 'time', 'leave', 'documents', 'payslips', 'history']
-const tabKeys = computed(() => {
-  const s = new Set(store.sections || [])
-  if (s.has('employment')) s.add('contract')
+// ── Rubriques (ADR-777 / UX2) : le serveur décide toujours des SECTIONS visibles (`available_sections`,
+// une par facette de droits) ; l'interface les range en CINQ rubriques compréhensibles. Une rubrique
+// n'existe que si l'une de ses sections est autorisée ; chaque section garde SA garde — partager une
+// rubrique ne fusionne aucune permission. « employment » se décline en Emploi + Contrat.
+const SECTION_ORDER = ['overview', 'personal', 'access', 'employment', 'contract', 'planning', 'time', 'leave', 'documents', 'payslips', 'history']
+const sectionKeys = computed(() => {
+  const set = new Set(store.sections || [])
+  if (set.has('employment')) set.add('contract')
 
-  return TAB_ORDER.filter(k => s.has(k))
+  return SECTION_ORDER.filter(k => set.has(k))
 })
-const tabSections = computed(() => tabKeys.value.map(k => ({ value: k, label: t(`people.tabs.${k}`), icon: TAB_ICONS[k] })))
+const has = key => sectionKeys.value.includes(key)
+const GROUPS = [
+  { key: 'overview', icon: 'tabler-layout-dashboard', sections: ['overview', 'history'] },
+  { key: 'profile', icon: 'tabler-user', sections: ['personal', 'employment'] },
+  { key: 'documents', icon: 'tabler-file-certificate', sections: ['contract', 'documents', 'payslips'] },
+  { key: 'time', icon: 'tabler-calendar-time', sections: ['planning', 'time', 'leave'] },
+  { key: 'access', icon: 'tabler-key', sections: ['access'] },
+]
+const groups = computed(() => GROUPS
+  .map(g => ({ ...g, sections: g.sections.filter(has) }))
+  .filter(g => g.sections.length))
+const tabKeys = computed(() => groups.value.map(g => g.key))
+const tabSections = computed(() => groups.value.map(g => ({ value: g.key, label: t(`people.groups.${g.key}`), icon: g.icon })))
+const currentGroup = computed(() => groups.value.find(g => g.key === currentTab.value) || null)
+const titled = computed(() => (currentGroup.value?.sections.length || 0) > 1)
+
+// Ouvre une rubrique, éventuellement sur une de ses sections (anciens liens `?tab=contract`, actions).
+const openSection = (key, section = null) => {
+  const group = groups.value.find(g => g.key === key) || groups.value.find(g => g.sections.includes(key))
+  if (!group) return false
+  const target = section || (group.key === key ? null : key)
+
+  currentTab.value = group.key
+  if (target && group.sections.includes(target)) {
+    nextTick(() => setTimeout(() => document.getElementById(`person-section-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150))
+  }
+
+  return true
+}
 
 const accountMeta = computed(() => ({
   connected: { color: 'success', label: t('people.account.connected') },
@@ -93,22 +117,69 @@ const accountMeta = computed(() => ({
 
 // ── Actions d'en-tête (déclaratives, filtrées par les capacités serveur) ──
 const openHrLink = mode => { hrLinkMode.value = mode; hrLinkOpen.value = true }
-const editPerson = () => {
-  if (store.can.edit_hr && employee.value) { currentTab.value = 'employment'; editSignal.value++ }
-  else currentTab.value = 'personal'
+const editPerson = async () => {
+  if (store.can.edit_hr && store.employeeId) {
+    openSection('profile', 'employment')
+
+    // Clic avant la fin du chargement de la fiche RH : on l'attend plutôt que d'ouvrir autre chose.
+    if (!employee.value) await loadEmployee()
+
+    // La section se monte à l'ouverture de la rubrique : le signal d'édition part une fois montée.
+    await nextTick()
+    await nextTick()
+    editSignal.value++
+  }
+  else openSection('profile', 'personal')
 }
-const headerActions = computed(() => [
-  (store.can.edit_hr && store.employeeId) || store.can.edit_identity
-    ? { id: 'edit', label: t('common.edit'), icon: 'tabler-edit', priority: 100, primary: true, handler: editPerson, dataTest: 'person-edit' } : null,
+
+// ── Actions (ADR-777) : UNE action principale libellée + un menu « Actions » lisible. Chaque entrée
+// vient d'une capacité calculée par le serveur (`can.*`) ; l'endpoint la revérifie de toute façon.
+const accessIntent = ref(null)
+const terminateOpen = ref(false)
+const terminateForm = ref({ reason: '', termination_date: '' })
+const terminating = ref(false)
+const isActiveEmployee = computed(() => !!employee.value && !['terminated'].includes(employee.value.status))
+const canDocuments = computed(() => has('documents') && can('documents.view'))
+
+const primaryAction = computed(() => ((store.can.edit_hr && store.employeeId) || store.can.edit_identity
+  ? { id: 'edit', label: t('common.edit'), icon: 'tabler-edit', handler: editPerson } : null))
+
+const menuActions = computed(() => [
+  canDocuments.value && can('documents.manage')
+    ? { id: 'add-document', label: t('people.actions.addDocument'), icon: 'tabler-file-upload', handler: () => openSection('documents', 'documents') } : null,
+  canDocuments.value && can('documents.manage') && store.userId
+    ? { id: 'request-document', label: t('people.actions.requestDocument'), icon: 'tabler-file-import', handler: () => openSection('documents', 'documents') } : null,
   store.can.generate_contract
-    ? { id: 'contract', label: t('generateContract.action'), icon: 'tabler-file-text', priority: 80, handler: () => { contractDialogOpen.value = true }, dataTest: 'person-generate-contract' } : null,
+    ? { id: 'generate-contract', label: t('generateContract.action'), icon: 'tabler-file-text', handler: () => { contractDialogOpen.value = true } } : null,
+  store.can.view_signatures && can('workforce_signature.request')
+    ? { id: 'sign', label: t('people.actions.sign'), icon: 'tabler-signature', handler: () => router.push({ name: 'company-workforce-signature' }) } : null,
   store.can.manage_access && store.employeeId
-    ? { id: 'access', label: t('people.manageAccess'), icon: 'tabler-key', priority: 70, handler: () => { accessDialogOpen.value = true }, dataTest: 'person-manage-access' } : null,
+    ? { id: 'manage-access', label: t('people.manageAccess'), icon: 'tabler-key', handler: () => { accessDialogOpen.value = true } } : null,
   store.can.create_hr_record
-    ? { id: 'hr', label: t('people.hrLink.createTitle'), icon: 'tabler-id-badge-2', priority: 60, handler: () => openHrLink('create'), dataTest: 'person-create-hr' } : null,
+    ? { id: 'create-hr', label: t('people.hrLink.createTitle'), icon: 'tabler-id-badge-2', handler: () => openHrLink('create') } : null,
   store.can.link_account
-    ? { id: 'link', label: t('people.hrLink.linkTitle'), icon: 'tabler-link', priority: 50, handler: () => openHrLink('link'), dataTest: 'person-link-account' } : null,
+    ? { id: 'link-account', label: t('people.hrLink.linkTitle'), icon: 'tabler-link', handler: () => openHrLink('link') } : null,
+  store.can.view_history && has('history')
+    ? { id: 'history', label: t('people.tabs.history'), icon: 'tabler-history', handler: () => openSection('overview', 'history') } : null,
+  store.can.suspend_access && store.account.state !== 'suspended'
+    ? { id: 'suspend', label: t('people.actions.suspend'), icon: 'tabler-lock', danger: true, divider: true, handler: () => { accessIntent.value = 'suspend'; openSection('access') } } : null,
+  store.can.edit_hr && isActiveEmployee.value
+    ? { id: 'terminate', label: t('people.actions.terminate'), icon: 'tabler-user-off', danger: true, handler: () => { terminateForm.value = { reason: '', termination_date: '' }; terminateOpen.value = true } } : null,
 ].filter(Boolean))
+
+const terminate = async () => {
+  terminating.value = true
+  try {
+    await employeesStore.terminateEmployee(store.employeeId, { reason: terminateForm.value.reason, termination_date: terminateForm.value.termination_date || undefined })
+    terminateOpen.value = false
+    toast(t('people.actions.terminated'), 'success')
+    await reload()
+  }
+  catch (e) {
+    toast(Object.values(e?.data?.errors || {})[0]?.[0] || e?.data?.message || t('common.error'), 'error')
+  }
+  finally { terminating.value = false }
+}
 
 async function reload() {
   await store.load(personRef.value)
@@ -120,30 +191,42 @@ async function reload() {
 
     return
   }
-  if (!tabKeys.value.includes(currentTab.value)) currentTab.value = 'overview'
+  // Ancien lien (`?tab=contract`, `?tab=payslips`…) ou rubrique indisponible : rubrique équivalente, sinon la première.
+  if (requestedTab.value) { openSection(requestedTab.value); requestedTab.value = null }
+  if (!tabKeys.value.includes(currentTab.value)) currentTab.value = tabKeys.value[0] || 'overview'
   await loadEmployee()
-  if (currentTab.value === 'history') store.loadHistory(personRef.value)
 }
 
 watch(personRef, reload)
+// La rubrique demandée par l'adresse n'est appliquée qu'une fois les sections connues : `currentTab`
+// ne porte jamais une valeur absente de la navigation (elle la réinitialisait, et l'adresse avec).
+const requestedTab = ref(null)
 onMounted(async () => {
-  if (typeof route.query.tab === 'string') currentTab.value = route.query.tab
+  if (typeof route.query.tab === 'string') requestedTab.value = route.query.tab
   await reload()
 })
 onBeforeUnmount(() => employeesStore.clearCurrentEmployee())
 
 // Deep-link : l'onglet courant vit dans l'URL (retour navigateur et partage de lien).
 watch(currentTab, tab => {
+  // Un ancien lien (`?tab=contract`, `?tab=personal`…) reste tel quel tant qu'il désigne une section
+  // de la rubrique affichée : les liens partagés et les favoris ne changent pas d'adresse.
+  if (groups.value.find(g => g.key === tab)?.sections.includes(route.query.tab)) return
   const q = { ...route.query }
   if (tab === 'overview') delete q.tab
   else q.tab = tab
-  router.replace({ query: q })
-  if (tab === 'history') store.loadHistory(personRef.value)
+  if (q.tab !== route.query.tab) router.replace({ query: q })
 })
+// Un lien interne vers la même fiche avec un autre `?tab=` change bien de rubrique (ADR-774, constat).
+watch(() => route.query.tab, tab => {
+  if (typeof tab === 'string' && tab !== currentTab.value && store.data) openSection(tab)
+})
+const historyOpened = ref([])
+watch(historyOpened, v => { if (v.length && !store.history.length) store.loadHistory(personRef.value) })
 
 const go = target => {
   if (target === 'create-hr') openHrLink('create')
-  else if (tabKeys.value.includes(target)) currentTab.value = target
+  else openSection(target)
 }
 const goBack = () => (window.history.state?.back ? router.back() : router.push({ name: 'company-people' }))
 const onRemoved = () => router.push({ name: 'company-people' })
@@ -261,28 +344,80 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                 /> {{ t(`people.empStatus.${store.employment.identity.status}`, store.employment.identity.status) }}</span>
               </div>
             </div>
-            <SmartActionBar
-              v-if="headerActions.length"
-              :actions="headerActions"
-              class="smart-action-bar--header"
-            />
+            <div
+              v-if="primaryAction || menuActions.length"
+              class="d-flex align-center gap-2 flex-wrap"
+              data-test="person-actions"
+            >
+              <VBtn
+                v-if="primaryAction"
+                color="primary"
+                :prepend-icon="primaryAction.icon"
+                data-test="person-edit"
+                @click="primaryAction.handler"
+              >
+                {{ primaryAction.label }}
+              </VBtn>
+              <VBtn
+                v-if="menuActions.length"
+                variant="tonal"
+                append-icon="tabler-chevron-down"
+                data-test="person-actions-menu"
+              >
+                {{ t('people.actions.menu') }}
+                <VMenu
+                  activator="parent"
+                  location="bottom end"
+                >
+                  <VList
+                    density="comfortable"
+                    min-width="240"
+                  >
+                    <template
+                      v-for="action in menuActions"
+                      :key="action.id"
+                    >
+                      <VDivider
+                        v-if="action.divider"
+                        class="my-1"
+                      />
+                      <VListItem
+                        :prepend-icon="action.icon"
+                        :base-color="action.danger ? 'error' : undefined"
+                        :data-test="`person-action-${action.id}`"
+                        @click="action.handler"
+                      >
+                        <VListItemTitle>{{ action.label }}</VListItemTitle>
+                      </VListItem>
+                    </template>
+                  </VList>
+                </VMenu>
+              </VBtn>
+            </div>
           </div>
         </VCardText>
       </VCard>
 
-      <!-- ═══ NAVIGATION (onglets desktop / sélecteur mobile) ═══ -->
+      <!-- ═══ NAVIGATION : cinq rubriques au plus (onglets desktop / barre mobile) ═══ -->
       <AppSectionNavigation
         v-model="currentTab"
         :sections="tabSections"
-        class="mb-5"
+        class="mb-2 mb-md-5"
       />
-
+      <div
+        v-if="currentGroup"
+        class="d-md-none text-subtitle-1 font-weight-medium mb-3"
+        data-test="person-group-label"
+      >
+        {{ t(`people.groups.${currentGroup.key}`) }}
+      </div>
       <VCard>
         <VCardText>
           <VWindow
             v-model="currentTab"
             class="disable-tab-transition"
           >
+            <!-- ── Vue d'ensemble (+ historique, à la demande) ── -->
             <VWindowItem value="overview">
               <PersonOverview
                 :account-meta="accountMeta"
@@ -290,149 +425,325 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                 @generate-contract="contractDialogOpen = true"
                 @manage-access="accessDialogOpen = true"
               />
+              <VExpansionPanels
+                v-if="has('history')"
+                id="person-section-history"
+                v-model="historyOpened"
+                multiple
+                class="mt-6"
+                data-test="person-history"
+              >
+                <VExpansionPanel
+                  value="history"
+                  :title="t('people.tabs.history')"
+                >
+                  <VExpansionPanelText>
+                    <VProgressLinear
+                      v-if="store.historyLoading"
+                      indeterminate
+                      color="primary"
+                    />
+                    <VTimeline
+                      v-else-if="store.history.length"
+                      density="compact"
+                      side="end"
+                      truncate-line="both"
+                      class="mt-2"
+                    >
+                      <VTimelineItem
+                        v-for="e in store.history"
+                        :key="e.id"
+                        :dot-color="e.severity === 'warning' ? 'warning' : e.severity === 'critical' ? 'error' : 'primary'"
+                        size="x-small"
+                      >
+                        <div class="d-flex justify-space-between gap-2 flex-wrap">
+                          <span class="text-body-2 font-weight-medium">{{ e.action }}</span>
+                          <span class="text-caption text-medium-emphasis">{{ new Date(e.created_at).toLocaleString('fr-FR') }}</span>
+                        </div>
+                        <div class="text-caption text-medium-emphasis">
+                          {{ e.target_type }} · {{ e.actor_type }}
+                        </div>
+                      </VTimelineItem>
+                    </VTimeline>
+                    <div
+                      v-else
+                      class="text-body-2 text-medium-emphasis py-4 text-center"
+                    >
+                      {{ t('people.noHistory') }}
+                    </div>
+                  </VExpansionPanelText>
+                </VExpansionPanel>
+              </VExpansionPanels>
             </VWindowItem>
 
-            <VWindowItem value="personal">
-              <PersonIdentity
-                v-if="currentTab === 'personal'"
-                :membership-id="store.membershipId"
-                :identity="store.identity"
-                :employee-number="store.employment?.identity?.employee_number || null"
-                :can-view-access="!!store.can.view_access"
-                :can-edit="!!store.can.edit_identity"
-                :lock-name="!store.can.edit_global_name"
-                :shared="!!store.data.identity_shared"
-                @updated="reload"
-              />
+            <!-- ── Informations & emploi ── -->
+            <VWindowItem value="profile">
+              <template v-if="currentTab === 'profile'">
+                <section
+                  v-if="has('personal')"
+                  data-test="person-section-personal"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-personal`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.personal') }}
+              </h6>
+                  <PersonIdentity
+                    :membership-id="store.membershipId"
+                    :identity="store.identity"
+                    :employee-number="store.employment?.identity?.employee_number || null"
+                    :can-view-access="!!store.can.view_access"
+                    :can-edit="!!store.can.edit_identity"
+                    :lock-name="!store.can.edit_global_name"
+                    :shared="!!store.data.identity_shared"
+                    @updated="reload"
+                  />
+                </section>
+                <VDivider
+                  v-if="has('personal') && has('employment')"
+                  class="my-6"
+                />
+                <!-- Emploi : informations RH (département, poste, responsable, matricule, dates, statut) -->
+                <section
+                  v-if="has('employment')"
+                  data-test="person-section-employment"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-employment`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.employment') }}
+              </h6>
+                  <EmployeeProfile
+                    v-if="employee"
+                    :employee="employee"
+                    :edit-signal="editSignal"
+                    @updated="reload().then(() => toast(t('employees.updated'), 'success'))"
+                  />
+                  <VSkeletonLoader
+                    v-else
+                    type="article"
+                  />
+                </section>
+              </template>
             </VWindowItem>
 
+            <!-- ── Documents & contrats (contrat · pièces, documents générés, signatures · bulletins) ── -->
+            <VWindowItem value="documents">
+              <template v-if="currentTab === 'documents'">
+                <!-- Contrat : consultation, création, activation, rémunération (permissions séparées) -->
+                <section
+                  v-if="has('contract')"
+                  data-test="person-section-contract"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-contract`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.contract') }}
+              </h6>
+                  <EmployeeContract
+                    v-if="employee"
+                    :employee="employee"
+                    @updated="reload"
+                  />
+                  <VSkeletonLoader
+                    v-else
+                    type="article"
+                  />
+                </section>
+                <VDivider
+                  v-if="has('contract') && has('documents')"
+                  class="my-6"
+                />
+                <!-- Documents : coffre DMS de la personne + documents RH générés + signatures -->
+                <section
+                  v-if="has('documents')"
+                  data-test="person-section-documents"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-documents`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.documents') }}
+              </h6>
+                  <MemberDocumentsWorkflowPanel
+                    v-if="can('documents.view') && store.personRef"
+                    :resource-base="`/company/people/${store.personRef}`"
+                    :supports-requests="!!store.userId"
+                    :can-edit="can('documents.manage')"
+                    @create-custom-type="docTypeDrawerOpen = true"
+                  />
+                  <EmployeeDocumentsSection
+                    v-if="store.employeeId && store.employment?.documents && can('workforce_documents.view')"
+                    :employee-id="store.employeeId"
+                    class="mt-6"
+                  />
+                  <EmployeeSignaturesSection
+                    v-if="store.employeeId && store.can.view_signatures"
+                    :employee-id="store.employeeId"
+                    class="mt-6"
+                  />
+                </section>
+                <!-- Bulletins : autorité paie uniquement (section servie par le serveur à ce seul titre) -->
+                <VDivider
+                  v-if="has('payslips') && (has('contract') || has('documents'))"
+                  class="my-6"
+                />
+                <section
+                  v-if="has('payslips')"
+                  data-test="person-section-payslips"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-payslips`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.payslips') }}
+              </h6>
+                  <VLazy
+                    :min-height="80"
+                    transition="none"
+                  >
+                    <PersonPayslips
+                      v-if="store.personRef"
+                      :person-ref="store.personRef"
+                    />
+                  </VLazy>
+                </section>
+              </template>
+            </VWindowItem>
+
+            <!-- ── Temps & absences (planning · pointage · congés), chargés à l'affichage ── -->
+            <VWindowItem value="time">
+              <template v-if="currentTab === 'time' && store.employeeId">
+                <section
+                  v-if="has('planning')"
+                  data-test="person-section-planning"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-planning`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.planning') }}
+              </h6>
+                  <EmployeePlanningSection
+                    :employee-id="store.employeeId"
+                    :can-manage="can('workforce.planning_manage')"
+                  />
+                </section>
+                <VDivider
+                  v-if="has('planning') && has('time')"
+                  class="my-6"
+                />
+                <section
+                  v-if="has('time')"
+                  data-test="person-section-time"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-time`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.time') }}
+              </h6>
+                  <VLazy
+                    :min-height="80"
+                    transition="none"
+                  >
+                    <EmployeeTimeSection :employee-id="store.employeeId" />
+                  </VLazy>
+                </section>
+                <VDivider
+                  v-if="has('leave') && (has('planning') || has('time'))"
+                  class="my-6"
+                />
+                <section
+                  v-if="has('leave')"
+                  data-test="person-section-leave"
+                >
+              <h6
+                v-if="titled"
+                :id="`person-section-leave`"
+                class="text-h6 mb-4 person-section-title"
+              >
+                {{ t('people.tabs.leave') }}
+              </h6>
+                  <VLazy
+                    :min-height="80"
+                    transition="none"
+                  >
+                    <EmployeeLeaveSection :employee-id="store.employeeId" />
+                  </VLazy>
+                </section>
+              </template>
+            </VWindowItem>
+
+            <!-- ── Accès & autorisations ── -->
             <VWindowItem value="access">
               <PersonAccess
                 v-if="currentTab === 'access'"
                 :account-meta="accountMeta"
+                :intent="accessIntent"
                 @changed="reload"
                 @removed="onRemoved"
                 @grant="accessDialogOpen = true"
+                @intent-handled="accessIntent = null"
               />
-            </VWindowItem>
-
-            <!-- Emploi : informations RH (département, poste, responsable, matricule, dates, statut) -->
-            <VWindowItem value="employment">
-              <EmployeeProfile
-                v-if="employee"
-                :employee="employee"
-                :edit-signal="editSignal"
-                @updated="reload().then(() => toast(t('employees.updated'), 'success'))"
-              />
-              <VSkeletonLoader
-                v-else
-                type="article"
-              />
-            </VWindowItem>
-
-            <!-- Contrat : consultation, création, activation, rémunération (permissions séparées) -->
-            <VWindowItem value="contract">
-              <EmployeeContract
-                v-if="employee"
-                :employee="employee"
-                @updated="reload"
-              />
-              <VSkeletonLoader
-                v-else
-                type="article"
-              />
-            </VWindowItem>
-
-            <VWindowItem value="planning">
-              <EmployeePlanningSection
-                v-if="currentTab === 'planning' && store.employeeId"
-                :employee-id="store.employeeId"
-                :can-manage="can('workforce.planning_manage')"
-              />
-            </VWindowItem>
-            <VWindowItem value="time">
-              <EmployeeTimeSection
-                v-if="currentTab === 'time' && store.employeeId"
-                :employee-id="store.employeeId"
-              />
-            </VWindowItem>
-            <VWindowItem value="leave">
-              <EmployeeLeaveSection
-                v-if="currentTab === 'leave' && store.employeeId"
-                :employee-id="store.employeeId"
-              />
-            </VWindowItem>
-
-            <!-- Documents : coffre DMS de la personne + documents RH générés + signatures -->
-            <VWindowItem value="documents">
-              <template v-if="currentTab === 'documents'">
-                <MemberDocumentsWorkflowPanel
-                  v-if="can('documents.view') && store.personRef"
-                  :resource-base="`/company/people/${store.personRef}`"
-                  :supports-requests="!!store.userId"
-                  :can-edit="can('documents.manage')"
-                  @create-custom-type="docTypeDrawerOpen = true"
-                />
-                <EmployeeDocumentsSection
-                  v-if="store.employeeId && store.employment?.documents && can('workforce_documents.view')"
-                  :employee-id="store.employeeId"
-                  class="mt-6"
-                />
-                <EmployeeSignaturesSection
-                  v-if="store.employeeId && store.can.view_signatures"
-                  :employee-id="store.employeeId"
-                  class="mt-6"
-                />
-              </template>
-            </VWindowItem>
-
-            <!-- Bulletins : autorité paie uniquement -->
-            <VWindowItem value="payslips">
-              <PersonPayslips
-                v-if="currentTab === 'payslips' && store.personRef"
-                :person-ref="store.personRef"
-              />
-            </VWindowItem>
-
-            <!-- Historique (traces d'audit réelles) -->
-            <VWindowItem value="history">
-              <VProgressLinear
-                v-if="store.historyLoading"
-                indeterminate
-                color="primary"
-              />
-              <VTimeline
-                v-else-if="store.history.length"
-                density="compact"
-                side="end"
-                truncate-line="both"
-                class="mt-2"
-              >
-                <VTimelineItem
-                  v-for="e in store.history"
-                  :key="e.id"
-                  :dot-color="e.severity === 'warning' ? 'warning' : e.severity === 'critical' ? 'error' : 'primary'"
-                  size="x-small"
-                >
-                  <div class="d-flex justify-space-between gap-2 flex-wrap">
-                    <span class="text-body-2 font-weight-medium">{{ e.action }}</span>
-                    <span class="text-caption text-medium-emphasis">{{ new Date(e.created_at).toLocaleString('fr-FR') }}</span>
-                  </div>
-                  <div class="text-caption text-medium-emphasis">
-                    {{ e.target_type }} · {{ e.actor_type }}
-                  </div>
-                </VTimelineItem>
-              </VTimeline>
-              <div
-                v-else
-                class="text-body-2 text-medium-emphasis py-8 text-center"
-              >
-                {{ t('people.noHistory') }}
-              </div>
             </VWindowItem>
           </VWindow>
         </VCardText>
       </VCard>
+
+      <!-- Fin de collaboration (endpoint Workforce existant, `workforce.manage`, motif obligatoire) -->
+      <VDialog
+        v-model="terminateOpen"
+        max-width="480"
+      >
+        <VCard :title="t('people.actions.terminateTitle')">
+          <VCardText>
+            <p class="text-body-2 text-medium-emphasis">
+              {{ t('people.actions.terminateHint') }}
+            </p>
+            <AppTextarea
+              v-model="terminateForm.reason"
+              :label="t('people.actions.terminateReason') + ' *'"
+              rows="2"
+              class="mb-4"
+              data-test="person-terminate-reason"
+            />
+            <AppTextField
+              v-model="terminateForm.termination_date"
+              type="date"
+              :label="t('people.actions.terminateDate')"
+            />
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="text"
+              @click="terminateOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              color="error"
+              :disabled="!terminateForm.reason.trim()"
+              :loading="terminating"
+              data-test="person-terminate-confirm"
+              @click="terminate"
+            >
+              {{ t('people.actions.terminate') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
 
       <!-- Dialogues RÉUTILISÉS (Workforce) -->
       <EmployeeAccessDialog

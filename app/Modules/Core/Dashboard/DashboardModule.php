@@ -25,6 +25,15 @@ class DashboardModule implements ModuleDefinition
                         'icon' => 'tabler-smart-home',
                         'group' => 'home', 'sort' => 10,
                     ],
+                    // ADR-777 : « Accueil personnel » (/home) — pour un gestionnaire AUSSI salarié, dans le
+                    // menu de l'avatar ; un salarié sans gestion y arrive déjà par « Accueil ».
+                    [
+                        'key' => 'personal-home',
+                        'title' => 'Personal home',
+                        'to' => ['name' => 'home'],
+                        'icon' => 'tabler-home-heart',
+                        'group' => 'personal', 'sort' => 5, 'requires' => 'employment', 'tags' => ['avatar', 'with-management'],
+                    ],
                 ],
                 routeNames: [], // ADR-149: dashboard always accessible, no module gate
             ),

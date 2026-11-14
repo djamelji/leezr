@@ -14,8 +14,9 @@
   "settings"
  ],
  "entries": 7,
- "leaves": 18,
+ "leaves": 19,
  "personalInMenu": [
+  "personal-home",
   "my-space",
   "workforce-me",
   "account-settings"
@@ -116,6 +117,12 @@
    "space": "settings",
    "placement": "nav",
    "path": "/company/audit"
+  },
+  {
+   "key": "personal-home",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/home"
   },
   {
    "key": "my-space",

@@ -82,7 +82,7 @@ class Ux0IntentNavigationTest extends TestCase
         $this->assertSame(['workforce-planning', 'workforce-time', 'workforce-leave'], array_column(collect($groups)->firstWhere('key', 'time')['items'][0]['children'], 'key'));
         $this->assertSame('nav.groups.settings', collect($groups)->firstWhere('key', 'settings')['items'][0]['labelKey']);
         // A manager's personal entries live in the avatar menu — all of them, none lost.
-        $this->assertSame(['my-space', 'workforce-me', 'account-settings'], $this->menuKeys($groups));
+        $this->assertSame(['personal-home', 'my-space', 'workforce-me', 'account-settings'], $this->menuKeys($groups));
     }
 
     public function test_presentation_never_adds_or_loses_a_reachable_entry(): void
@@ -137,7 +137,7 @@ class Ux0IntentNavigationTest extends TestCase
         // Manager (any management entry) : personal entries move to the avatar menu, none is lost.
         $manager = NavBuilder::forCompany($company, ['members.view'], 'management');
         $this->assertNotContains('my-space', $this->entries($manager));
-        $this->assertSame(['my-space', 'workforce-me', 'account-settings'], $this->menuKeys($manager));
+        $this->assertSame(['personal-home', 'my-space', 'workforce-me', 'account-settings'], $this->menuKeys($manager));
     }
 
     public function test_business_modules_join_activity_without_naming_a_jobdomain(): void
@@ -194,7 +194,7 @@ class Ux0IntentNavigationTest extends TestCase
         $this->assertSame(['my-space', 'account-settings'], $this->menuKeys($noRecord));
         // …and kept for an administrator who is ALSO an employee.
         $adminEmployee = NavBuilder::forCompany($company, null, 'management', ['employment' => true]);
-        $this->assertSame(['my-space', 'workforce-me', 'account-settings'], $this->menuKeys($adminEmployee));
+        $this->assertSame(['personal-home', 'my-space', 'workforce-me', 'account-settings'], $this->menuKeys($adminEmployee));
 
         // HR settings is a structure page (refused to operational profiles by its own guard) : the
         // entry follows the page — no entry leading to a refusal.
@@ -217,5 +217,16 @@ class Ux0IntentNavigationTest extends TestCase
         // No employee record for this owner : no « Mon activité » anywhere.
         $this->assertNotContains('workforce-me', NavBuilder::leafKeys($res->json('groups')));
         $this->assertContains('my-space', NavBuilder::leafKeys($res->json('groups')));
+    }
+
+    public function test_personal_home_is_offered_to_a_manager_who_is_also_an_employee_only(): void
+    {
+        $company = $this->company(true);
+
+        // ADR-777 : « Accueil personnel » (/home) — avatar menu of a manager with an employee record.
+        $this->assertContains('personal-home', $this->menuKeys(NavBuilder::forCompany($company, null, 'management', ['employment' => true])));
+        // No employee record : not offered. An employee without management : reaches it through « Accueil ».
+        $this->assertNotContains('personal-home', NavBuilder::leafKeys(NavBuilder::forCompany($company, null, 'management', ['employment' => false])));
+        $this->assertNotContains('personal-home', NavBuilder::leafKeys(NavBuilder::forCompany($company, ['shipments.view_own'], 'operational', ['employment' => true])));
     }
 }

@@ -203,7 +203,8 @@
       "workforce-contract-templates": "Contrats de travail",
       "workforce-signature": "Signatures",
       "workforce-home": "Accueil",
-      "my-space": "Mon espace"
+      "my-space": "Mon espace",
+      "personal-home": "Accueil personnel"
     }
   },
   "roles": {
@@ -2841,6 +2842,10 @@
       "shipments.delivery": {
         "label": "Opérations de livraison",
         "hint": "Voir les expéditions assignées et mettre à jour leur statut."
+      },
+      "members.team_view": {
+        "label": "Annuaire de l'équipe",
+        "hint": "Consulter l'équipe."
       }
     },
     "permissions": {
@@ -4395,11 +4400,11 @@
     "noHistory": "Aucun historique disponible.",
     "tabs": {
       "overview": "Vue d'ensemble",
-      "personal": "Informations",
+      "personal": "Informations personnelles",
       "access": "Accès & autorisations",
       "employment": "Emploi",
       "planning": "Planning",
-      "time": "Temps & pointage",
+      "time": "Pointage",
       "leave": "Congés & absences",
       "documents": "Documents",
       "history": "Historique",
@@ -4494,6 +4499,48 @@
       "created": "Fiche salarié créée.",
       "noRecordTitle": "Fiche salarié",
       "noRecordHint": "Ce compte n'a pas de fiche salarié : contrat, planning et congés ne sont pas disponibles."
+    },
+    "groups": {
+      "overview": "Vue d'ensemble",
+      "profile": "Informations & emploi",
+      "documents": "Documents & contrats",
+      "time": "Temps & absences",
+      "access": "Accès & autorisations"
+    },
+    "actions": {
+      "menu": "Actions",
+      "addDocument": "Ajouter un document",
+      "requestDocument": "Demander un document",
+      "sign": "Faire signer",
+      "suspend": "Suspendre l'accès",
+      "terminate": "Terminer la collaboration",
+      "terminateTitle": "Terminer la collaboration",
+      "terminateHint": "La personne quitte l'entreprise. Son dossier, ses contrats et ses documents sont conservés. Un contrat en brouillon est abandonné.",
+      "terminateReason": "Motif",
+      "terminateDate": "Date de fin (aujourd’hui par défaut)",
+      "terminated": "Fin de collaboration enregistrée."
+    },
+    "add": {
+      "title": "Ajouter une personne",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "accessQuestion": "Cette personne aura-t-elle besoin de se connecter à Leezr ?",
+      "accessYes": "Oui, elle reçoit une invitation",
+      "accessNo": "Non, pas pour le moment",
+      "onlyAccess": "Cette personne recevra une invitation pour se connecter à Leezr.",
+      "onlyRecord": "La fiche de cette personne sera créée. Un accès à Leezr pourra lui être donné plus tard.",
+      "emailHint": "Si un compte existe déjà avec cette adresse, la personne devra accepter l'invitation.",
+      "role": "Rôle dans Leezr",
+      "staff": "Cette personne fait partie du personnel de l'entreprise",
+      "hireDate": "Date d'entrée",
+      "more": "Plus d'informations",
+      "phone": "Téléphone",
+      "employeeNumber": "Matricule",
+      "submit": "Ajouter",
+      "submitInvite": "Ajouter et inviter",
+      "created": "Personne ajoutée.",
+      "createdInvited": "Personne ajoutée, invitation préparée.",
+      "createdAccessFailed": "Personne ajoutée, mais l'accès n'a pas pu être préparé. {reason}"
     }
   },
   "peopleList": {
@@ -4524,7 +4571,8 @@
     "invitedNotSent": "L'invitation est enregistrée, mais l'e-mail n'a pas pu être envoyé. Ouvrez la fiche pour la relancer.",
     "invitedQueued": "Invitation enregistrée. L'e-mail est en file d'attente et n'est pas encore parti.",
     "invitedPendingQueued": "Ce compte existe déjà : l'invitation est enregistrée, son e-mail est en file d'attente. L'accès sera activé après son acceptation.",
-    "openFile": "Ouvrir la fiche de {name}"
+    "openFile": "Ouvrir la fiche de {name}",
+    "access": "Accès"
   },
   "home": {
     "title": "Accueil",

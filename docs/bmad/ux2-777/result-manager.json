@@ -1,0 +1,12 @@
+{
+ "profile": {
+  "tag": "manager",
+  "email": "manager@leezr.test",
+  "note": "manager limité à son équipe",
+  "add": null
+ },
+ "hasTeam": true,
+ "files": [],
+ "rows": 0,
+ "network": []
+}

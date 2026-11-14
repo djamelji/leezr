@@ -72,13 +72,12 @@ class PersonDocumentController extends Controller
         $maxSize = ($rules['max_file_size_mb'] ?? 10) * 1024;
         $accepted = $rules['accepted_types'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
         $expiresRule = $type->requires_expiration ? ['required', 'date', 'after:today'] : ['nullable', 'date', 'after:today'];
-        $request->validate([
-            'file' => ['required', 'file', "max:{$maxSize}", 'mimes:'.implode(',', $accepted)],
-            'expires_at' => $expiresRule,
-        ]);
-
-        $file = $request->file('file');
-        $processed = $pipeline->process([$file], $documentCode);
+        // ADR-777 : `file` (appels existants) ou `files[]` (panneau de la fiche) — mêmes règles par fichier.
+        $fileRule = ['file', "max:{$maxSize}", 'mimes:'.implode(',', $accepted)];
+        $request->validate(['file' => ['required_without:files', ...$fileRule], 'files' => ['required_without:file', 'array', 'min:1'], 'files.*' => $fileRule, 'expires_at' => $expiresRule]);
+        $files = $request->hasFile('file') ? [$request->file('file')] : array_values($request->file('files'));
+        $file = $files[0];
+        $processed = $pipeline->process($files, $documentCode);
         try {
             if ($processed->passthrough) {
                 $path = $file->store("documents/{$company->id}/subject", 'local');

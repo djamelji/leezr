@@ -182,4 +182,24 @@ class Ux1HomePrioritiesTest extends TestCase
             }
         }
     }
+
+    // ═══ ADR-777 (UX2) — corrected contextual links ═══
+
+    public function test_adr777_workforce_priorities_open_the_single_team_list(): void
+    {
+        $company = $this->company();
+        $owner = $this->owner($company);
+        \App\Core\Workforce\Employee::withoutGlobalScopes()->create([
+            'company_id' => $company->id, 'first_name' => 'No', 'last_name' => 'Contract', 'status' => \App\Core\Workforce\Employee::STATUS_ACTIVE,
+            'hire_date' => '2026-01-01', 'employee_number' => 'E-'.uniqid(),
+        ]);
+
+        $onboarding = collect($this->priorities($owner, $company)['priorities'])->firstWhere('key', 'onboarding_incomplete');
+        $this->assertSame(1, $onboarding['count']);
+        $this->assertSame('company-people', $onboarding['to']['name'], 'the single team list, not the legacy employee list');
+
+        $source = file_get_contents(app_path('Modules/Workforce/ReadModels/HomePrioritiesReadModel.php'));
+        $this->assertStringContainsString("'name' => 'company-workforce-signature', 'query' => ['status' => 'pending']", $source);
+        $this->assertStringNotContainsString("'name' => 'company-workforce-employees'", $source);
+    }
 }

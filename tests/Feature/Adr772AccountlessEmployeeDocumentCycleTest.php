@@ -256,4 +256,22 @@ class Adr772AccountlessEmployeeDocumentCycleTest extends TestCase
         $this->assertSame(0, DocumentRequestEvent::where('company_id', $this->b->id)->count());
         $this->as($this->ownerB, $this->b)->putJson("{$base}/review", ['status' => 'approved', 'extend_until' => $until])->assertStatus(404);
     }
+
+    // ═══ ADR-777 (UX2) — the person file sends `files[]` ; existing callers send `file` ═══
+
+    public function test_adr777_person_document_upload_accepts_both_field_forms(): void
+    {
+        $base = "/api/company/people/employee-{$this->employee->id}/documents/id_card";
+        $expires = now()->addYear()->toDateString();
+
+        $this->as($this->owner, $this->a)->post($base, ['files' => [$this->pdf('PANEL')], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertOk();
+        $this->assertSame(1, MemberDocument::where('company_id', $this->a->id)->where('document_subject_id', $this->employee->id)->count());
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $this->pdf('API'), 'expires_at' => $expires])->assertOk();
+
+        // Same rules for each file, same permission, same tenant boundary — nothing widened.
+        $this->as($this->owner, $this->a)->postJson($base, ['expires_at' => $expires])->assertStatus(422)->assertJsonValidationErrors(['file']);
+        $this->as($this->owner, $this->a)->post($base, ['files' => [UploadedFile::fake()->create('x.exe', 10)], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertStatus(422);
+        $this->as($this->viewer, $this->a)->post($base, ['files' => [$this->pdf('NO')], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertStatus(403);
+        $this->as($this->ownerB, $this->b)->post($base, ['files' => [$this->pdf('B')], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertStatus(404);
+    }
 }

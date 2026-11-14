@@ -168,7 +168,7 @@ defineExpose({ markApplied })
     :model-value="props.isDialogVisible"
     temporary
     location="end"
-    :width="$vuetify.display.smAndDown ? '100%' : 560"
+    :width="$vuetify.display.smAndDown ? $vuetify.display.width : 560"
     data-allow-mismatch
     class="scrollable-content"
     border="none"

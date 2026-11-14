@@ -203,7 +203,8 @@
       "workforce-contract-templates": "Employment contracts",
       "workforce-signature": "Signatures",
       "workforce-home": "Home",
-      "my-space": "My space"
+      "my-space": "My space",
+      "personal-home": "Personal home"
     }
   },
   "roles": {
@@ -2841,6 +2842,10 @@
       "shipments.delivery": {
         "label": "Delivery Operations",
         "hint": "View assigned shipments and update their status."
+      },
+      "members.team_view": {
+        "label": "Team directory",
+        "hint": "View the team."
       }
     },
     "permissions": {
@@ -4395,11 +4400,11 @@
     "noHistory": "No history available.",
     "tabs": {
       "overview": "Overview",
-      "personal": "Personal info",
+      "personal": "Personal details",
       "access": "Access & authorizations",
       "employment": "Employment",
       "planning": "Planning",
-      "time": "Time & attendance",
+      "time": "Time tracking",
       "leave": "Leave & absences",
       "documents": "Documents",
       "history": "History",
@@ -4494,6 +4499,48 @@
       "created": "Employee record created.",
       "noRecordTitle": "Employee record",
       "noRecordHint": "This account has no employee record: contract, planning and leave are not available."
+    },
+    "groups": {
+      "overview": "Overview",
+      "profile": "Details & job",
+      "documents": "Documents & contracts",
+      "time": "Time & leave",
+      "access": "Access & permissions"
+    },
+    "actions": {
+      "menu": "Actions",
+      "addDocument": "Add a document",
+      "requestDocument": "Request a document",
+      "sign": "Request a signature",
+      "suspend": "Suspend access",
+      "terminate": "End the collaboration",
+      "terminateTitle": "End the collaboration",
+      "terminateHint": "The person leaves the company. Their file, contracts and documents are kept. A draft contract is abandoned.",
+      "terminateReason": "Reason",
+      "terminateDate": "End date (today by default)",
+      "terminated": "End of collaboration recorded."
+    },
+    "add": {
+      "title": "Add a person",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "accessQuestion": "Will this person need to sign in to Leezr?",
+      "accessYes": "Yes, send an invitation",
+      "accessNo": "No, not for now",
+      "onlyAccess": "This person will receive an invitation to sign in to Leezr.",
+      "onlyRecord": "This person's file will be created. Access to Leezr can be granted later.",
+      "emailHint": "If an account already exists for this address, the person will have to accept the invitation.",
+      "role": "Role in Leezr",
+      "staff": "This person is part of the company staff",
+      "hireDate": "Start date",
+      "more": "More details",
+      "phone": "Phone",
+      "employeeNumber": "Employee number",
+      "submit": "Add",
+      "submitInvite": "Add and invite",
+      "created": "Person added.",
+      "createdInvited": "Person added, invitation prepared.",
+      "createdAccessFailed": "Person added, but access could not be prepared. {reason}"
     }
   },
   "peopleList": {
@@ -4524,7 +4571,8 @@
     "invitedNotSent": "The invitation is saved, but the e-mail could not be sent. Open the person's file to resend it.",
     "invitedQueued": "Invitation saved. The e-mail is queued and has not been sent yet.",
     "invitedPendingQueued": "This account already exists: the invitation is saved and its e-mail is queued. Access will be activated once accepted.",
-    "openFile": "Open {name}'s file"
+    "openFile": "Open {name}'s file",
+    "access": "Access"
   },
   "home": {
     "title": "Home",

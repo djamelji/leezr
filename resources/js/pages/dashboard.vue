@@ -135,7 +135,7 @@ const acceptSuggestion = suggestion => {
       <!-- ADR-751b / ADR-776 : accès contextuel à l'espace opérationnel d'un gestionnaire aussi salarié -->
       <VBtn
         v-if="showMySpace"
-        to="/home"
+        :to="{ name: 'company-workforce-me' }"
         variant="text"
         prepend-icon="tabler-calendar-time"
         data-test="home-my-activity"

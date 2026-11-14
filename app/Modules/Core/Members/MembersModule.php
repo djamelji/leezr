@@ -36,6 +36,13 @@ class MembersModule implements ModuleDefinition
                 ['key' => 'members.sensitive_read', 'label' => 'Read Sensitive Data', 'is_admin' => true, 'hint' => 'Access sensitive member fields (IBAN, social security number).'],
             ],
             bundles: [
+                // ADR-777 : « voir l'équipe » sans le pouvoir d'inviter — pour les rôles de terrain.
+                [
+                    'key' => 'members.team_view',
+                    'label' => 'Team Directory',
+                    'hint' => 'View the team.',
+                    'permissions' => ['members.view'],
+                ],
                 [
                     'key' => 'members.team_access',
                     'label' => 'Team Access',

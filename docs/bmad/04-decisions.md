@@ -28071,3 +28071,35 @@ UX0 validé. L'accueil Company affichait des priorités limitées à Workforce, 
 `Ux1HomePrioritiesTest` (5 tests) ; `ux1-home.spec.js` 9/9 (7 profils, parcours avec écriture sous registre d'exécution, entreprise sans Workforce) ; mobile, tablette, sombre ; suite complète et build : voir le checkpoint.
 
 **Verdict** : 🟢 GO DEV. UX2 non commencé.
+
+---
+
+## ADR-777 — Company Experience 2.0 / UX2 : Équipe, fiche unifiée, parcours d'ajout unique
+
+**Date** : 2026-11-14 · **Base** : `6b3eabaf` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX2.md`
+
+### Contexte
+
+UX1 validé. L'ajout d'une personne imposait un choix technique (utilisateur ou fiche salarié), la fiche comptait onze onglets et ses actions étaient des icônes sans libellé ; la fin de collaboration n'avait aucune interface.
+
+### Décisions
+
+1. **Ajout unique** : tiroir « Ajouter une personne » posant une question métier (« aura-t-elle besoin de se connecter à Leezr ? »). Il enchaîne les endpoints existants (fiche, accès d'une fiche, invitation) ; la question n'est posée que si les deux réponses sont permises ; aucune fiche salarié sans Workforce ; aucun moteur d'invitation nouveau.
+2. **Fiche en cinq rubriques** : Vue d'ensemble, Informations & emploi, Documents & contrats, Temps & absences, Accès & autorisations. Le serveur décide toujours des sections (`available_sections`) ; l'interface ne fait que les ranger. Chaque section garde sa garde. Anciens `?tab=` conservés.
+3. **Actions libellées** : « Modifier » + menu « Actions », entrées issues des capacités serveur. Nouvelle interface « Terminer la collaboration » sur l'endpoint existant.
+4. **Liste** : une colonne « Accès » (état + rôle).
+5. **Décisions UX1** : « Mon activité » → espace Workforce personnel ; `/home` = « Accueil personnel » (entrée de manifeste, menu de l'avatar d'un gestionnaire aussi salarié) ; liens de priorités corrigés.
+6. **Préréglage Driver** : lot `members.team_view` (`members.view`) ; le rôle de terrain n'obtient plus `members.invite` à la création d'une entreprise. Rôles existants non modifiés (7 rôles, 12 adhésions, aucune invitation émise en DEV).
+7. **Compatibilité additive** : `POST /company/people/{ref}/documents/{code}` accepte `files[]` en plus de `file` (le dépôt depuis la fiche échouait en 422).
+
+### Conséquences
+
+- Aucune route supprimée, aucune migration, aucune permission ajoutée ; Billing et paie intacts.
+- Les recettes historiques qui utilisaient le menu « Nouveau » sont portées sur le nouveau parcours.
+- `PersonDocumentController` ne grossit pas (258 lignes).
+
+### Validation
+
+`Ux2TeamTest`, tests de dépôt et de priorités ; suite complète 4278 verts (3 échecs historiques inchangés) ; build propre ; recettes navigateur : voir le checkpoint.
+
+**Verdict** : 🟢 GO DEV. UX3 non commencé.

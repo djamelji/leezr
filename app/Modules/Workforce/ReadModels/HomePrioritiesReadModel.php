@@ -78,7 +78,7 @@ class HomePrioritiesReadModel
             $count = SignatureReadModel::scopedQuery($request, $companyId)
                 ->where('status', 'pending')->count();
             $priorities[] = self::item('signatures_pending', $count, 'info', 'tabler-signature', [
-                'name' => 'company-workforce-documents', 'query' => ['tab' => 'signatures'],
+                'name' => 'company-workforce-signature', 'query' => ['status' => 'pending'], // ADR-777 : la liste des signatures, déjà filtrée
             ]);
         }
 
@@ -103,7 +103,7 @@ class HomePrioritiesReadModel
                 ->whereNotIn('id', $withContract->all() ?: [-1])
                 ->count();
             $priorities[] = self::item('onboarding_incomplete', $count, 'warning', 'tabler-user-plus', [
-                'name' => 'company-workforce-employees',
+                'name' => 'company-people', // ADR-777 : la liste Équipe unique (plus l'ancienne liste des salariés)
             ]);
         }
 

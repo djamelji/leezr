@@ -103,6 +103,9 @@ class NavBuilder
             }
 
             if ($space['personal'] ?? false) {
+                // `with-management` : entry meant for a manager only (e.g. the personal home, which a
+                // person without management entries already reaches through « Accueil »).
+                $group['items'] = array_values(array_filter($group['items'], fn (array $i) => $hasManagement || ! in_array('with-management', $i['tags'] ?? [], true)));
                 // Items tagged `avatar` always live in the avatar menu ; the others follow the user :
                 // visible entries for a person without management entries, avatar menu otherwise.
                 $menu = array_values(array_filter($group['items'], fn (array $i) => $hasManagement || in_array('avatar', $i['tags'] ?? [], true)));

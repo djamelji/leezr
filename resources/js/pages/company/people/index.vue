@@ -7,8 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
-import AddMemberDrawer from '@/company/views/AddMemberDrawer.vue'
-import PersonCreateEmployeeDialog from './_PersonCreateEmployeeDialog.vue'
+import PersonAddDrawer from './_PersonAddDrawer.vue'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -25,28 +24,14 @@ const { can } = useCan()
 const settings = useCompanySettingsStore()
 const { toast } = useAppToast()
 
-// ── ADR-768 (M7 LOT 2) — création EN PLACE : inviter un utilisateur (compte + rôle) ou créer une
-// fiche salarié sans compte. Mêmes composants et endpoints que les anciennes listes ; plus de
-// renvoi obligatoire vers /company/members ou /company/workforce/employees.
-const inviteOpen = ref(false)
-const createEmployeeOpen = ref(false)
-const openInvite = async () => {
-  if (!settings.roles?.length) await settings.fetchCompanyRoles({ silent: true }).catch(() => {})
-  inviteOpen.value = true
-}
-const onMemberAdded = member => {
-  inviteOpen.value = false
-  // Un compte déjà existant n'est PAS activé : il doit accepter l'invitation.
-  // M7 LOT 3 : jamais de fausse confirmation — si l'e-mail n'a pas pu partir, on le dit.
-  if (member?._invitationDelivery === 'failed') toast(t('peopleList.invitedNotSent'), 'warning')
-
-  // M7 LOT 4 : `queued` n'est pas « envoyé » — l'e-mail attend encore le worker.
-  else if (member?._invitationDelivery === 'queued') toast(t(member?._pendingAcceptance ? 'peopleList.invitedPendingQueued' : 'peopleList.invitedQueued'), 'info')
-  else toast(t(member?._pendingAcceptance ? 'peopleList.invitedPending' : 'peopleList.invited'), member?._pendingAcceptance ? 'info' : 'success')
-  reload()
-}
-const onEmployeeCreated = emp => {
-  if (emp?.id) router.push(`/company/people/employee-${emp.id}`)
+// ── ADR-777 (UX2) — « Ajouter une personne » : un seul parcours (tiroir unique). L'invitation et la
+// fiche salarié restent les mêmes endpoints ; l'utilisateur ne choisit plus entre deux concepts.
+const addOpen = ref(false)
+const addPreset = ref(null)
+const canAdd = computed(() => can('members.invite') || can('workforce.manage'))
+const openAdd = (preset = null) => { addPreset.value = preset; addOpen.value = true }
+const onPersonAdded = ({ personRef, tab }) => {
+  if (personRef) router.push({ path: `/company/people/${personRef}`, query: tab ? { tab } : {} })
   else reload()
 }
 
@@ -80,8 +65,7 @@ const employmentStates = ['active', 'inactive', 'on_leave', 'suspended', 'termin
 const headers = computed(() => {
   const h = [{ title: t('peopleList.person'), key: 'name', sortable: true }]
   if (store.facets.access) {
-    h.push({ title: t('peopleList.account'), key: 'account_state', sortable: false })
-    h.push({ title: t('peopleList.role'), key: 'role', sortable: false })
+    h.push({ title: t('peopleList.access'), key: 'account_state', sortable: false })
   }
   if (store.facets.hr) {
     h.push({ title: t('peopleList.employment'), key: 'employment_status', sortable: false })
@@ -110,8 +94,8 @@ onMounted(() => {
   if (canPeople.value) reload()
 
   // Deep-links des anciens raccourcis (tableau de bord, onboarding) : `?action=invite|create`.
-  if (route.query.action === 'invite' && can('members.invite')) openInvite()
-  if (route.query.action === 'create' && can('workforce.manage')) createEmployeeOpen.value = true
+  if (route.query.action === 'invite' && can('members.invite')) openAdd(true)
+  if (route.query.action === 'create' && can('workforce.manage')) openAdd(false)
 })
 
 const openFiche = row => router.push(`/company/people/${row.person_ref}`)
@@ -158,36 +142,15 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
           />
         </VList>
       </VMenu>
-      <VMenu v-if="tab === 'people' && (can('members.invite') || can('workforce.manage'))">
-        <template #activator="{ props }">
-          <VBtn
-            v-bind="props"
-            color="primary"
-            prepend-icon="tabler-plus"
-            data-test="people-new"
-          >
-            {{ t('peopleList.new') }}
-          </VBtn>
-        </template>
-        <VList>
-          <VListItem
-            v-if="can('members.invite')"
-            prepend-icon="tabler-user-plus"
-            :title="t('peopleList.inviteUser')"
-            :subtitle="t('peopleList.inviteUserHint')"
-            data-test="people-invite"
-            @click="openInvite"
-          />
-          <VListItem
-            v-if="can('workforce.manage')"
-            prepend-icon="tabler-id-badge-2"
-            :title="t('peopleList.createEmployee')"
-            :subtitle="t('peopleList.createEmployeeHint')"
-            data-test="people-create-employee"
-            @click="createEmployeeOpen = true"
-          />
-        </VList>
-      </VMenu>
+      <VBtn
+        v-if="tab === 'people' && canAdd"
+        color="primary"
+        prepend-icon="tabler-user-plus"
+        data-test="people-add"
+        @click="openAdd()"
+      >
+        {{ t('people.add.title') }}
+      </VBtn>
     </div>
 
     <VCard flat border>
@@ -228,14 +191,13 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
                 </div>
               </div>
             </template>
+            <!-- Accès : un seul état (puce) + le rôle en clair — pas deux colonnes de badges. -->
             <template #item.account_state="{ item }">
-              <VChip v-if="item.account_state" :color="accountMeta(item.account_state).color" size="small" variant="tonal" label>{{ t(accountMeta(item.account_state).label) }}</VChip>
-              <span v-else class="text-disabled">—</span>
-            </template>
-            <template #item.role="{ item }">
-              <VChip v-if="item.is_owner" color="primary" size="small" variant="tonal" label>{{ t('people.owner') }}</VChip>
-              <VChip v-else-if="item.role" :color="item.role.is_administrative ? 'warning' : 'secondary'" size="small" variant="tonal" label>{{ item.role.name }}</VChip>
-              <span v-else class="text-disabled">—</span>
+              <div v-if="item.account_state" class="d-flex align-center gap-2 flex-wrap">
+                <VChip :color="accountMeta(item.account_state).color" size="small" variant="tonal" label>{{ t(accountMeta(item.account_state).label) }}</VChip>
+                <span class="text-body-2 text-medium-emphasis">{{ item.is_owner ? t('people.owner') : (item.role?.name || '') }}</span>
+              </div>
+              <span v-else class="text-disabled">{{ t('people.account.none') }}</span>
             </template>
             <template #item.employment_status="{ item }">
               <span v-if="item.employment_status" class="text-body-2">{{ t('people.empStatus.' + item.employment_status, item.employment_status) }}</span>
@@ -260,17 +222,11 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
       </VWindow>
     </VCard>
 
-    <AddMemberDrawer
-      v-if="can('members.invite')"
-      :is-drawer-open="inviteOpen"
-      :company-roles="settings.roles"
-      @update:is-drawer-open="inviteOpen = $event"
-      @member-added="onMemberAdded"
-    />
-    <PersonCreateEmployeeDialog
-      v-if="can('workforce.manage')"
-      v-model="createEmployeeOpen"
-      @created="onEmployeeCreated"
+    <PersonAddDrawer
+      v-if="canAdd"
+      v-model="addOpen"
+      :preset-access="addPreset"
+      @created="onPersonAdded"
     />
   </div>
 </template>

@@ -119,6 +119,12 @@ onMounted(async () => {
   <div class="employee-home">
     <!-- ═══ En-tête ═══ -->
     <div class="mb-6">
+      <div
+        class="text-overline text-medium-emphasis"
+        data-test="personal-home-label"
+      >
+        {{ t('nav.company.personal-home') }}
+      </div>
       <h4 class="text-h4 mb-1">
         {{ firstName ? t('employeeHome.greeting', { name: firstName }) : t('employeeHome.greetingNoName') }}
       </h4>

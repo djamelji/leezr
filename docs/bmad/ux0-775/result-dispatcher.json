@@ -12,8 +12,9 @@
   "settings"
  ],
  "entries": 5,
- "leaves": 8,
+ "leaves": 9,
  "personalInMenu": [
+  "personal-home",
   "my-space",
   "workforce-me",
   "account-settings"
@@ -53,6 +54,12 @@
    "space": "settings",
    "placement": "nav",
    "path": "/company/profile/overview"
+  },
+  {
+   "key": "personal-home",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/home"
   },
   {
    "key": "my-space",

@@ -1,0 +1,23 @@
+{
+ "profile": {
+  "tag": "dispatcher",
+  "email": "admin@leezr.test",
+  "note": "Members sans droits Workforce",
+  "add": "access"
+ },
+ "hasTeam": true,
+ "files": [
+  {
+   "ref": "user-2",
+   "groups": [
+    "overview",
+    "profile",
+    "documents",
+    "access"
+   ],
+   "actions": 1
+  }
+ ],
+ "rows": 22,
+ "network": []
+}

@@ -247,7 +247,9 @@ class JobdomainRegistry
                         'dashboard_widgets' => ['compliance.rate', 'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today'],
                         'bundles' => [
                             'theme.full',
-                            'members.team_access',
+                            // ADR-777 : un rôle de terrain consulte l'équipe ; il n'invite pas. Ne vaut que
+                            // pour les entreprises créées ensuite — les rôles existants ne sont pas modifiés.
+                            'members.team_view',
                             'settings.company_info',
                             'documents.access',
                             'shipments.delivery',

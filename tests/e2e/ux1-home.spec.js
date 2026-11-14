@@ -110,6 +110,7 @@ for (const p of PROFILES) {
 test('UX1 parcours exécutés depuis l\'accueil (propriétaire, registre d\'exécution)', async ({ page }) => {
   test.setTimeout(6 * 60 * 1000)
   const run = createRun('ux1')
+  page.setDefaultTimeout(25000)
   const net = watch(page)
   const measures = {}
   try {
@@ -126,13 +127,15 @@ test('UX1 parcours exécutés depuis l\'accueil (propriétaire, registre d\'exé
     let read = await meter(page)
     net.mark('ajouter une personne')
     await page.locator('[data-test="home-action-team.add-person"]').click()
-    await page.getByLabel('Prénom').fill('UX1')
-    await page.getByLabel('Nom', { exact: true }).fill(run.name('Accueil'))
-    await page.getByLabel('E-mail').fill(run.email('ux1'))
-    await page.locator('[data-test="member-role-select"]').click()
+    // ADR-777 (UX2) : tiroir unique « Ajouter une personne » (l'action d'accueil prérépond « oui »).
+    await page.locator('[data-test="person-add-first-name"] input').fill('UX1')
+    await page.locator('[data-test="person-add-last-name"] input').fill(run.name('Accueil'))
+    await page.locator('[data-test="person-add-email"] input').fill(run.email('ux1'))
+    await page.locator('[data-test="person-add-staff"] input').uncheck()
+    await page.locator('[data-test="person-add-role"]').click()
     await page.getByRole('option', { name: 'Driver' }).first().click()
     const created = await clickAndExpectApi(page, { urlIncludes: '/api/company/members', method: 'POST' },
-      () => page.getByRole('button', { name: 'Ajouter', exact: true }).click())
+      () => page.locator('[data-test="person-add-submit"]').click())
     const member = (await created.json()).member
     run.track('membership', member.id)
     run.track('user', member.user.id)

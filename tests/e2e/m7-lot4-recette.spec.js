@@ -97,8 +97,8 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   await page.locator('tbody tr').first().click()
   await expect(page).toHaveURL(/\/company\/people\/(user|employee)-\d+/, { timeout: 20000 })
   await settle(page)
-  await page.getByRole('tab', { name: 'Informations' }).first().click()
-  await expect(page).toHaveURL(/tab=personal/)
+  await page.getByRole('tab', { name: 'Informations & emploi' }).first().click() // ADR-777 : rubrique
+  await expect(page).toHaveURL(/tab=profile/)
   await page.locator('[data-test="person-back"]').click()
   await expect(page, 'retour à la liste').toHaveURL(/\/company\/people$/, { timeout: 20000 })
 
@@ -226,19 +226,19 @@ test('interactions mobiles : menus, tiroirs, dialogues, onglets, états vides', 
 
   // Collaborateurs : menu « Nouveau » → tiroir d'invitation, fermable, sans débordement.
   await visit(page, '/company/people')
-  await page.locator('[data-test="people-new"]').click()
-  await page.locator('[data-test="people-invite"]').click()
-  await expect(page.getByLabel('E-mail')).toBeVisible({ timeout: 10000 })
+  await page.locator('[data-test="people-add"]').click() // ADR-777 : parcours unique
+  await page.locator('[data-test="person-add-access-yes"] input').check()
+  await expect(page.locator('[data-test="person-add-email"]')).toBeVisible({ timeout: 10000 })
   expect(await overflowX(page), 'tiroir invitation').toBeLessThanOrEqual(2)
   await page.screenshot({ path: `${DIR}/20-mobile-invite-drawer.png` })
   await page.getByRole('button', { name: /annuler|cancel/i }).first().click()
 
   // Dialogue de création de salarié : plein écran, actions atteignables.
-  await page.locator('[data-test="people-new"]').click()
-  await page.locator('[data-test="people-create-employee"]').click()
-  await expect(page.locator('[data-test="emp-submit"]')).toBeInViewport({ timeout: 10000 })
+  await page.locator('[data-test="people-add"]').click()
+  await page.locator('[data-test="person-add-access-no"] input').check()
+  await expect(page.locator('[data-test="person-add-submit"]')).toBeInViewport({ timeout: 10000 })
   await page.screenshot({ path: `${DIR}/21-mobile-create-employee.png` })
-  await page.locator('[data-test="aad-close"]').first().click()
+  await page.getByRole('button', { name: /annuler|cancel/i }).first().click()
 
   // Recherche sans résultat : état vide utile.
   await page.getByPlaceholder('Rechercher un collaborateur…').fill('zzz-aucun-résultat-zzz')

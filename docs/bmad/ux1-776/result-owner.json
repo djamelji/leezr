@@ -26,7 +26,7 @@
   },
   {
    "key": "onboarding_incomplete",
-   "path": "/company/workforce/employees"
+   "path": "/company/people"
   },
   {
    "key": "documents_to_review",
@@ -46,7 +46,7 @@
   },
   {
    "key": "signatures_pending",
-   "path": "/company/documents/hr"
+   "path": "/company/workforce/signature?status=pending"
   },
   {
    "key": "team.add-person",
