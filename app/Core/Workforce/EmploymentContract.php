@@ -19,18 +19,23 @@ class EmploymentContract extends Model
     const STATUS_SUSPENDED = 'suspended';
     const STATUS_TERMINATED = 'terminated';
 
+    /** ADR-773 — brouillon ABANDONNÉ : n'a jamais pris effet (≠ terminé). Terminal, conservé dans l'historique. */
+    const STATUS_CANCELLED = 'cancelled';
+
     const STATUSES = [
         self::STATUS_DRAFT,
         self::STATUS_ACTIVE,
         self::STATUS_SUSPENDED,
         self::STATUS_TERMINATED,
+        self::STATUS_CANCELLED,
     ];
 
     const TRANSITIONS = [
-        self::STATUS_DRAFT => [self::STATUS_ACTIVE],
+        self::STATUS_DRAFT => [self::STATUS_ACTIVE, self::STATUS_CANCELLED],
         self::STATUS_ACTIVE => [self::STATUS_SUSPENDED, self::STATUS_TERMINATED],
         self::STATUS_SUSPENDED => [self::STATUS_ACTIVE, self::STATUS_TERMINATED],
         self::STATUS_TERMINATED => [],
+        self::STATUS_CANCELLED => [],
     ];
 
     const CONTRACT_TYPES = ['cdi', 'cdd', 'stage', 'alternance', 'freelance'];

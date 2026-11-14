@@ -38,7 +38,7 @@ class ReviewMemberDocumentUseCase
         \App\Core\Documents\Services\PersonDocumentContinuity::adopt($data->company, $targetUser); // ADR-770 : valider LA pièce de la personne
 
 
-        return $this->reviewSubject($data->actor, $data->company, DocumentSubject::user($targetUser->id), $data->documentCode, $data->status, $data->reviewNote);
+        return $this->reviewSubject($data->actor, $data->company, DocumentSubject::user($targetUser->id), $data->documentCode, $data->status, $data->reviewNote, $data->status === 'approved' ? $data->extendUntil : null);
     }
 
     /**
@@ -46,7 +46,7 @@ class ReviewMemberDocumentUseCase
      * account (`employee`). One validation logic for both (same engine, same transitions, same
      * events) ; an account-less employee is reviewed as such — no account is created or required.
      */
-    public function reviewSubject(User $actor, Company $company, DocumentSubject $subject, string $documentCode, string $status, ?string $reviewNote): ReviewMemberDocumentResult
+    public function reviewSubject(User $actor, Company $company, DocumentSubject $subject, string $documentCode, string $status, ?string $reviewNote, ?string $extendUntil = null): ReviewMemberDocumentResult
     {
         $type = DocumentType::where('code', $documentCode)->firstOrFail();
 
@@ -67,7 +67,7 @@ class ReviewMemberDocumentUseCase
             if ($companyDocument === null || empty($companyDocument->file_path)) {
                 throw ValidationException::withMessages(['status' => ['Cannot approve: no file has been submitted.']]);
             }
-            $this->requests->approve($request, $actor, null);
+            $this->requests->approve($request, $actor, $companyDocument, $this->renewalProof($request, $companyDocument, $actor, $extendUntil));
         } elseif ($status === DocumentRequest::STATUS_APPROVED) {
             // Tolérant aux documents legacy d'un membre (sujet non renseigné) : match sujet OU user_id.
             $document = MemberDocument::where('company_id', $company->id)
@@ -84,7 +84,7 @@ class ReviewMemberDocumentUseCase
                 throw ValidationException::withMessages(['status' => ['Cannot approve: no file has been submitted.']]);
             }
 
-            $this->requests->approve($request, $actor, $document);
+            $this->requests->approve($request, $actor, $document, $this->renewalProof($request, $document, $actor, $extendUntil));
         } else {
             $this->requests->reject($request, $actor, (string) $reviewNote);
         }
@@ -115,5 +115,43 @@ class ReviewMemberDocumentUseCase
             reviewNote: $request->review_note,
             reviewedAt: $request->reviewed_at?->toIso8601String(),
         );
+    }
+
+    /**
+     * ADR-773 — an approval bears on an IDENTIFIABLE version. An expired document, or a pending
+     * renewal whose file is still the one that was expiring, is NOT made compliant by approving the
+     * request : it needs a new version, or an explicit, audited decision to extend the same document
+     * (`extend_until`). Returns the proof recorded on the `approved` event.
+     */
+    private function renewalProof(DocumentRequest $request, \Illuminate\Database\Eloquent\Model $document, User $actor, ?string $extendUntil): array
+    {
+        if ($extendUntil !== null) {
+            $previous = $document->expires_at?->toDateString();
+            $document->update(['expires_at' => $extendUntil]);
+            app(\App\Core\Audit\AuditLogger::class)->logCompany($request->company_id, 'document.expiry_extended', 'document_request', (string) $request->id, [
+                'actorId' => $actor->id, 'actorType' => 'user', 'severity' => 'warning',
+                'metadata' => ['document_id' => $document->id, 'document_class' => class_basename($document), 'previous_expires_at' => $previous, 'extended_until' => $extendUntil, 'file_sha256' => $document->file_sha256],
+            ]);
+
+            return ['proof' => 'extension', 'previous_expires_at' => $previous, 'extended_until' => $extendUntil];
+        }
+
+        if ($document->expires_at !== null && $document->expires_at->isPast()) {
+            throw ValidationException::withMessages(['status' => ['Cannot approve: the document has expired. Submit a new version or record an explicit extension.']]);
+        }
+
+        $renewal = $this->requests->pendingRenewal($request);
+        if ($renewal === null) {
+            return [];
+        }
+        $submitted = in_array($request->status, [DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_IN_REVIEW], true);
+        $sameFile = $renewal['file_sha256'] !== null && $document->file_sha256 !== null
+            ? hash_equals($renewal['file_sha256'], $document->file_sha256)
+            : false;
+        if (! $submitted || $sameFile) {
+            throw ValidationException::withMessages(['status' => ['Cannot approve a renewal without a new version of the document. Submit a new file or record an explicit extension.']]);
+        }
+
+        return ['proof' => 'new_version', 'renewed_from_sha256' => $renewal['file_sha256']];
     }
 }

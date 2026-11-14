@@ -78,8 +78,12 @@ const subjectTypeOptions = [
 const signatureStatusOptions = [
   { title: t('workforceDocuments.signatureStatuses.none'), value: 'none' },
   { title: t('workforceDocuments.signatureStatuses.pending'), value: 'pending' },
+  { title: t('workforceDocuments.signatureStatuses.in_progress'), value: 'in_progress' },
   { title: t('workforceDocuments.signatureStatuses.signed'), value: 'signed' },
   { title: t('workforceDocuments.signatureStatuses.declined'), value: 'declined' },
+  { title: t('workforceDocuments.signatureStatuses.expired'), value: 'expired' },
+  { title: t('workforceDocuments.signatureStatuses.cancelled'), value: 'cancelled' },
+  { title: t('workforceDocuments.signatureStatuses.failed'), value: 'failed' },
 ]
 
 // ── Table headers ────────────────────────────────────────────
@@ -108,7 +112,7 @@ function formatSubject(type, id) {
 
 const signatureColor = status => {
   // ADR-772 : état RÉEL du moteur de signature (refusée, expirée, annulée ne restent plus « en attente »).
-  const map = { none: 'secondary', pending: 'warning', signed: 'success', declined: 'error', expired: 'secondary', cancelled: 'secondary', failed: 'error' }
+  const map = { none: 'secondary', pending: 'warning', in_progress: 'info', signed: 'success', declined: 'error', expired: 'secondary', cancelled: 'secondary', failed: 'error' }
 
   return map[status] || 'secondary'
 }
@@ -117,6 +121,7 @@ const signatureLabel = status => {
   const map = {
     none: t('workforceDocuments.signatureStatuses.none'),
     pending: t('workforceDocuments.signatureStatuses.pending'),
+    in_progress: t('workforceDocuments.signatureStatuses.in_progress'),
     signed: t('workforceDocuments.signatureStatuses.signed'),
     declined: t('workforceDocuments.signatureStatuses.declined'),
     expired: t('workforceDocuments.signatureStatuses.expired'),

@@ -287,7 +287,7 @@ class MemberDocumentController extends Controller
     {
         $request->validate([
             'status' => ['required', 'in:approved,rejected'],
-            'review_note' => ['nullable', 'string', 'max:2000'],
+            'review_note' => ['nullable', 'string', 'max:2000'], 'extend_until' => ['nullable', 'date', 'after:today'],
         ]);
 
         $company = $request->attributes->get('company');
@@ -298,7 +298,7 @@ class MemberDocumentController extends Controller
             membershipId: $membershipId,
             documentCode: $code,
             status: $request->input('status'),
-            reviewNote: $request->input('review_note'),
+            reviewNote: $request->input('review_note'), extendUntil: $request->input('extend_until'),
         ));
 
         $this->publishDomainEvent('document.updated', $company->id, ['type' => 'reviewed', 'entity' => 'MemberDocument', 'document_type' => $code, 'status' => $result->status]);

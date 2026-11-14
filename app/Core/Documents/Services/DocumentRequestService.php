@@ -126,7 +126,7 @@ class DocumentRequestService
      * Accepte la pièce soumise : lie la référence de version validée (sha256 courant), fige le
      * reviewer/date. Transition autorisée depuis submitted/in_review.
      */
-    public function approve(DocumentRequest $request, User $actor, ?MemberDocument $document): DocumentRequest
+    public function approve(DocumentRequest $request, User $actor, ?\Illuminate\Database\Eloquent\Model $document, array $proof = []): DocumentRequest
     {
         $this->assertTransition($request, DocumentRequest::STATUS_APPROVED);
 
@@ -140,8 +140,8 @@ class DocumentRequestService
         $this->record($request, DocumentRequestEvent::E_APPROVED, $actor, null, [
             'validated_sha256' => $document?->file_sha256,
             'validated_file_name' => $document?->file_name,
-            'member_document_id' => $document?->id,
-        ]);
+            ($document instanceof \App\Core\Documents\CompanyDocument ? 'company_document_id' : 'member_document_id') => $document?->id,
+        ] + $proof);
 
         return $request;
     }
@@ -184,6 +184,34 @@ class DocumentRequestService
         $this->record($request, DocumentRequestEvent::E_CANCELLED, $actor, $note);
 
         return $request;
+    }
+
+    /**
+     * ADR-773 — RENEWAL CYCLE still open on this request : a renewal was requested (`renewed`) and no
+     * approval concluded it since. Returns the identity of the document AT THE TIME of the renewal
+     * (`file_sha256`, `expires_at`) — the version a renewal must differ from — or null when the
+     * request is not a pending renewal. Single rule, read by the review AND by the orchestrator.
+     *
+     * @return array{file_sha256: ?string, expires_at: ?string}|null
+     */
+    public function pendingRenewal(DocumentRequest $request): ?array
+    {
+        $events = DocumentRequestEvent::where('document_request_id', $request->id);
+        $renewed = (clone $events)->where('event', DocumentRequestEvent::E_RENEWED)->latest('id')->first();
+        if ($renewed === null) {
+            return null;
+        }
+        $approved = (clone $events)->where('event', DocumentRequestEvent::E_APPROVED)->latest('id')->first();
+        if ($approved !== null && $approved->id > $renewed->id) {
+            return null;
+        }
+        $meta = (array) $renewed->metadata;
+
+        return [
+            // Événements antérieurs à ADR-773 : pas d'empreinte au renouvellement → dernière version validée.
+            'file_sha256' => $meta['file_sha256'] ?? ($approved?->metadata['validated_sha256'] ?? null),
+            'expires_at' => $meta['expires_at'] ?? null,
+        ];
     }
 
     private function assertTransition(DocumentRequest $request, string $target): void

@@ -9,6 +9,7 @@ use App\Core\Workforce\LeaveRequest;
 use App\Core\Workforce\PayrollLine;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class GeneratedDocumentReadModel
 {
@@ -39,8 +40,10 @@ class GeneratedDocumentReadModel
             $query->whereHas('template', fn ($q) => $q->where('code', $filters['template_code']));
         }
 
+        // ADR-773 : le filtre porte sur l'état AFFICHÉ (état réel du moteur de signature), pas sur la
+        // colonne projetée — même règle que la colonne, donc pagination et total cohérents.
         if (! empty($filters['signature_status'])) {
-            $query->where('signature_status', $filters['signature_status']);
+            $query->whereRaw(self::realSignatureStateSql().' = ?', [$filters['signature_status']]);
         }
 
         // Filtre COLLABORATEUR transversal (tous les types de sujet rattachés à l'employé).
@@ -207,11 +210,38 @@ class GeneratedDocumentReadModel
             return GeneratedDocument::SIGNATURE_SIGNED;
         }
 
-        return match ($latest?->status) {
-            'pending', 'partially_signed' => GeneratedDocument::SIGNATURE_PENDING,
-            'declined', 'expired', 'cancelled', 'failed' => $latest->status,
-            default => (string) $doc->signature_status,
-        };
+        return self::REQUEST_STATE[$latest?->status] ?? (string) $doc->signature_status;
+    }
+
+    /**
+     * ADR-773 — THE rule, written once : state of the latest (non-draft) signature request → state
+     * shown for the document. `realSignatureState()` (display) and `realSignatureStateSql()` (filter,
+     * counters, pagination) are both derived from this table, so they cannot diverge.
+     */
+    public const REQUEST_STATE = [
+        'pending' => 'pending',
+        'partially_signed' => 'in_progress',
+        'declined' => 'declined',
+        'expired' => 'expired',
+        'cancelled' => 'cancelled',
+        'failed' => 'failed',
+    ];
+
+    /** SQL expression of the SAME rule, for the documents table `generated_documents` (tenant filter is the caller's). */
+    public static function realSignatureStateSql(): string
+    {
+        $docs = (new GeneratedDocument)->getTable();
+        $req = (new \App\Modules\Workforce\Signature\Models\SignatureRequest)->getTable();
+        $ofDoc = "r.generated_document_id = {$docs}.id and r.company_id = {$docs}.company_id";
+        $latest = "(select r.status from {$req} r where {$ofDoc} and r.status <> 'draft' order by r.id desc limit 1)";
+        $sealed = "exists (select 1 from {$req} r where {$ofDoc} and r.status = 'completed' and r.signed_document_path is not null)";
+
+        $cases = '';
+        foreach (self::REQUEST_STATE as $requestStatus => $state) {
+            $cases .= " when {$latest} = '{$requestStatus}' then '{$state}'";
+        }
+
+        return "(case when {$sealed} then '".GeneratedDocument::SIGNATURE_SIGNED."'{$cases} else {$docs}.signature_status end)";
     }
 
     /** Sets the real signature state on a page of documents (one query, in memory, never saved). */
@@ -273,8 +303,12 @@ class GeneratedDocumentReadModel
      */
     public static function statistics(int $companyId): array
     {
-        $docs = GeneratedDocument::withoutGlobalScopes()
+        // ADR-773 : compteurs sur l'état réel (même règle que la colonne et le filtre). L'état est
+        // calculé par ligne dans une sous-requête, puis agrégé (compatible ONLY_FULL_GROUP_BY).
+        $rows = GeneratedDocument::withoutGlobalScopes()
             ->where('company_id', $companyId)
+            ->selectRaw('subject_type, '.self::realSignatureStateSql().' as signature_status');
+        $docs = DB::query()->fromSub($rows, 'd')
             ->selectRaw('subject_type, signature_status, COUNT(*) as count')
             ->groupBy('subject_type', 'signature_status')
             ->get();

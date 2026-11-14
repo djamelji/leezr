@@ -17,5 +17,6 @@ final class ReviewMemberDocumentData
         public readonly string $documentCode,
         public readonly string $status,
         public readonly ?string $reviewNote,
+        public readonly ?string $extendUntil = null, // ADR-773 : prolongation explicite
     ) {}
 }

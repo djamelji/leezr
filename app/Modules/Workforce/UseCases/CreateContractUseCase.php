@@ -41,7 +41,7 @@ class CreateContractUseCase
             // versioning remains a deferred product arbitration (ADR-574) — overlapping on purpose is
             // intentionally refused here until that flow exists.
             $overlap = EmploymentContract::where('employee_id', $employee->id)
-                ->where('status', '!=', EmploymentContract::STATUS_TERMINATED)
+                ->whereNotIn('status', [EmploymentContract::STATUS_TERMINATED, EmploymentContract::STATUS_CANCELLED]) // ADR-773 : un brouillon abandonné ne bloque rien
                 ->where(function ($q) use ($startDate, $endDate) {
                     // existing.start_date <= newEnd  (newEnd null = open-ended → no upper bound)
                     if ($endDate !== null) {

@@ -180,4 +180,80 @@ class Adr772AccountlessEmployeeDocumentCycleTest extends TestCase
         $this->assertSame('approved', $reqA->fresh()->status);
         $this->assertSame('submitted', $reqB->fresh()->status);
     }
+
+    // ═══ ADR-773 — a renewal is proven by a NEW version, or by an explicit extension ═══
+
+    public function test_adr773_renewal_needs_a_new_version_or_an_explicit_extension_and_never_loops(): void
+    {
+        $ref = "employee-{$this->employee->id}";
+        $base = "/api/company/people/{$ref}/documents/id_card";
+        $renewals = fn () => DocumentRequestEvent::where('company_id', $this->a->id)->where('event', DocumentRequestEvent::E_RENEWED)->count();
+        $run = function () {
+            foreach (['documents:auto-renew', 'documents:check-expiration'] as $command) {
+                $this->artisan($command)->assertSuccessful();
+            }
+        };
+        $doc = fn () => MemberDocument::where('company_id', $this->a->id)->where('document_subject_id', $this->employee->id)->first();
+        CompanyDocumentSetting::updateOrCreate(['company_id' => $this->a->id], ['auto_renew_enabled' => true, 'renew_days_before' => 30, 'auto_remind_enabled' => false, 'remind_after_days' => 7]);
+
+        // A validated document, later close to its expiry : the renewal is requested once.
+        $v1 = $this->pdf('V1');
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $v1, 'expires_at' => now()->addYear()->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved'])->assertOk();
+        MemberDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(10)]);
+        $run();
+        $this->assertSame(['requested', 1], [$this->request($this->a, $this->employee)->status, $renewals()]);
+
+        // Approving WITHOUT a new version is refused : no proof of renewal.
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved'])->assertStatus(422)->assertJsonValidationErrors(['status']);
+        // Re-sending the SAME bytes is not a new version either.
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $this->pdf('V1'), 'expires_at' => now()->addDays(10)->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved'])->assertStatus(422);
+        $run();
+        $run();
+        $this->assertSame(1, $renewals(), 'the orchestrator stays idempotent while the renewal is pending');
+        $this->assertNotSame('approved', $this->request($this->a, $this->employee)->status);
+
+        // Explicit business decision : extension of the SAME document, by an authorised person, audited.
+        $until = now()->addYear()->toDateString();
+        $this->as($this->viewer, $this->a)->putJson("{$base}/review", ['status' => 'approved', 'extend_until' => $until])->assertStatus(403);
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved', 'extend_until' => now()->subDay()->toDateString()])->assertStatus(422);
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved', 'extend_until' => $until])->assertOk()->assertJsonPath('review.status', 'approved');
+        $this->assertSame($until, $doc()->expires_at->toDateString());
+        $this->assertDatabaseHas('company_audit_logs', ['company_id' => $this->a->id, 'action' => 'document.expiry_extended']);
+        $run();
+        $this->assertSame(1, $renewals(), 'extended : nothing to renew');
+
+        // Next cycle : a NEW version is deposited — the validation bears on that identifiable version.
+        MemberDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(10)]);
+        $run();
+        $this->assertSame(2, $renewals());
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $this->pdf('V2'), 'expires_at' => now()->addYears(2)->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved'])->assertOk();
+        $approved = DocumentRequestEvent::where('company_id', $this->a->id)->where('event', 'approved')->latest('id')->first();
+        $this->assertSame($doc()->file_sha256, $approved->metadata['validated_sha256']);
+        $this->assertNotNull($doc()->file_sha256);
+        $run();
+        $this->assertSame(2, $renewals());
+
+        // A refused renewal is not re-opened at every run either (same version, same expiry).
+        MemberDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(10)]);
+        $run();
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $this->pdf('V3'), 'expires_at' => now()->addDays(10)->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'rejected', 'review_note' => 'Mauvais document'])->assertOk();
+        $count = $renewals();
+        $run();
+        $run();
+        $this->assertSame($count, $renewals(), 'no endless cycle of requests after a refusal');
+
+        // An EXPIRED document does not become compliant by approving the request.
+        $this->as($this->owner, $this->a)->postJson($base, ['file' => $this->pdf('V4'), 'expires_at' => now()->addDays(3)->toDateString()])->assertOk();
+        MemberDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->subDay()]);
+        $this->as($this->owner, $this->a)->putJson("{$base}/review", ['status' => 'approved'])->assertStatus(422);
+        $this->assertFalse($this->entry($this->owner, $this->a, $this->employee)['satisfies_obligation']);
+
+        // Company B never involved.
+        $this->assertSame(0, DocumentRequestEvent::where('company_id', $this->b->id)->count());
+        $this->as($this->ownerB, $this->b)->putJson("{$base}/review", ['status' => 'approved', 'extend_until' => $until])->assertStatus(404);
+    }
 }

@@ -1886,7 +1886,8 @@
     "signatureFailed": "Failed",
     "signedVersion": "Signed version",
     "downloadOriginal": "Download the original",
-    "restricted": "Restricted access (compensation)"
+    "restricted": "Restricted access (compensation)",
+    "signatureInProgress": "Signature in progress"
   },
   "companyBilling": {
     "title": "Billing",
@@ -5432,6 +5433,10 @@
     "reject": "Reject",
     "reviewNote": "Review note",
     "reviewNotePlaceholder": "Reason for rejection...",
+    "extend": "Extend",
+    "extendTitle": "Extend the document validity",
+    "extendHint": "Explicit decision: the same document stays valid until the new expiry date, without a new version. The decision is audited.",
+    "extendUntil": "New expiry date",
     "reviewSaved": "Document review saved.",
     "reviewFailed": "Failed to save review.",
     "requestDocument": "Request Document",
@@ -6876,7 +6881,8 @@
       "declined": "Declined",
       "expired": "Expired",
       "cancelled": "Cancelled",
-      "failed": "Failed"
+      "failed": "Failed",
+      "in_progress": "In progress"
     },
     "emptyState": {
       "title": "No generated documents",
@@ -7059,7 +7065,8 @@
         "draft": "Draft",
         "active": "Active",
         "suspended": "Suspended",
-        "terminated": "Terminated"
+        "terminated": "Terminated",
+        "cancelled": "Abandoned"
       },
       "leave": {
         "draft": "Draft",
@@ -7319,7 +7326,11 @@
       "amountInCents": "Amount in cents (e.g. 250000 = €2,500.00)",
       "day": "day",
       "hourlyRate": "Hourly rate",
-      "dailyRate": "Daily rate"
+      "dailyRate": "Daily rate",
+      "abandon": "Abandon draft",
+      "abandonTitle": "Abandon this draft contract",
+      "abandonHint": "The draft never came into force. It stays in the history with its documents; a signature in progress is cancelled.",
+      "abandonReason": "Reason"
     },
     "contractTypes": {
       "cdi": "Permanent (CDI)",

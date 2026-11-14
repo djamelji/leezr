@@ -1,4 +1,5 @@
 <script setup>
+import { $api } from '@/utils/api'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { useCan } from '@/composables/useCan'
@@ -88,6 +89,26 @@ const activateContract = async contractId => {
   finally {
     activatingId.value = null
   }
+}
+
+// ADR-773 — un contrat en BROUILLON peut être abandonné (motif obligatoire, audité) : il n'a jamais
+// pris effet, on ne l'active pas pour le clore. Un contrat en vigueur suit la fin de collaboration.
+const cancelTarget = ref(null)
+const cancelReason = ref('')
+const cancelling = ref(false)
+const cancelError = ref('')
+const cancelContract = async () => {
+  cancelling.value = true
+  cancelError.value = ''
+  try {
+    await $api(`/workforce/employees/${props.employee.id}/contracts/${cancelTarget.value}/cancel`, { method: 'POST', body: { reason: cancelReason.value } })
+    cancelTarget.value = null
+    cancelReason.value = ''
+    await store.fetchContracts(props.employee.id)
+    emit('updated')
+  }
+  catch (e) { cancelError.value = Object.values(e?.data?.errors || {})[0]?.[0] || e?.data?.message || t('common.error') }
+  finally { cancelling.value = false }
 }
 
 const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
@@ -296,6 +317,17 @@ const formatSalary = (cents, currency) => {
               >
                 {{ $t('employees.contract.activate') }}
               </VBtn>
+              <VBtn
+                v-if="contract.status === 'draft' && can('workforce.contracts')"
+                data-test="contract-cancel"
+                color="secondary"
+                size="x-small"
+                variant="text"
+                class="ms-1"
+                @click="cancelTarget = contract.id"
+              >
+                {{ $t('employees.contract.abandon') }}
+              </VBtn>
             </div>
           </VTimelineItem>
         </VTimeline>
@@ -434,5 +466,45 @@ const formatSalary = (cents, currency) => {
         </VForm>
       </div>
     </VNavigationDrawer>
+
+    <VDialog
+      :model-value="cancelTarget !== null"
+      max-width="480"
+      @update:model-value="v => { if (!v) cancelTarget = null }"
+    >
+      <VCard :title="$t('employees.contract.abandonTitle')">
+        <VCardText>
+          <p class="text-body-2 text-medium-emphasis">
+            {{ $t('employees.contract.abandonHint') }}
+          </p>
+          <AppTextField
+            v-model="cancelReason"
+            :label="$t('employees.contract.abandonReason') + ' *'"
+            :error-messages="cancelError"
+            data-test="contract-cancel-reason"
+          />
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            @click="cancelTarget = null"
+          >
+            {{ $t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="error"
+            variant="elevated"
+            :loading="cancelling"
+            :disabled="!cancelReason"
+            data-test="contract-cancel-confirm"
+            @click="cancelContract"
+          >
+            {{ $t('employees.contract.abandon') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>

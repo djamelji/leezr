@@ -432,30 +432,139 @@ class Adr771GeneratedContractFilingTest extends TestCase
         $this->as($this->otherOwner, $this->other)->getJson("/api/workforce/documents/{$doc->id}")->assertStatus(404);
     }
 
-    public function test_adr772_end_of_collaboration_with_a_draft_contract_is_an_explicit_refusal(): void
+    public function test_adr773_a_draft_contract_can_be_abandoned_by_an_authorised_person(): void
     {
         $contract = $this->hrContract($this->linked); // draft
+        $doc = $this->generate($this->linked);
+        $req = $this->requestSignature($doc, $this->linked);
+        $url = "/api/workforce/employees/{$this->linked->id}/contracts/{$contract->id}/cancel";
+
+        // Permissions and tenant.
+        $this->as($this->teamManager)->postJson($url, ['reason' => 'x'])->assertStatus(403);
+        $this->as($this->otherOwner, $this->other)->postJson($url, ['reason' => 'x'])->assertStatus(404);
+        $this->as($this->owner)->postJson($url, [])->assertStatus(422); // a reason is required
+        $this->assertSame(EmploymentContract::STATUS_DRAFT, $contract->fresh()->status);
+
+        $this->as($this->hrNoPay)->postJson($url, ['reason' => 'Embauche annulee'])->assertOk()->assertJsonPath('status', 'cancelled');
+
+        // Abandoned, never activated ; kept in the history.
+        $this->assertSame(['cancelled', false], [$contract->fresh()->status, (bool) $contract->fresh()->is_current]);
+        $this->assertContains($contract->id, array_column($this->as($this->owner)->getJson("/api/workforce/employees/{$this->linked->id}/contracts")->assertOk()->json(), 'id'));
+        $this->assertDatabaseHas('company_audit_logs', ['company_id' => $this->company->id, 'action' => 'contract.cancelled', 'target_id' => (string) $contract->id]);
+        $this->assertDatabaseMissing('company_audit_logs', ['company_id' => $this->company->id, 'action' => 'contract.activated', 'target_id' => (string) $contract->id]);
+
+        // Generated document and signature stay traceable ; the pending signature is cancelled by the engine.
+        $row = $this->fileRows($this->owner, $this->linked)->firstWhere('id', $doc->id);
+        $this->assertSame(['cancelled', $contract->id], [$row['signature_status'], $row['contract_id']]);
+        $this->assertSame(SignatureRequest::STATUS_CANCELLED, $req->fresh()->status);
+        $this->as($this->owner)->get("/api/workforce/documents/{$doc->id}/download")->assertOk();
+        $this->assertGreaterThan(0, SignatureEvent::withoutGlobalScopes()->where('signature_request_id', $req->id)->count());
+
+        // Terminal : not twice, not activable ; an ACTIVE contract is not « cancelled », it follows termination.
+        $this->as($this->owner)->postJson($url, ['reason' => 'encore'])->assertStatus(422);
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->linked->id}/contracts/{$contract->id}/activate")->assertStatus(422);
+        $active = $this->hrContract($this->linked); // same dates : the abandoned draft does not block a new contract
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->linked->id}/contracts/{$active->id}/activate")->assertOk();
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->linked->id}/contracts/{$active->id}/cancel", ['reason' => 'x'])->assertStatus(422);
+        $this->assertSame(EmploymentContract::STATUS_ACTIVE, $active->fresh()->status);
+    }
+
+    public function test_adr773_a_draft_contract_never_blocks_the_end_of_collaboration(): void
+    {
+        $draft = $this->hrContract($this->linked);
+        $doc = $this->generate($this->linked);
         $url = "/api/workforce/employees/{$this->linked->id}/terminate";
+        $payrollLines = \App\Core\Workforce\PayrollLine::withoutGlobalScopes()->count();
 
-        $res = $this->as($this->owner)->postJson($url, ['reason' => 'Fin de periode'])->assertStatus(422);
-        $res->assertJsonValidationErrors(['contract']);
-        $this->assertSame(['active', null], [$this->linked->fresh()->status, $this->linked->fresh()->termination_date]);
-        $this->assertSame([EmploymentContract::STATUS_DRAFT, true], [$contract->fresh()->status, (bool) $contract->fresh()->is_current]);
-
-        // RBAC and tenant : unchanged.
         $this->as($this->teamManager)->postJson($url, ['reason' => 'x'])->assertStatus(403);
         $this->as($this->otherOwner, $this->other)->postJson($url, ['reason' => 'x'])->assertStatus(404);
 
-        // Once the contract is in force, the end of collaboration terminates the employee AND the contract.
-        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->linked->id}/contracts/{$contract->id}/activate")->assertOk();
+        // The employee leaves ; the draft is ABANDONED — never activated, never « terminated ».
         $this->as($this->owner)->postJson($url, ['reason' => 'Fin de periode'])->assertOk();
         $this->assertSame('terminated', $this->linked->fresh()->status);
-        $this->assertSame(EmploymentContract::STATUS_TERMINATED, $contract->fresh()->status);
+        $this->assertSame(['cancelled', false], [$draft->fresh()->status, (bool) $draft->fresh()->is_current]);
+        $this->assertDatabaseHas('company_audit_logs', ['company_id' => $this->company->id, 'action' => 'contract.cancelled', 'target_id' => (string) $draft->id]);
+        $this->assertDatabaseMissing('company_audit_logs', ['company_id' => $this->company->id, 'action' => 'contract.activated']);
 
-        // Already terminated : explicit refusal, not a 500.
-        $this->as($this->owner)->postJson($url, ['reason' => 'encore'])->assertStatus(422);
+        // History and documents kept ; no effect on payroll.
+        $this->assertContains($draft->id, array_column($this->as($this->owner)->getJson("/api/workforce/employees/{$this->linked->id}/contracts")->json(), 'id'));
+        $this->as($this->owner)->get("/api/workforce/documents/{$doc->id}/download")->assertOk();
+        $this->assertSame($payrollLines, \App\Core\Workforce\PayrollLine::withoutGlobalScopes()->count());
+        $this->assertSame(0, EmploymentContract::withoutGlobalScopes()->where('employee_id', $this->linked->id)->where('is_current', true)->count());
 
-        // No contract at all : the end of collaboration is recorded.
+        // An ACTIVE contract follows its own rule : terminated with the employee.
+        $active = $this->hrContract($this->outsider);
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->outsider->id}/contracts/{$active->id}/activate")->assertOk();
         $this->as($this->owner)->postJson("/api/workforce/employees/{$this->outsider->id}/terminate", ['reason' => 'Depart'])->assertOk();
+        $this->assertSame(EmploymentContract::STATUS_TERMINATED, $active->fresh()->status);
+
+        // Already terminated : explicit refusal, not a 500. No contract at all : recorded.
+        $this->as($this->owner)->postJson($url, ['reason' => 'encore'])->assertStatus(422);
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->accountless->id}/terminate", ['reason' => 'Depart'])->assertOk();
+    }
+
+    // ═══ ADR-773 — the registry FILTERS and COUNTS on the state it displays ═══
+
+    public function test_adr773_registry_filter_counters_and_pagination_use_the_displayed_state(): void
+    {
+        $doc = [];
+        $make = function (string $state, ?Employee $employee = null) use (&$doc) {
+            $employee ??= $this->employee('S-'.strtoupper($state));
+            $this->hrContract($employee);
+            $doc[$state] = $this->generate($employee);
+
+            return $employee;
+        };
+        $force = fn (SignatureRequest $r, string $status) => SignatureRequest::withoutGlobalScopes()->whereKey($r->id)->update(['status' => $status]);
+
+        $make('none');
+        $e = $make('pending');
+        $this->requestSignature($doc['pending'], $e);
+        $e = $make('in_progress');
+        $force($this->requestSignature($doc['in_progress'], $e), SignatureRequest::STATUS_PARTIALLY_SIGNED);
+        $make('signed', $this->linked);
+        $this->sign($this->requestSignature($doc['signed'], $this->linked));
+        $e = $make('declined');
+        $force($this->requestSignature($doc['declined'], $e), SignatureRequest::STATUS_DECLINED);
+        $e = $make('expired');
+        $force($this->requestSignature($doc['expired'], $e), SignatureRequest::STATUS_EXPIRED);
+        $e = $make('cancelled');
+        $cancelled = $this->requestSignature($doc['cancelled'], $e);
+        $this->as($this->owner)->postJson("/api/workforce/signature/{$cancelled->id}/cancel", ['reason' => 'x'])->assertOk();
+        $e = $make('failed');
+        $force($this->requestSignature($doc['failed'], $e), SignatureRequest::STATUS_FAILED);
+
+        // The stored projection is misleading on purpose : the filter must not rely on it.
+        $this->assertSame('pending', $doc['declined']->fresh()->signature_status);
+        $this->assertSame('pending', $doc['expired']->fresh()->signature_status);
+
+        $states = ['none', 'pending', 'in_progress', 'signed', 'declined', 'expired', 'cancelled', 'failed'];
+        foreach ($states as $state) {
+            $page = $this->as($this->owner)->getJson("/api/workforce/documents?signature_status={$state}&per_page=50")->assertOk();
+            $this->assertSame([$doc[$state]->id], array_column($page->json('data'), 'id'), "filter « {$state} »");
+            $this->assertSame([$state], array_column($page->json('data'), 'signature_status'), "displayed state of the filtered row « {$state} »");
+            $this->assertSame(1, $page->json('total'), "pagination total « {$state} »");
+        }
+
+        // Counters : same semantics, and they add up to the unfiltered total.
+        $stats = $this->as($this->owner)->getJson('/api/workforce/documents/statistics')->assertOk()->json();
+        foreach ($states as $state) {
+            $this->assertSame(1, (int) ($stats['by_signature_status'][$state] ?? 0), "counter « {$state} »");
+        }
+        $this->assertSame(count($states), array_sum($stats['by_signature_status']));
+        $this->assertSame(count($states), $this->as($this->owner)->getJson('/api/workforce/documents?per_page=50')->json('total'));
+
+        // Filter + pagination stay consistent (page size 1 over an unfiltered list keeps every row once).
+        $seen = [];
+        for ($p = 1; $p <= count($states); $p++) {
+            $seen[] = $this->as($this->owner)->getJson("/api/workforce/documents?per_page=1&page={$p}")->json('data.0.id');
+        }
+        $this->assertEqualsCanonicalizing(array_map(fn ($d) => $d->id, $doc), $seen);
+
+        // Permissions and tenant.
+        $this->as($this->docViewer)->getJson('/api/workforce/documents?signature_status=declined')->assertStatus(403);
+        $other = $this->as($this->otherOwner, $this->other)->getJson('/api/workforce/documents?signature_status=declined')->assertOk();
+        $this->assertSame(0, $other->json('total'));
+        $this->assertSame(0, array_sum($this->as($this->otherOwner, $this->other)->getJson('/api/workforce/documents/statistics')->json('by_signature_status') ?: []));
     }
 }

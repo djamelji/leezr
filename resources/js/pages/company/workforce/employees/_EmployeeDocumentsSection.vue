@@ -17,6 +17,7 @@ const busy = ref(null)
 
 const SIGNATURE = {
   pending: { color: 'warning', key: 'signaturePending' },
+  in_progress: { color: 'info', key: 'signatureInProgress' },
   signed: { color: 'success', key: 'signatureSigned' },
   declined: { color: 'error', key: 'signatureDeclined' },
   expired: { color: 'secondary', key: 'signatureExpired' },

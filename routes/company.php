@@ -649,6 +649,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store'])->middleware($perm('workforce.contracts'));
     Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate'])->middleware($perm('workforce.contracts'));
 
+    Route::post('employees/{employeeId}/contracts/{contractId}/cancel', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'cancel'])->middleware($perm('workforce.contracts')); // ADR-773
     Route::get('conventions', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'conventions'])->middleware($perm('workforce.view'));
 
     // Timesheets — view to read, time_manage to generate, submit/approve per action, time_approve to lock

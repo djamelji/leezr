@@ -24,6 +24,7 @@ class PersonDocumentReviewController
         $data = $request->validate([
             'status' => ['required', 'in:approved,rejected'],
             'review_note' => ['nullable', 'string', 'max:2000'],
+            'extend_until' => ['nullable', 'date', 'after:today'], // ADR-773 : prolongation explicite
         ]);
 
         $company = $request->attributes->get('company');
@@ -36,7 +37,7 @@ class PersonDocumentReviewController
         $subject = PersonSubjectResolver::resolve($company, $ids['user'], $ids['employee'])['canonical'];
         abort_if($subject === null, 422, 'Unresolvable subject.');
 
-        $result = $useCase->reviewSubject($request->user(), $company, $subject, $code, $data['status'], $data['review_note'] ?? null);
+        $result = $useCase->reviewSubject($request->user(), $company, $subject, $code, $data['status'], $data['review_note'] ?? null, $data['status'] === 'approved' ? ($data['extend_until'] ?? null) : null);
 
         $this->publishDomainEvent('document.updated', $company->id, ['type' => 'reviewed', 'entity' => 'MemberDocument', 'document_type' => $code, 'status' => $result->status]);
 

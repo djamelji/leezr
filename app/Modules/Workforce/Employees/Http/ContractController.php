@@ -115,6 +115,16 @@ class ContractController extends Controller
         return response()->json($contract);
     }
 
+    /** ADR-773 — abandon d'un contrat en BROUILLON (jamais entré en vigueur). Motif obligatoire, audité. */
+    public function cancel(Request $request, int $employeeId, int $contractId): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $contract = EmploymentContract::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employeeId)->findOrFail($contractId);
+        $data = $request->validate(['reason' => 'required|string|max:500']);
+
+        return response()->json(app(\App\Modules\Workforce\UseCases\CancelDraftContractUseCase::class)->execute($contract, $request->user(), $data['reason']));
+    }
+
     public function conventions(Request $request): JsonResponse
     {
         $conventions = ConventionCollective::active()

@@ -20,16 +20,6 @@ class TerminateEmployeeUseCase
             ]);
         }
 
-        // Règle contractuelle : seul un contrat EN VIGUEUR (actif ou suspendu) se termine. Un contrat
-        // encore en brouillon n'a jamais pris effet — il ne peut pas être « terminé », et le laisser
-        // courant sur un collaborateur sorti casserait l'historique contractuel. Rien n'est écrit.
-        $current = $employee->currentContract;
-        if ($current && ! in_array($current->status, ['terminated'], true) && ! $current->canTransitionTo('terminated')) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'contract' => ["Le contrat en cours est au statut « {$current->status} » : activez-le avant d'enregistrer la fin de collaboration."],
-            ]);
-        }
-
         return DB::transaction(function () use ($employee, $reason, $terminationDate) {
             $employee->transitionTo(Employee::STATUS_TERMINATED);
             $employee->termination_date = $terminationDate;
@@ -37,10 +27,19 @@ class TerminateEmployeeUseCase
 
             // Terminate current contract if exists
             $currentContract = $employee->currentContract;
-            if ($currentContract && $currentContract->status !== 'terminated') {
+            // ADR-773 : un contrat EN VIGUEUR se termine ; un BROUILLON (jamais entré en vigueur) est
+            // abandonné — jamais activé artificiellement, jamais « terminé ». La sortie n'est plus bloquée.
+            if ($currentContract && $currentContract->status === \App\Core\Workforce\EmploymentContract::STATUS_DRAFT) {
+                app(CancelDraftContractUseCase::class)->execute($currentContract, auth()->user(), 'Fin de collaboration : '.$reason);
+            } elseif ($currentContract && $currentContract->canTransitionTo('terminated')) {
                 $currentContract->transitionTo('terminated');
                 $currentContract->is_current = false;
                 $currentContract->save();
+            }
+            // Autres brouillons éventuels du collaborateur sortant : abandonnés eux aussi.
+            foreach (\App\Core\Workforce\EmploymentContract::withoutGlobalScopes()->where('company_id', $employee->company_id)
+                ->where('employee_id', $employee->id)->where('status', \App\Core\Workforce\EmploymentContract::STATUS_DRAFT)->get() as $draft) {
+                app(CancelDraftContractUseCase::class)->execute($draft, auth()->user(), 'Fin de collaboration : '.$reason);
             }
 
             app(AuditLogger::class)->logCompany(

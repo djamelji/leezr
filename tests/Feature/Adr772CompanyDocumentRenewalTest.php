@@ -169,4 +169,41 @@ class Adr772CompanyDocumentRenewalTest extends TestCase
         $this->assertGreaterThanOrEqual(1, $reminded->count(), 'the company request is reminded');
         $this->assertSame($reminded->count(), $reminded->pluck('metadata')->map(fn ($m) => $m['tier'] ?? null)->unique()->count(), 'once per tier');
     }
+
+    public function test_adr773_company_renewal_needs_a_new_version_or_an_explicit_extension(): void
+    {
+        $renewals = fn () => DocumentRequestEvent::where('company_id', $this->a->id)->where('event', DocumentRequestEvent::E_RENEWED)->count();
+        $this->as($this->owner, $this->a)->postJson('/api/company/documents/kbis', ['file' => $this->pdf('V1'), 'expires_at' => now()->addYear()->toDateString()])->assertOk();
+        CompanyDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(10)]);
+        $this->artisan('documents:auto-renew')->assertSuccessful();
+        $this->assertSame(['requested', 1], [$this->request($this->a)->status, $renewals()]);
+
+        // No new version : refused ; the same bytes again : refused ; runs stay idempotent.
+        $this->as($this->owner, $this->a)->putJson('/api/company/documents/kbis/review', ['status' => 'approved'])->assertStatus(422);
+        $this->as($this->owner, $this->a)->postJson('/api/company/documents/kbis', ['file' => $this->pdf('V1'), 'expires_at' => now()->addDays(10)->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson('/api/company/documents/kbis/review', ['status' => 'approved'])->assertStatus(422);
+        $this->artisan('documents:auto-renew')->assertSuccessful();
+        $this->artisan('documents:check-expiration')->assertSuccessful();
+        $this->assertSame(1, $renewals());
+        $this->assertSame(0, (int) $this->compliance($this->owner, $this->a)['valid'] + 0 * 1, 'still not renewed');
+
+        // Explicit extension, authorised and audited.
+        $until = now()->addYear()->toDateString();
+        $this->as($this->viewer, $this->a)->putJson('/api/company/documents/kbis/review', ['status' => 'approved', 'extend_until' => $until])->assertStatus(403);
+        $this->as($this->owner, $this->a)->putJson('/api/company/documents/kbis/review', ['status' => 'approved', 'extend_until' => $until])->assertOk();
+        $this->assertSame($until, CompanyDocument::where('company_id', $this->a->id)->first()->expires_at->toDateString());
+        $this->assertDatabaseHas('company_audit_logs', ['company_id' => $this->a->id, 'action' => 'document.expiry_extended']);
+        $this->assertSame(1, (int) $this->compliance($this->owner, $this->a)['valid']);
+
+        // New cycle with a NEW version : validated on that version, no further request.
+        CompanyDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(10)]);
+        $this->artisan('documents:auto-renew')->assertSuccessful();
+        $this->as($this->owner, $this->a)->postJson('/api/company/documents/kbis', ['file' => $this->pdf('V2'), 'expires_at' => now()->addYears(2)->toDateString()])->assertOk();
+        $this->as($this->owner, $this->a)->putJson('/api/company/documents/kbis/review', ['status' => 'approved'])->assertOk();
+        $approved = DocumentRequestEvent::where('company_id', $this->a->id)->where('event', 'approved')->latest('id')->first();
+        $this->assertSame(CompanyDocument::where('company_id', $this->a->id)->value('file_sha256'), $approved->metadata['validated_sha256']);
+        $this->artisan('documents:auto-renew')->assertSuccessful();
+        $this->assertSame(2, $renewals());
+        $this->assertSame(0, DocumentRequest::withoutGlobalScopes()->where('company_id', $this->b->id)->count());
+    }
 }

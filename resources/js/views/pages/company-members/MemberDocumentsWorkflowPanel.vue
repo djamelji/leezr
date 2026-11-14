@@ -196,12 +196,18 @@ const handleDocDelete = async code => {
   }
 }
 
-const handleReview = async (code, status, note = null) => {
+const extendVisible = ref(false)
+const extendDate = ref('')
+const extendCode = ref(null)
+const openExtend = code => { extendCode.value = code; extendDate.value = ''; extendVisible.value = true }
+const confirmExtend = async () => { extendVisible.value = false; await handleReview(extendCode.value, 'approved', null, extendDate.value) }
+
+const handleReview = async (code, status, note = null, extendUntil = null) => {
   reviewingCode.value = code
   try {
     await $api(`${base.value}/documents/${code}/review`, {
       method: 'PUT',
-      body: { status, review_note: note },
+      body: { status, review_note: note, extend_until: extendUntil },
     })
     toast(t('documents.reviewSaved'), 'success')
     await fetchDocuments()
@@ -491,6 +497,15 @@ const handleViewerDownload = async () => {
                   {{ t('documents.approve') }}
                 </VBtn>
                 <VBtn
+                  v-if="canEdit && doc.upload?.expires_at && ['requested', 'submitted', 'in_review', 'to_replace', 'rejected'].includes(doc.request_status)"
+                  size="small"
+                  variant="text"
+                  data-test="document-extend"
+                  @click="openExtend(doc.code)"
+                >
+                  {{ t('documents.extend') }}
+                </VBtn>
+                <VBtn
                   v-if="doc.can_review && canEdit"
                   size="small"
                   variant="tonal"
@@ -569,6 +584,43 @@ const handleViewerDownload = async () => {
   </VCard>
 
   <!-- Reject Dialog -->
+  <!-- ADR-773 — explicit, audited extension of the SAME document (no new version) -->
+  <VDialog
+    v-model="extendVisible"
+    max-width="460"
+  >
+    <VCard :title="t('documents.extendTitle')">
+      <VCardText>
+        <p class="text-body-2 text-medium-emphasis">
+          {{ t('documents.extendHint') }}
+        </p>
+        <AppTextField
+          v-model="extendDate"
+          type="date"
+          :label="t('documents.extendUntil')"
+          data-test="document-extend-until"
+        />
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="text"
+          @click="extendVisible = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          :disabled="!extendDate"
+          data-test="document-extend-confirm"
+          @click="confirmExtend"
+        >
+          {{ t('documents.extend') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
   <VDialog
     v-model="rejectDialogVisible"
     max-width="500"

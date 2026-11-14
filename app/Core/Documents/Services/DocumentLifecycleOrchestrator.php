@@ -138,8 +138,8 @@ class DocumentLifecycleOrchestrator
                     // Garde anti-doublon : ne rouvre pas si une demande est déjà active.
                     $existing = $this->requests->findExisting($doc->company_id, $subject, $type->id);
                     $active = [DocumentRequest::STATUS_REQUESTED, DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_IN_REVIEW, DocumentRequest::STATUS_TO_REPLACE];
-                    if ($existing && in_array($existing->status, $active, true)) {
-                        continue;
+                    if ($existing && (in_array($existing->status, $active, true) || $this->requests->pendingRenewal($existing) !== null)) {
+                        continue; // ADR-773 : un renouvellement non conclu (même refusé) n'est jamais rouvert en boucle
                     }
 
                     if (! $dryRun) {
@@ -149,7 +149,7 @@ class DocumentLifecycleOrchestrator
                             'document_request_id' => $req->id,
                             'event' => DocumentRequestEvent::E_RENEWED,
                             'created_at' => Carbon::now(),
-                            'metadata' => ['reason' => 'expiring', 'expires_at' => $doc->expires_at?->toDateString()],
+                            'metadata' => ['reason' => 'expiring', 'expires_at' => $doc->expires_at?->toDateString(), 'file_sha256' => $doc->file_sha256],
                         ]);
                         $this->notify($doc->company_id, $subject, $type, 'documents.request_new', null);
                     }
@@ -181,14 +181,14 @@ class DocumentLifecycleOrchestrator
         foreach ($docs as $doc) {
             $type = DocumentType::find($doc->document_type_id);
             $existing = $type ? $this->requests->findExisting($doc->company_id, $subject, $type->id) : null;
-            if (! $type || ($existing && in_array($existing->status, $active, true))) {
+            if (! $type || ($existing && (in_array($existing->status, $active, true) || $this->requests->pendingRenewal($existing) !== null))) {
                 continue;
             }
             if (! $dryRun) {
                 $req = $this->requests->open($doc->company_id, $subject, $type, null, null, $doc->expires_at->toDateString(), true);
                 DocumentRequestEvent::create([
                     'company_id' => $doc->company_id, 'document_request_id' => $req->id, 'event' => DocumentRequestEvent::E_RENEWED,
-                    'created_at' => Carbon::now(), 'metadata' => ['reason' => 'expiring', 'expires_at' => $doc->expires_at->toDateString(), 'subject' => 'company'],
+                    'created_at' => Carbon::now(), 'metadata' => ['reason' => 'expiring', 'expires_at' => $doc->expires_at->toDateString(), 'subject' => 'company', 'file_sha256' => $doc->file_sha256],
                 ]);
                 $this->notify($doc->company_id, $subject, $type, 'documents.request_new', null);
             }

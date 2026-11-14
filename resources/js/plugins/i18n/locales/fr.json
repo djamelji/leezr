@@ -1885,7 +1885,8 @@
     "signatureFailed": "En échec",
     "signedVersion": "Version signée",
     "downloadOriginal": "Télécharger l'original",
-    "restricted": "Accès restreint (rémunération)"
+    "restricted": "Accès restreint (rémunération)",
+    "signatureInProgress": "Signature en cours"
   },
   "companyBilling": {
     "title": "Facturation",
@@ -5432,6 +5433,10 @@
     "reject": "Rejeter",
     "reviewNote": "Note de révision",
     "reviewNotePlaceholder": "Motif du rejet...",
+    "extend": "Prolonger",
+    "extendTitle": "Prolonger la validité du document",
+    "extendHint": "Décision explicite : le même document reste valable jusqu'à la nouvelle échéance, sans nouvelle version. La décision est tracée.",
+    "extendUntil": "Nouvelle échéance",
     "reviewSaved": "Révision du document enregistrée.",
     "requestDocument": "Demander un document",
     "requestSent": "Demande de document envoyée.",
@@ -6876,7 +6881,8 @@
       "declined": "Refusé",
       "expired": "Expirée",
       "cancelled": "Annulée",
-      "failed": "En échec"
+      "failed": "En échec",
+      "in_progress": "En cours"
     },
     "emptyState": {
       "title": "Aucun document généré",
@@ -7059,7 +7065,8 @@
         "draft": "Brouillon",
         "active": "Actif",
         "suspended": "Suspendu",
-        "terminated": "Résilié"
+        "terminated": "Résilié",
+        "cancelled": "Abandonné"
       },
       "leave": {
         "draft": "Brouillon",
@@ -7319,7 +7326,11 @@
       "amountInCents": "Montant en centimes (ex: 250000 = 2 500,00 €)",
       "day": "jour",
       "hourlyRate": "Taux horaire",
-      "dailyRate": "Taux journalier"
+      "dailyRate": "Taux journalier",
+      "abandon": "Abandonner le brouillon",
+      "abandonTitle": "Abandonner ce contrat en brouillon",
+      "abandonHint": "Le brouillon n'est jamais entré en vigueur. Il reste dans l'historique avec ses documents ; une signature en cours est annulée.",
+      "abandonReason": "Motif"
     },
     "contractTypes": {
       "cdi": "CDI",

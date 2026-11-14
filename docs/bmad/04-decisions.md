@@ -27944,3 +27944,52 @@ Règle retenue : seul un contrat en vigueur (actif ou suspendu) se termine. Avec
 **Verdict** : **🟢 GO DEV.** NO-GO PROD inchangé (conditions d'ADR-771).
 
 **Règles** : DEV uniquement, aucun push, aucune migration, aucun accès distant, Billing et moteur de paie intacts.
+
+---
+
+## ADR-773 — Stabilisation métier avant préproduction
+
+**Date** : 2026-11-14 · **Base** : `ca621f5a` · **Périmètre** : trois anomalies résiduelles de cycle de vie (ADR-772, défauts 1 à 3). Aucun audit général.
+
+### Contexte
+
+1. Une demande de renouvellement pouvait être validée sans nouveau fichier : le document restait proche de son échéance et l'orchestrateur rouvrait une demande au passage suivant.
+2. Un contrat en brouillon bloquait la fin de collaboration ; la seule issue était d'activer artificiellement le contrat.
+3. Le filtre du registre RH lisait la colonne projetée `signature_status`, alors que l'affichage montre l'état réel des demandes de signature.
+
+### Décisions
+
+**1 — Un renouvellement se prouve.** Une règle unique, `DocumentRequestService::pendingRenewal()`, dit si un cycle de renouvellement est encore ouvert (événement `renewed` non suivi d'une approbation) et rend l'identité du document au moment du renouvellement (empreinte, échéance), désormais enregistrée dans l'événement `renewed`. Elle est lue par la validation et par l'orchestrateur.
+
+- Validation (`ReviewMemberDocumentUseCase::reviewSubject`, un seul chemin pour membres, salariés sans compte et entreprise) : refus 422 si le cycle est ouvert et qu'aucune nouvelle version n'a été déposée (demande non soumise, ou fichier identique à celui qui expirait) ; refus 422 si le document est expiré.
+- Prolongation explicite : paramètre `extend_until` (date future) sur les trois routes de validation, sous la même permission `documents.manage`. Elle repousse l'échéance du même document, est tracée dans l'événement `approved` (`proof: extension`) et dans le journal d'audit (`document.expiry_extended`).
+- L'approbation enregistre la version validée (`validated_sha256`) aussi pour les documents de l'entreprise (`company_document_id`), avec la nature de la preuve (`new_version` ou `extension`).
+- Orchestrateur : un renouvellement non conclu, même refusé, n'est jamais rouvert. Pas de cycle de demandes.
+- Interface : action « Prolonger » (coffre de l'entreprise, dossier documentaire d'une personne), dialogue du stock existant.
+
+**2 — Un brouillon s'abandonne.** Transition additive `draft → cancelled` (état terminal, colonne existante, aucune migration). `CancelDraftContractUseCase` : réservé aux brouillons, motif obligatoire, annule les demandes de signature en cours des documents générés du contrat (via le cas d'usage existant), journal d'audit `contract.cancelled`. Route `POST employees/{id}/contracts/{id}/cancel` sous `workforce.contracts`. La fin de collaboration abandonne les brouillons au lieu de refuser ; un contrat en vigueur suit sa terminaison habituelle. Contrats, documents générés et signatures sont conservés. Un contrat annulé n'est jamais courant : la paie, qui lit le contrat courant des salariés actifs, n'est pas affectée. Le contrôle de chevauchement ignore les contrats annulés. Le moteur des avenants n'est pas construit.
+
+**3 — Une seule règle d'état de signature.** La correspondance demande → état (`REQUEST_STATE`) est écrite une fois dans `GeneratedDocumentReadModel` et dérivée en PHP (affichage) et en SQL (`realSignatureStateSql()`), utilisée par le filtre, la pagination et les compteurs. États : en attente, en cours, signée, refusée, expirée, annulée, en échec. Les compteurs agrègent une sous-requête (compatible `ONLY_FULL_GROUP_BY` — défaut MySQL révélé par l'E2E, invisible en sqlite).
+
+### Conséquences
+
+- Une demande approuvée correspond toujours à une version identifiable ou à une décision de prolongation tracée.
+- Les événements `renewed` antérieurs n'ont pas d'empreinte : repli sur la dernière version validée, sinon sur le statut « soumise ».
+- Le statut `cancelled` d'un contrat est nouveau pour les consommateurs de la liste des contrats (libellé ajouté).
+
+### Validation
+
+- Tests ciblés (rouges avant correctif, verts après) : `Adr772AccountlessEmployeeDocumentCycleTest` et `Adr772CompanyDocumentRenewalTest` (renouvellement : refus sans nouvelle version, mêmes octets refusés, prolongation autorisée et auditée, 403 sans permission, 404 autre entreprise, document expiré, tâches `documents:auto-renew` / `documents:check-expiration` répétées sans nouvelle demande) ; `Adr771GeneratedContractFilingTest` (filtre, compteurs, pagination ; abandon d'un brouillon ; fin de collaboration avec brouillon).
+- Suite complète, une fois : 4259 verts, 12 ignorés, 3 échecs historiques de `ControllerSizeInvariantTest` (liste des 24 contrôleurs identique à ADR-772, seuils non modifiés). Les tests du registre ont été relancés après le correctif des compteurs : verts.
+- `pnpm build` : propre.
+- E2E en lecture seule sur MySQL : `adr773-stabilisation.spec.js` (les sept filtres, compteurs, coffre), `adr771-generated-documents.spec.js` : verts.
+
+### Défauts résiduels
+
+1. Validation par lot de la file des demandes : pas de prolongation (elle se fait document par document).
+2. Abandon d'un brouillon et prolongation : couverts par tests HTTP, pas par un parcours E2E avec écriture.
+3. Campagnes documentaires réservées aux personnes ; reportés d'ADR-770/771 inchangés.
+
+**Verdict** : **🟢 GO DEV — prêt à préparer la préproduction** côté cycles de vie métier. NO-GO PROD inchangé (conditions d'ADR-771). La préproduction n'est pas démarrée.
+
+**Règles** : DEV uniquement, aucun push, aucune migration, aucun accès distant, Billing et calcul de paie intacts.
