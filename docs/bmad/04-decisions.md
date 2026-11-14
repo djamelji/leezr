@@ -28239,10 +28239,11 @@ UX0 à UX5 ont simplifié les parcours, mais la qualité visuelle est inégale :
 2. **Réglages** : navigation des rubriques + lignes de réglage dans des surfaces ; états en texte ; avancé discret ; mobile en barre de rubriques. Logique UX5 inchangée.
 3. **Conventions** : en-tête de page commun ; onglets soulignés, masqués s'ils sont seuls ; formulaires en sections « intitulé / champs » ; états vides en texte ; VCard seulement quand elle porte un sens ; jamais de code brut à l'écran.
 4. Application aux pages Profil, Abonnement, Paramètres RH, Organisation, Équipe, Fiche, Mon activité. `/workforce/settings` expose en plus `market_label` et `jobdomain_label` (lecture seule).
+5. **Modules = produits, pas réglages** : nouvel espace d'intention `modules` (entrée principale, `modules.manage`), retiré du hub Réglages ; page catalogue en en-tête commun avec résumé et onglets produit. Règles de souscription, ModuleManifest, JobDomains et Billing inchangés.
 
 ### Conséquences
 
-- Aucun parcours rallongé ; aucune permission, aucun moteur modifiés.
+- Aucun parcours rallongé ; aucune permission, aucun moteur modifiés. Le test UX0 de l'ordre des espaces inclut désormais `modules`.
 - Restent à traiter visuellement : Accueil (cartes d'indicateurs), Mon activité (cartes), Abonnement (alerte), Documents mobile (tableau), drawers et dialogues, écrans de réglage denses.
 
 **Verdict** : 🟢 GO DEV (voir checkpoint). Préproduction non commencée.

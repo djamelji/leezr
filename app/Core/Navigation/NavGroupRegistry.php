@@ -36,7 +36,7 @@ class NavGroupRegistry
             // ADR-775 (Company Experience 2.0 / UX0) : navigation par INTENTION. Les modules
             // contribuent à ces espaces (`group`) ; l'ordre et la présentation vivent ici.
             'home' => 1, 'team' => 2, 'time' => 3, 'documents' => 4, 'payroll' => 5,
-            'activity' => 6, 'settings' => 8, 'personal' => 9,
+            'activity' => 6, 'modules' => 7, 'settings' => 8, 'personal' => 9,
             // Groupes historiques : restent enregistrés (compat), vides donc élagués.
             'identity' => 10,
             'contact' => 20,
@@ -72,6 +72,9 @@ class NavGroupRegistry
         'documents' => ['icon' => 'tabler-files', 'management' => true],
         'payroll' => ['icon' => 'tabler-receipt', 'management' => true],
         'activity' => ['icon' => 'tabler-briefcase'],
+        // ADR-782 (UX6) — Modules : products the company discovers, activates or subscribes to.
+        // An intent space of its own (never a setting) ; RBAC (`modules.manage`) decides who sees it.
+        'modules' => ['icon' => 'tabler-puzzle', 'management' => true, 'single' => 'space'],
         // ADR-781 (UX5) — Settings is a HUB : one menu entry opening `company-settings`, where the
         // entries contributed by the modules are presented by section and level.
         'settings' => ['icon' => 'tabler-settings', 'management' => true, 'single' => 'space', 'hub' => 'company-settings'],

@@ -1,0 +1,18 @@
+{
+ "admin": {
+  "navEntry": false,
+  "landed": "/company/403"
+ },
+ "rh-nopay": {
+  "navEntry": false,
+  "landed": "/company/403"
+ },
+ "manager": {
+  "navEntry": false,
+  "landed": "/company/403"
+ },
+ "salarie": {
+  "navEntry": false,
+  "landed": "/company/403"
+ }
+}

@@ -24,7 +24,7 @@ class Ux0IntentNavigationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ORDER = ['home', 'team', 'time', 'documents', 'payroll', 'activity', 'settings', 'personal'];
+    private const ORDER = ['home', 'team', 'time', 'documents', 'payroll', 'activity', 'modules', 'settings', 'personal']; // ADR-782 : Modules
 
     protected function setUp(): void
     {
@@ -78,7 +78,7 @@ class Ux0IntentNavigationTest extends TestCase
                 $this->assertCount(1, $group['items'], "{$group['key']} : ONE main entry");
             }
         }
-        $this->assertSame(['dashboard', 'people', 'space-time', 'documents', 'workforce-payroll', 'shipments', 'space-settings'], $this->entries($groups));
+        $this->assertSame(['dashboard', 'people', 'space-time', 'documents', 'workforce-payroll', 'shipments', 'modules', 'space-settings'], $this->entries($groups)); // ADR-782
         $this->assertSame(['workforce-planning', 'workforce-time', 'workforce-leave'], array_column(collect($groups)->firstWhere('key', 'time')['items'][0]['children'], 'key'));
         $this->assertSame('nav.groups.settings', collect($groups)->firstWhere('key', 'settings')['items'][0]['labelKey']);
         // A manager's personal entries live in the avatar menu — all of them, none lost.
@@ -109,7 +109,7 @@ class Ux0IntentNavigationTest extends TestCase
     {
         // Company WITHOUT Workforce / business modules : no Planning & temps, no Paie, no Activité.
         $bare = NavBuilder::forCompany($this->company(false), null, 'management');
-        $this->assertSame(['home', 'team', 'documents', 'settings'], array_column($this->nav($bare), 'key'));
+        $this->assertSame(['home', 'team', 'documents', 'modules', 'settings'], array_column($this->nav($bare), 'key')); // ADR-782 : Modules hors Réglages
 
         // One settings capability only : ONE entry labelled « Réglages ». Since ADR-781 (UX5) Settings is
         // a HUB : the entry opens the hub page, which lists the (filtered) entries — never a sub-menu.

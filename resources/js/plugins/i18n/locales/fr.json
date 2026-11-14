@@ -113,7 +113,8 @@
       "payroll": "Paie",
       "activity": "Activité",
       "settings": "Réglages",
-      "personal": "Mon espace"
+      "personal": "Mon espace",
+      "modules": "Modules"
     },
     "platform": {
       "dashboard": "Tableau de bord",
@@ -3925,7 +3926,7 @@
   },
   "companyModules": {
     "title": "Modules",
-    "subtitle": "Gérez les modules disponibles pour votre entreprise.",
+    "subtitle": "Découvrez les produits Leezr, activez ceux inclus dans votre formule et ajoutez-en de nouveaux.",
     "coreModules": "Modules essentiels",
     "coreModulesInfo": "Toujours actifs. Ne peuvent pas être désactivés.",
     "activeModules": "Modules actifs",
@@ -3993,10 +3994,10 @@
     "noSettings": "Ce module n'a aucun paramètre configurable.",
     "advancedSettings": "Paramètres avancés",
     "advancedSettingsHint": "Configuration JSON brute pour utilisateurs avancés.",
-    "tabAddons": "Extensions",
-    "tabIncluded": "Inclus",
-    "tabActive": "Actifs",
-    "tabAll": "Tout",
+    "tabAddons": "À découvrir",
+    "tabIncluded": "Inclus dans votre formule",
+    "tabActive": "Activés",
+    "tabAll": "Tous",
     "upgradeTo": "Passer au plan {plan}",
     "purchaseAddon": "Acheter l'extension",
     "contactSales": "Contacter les ventes",
@@ -4034,7 +4035,10 @@
     "deactivateWillAffect": "Les modules dépendants suivants seront également affectés : {modules}",
     "reactivateTitle": "Réactiver {module}",
     "reactivateNoCharge": "Cet addon est encore actif jusqu'au {date}. Réactivation sans frais supplémentaires.",
-    "reactivateConfirm": "Réactiver"
+    "reactivateConfirm": "Réactiver",
+    "summaryActive": "{n} activé(s)",
+    "summaryIncluded": "{n} inclus",
+    "summaryAvailable": "{n} à découvrir"
   },
   "contactSales": {
     "title": "Module premium",

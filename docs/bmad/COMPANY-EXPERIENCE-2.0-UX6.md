@@ -57,6 +57,15 @@ Voir `06-ui-policy.md`. Composants : `AppPageHeader`, `AppSettingsGroup`, `AppSe
 | Fiche | « Prochain créneau » ; statut de pointage traduit |
 | Mon activité | 5 états vides en texte (au lieu d'alertes) ; une seule pastille par document |
 
+## 4 bis. Correction de navigation : Modules
+
+**Principe produit** : Réglages = configurer l'entreprise ; Modules = découvrir et gérer les produits additionnels Leezr.
+
+- Nouvel espace d'intention `modules` (`NavGroupRegistry`, entre Activité et Réglages) ; l'entrée `modules` du manifeste `core.modules` y est rattachée (même permission `modules.manage`, même route). Elle sort donc du hub Réglages (plus de doublon) ; l'administration avancée ne contient plus que le Journal d'audit.
+- Page `/company/modules` : en-tête commun, résumé « N activé(s) · N inclus · N à découvrir », onglets soulignés « À découvrir · Inclus dans votre formule · Activés · Tous », compteurs discrets. Cartes produit conservées (un module est un objet). Logique inchangée : activation, devis, désactivation, période de grâce, contact commercial, règles de souscription et Billing intacts.
+- Accès vérifié : entrée et page pour le propriétaire ; ni entrée ni accès pour Dispatcher, RH sans paie, Manager, Salarié (`result-modules-access.json`). Desktop et tiroir mobile vérifiés (`after-modules-desktop-light.jpg`, `after-modules-mobile-light.jpg`, `after-modules-mobile-menu.jpg`).
+- Tests alignés sur la nouvelle règle : `Ux0IntentNavigationTest` (ordre des espaces), `ux0-intent-navigation.spec.js`, `ux5-settings.spec.js` (Modules hors hub), `company-module-toggle.spec.js` (libellé d'onglet, non rejoué : il active et désactive des modules).
+
 ## 5. Comparatif ergonomique
 
 Aucun clic ajouté. Sur Réglages, la navigation latérale ajoute un accès direct à chaque rubrique (1 clic) en plus de la recherche ; ouvrir un réglage reste à 1 clic. Le profil, l'abonnement et les paramètres RH gardent les mêmes champs et actions. Hauteurs mesurées (mobile) : Mon activité 2 358 → 2 240 px ; Profil 2 351 → 2 405 px (explications de section ajoutées).
@@ -83,3 +92,4 @@ Aucun clic ajouté. Sur Réglages, la navigation latérale ajoute un accès dire
 6. Planning desktop : grille dense (palette de modèles, couverture).
 7. Drawers et dialogues : non harmonisés dans ce lot.
 8. Le socle n'est appliqué qu'aux pages listées ; les autres pages gardent leurs en-têtes historiques.
+9. Modules : noms et descriptions des modules en anglais (données du catalogue Platform) ; cartes « En préparation » encore proposées à la découverte.

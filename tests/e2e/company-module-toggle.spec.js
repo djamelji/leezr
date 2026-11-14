@@ -48,7 +48,7 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
   expect(before.display_state, `${KEY} must start available`).toBe('available')
 
   // ─── Activate (add-on quote flow) ─────────────────────────────────────────
-  await page.getByRole('tab', { name: 'Extensions' }).click()
+  await page.getByRole('tab', { name: 'À découvrir' }).click()
   await page.waitForTimeout(800)
   await page.locator(`[data-test="module-activate-${KEY}"]`).click()
   // Quote dialog → wait for the quote to load (confirm is disabled until quoteData arrives) → PUT enable.

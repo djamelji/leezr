@@ -453,19 +453,36 @@ const doToggle = async (key, isCurrentlyEnabled) => {
       {{ errorMessage }}
     </VAlert>
 
-    <VCard>
-      <VCardText>
-        <!-- Header -->
-        <div class="d-flex justify-space-between align-center flex-wrap gap-4 mb-6">
-          <div>
-            <h5 class="text-h5">
-              {{ t('companyModules.title') }}
-            </h5>
-            <div class="text-body-1">
-              {{ t('companyModules.subtitle') }}
+    <!-- ADR-782 (UX6) — Modules : entrée principale (produits Leezr), en-tête commun, sans carte englobante. -->
+    <div>
+      <div>
+        <AppPageHeader
+          :title="t('companyModules.title')"
+          :description="t('companyModules.subtitle')"
+        >
+          <template
+            v-if="!isLoading"
+            #actions
+          >
+            <div
+              class="d-flex align-center gap-4 text-body-2 text-medium-emphasis"
+              data-test="modules-summary"
+            >
+              <AppStatusText
+                tone="success"
+                :text="t('companyModules.summaryActive', { n: activeModules.length })"
+              />
+              <AppStatusText
+                tone="info"
+                :text="t('companyModules.summaryIncluded', { n: includedModules.length })"
+              />
+              <AppStatusText
+                tone="warning"
+                :text="t('companyModules.summaryAvailable', { n: addonModulesAll.length })"
+              />
             </div>
-          </div>
-        </div>
+          </template>
+        </AppPageHeader>
 
         <!-- Loading -->
         <div
@@ -479,43 +496,28 @@ const doToggle = async (key, isCurrentlyEnabled) => {
           <!-- Tabs -->
           <VTabs
             v-model="currentTab"
-            class="mb-6"
+            class="mb-6 border-b"
           >
             <VTab :value="0">
               {{ t('companyModules.tabAddons') }}
-              <VChip
+              <span
                 v-if="addonModulesAll.length"
-                size="x-small"
-                class="ms-2"
-                color="info"
-                variant="tonal"
-              >
-                {{ addonModulesAll.length }}
-              </VChip>
+                class="ms-2 text-caption text-medium-emphasis"
+              >{{ addonModulesAll.length }}</span>
             </VTab>
             <VTab :value="1">
               {{ t('companyModules.tabIncluded') }}
-              <VChip
+              <span
                 v-if="includedModules.length"
-                size="x-small"
-                class="ms-2"
-                color="primary"
-                variant="tonal"
-              >
-                {{ includedModules.length }}
-              </VChip>
+                class="ms-2 text-caption text-medium-emphasis"
+              >{{ includedModules.length }}</span>
             </VTab>
             <VTab :value="2">
               {{ t('companyModules.tabActive') }}
-              <VChip
+              <span
                 v-if="activeModules.length"
-                size="x-small"
-                class="ms-2"
-                color="success"
-                variant="tonal"
-              >
-                {{ activeModules.length }}
-              </VChip>
+                class="ms-2 text-caption text-medium-emphasis"
+              >{{ activeModules.length }}</span>
             </VTab>
             <VTab :value="3">
               {{ t('companyModules.tabAll') }}
@@ -1280,8 +1282,8 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             </VWindowItem>
           </VWindow>
         </template>
-      </VCardText>
-    </VCard>
+      </div>
+    </div>
 
     <!-- Deactivation confirmation dialog -->
     <VDialog

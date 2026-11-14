@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test'
 import { apiRequest, loginCompany } from './helpers.js'
 
 const OUT = 'docs/bmad/ux0-775'
-const ORDER = ['home', 'team', 'time', 'documents', 'payroll', 'activity', 'settings', 'personal']
+const ORDER = ['home', 'team', 'time', 'documents', 'payroll', 'activity', 'modules', 'settings', 'personal'] // ADR-782 : Modules
 const PROFILES = [
   { tag: 'owner', email: 'owner@leezr.test', note: 'propriétaire, aussi salarié' },
   { tag: 'dispatcher', email: 'admin@leezr.test', note: 'administratif, aussi salarié' },

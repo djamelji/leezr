@@ -117,7 +117,10 @@ test('UX5 parcours propriétaire (lecture) : hub, rôle, absence, factures, int�
   // Administration avancée : repliée, puis ouverte
   await openSettings(page)
   await page.locator('[data-test="settings-advanced-toggle"]').click()
-  await expect(page.locator('[data-test="settings-advanced"] [data-test="settings-entry-modules"]')).toBeVisible()
+  await expect(page.locator('[data-test="settings-advanced"] [data-test="settings-entry-audit"]')).toBeVisible()
+  // ADR-782 : Modules n'est plus un réglage — entrée principale du menu.
+  await expect(page.locator('[data-test="settings-entry-modules"]')).toHaveCount(0)
+  await expect(page.locator('.layout-vertical-nav a[href="/company/modules"]').first()).toBeVisible()
   await shot(page, 'j-desktop-04-advanced')
 
   // 9. Revenir à l'opération d'origine : Planning → Préférences → Retour
@@ -273,7 +276,7 @@ test('UX5 profils : entrées du hub = pages réellement accessibles', async ({ p
     // Pages sensibles hors droits : refusées (redirigées), jamais affichées.
     const sensitive = {}
     for (const [k, p] of [['billing', '/company/billing/overview'], ['roles', '/company/roles'], ['modules', '/company/modules']]) {
-      if (entries.some(e => e.key === k || (k === 'roles' && e.key === 'settings-roles'))) continue
+      if (entries.some(e => e.key === k || (k === 'roles' && e.key === 'settings-roles')) || (k === 'modules' && who === 'owner')) continue
       await page.goto(p, { waitUntil: 'networkidle' })
       await page.waitForTimeout(600)
       sensitive[k] = new URL(page.url()).pathname

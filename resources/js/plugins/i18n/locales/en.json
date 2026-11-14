@@ -113,7 +113,8 @@
       "payroll": "Payroll",
       "activity": "Activity",
       "settings": "Settings",
-      "personal": "My space"
+      "personal": "My space",
+      "modules": "Modules"
     },
     "platform": {
       "dashboard": "Dashboard",
@@ -3925,7 +3926,7 @@
   },
   "companyModules": {
     "title": "Modules",
-    "subtitle": "Manage the modules available for your company.",
+    "subtitle": "Discover Leezr products, turn on those included in your plan and add new ones.",
     "coreModules": "Core Modules",
     "coreModulesInfo": "Always active. Cannot be disabled.",
     "activeModules": "Active Modules",
@@ -3993,8 +3994,8 @@
     "noSettings": "This module has no configurable settings.",
     "advancedSettings": "Advanced Settings",
     "advancedSettingsHint": "Raw JSON configuration for advanced users.",
-    "tabAddons": "Add-ons",
-    "tabIncluded": "Included",
+    "tabAddons": "Discover",
+    "tabIncluded": "Included in your plan",
     "tabActive": "Active",
     "tabAll": "All",
     "upgradeTo": "Upgrade to {plan}",
@@ -4034,7 +4035,10 @@
     "deactivateWillAffect": "The following dependent modules will also be affected: {modules}",
     "reactivateTitle": "Reactivate {module}",
     "reactivateNoCharge": "This addon is still active until {date}. Reactivating at no additional cost.",
-    "reactivateConfirm": "Reactivate"
+    "reactivateConfirm": "Reactivate",
+    "summaryActive": "{n} active",
+    "summaryIncluded": "{n} included",
+    "summaryAvailable": "{n} to discover"
   },
   "contactSales": {
     "title": "Premium module",
