@@ -1,0 +1,95 @@
+{
+ "groups": [
+  {
+   "key": "account",
+   "titleKey": "nav.groups.account",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "operations",
+   "titleKey": "nav.groups.operations",
+   "items": [
+    {
+     "key": "my-deliveries",
+     "title": "My Deliveries",
+     "to": {
+      "name": "company-my-deliveries"
+     },
+     "icon": "tabler-truck-delivery",
+     "permission": "shipments.view_own",
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "company",
+   "titleKey": "nav.groups.company",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "dashboard"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

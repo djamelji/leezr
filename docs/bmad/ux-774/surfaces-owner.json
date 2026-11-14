@@ -1,0 +1,1284 @@
+{
+ "profile": "owner@leezr.test",
+ "landing": "/dashboard",
+ "surfaces": [
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "Time Tracking",
+   "path": "/company/workforce/time",
+   "ms": 72,
+   "spa": true,
+   "shot": "01-owner-company_workforce_time.jpg",
+   "finalPath": "/company/workforce/time",
+   "h": [
+    "H4:Temps de travail",
+    "H5:Corriger le pointage",
+    "H5:Ajouter un pointage",
+    "H5:Générer une feuille de temps"
+   ],
+   "tabs": [
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps"
+   ],
+   "buttons": [
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Générer"
+   ],
+   "iconButtons": 3,
+   "inputs": 13,
+   "tables": 1,
+   "cards": 9,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 82
+  },
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "Planning",
+   "path": "/company/workforce/planning",
+   "ms": 240,
+   "spa": true,
+   "shot": "02-owner-company_workforce_planning.jpg",
+   "finalPath": "/company/workforce/planning",
+   "h": [
+    "H4:Planning",
+    "H5:9 nov. – 15 nov. 2026",
+    "H5:Nouveau shift",
+    "H5:Création en lot",
+    "H5:Nouveau modèle",
+    "H5:Tâches types"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Création en lot",
+    "Nouveau shift",
+    "Semaine",
+    "Jour",
+    "Postes",
+    "Mois",
+    "Modèles",
+    "Préparer ma semaine",
+    "Aujourd'hui",
+    "Tout sélectionner",
+    "Publier la semaine",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer",
+    "Composition — activités & paus",
+    "Annuler",
+    "Créer",
+    "Ajouter",
+    "Nouvelle semaine type",
+    "Capturer la semaine",
+    "Prévisualiser",
+    "Annuler",
+    "Créer le remplacement",
+    "Ajouter"
+   ],
+   "iconButtons": 436,
+   "inputs": 79,
+   "tables": 1,
+   "cards": 1,
+   "chips": 57,
+   "alerts": [
+    "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs shift",
+    "Créneau non assuré à couvrir :",
+    "Aucun collaborateur disponible dans votre périmètre sur ce créneau."
+   ],
+   "charts": 0,
+   "scrollH": 1315,
+   "empty": false,
+   "words": 1137
+  },
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "Leave",
+   "path": "/company/workforce/leave",
+   "ms": 56,
+   "spa": true,
+   "shot": "03-owner-company_workforce_leave.jpg",
+   "finalPath": "/company/workforce/leave",
+   "h": [
+    "H4:Congés",
+    "H5:Nouvelle demande",
+    "H5:Nouveau type de congé"
+   ],
+   "tabs": [
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés"
+   ],
+   "buttons": [
+    "Nouvelle demande",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtons": 9,
+   "inputs": 24,
+   "tables": 1,
+   "cards": 4,
+   "chips": 2,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 135
+  },
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "Payroll",
+   "path": "/company/workforce/payroll",
+   "ms": 30,
+   "spa": true,
+   "shot": "04-owner-company_workforce_payroll.jpg",
+   "finalPath": "/company/workforce/payroll",
+   "h": [
+    "H4:Paie & déclarations",
+    "H5:Nouvelle période"
+   ],
+   "tabs": [
+    "Périodes",
+    "Déclarations (DSN)"
+   ],
+   "buttons": [
+    "Nouvelle période",
+    "Périodes",
+    "Déclarations (DSN)",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtons": 6,
+   "inputs": 8,
+   "tables": 1,
+   "cards": 5,
+   "chips": 3,
+   "alerts": [
+    "Espace de préparation de la paie — Les montants sont des estimations indicatives (barèmes "
+   ],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 98
+  },
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "Organization",
+   "path": "/company/workforce/organization/departments",
+   "ms": 39,
+   "spa": true,
+   "shot": "05-owner-company_workforce_organization_departments.jpg",
+   "finalPath": "/company/workforce/organization/departments",
+   "h": [
+    "H4:Organisation",
+    "H6:Organisation proposée",
+    "H5:Ajouter un département",
+    "H5:Ajouter un poste"
+   ],
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "buttons": [
+    "Assistant de configuration",
+    "Enregistrer le profil",
+    "Prévisualiser le modèle",
+    "Départements",
+    "Postes",
+    "Lieux",
+    "Ajouter un département",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtons": 12,
+   "inputs": 15,
+   "tables": 1,
+   "cards": 5,
+   "chips": 5,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1054,
+   "empty": false,
+   "words": 121
+  },
+  {
+   "group": "workforce",
+   "depth": 0,
+   "title": "HR Settings",
+   "path": "/company/workforce/settings/general",
+   "ms": 15,
+   "spa": true,
+   "shot": "06-owner-company_workforce_settings_general.jpg",
+   "finalPath": "/company/workforce/settings/general",
+   "h": [
+    "H4:Paramètres RH"
+   ],
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "buttons": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique",
+    "Enregistrer",
+    "Assistant de configuration"
+   ],
+   "iconButtons": 0,
+   "inputs": 2,
+   "tables": 0,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 74
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Space",
+   "path": "/company/my-space/overview",
+   "ms": 15,
+   "spa": true,
+   "shot": "07-owner-company_my_space_overview.jpg",
+   "finalPath": "/company/my-space/overview",
+   "h": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 1,
+   "chips": 1,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 74
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Work",
+   "path": "/company/workforce/me",
+   "ms": 39,
+   "spa": true,
+   "shot": "08-owner-company_workforce_me.jpg",
+   "finalPath": "/company/workforce/me",
+   "h": [
+    "H4:Mon espace",
+    "H5:Demander un congé"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Commencer la journée",
+    "Actualiser",
+    "Demander un congé",
+    "Voir la paie",
+    "Version signée",
+    "Version signée",
+    "Version signée",
+    "Voir tous mes documents",
+    "Soumettre",
+    "Annuler"
+   ],
+   "iconButtons": 5,
+   "inputs": 6,
+   "tables": 0,
+   "cards": 9,
+   "chips": 5,
+   "alerts": [
+    "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'au",
+    "Aucun solde de congés disponible",
+    "Aucun bulletin disponible"
+   ],
+   "charts": 0,
+   "scrollH": 1798,
+   "empty": true,
+   "words": 141
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "Account Settings",
+   "path": "/account-settings/account",
+   "ms": 18,
+   "spa": true,
+   "shot": "09-owner-account_settings_account.jpg",
+   "finalPath": "/account-settings/account",
+   "h": [
+    "H6:Informations générales",
+    "H6:RH & Administratif"
+   ],
+   "tabs": [
+    "Compte",
+    "Sécurité",
+    "Préférences"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Préférences",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 26,
+   "tables": 0,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [
+    "1 sur 4 champs obligatoires renseignés"
+   ],
+   "charts": 0,
+   "scrollH": 1923,
+   "empty": false,
+   "words": 86
+  },
+  {
+   "group": "operations",
+   "depth": 0,
+   "title": "Shipments",
+   "path": "/company/shipments",
+   "ms": 15,
+   "spa": true,
+   "shot": "10-owner-company_shipments.jpg",
+   "finalPath": "/company/shipments",
+   "h": [],
+   "tabs": [],
+   "buttons": [
+    "Mes livraisons",
+    "Nouvelle expédition"
+   ],
+   "iconButtons": 4,
+   "inputs": 3,
+   "tables": 1,
+   "cards": 1,
+   "chips": 4,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 97
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Dashboard",
+   "path": "/dashboard",
+   "ms": 28,
+   "spa": true,
+   "shot": "11-owner-dashboard.jpg",
+   "finalPath": "/dashboard",
+   "h": [
+    "H4:Bienvenue, Djamel",
+    "H6:À traiter",
+    "H5:Tableau de bord"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Mon espace salarié",
+    "Profil entreprise",
+    "Inviter un membre",
+    "Documents",
+    "Facturation",
+    "Traiter",
+    "Traiter",
+    "Traiter",
+    "Traiter",
+    "Ajouter un widget",
+    "Passer au supérieur"
+   ],
+   "iconButtons": 11,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 17,
+   "chips": 21,
+   "alerts": [],
+   "charts": 2,
+   "scrollH": 1977,
+   "empty": true,
+   "words": 350
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Collaborators",
+   "path": "/company/people",
+   "ms": 31,
+   "spa": true,
+   "shot": "12-owner-company_people.jpg",
+   "finalPath": "/company/people",
+   "h": [
+    "H4:Collaborateurs",
+    "H5:Ajouter un membre"
+   ],
+   "tabs": [
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Nouveau",
+    "Personnes",
+    "Rôles & autorisations",
+    "Ajouter",
+    "Annuler"
+   ],
+   "iconButtons": 15,
+   "inputs": 12,
+   "tables": 1,
+   "cards": 2,
+   "chips": 10,
+   "alerts": [
+    "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquem"
+   ],
+   "charts": 0,
+   "scrollH": 1050,
+   "empty": false,
+   "words": 145
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Workflows",
+   "path": "/company/workflows",
+   "ms": 17,
+   "spa": true,
+   "shot": "13-owner-company_workflows.jpg",
+   "finalPath": "/company/workflows",
+   "h": [
+    "H5:Aucune règle d'automatisation"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau workflow",
+    "Nouveau workflow"
+   ],
+   "iconButtons": 4,
+   "inputs": 2,
+   "tables": 1,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 46
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Company Profile",
+   "path": "/company/profile/overview",
+   "ms": 17,
+   "spa": true,
+   "shot": "14-owner-company_profile_overview.jpg",
+   "finalPath": "/company/profile/overview",
+   "h": [
+    "H5:Paramètres de l'entreprise",
+    "H5:Adresse de l'entreprise",
+    "H5:Adresse de facturation"
+   ],
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 20,
+   "tables": 0,
+   "cards": 5,
+   "chips": 0,
+   "alerts": [
+    "En fonction du secteur d'activité de votre entreprise, les informations suivantes doivent "
+   ],
+   "charts": 0,
+   "scrollH": 2022,
+   "empty": false,
+   "words": 98
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Documents",
+   "path": "/company/documents/overview",
+   "ms": 134,
+   "spa": true,
+   "shot": "15-owner-company_documents_overview.jpg",
+   "finalPath": "/company/documents/overview",
+   "h": [
+    "H6:Ajouter un document",
+    "H6:Configurer les types de documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Import bulletins",
+    "Conformité",
+    "Coffre-fort",
+    "Documents RH",
+    "Paramètres"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Import bulletins",
+    "Conformité",
+    "Coffre-fort",
+    "Documents RH",
+    "Paramètres",
+    "Accéder au coffre-fort",
+    "Paramètres documents",
+    "Voir 60 manquant(s)",
+    "Voir 3 soumis",
+    "Gérer les types",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtons": 1,
+   "inputs": 4,
+   "tables": 0,
+   "cards": 11,
+   "chips": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce doc"
+   ],
+   "charts": 0,
+   "scrollH": 1924,
+   "empty": false,
+   "words": 294
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Billing",
+   "path": "/company/billing/overview",
+   "ms": 17,
+   "spa": true,
+   "shot": "16-owner-company_billing_overview.jpg",
+   "finalPath": "/company/billing/overview",
+   "h": [
+    "H6:Mon abonnement",
+    "H4:Pro",
+    "H4:0,00 €",
+    "H6:Prochaine échéance",
+    "H6:Ma situation financière"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Changer de plan",
+    "Résilier",
+    "Gérer",
+    "Voir les factures",
+    "Voir les factures"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 6,
+   "chips": 1,
+   "alerts": [
+    "Problème de paiementVous avez 1 facture(s) en retard. Veuillez mettre à jour votre moyen d"
+   ],
+   "charts": 0,
+   "scrollH": 1226,
+   "empty": false,
+   "words": 165
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Audit Log",
+   "path": "/company/audit",
+   "ms": 13,
+   "spa": true,
+   "shot": "17-owner-company_audit.jpg",
+   "finalPath": "/company/audit",
+   "h": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtons": 49,
+   "inputs": 2,
+   "tables": 1,
+   "cards": 1,
+   "chips": 50,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1746,
+   "empty": false,
+   "words": 269
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Modules",
+   "path": "/company/modules",
+   "ms": 596,
+   "spa": true,
+   "shot": "18-owner-company_modules.jpg",
+   "finalPath": "/company/modules",
+   "h": [
+    "H5:Modules",
+    "H6:Real-Time Tracking",
+    "H6:Fleet Management",
+    "H6:Advanced Analytics"
+   ],
+   "tabs": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout"
+   ],
+   "buttons": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout",
+    "En préparation",
+    "Voir les détails",
+    "En préparation",
+    "Voir les détails",
+    "En préparation",
+    "Voir les détails"
+   ],
+   "iconButtons": 0,
+   "inputs": 1,
+   "tables": 0,
+   "cards": 4,
+   "chips": 6,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 77
+  },
+  {
+   "group": "footer",
+   "depth": 0,
+   "title": "footer-support",
+   "path": "/company/support",
+   "ms": 20,
+   "spa": true,
+   "shot": "19-owner-company_support.jpg",
+   "finalPath": "/company/support",
+   "h": [],
+   "tabs": [],
+   "buttons": [
+    "Nouveau ticket",
+    "Nouveau ticket"
+   ],
+   "iconButtons": 4,
+   "inputs": 4,
+   "tables": 1,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 27
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/roles",
+   "path": "/company/roles",
+   "ms": 27,
+   "spa": true,
+   "shot": "20-owner-company_roles.jpg",
+   "finalPath": "/company/people?tab=roles",
+   "h": [
+    "H4:Collaborateurs",
+    "H5:Nouveau rôle",
+    "H6:Niveau du rôle",
+    "H6:Capacités",
+    "H5:Ajouter un membre"
+   ],
+   "tabs": [
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Personnes",
+    "Rôles & autorisations",
+    "Ajouter un rôle",
+    "Avancé",
+    "Créer",
+    "Annuler",
+    "Ajouter",
+    "Annuler"
+   ],
+   "iconButtons": 30,
+   "inputs": 8,
+   "tables": 1,
+   "cards": 3,
+   "chips": 47,
+   "alerts": [
+    "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquem"
+   ],
+   "charts": 0,
+   "scrollH": 966,
+   "empty": false,
+   "words": 215
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/members",
+   "path": "/company/members",
+   "ms": 29,
+   "spa": true,
+   "shot": "21-owner-company_members.jpg",
+   "finalPath": "/company/members",
+   "h": [
+    "H5:Ajouter un membre",
+    "H5:Champs membre"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles"
+   ],
+   "buttons": [
+    "Champs membre",
+    "Ajouter un membre",
+    "Ajouter",
+    "Annuler",
+    "Champs actifs 0",
+    "Champs disponibles"
+   ],
+   "iconButtons": 66,
+   "inputs": 7,
+   "tables": 1,
+   "cards": 2,
+   "chips": 68,
+   "alerts": [
+    "22 membre(s) avec un profil incomplet",
+    "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquem"
+   ],
+   "charts": 0,
+   "scrollH": 1520,
+   "empty": true,
+   "words": 231
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/notifications",
+   "path": "/company/notifications",
+   "ms": 21,
+   "spa": true,
+   "shot": "22-owner-company_notifications.jpg",
+   "finalPath": "/company/notifications",
+   "h": [],
+   "tabs": [
+    "Notifications 7",
+    "Préférences"
+   ],
+   "buttons": [
+    "Notifications 7",
+    "Préférences",
+    "Tout marquer comme lu"
+   ],
+   "iconButtons": 17,
+   "inputs": 1,
+   "tables": 0,
+   "cards": 2,
+   "chips": 16,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1522,
+   "empty": false,
+   "words": 114
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/plan",
+   "path": "/company/plan",
+   "ms": 24,
+   "spa": true,
+   "shot": "23-owner-company_plan.jpg",
+   "finalPath": "/company/billing/plan",
+   "h": [
+    "H3:Votre abonnement actuel est Pro",
+    "H3:29,00 € HT / mensuel",
+    "H4:Starter",
+    "H4:Pro",
+    "H4:Business"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Rétrograder",
+    "Votre abonnement actuel",
+    "Passer au supérieur"
+   ],
+   "iconButtons": 0,
+   "inputs": 1,
+   "tables": 0,
+   "cards": 7,
+   "chips": 3,
+   "alerts": [
+    "Aucun profil sectoriel assigné. Contactez le support pour configurer le profil de votre en"
+   ],
+   "charts": 0,
+   "scrollH": 1632,
+   "empty": true,
+   "words": 206
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce",
+   "path": "/company/workforce",
+   "ms": 34,
+   "spa": true,
+   "shot": "24-owner-company_workforce.jpg",
+   "finalPath": "/dashboard",
+   "h": [
+    "H4:Bienvenue, Djamel",
+    "H6:À traiter",
+    "H5:Tableau de bord"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Mon espace salarié",
+    "Profil entreprise",
+    "Inviter un membre",
+    "Documents",
+    "Facturation",
+    "Traiter",
+    "Traiter",
+    "Traiter",
+    "Traiter",
+    "Ajouter un widget",
+    "Passer au supérieur"
+   ],
+   "iconButtons": 11,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 17,
+   "chips": 21,
+   "alerts": [],
+   "charts": 2,
+   "scrollH": 1977,
+   "empty": true,
+   "words": 350
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/employees",
+   "path": "/company/workforce/employees",
+   "ms": 51,
+   "spa": true,
+   "shot": "25-owner-company_workforce_employees.jpg",
+   "finalPath": "/company/workforce/employees",
+   "h": [
+    "H4:Collaborateurs 52",
+    "H5:Importer des collaborateurs"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter un employé",
+    "Filtres",
+    "Télécharger le modèle",
+    "Suivant"
+   ],
+   "iconButtons": 16,
+   "inputs": 15,
+   "tables": 1,
+   "cards": 1,
+   "chips": 20,
+   "alerts": [
+    "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont "
+   ],
+   "charts": 0,
+   "scrollH": 1018,
+   "empty": true,
+   "words": 141
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/onboarding",
+   "path": "/company/workforce/onboarding",
+   "ms": 62,
+   "spa": true,
+   "shot": "26-owner-company_workforce_onboarding.jpg",
+   "finalPath": "/company/workforce/onboarding",
+   "h": [
+    "H4:Assistant de configuration RH",
+    "H6:Votre espace RH est prêt"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Accéder aux Ressources humaine",
+    "Ouvrir l'organisation",
+    "Précédent",
+    "Terminer"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 1,
+   "chips": 7,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 57
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/signature",
+   "path": "/company/workforce/signature",
+   "ms": 14,
+   "spa": true,
+   "shot": "27-owner-company_workforce_signature.jpg",
+   "finalPath": "/company/workforce/signature",
+   "h": [
+    "H4:Signatures",
+    "H5:Détail de la demande"
+   ],
+   "tabs": [
+    "Toutes",
+    "En attente",
+    "En cours",
+    "Terminées",
+    "Refusées",
+    "Expirées"
+   ],
+   "buttons": [
+    "Nouvelle demande",
+    "Toutes",
+    "En attente",
+    "En cours",
+    "Terminées",
+    "Refusées",
+    "Expirées"
+   ],
+   "iconButtons": 20,
+   "inputs": 3,
+   "tables": 1,
+   "cards": 2,
+   "chips": 47,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1215,
+   "empty": false,
+   "words": 250
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/documents",
+   "path": "/company/workforce/documents",
+   "ms": 191,
+   "spa": true,
+   "shot": "28-owner-company_workforce_documents.jpg",
+   "finalPath": "/company/documents/hr",
+   "h": [
+    "H5:Générer un document",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Import bulletins",
+    "Conformité",
+    "Coffre-fort",
+    "Documents RH",
+    "Paramètres",
+    "Documents générés",
+    "Modèles",
+    "Signatures"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Import bulletins",
+    "Conformité",
+    "Coffre-fort",
+    "Documents RH",
+    "Paramètres",
+    "Générer un document",
+    "Documents générés",
+    "Modèles",
+    "Signatures",
+    "Aller à la paie",
+    "Annuler",
+    "Générer le document",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtons": 32,
+   "inputs": 21,
+   "tables": 1,
+   "cards": 5,
+   "chips": 10,
+   "alerts": [
+    "Les bulletins de paie se génèrent désormais depuis le cycle de paie. Cette page recense le",
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce doc"
+   ],
+   "charts": 0,
+   "scrollH": 1348,
+   "empty": false,
+   "words": 241
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/configuration",
+   "path": "/company/workforce/configuration",
+   "ms": 11,
+   "spa": true,
+   "shot": "29-owner-company_workforce_configuration.jpg",
+   "finalPath": "/company/workforce/settings/worktime",
+   "h": [
+    "H4:Paramètres RH",
+    "H6:Temps de travail & pauses",
+    "H6:Pauses"
+   ],
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "buttons": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer"
+   ],
+   "iconButtons": 0,
+   "inputs": 16,
+   "tables": 2,
+   "cards": 1,
+   "chips": 27,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1398,
+   "empty": false,
+   "words": 248
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/dsn",
+   "path": "/company/workforce/dsn",
+   "ms": 19,
+   "spa": true,
+   "shot": "30-owner-company_workforce_dsn.jpg",
+   "finalPath": "/company/workforce/dsn",
+   "h": [
+    "H4:DSN - Declarations Sociales",
+    "H6:Aucune declaration DSN",
+    "H5:Exporter DSN"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Exporter DSN",
+    "Exporter DSN",
+    "Annuler",
+    "Exporter DSN"
+   ],
+   "iconButtons": 5,
+   "inputs": 7,
+   "tables": 1,
+   "cards": 5,
+   "chips": 0,
+   "alerts": [
+    "Mode de transmission DSN — Transmission désactivée (kill-switch) — aucune déclaration n'es"
+   ],
+   "charts": 0,
+   "scrollH": 919,
+   "empty": true,
+   "words": 81
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/workforce/contract/templates",
+   "path": "/company/workforce/contract/templates",
+   "ms": 19,
+   "spa": true,
+   "shot": "31-owner-company_workforce_contract_templates.jpg",
+   "finalPath": "/company/workforce/contract/templates",
+   "h": [
+    "H4:Contrats de travail",
+    "H5:Modifier le modèle"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouvelle version",
+    "Par défaut",
+    "Archiver",
+    "Dupliquer",
+    "Nouvelle version",
+    "Archiver",
+    "Aperçu PDF",
+    "Annuler",
+    "Enregistrer"
+   ],
+   "iconButtons": 7,
+   "inputs": 2,
+   "tables": 1,
+   "cards": 1,
+   "chips": 47,
+   "alerts": [
+    "Les modèles fournis sont des exemples non validés juridiquement. Leezr ne garantit pas leu"
+   ],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 185
+  },
+  {
+   "group": "hors menu",
+   "title": "/company/my-deliveries",
+   "path": "/company/my-deliveries",
+   "ms": 13,
+   "spa": true,
+   "shot": "32-owner-company_my_deliveries.jpg",
+   "finalPath": "/company/my-deliveries",
+   "h": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtons": 0,
+   "inputs": 2,
+   "tables": 1,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 16
+  },
+  {
+   "group": "hors menu",
+   "title": "/home",
+   "path": "/home",
+   "ms": 16,
+   "spa": true,
+   "shot": "33-owner-home.jpg",
+   "finalPath": "/home",
+   "h": [
+    "H4:Bonjour, Djamel",
+    "H5:Mes widgets"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter un widget",
+    "Passer au supérieur"
+   ],
+   "iconButtons": 11,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 17,
+   "chips": 22,
+   "alerts": [],
+   "charts": 2,
+   "scrollH": 2012,
+   "empty": true,
+   "words": 339
+  }
+ ],
+ "errors": [
+  {
+   "page": null,
+   "console": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "page": "/company/documents/overview",
+   "console": "TypeError: Cannot read properties of undefined (reading 'includes')\n    at n (https://leezr.test/build/assets/VSkeletonLoader-C3bv2YIT.js:1:1458)\n    at Array.map (<anonymous>)\n    at l (https://leezr"
+  },
+  {
+   "page": "/company/workforce/documents",
+   "console": "TypeError: Cannot read properties of undefined (reading 'includes')\n    at n (https://leezr.test/build/assets/VSkeletonLoader-C3bv2YIT.js:1:1458)\n    at Array.map (<anonymous>)\n    at l (https://leezr"
+  }
+ ]
+}

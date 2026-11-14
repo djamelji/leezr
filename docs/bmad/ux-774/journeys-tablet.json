@@ -1,0 +1,539 @@
+{
+ "user": "owner@leezr.test",
+ "view": [
+  820,
+  1180
+ ],
+ "vars": {
+  "accountless": "employee-1351",
+  "linked": "employee-2",
+  "memberOnly": "user-56",
+  "employeeId": 2
+ },
+ "journeys": [
+  {
+   "journey": "responsive",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/dashboard",
+     "ok": true,
+     "shot": "j-tablet-01-dashboard.jpg",
+     "path": "/dashboard",
+     "overlay": null,
+     "title": "Bienvenue, Djamel",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Mon espace salarié",
+      "Profil entreprise",
+      "Inviter un membre",
+      "Documents",
+      "Facturation",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Ajouter un widget",
+      "Passer au supérieur"
+     ],
+     "menu": [
+      "Documents manquantsNombre de documents requis non encore dép",
+      "Documents expirésNombre de documents dont la date de validit",
+      "Conformité par typeTaux de conformité des documents groupé p",
+      "Feuilles de temps à validerFeuilles de temps soumises en att",
+      "Congés à approuverDemandes de congé en attente d’approbation",
+      "Configuration initialeÉtapes de mise en route de votre entre",
+      "Expéditions du jourExpéditions planifiées pour aujourd'hui",
+      "En transitExpéditions actuellement en transit",
+      "En retardExpéditions en transit dépassant l'heure prévue",
+      "Chauffeurs actifsChauffeurs actuellement en livraison"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/people",
+     "ok": true,
+     "shot": "j-tablet-02-people.jpg",
+     "path": "/company/people",
+     "overlay": null,
+     "title": "Collaborateurs",
+     "tabs": [
+      "Personnes",
+      "Rôles & autorisations"
+     ],
+     "fields": [
+      "Rechercher un collaborateur…[text-field]",
+      "Compte[text-field]",
+      "Emploi[text-field]",
+      "?[text-field]",
+      "Prénom[text-field]",
+      "Nom[text-field]",
+      "E-mail[text-field]",
+      "Rôle[text-field]"
+     ],
+     "buttons": [
+      "Outils",
+      "Nouveau",
+      "Personnes",
+      "Rôles & autorisations",
+      "Ajouter",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement."
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/people/employee-2",
+     "ok": true,
+     "shot": "j-tablet-03-file.jpg",
+     "path": "/company/people/employee-2",
+     "overlay": null,
+     "title": "Alice Martin",
+     "tabs": [],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Générer un contrat",
+      "Gérer l'accès",
+      "Faire",
+      "Faire",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "Informations du collaborateurFait",
+      "Contrat de travailFait",
+      "Signature du contratFaire",
+      "Accès à l'espace collaborateurFait",
+      "Programmer le premier créneauFaire"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/people/employee-2?tab=documents",
+     "ok": true,
+     "shot": "j-tablet-04-file-docs.jpg",
+     "path": "/company/people/employee-2?tab=documents",
+     "overlay": null,
+     "title": "Alice Martin",
+     "tabs": [],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Générer un contrat",
+      "Gérer l'accès",
+      "Faire",
+      "Faire",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "Informations du collaborateurFait",
+      "Contrat de travailFait",
+      "Signature du contratFaire",
+      "Accès à l'espace collaborateurFait",
+      "Programmer le premier créneauFaire"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/documents/overview",
+     "ok": true,
+     "shot": "j-tablet-05-documents.jpg",
+     "path": "/company/documents/overview",
+     "overlay": null,
+     "title": "Créer un type de document",
+     "tabs": [
+      "Vue d'ensemble",
+      "Demandes 3",
+      "Campagnes",
+      "Import bulletins",
+      "Conformité",
+      "Coffre-fort",
+      "Documents RH",
+      "Paramètres"
+     ],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Vue d'ensemble",
+      "Demandes 3",
+      "Campagnes",
+      "Import bulletins",
+      "Conformité",
+      "Coffre-fort",
+      "Documents RH",
+      "Paramètres",
+      "Accéder au coffre-fort",
+      "Paramètres documents",
+      "Voir 60 manquant(s)",
+      "Voir 3 soumis",
+      "Gérer les types",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "1 membres · 37 manquants0%",
+      "Dispatcher3 membres · 3 manquants0%",
+      "Driver12 membres · 11 manquants0%",
+      "Propriétaire1 membres · 1 manquants50%",
+      "Salarie1 membres · 1 manquants0%",
+      "RH (sans paie)1 membres · 1 manquants0%",
+      "Manager equipe1 membres · 1 manquants0%",
+      "Responsable exploitation1 membres · 1 manquants0%",
+      "Consultation1 membres · 1 manquants0%",
+      "Gestionnaire paie1 membres · 1 manquants0%",
+      "0% Extrait K-bis0/1 conformes · 1 manquants",
+      "0% Licence de transport0/1 conformes · 1 manquants",
+      "0% Permis de conduire0/58 conformes · 57 manquants",
+      "1.7% Carte d'identité1/58 conformes · 1 manquants"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/documents/requests",
+     "ok": true,
+     "shot": "j-tablet-06-requests.jpg",
+     "path": "/company/documents/requests",
+     "overlay": null,
+     "title": "Créer un type de document",
+     "tabs": [
+      "Vue d'ensemble",
+      "Demandes 3",
+      "Campagnes",
+      "Import bulletins",
+      "Conformité",
+      "Coffre-fort",
+      "Documents RH",
+      "Paramètres"
+     ],
+     "fields": [
+      "Rechercher un membre...[text-field]",
+      "Filtrer par statut[text-field]",
+      "Filtrer par type[text-field]",
+      "?[text-field]",
+      "?[text-field]",
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Vue d'ensemble",
+      "Demandes 3",
+      "Campagnes",
+      "Import bulletins",
+      "Conformité",
+      "Coffre-fort",
+      "Documents RH",
+      "Paramètres",
+      "Demander un document",
+      "Télécharger",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/workforce/planning",
+     "ok": true,
+     "shot": "j-tablet-07-planning.jpg",
+     "path": "/company/workforce/planning",
+     "overlay": null,
+     "title": "Planning",
+     "tabs": [],
+     "fields": [
+      "Employé[text-field]",
+      "?[text-field]",
+      "Modèle[text-field]",
+      "Début[text-field]",
+      "Fin[text-field]",
+      "Lieu[text-field]",
+      "Notes[text-field]",
+      "Modèle[text-field]",
+      "Employés[text-field]",
+      "?[text-field]",
+      "?[text-field]",
+      "Lieu[text-field]",
+      "Nom du modèle[text-field]",
+      "Code[text-field]",
+      "Type d'activité[text-field]",
+      "Catégorie de couverture[text-field]",
+      "Heure de début[text-field]",
+      "Heure de fin[text-field]",
+      "Durée de pause (min)[text-field]",
+      "Lieu par défaut[text-field]",
+      "Département[text-field]",
+      "Nom[text-field]",
+      "Type d'activité[text-field]",
+      "Durée (min)[text-field]",
+      "Catégorie de couverture[text-field]",
+      "Active[switch]",
+      "Nom de la capture[text-field]",
+      "Semaine source[text-field]",
+      "Collaborateurs (tous si vide)[text-field]",
+      "Nom de catégorie[text-field]",
+      "Code[text-field]",
+      "Libellé[text-field]",
+      "Jour[text-field]",
+      "Effectif requis[text-field]",
+      "Début[text-field]",
+      "Fin[text-field]",
+      "Catégorie de couverture[text-field]",
+      "Département[text-field]",
+      "Priorité[text-field]",
+      "Nom du lieu[text-field]",
+      "Type de lieu[text-field]",
+      "Adresse[text-field]",
+      "Fuseau horaire[text-field]"
+     ],
+     "buttons": [
+      "Création en lot",
+      "Nouveau shift",
+      "Semaine",
+      "Jour",
+      "Postes",
+      "Mois",
+      "Modèles",
+      "Préparer ma semaine",
+      "Nouveau shift",
+      "Annuler",
+      "Créer",
+      "Annuler",
+      "Créer",
+      "Composition — activités & pauses",
+      "Annuler",
+      "Créer",
+      "Ajouter",
+      "Nouvelle semaine type",
+      "Capturer la semaine",
+      "Prévisualiser",
+      "Annuler",
+      "Créer le remplacement",
+      "Ajouter",
+      "Récurrent",
+      "Ponctuel",
+      "Ajouter",
+      "Annuler",
+      "Créer"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs shifts en une fois.",
+      "Créneau non assuré à couvrir :",
+      "Aucun collaborateur disponible dans votre périmètre sur ce créneau."
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/workforce/time",
+     "ok": true,
+     "shot": "j-tablet-08-time.jpg",
+     "path": "/company/workforce/time",
+     "overlay": null,
+     "title": "Temps de travail",
+     "tabs": [],
+     "fields": [
+      "?[text-field]",
+      "Département[text-field]",
+      "Employé[text-field]",
+      "Statut[text-field]",
+      "Employé[text-field]",
+      "?[text-field]",
+      "?[text-field]",
+      "?[text-field]",
+      "Employé[text-field]",
+      "?[text-field]",
+      "?[text-field]"
+     ],
+     "buttons": [
+      "Annuler",
+      "Créer",
+      "Annuler",
+      "Générer"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/workforce/leave",
+     "ok": true,
+     "shot": "j-tablet-09-leave.jpg",
+     "path": "/company/workforce/leave",
+     "overlay": null,
+     "title": "Congés",
+     "tabs": [
+      "Demandes",
+      "Calendrier",
+      "Soldes",
+      "Types de congés"
+     ],
+     "fields": [
+      "Rechercher un employé…[text-field]",
+      "Filtrer par statut[text-field]",
+      "?[text-field]",
+      "Employé[text-field]",
+      "Type de congé[text-field]",
+      "?[text-field]",
+      "?[text-field]",
+      "Absence partielle (quelques heures / dem[switch]",
+      "Durée (centièmes de jour)[text-field]",
+      "Motif[text-field]",
+      "Code[text-field]",
+      "Libellé[text-field]",
+      "Description[text-field]",
+      "Mode d'acquisition[text-field]",
+      "Jours par an[text-field]",
+      "Solde maximum[text-field]",
+      "Report autorisé[text-field]",
+      "Validation requise[switch]",
+      "Congé payé[switch]",
+      "Ordre d'affichage[text-field]"
+     ],
+     "buttons": [
+      "Nouvelle demande",
+      "Demandes",
+      "Calendrier",
+      "Soldes",
+      "Types de congés",
+      "Annuler",
+      "Créer",
+      "Annuler",
+      "Créer"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/billing/overview",
+     "ok": true,
+     "shot": "j-tablet-10-billing.jpg",
+     "path": "/company/billing/overview",
+     "overlay": null,
+     "title": "Pro",
+     "tabs": [
+      "Abonnement",
+      "Vue d'ensemble",
+      "Factures",
+      "Moyens de paiement",
+      "Activité"
+     ],
+     "fields": [],
+     "buttons": [
+      "Abonnement",
+      "Vue d'ensemble",
+      "Factures",
+      "Moyens de paiement",
+      "Activité",
+      "Changer de plan",
+      "Résilier",
+      "Gérer",
+      "Voir les factures",
+      "Voir les factures"
+     ],
+     "menu": [
+      "Abonnement ProAbonnement29,00 €",
+      "Addon Real-Time TrackingModule addon +29,00 €",
+      "Sous-total58,00 €",
+      "Taxe (20.0%) +11,60 €",
+      "Montant estimé à payer69,60 €"
+     ],
+     "steps": [],
+     "alerts": [
+      "Problème de paiementVous avez 1 facture(s) en retard. Veuillez mettre à jour votre moyen de paiement ou réessa"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/my-space/overview",
+     "ok": true,
+     "shot": "j-tablet-11-my-space.jpg",
+     "path": "/company/my-space/overview",
+     "overlay": null,
+     "title": "Mon espace",
+     "tabs": [],
+     "fields": [],
+     "buttons": [],
+     "menu": [
+      "Mes documentsDocuments demandés, déposés, refusés ou à renou",
+      "Mes bulletins de paieConsultation et téléchargement, par ann",
+      "Mes signaturesDocuments à signer et documents signés.",
+      "Mon activitéPlanning · Pointage · Congés · Documents RH",
+      "Mon profilIdentité, photo et préférences.",
+      "Sécurité du compteMot de passe et double authentification."
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

@@ -1,0 +1,335 @@
+{
+ "profile": "admin@leezr.test",
+ "landing": "/dashboard",
+ "surfaces": [
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Space",
+   "path": "/company/my-space/overview",
+   "ms": 36,
+   "spa": true,
+   "shot": "01-dispatcher-company_my_space_overview.jpg",
+   "finalPath": "/company/my-space/overview",
+   "h": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 70
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Work",
+   "path": "/company/workforce/me",
+   "ms": 22,
+   "spa": true,
+   "shot": "02-dispatcher-company_workforce_me.jpg",
+   "finalPath": "/company/workforce/me",
+   "h": [
+    "H4:Mon espace",
+    "H5:Demander un congé"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Commencer la journée",
+    "Actualiser",
+    "Demander un congé",
+    "Voir la paie",
+    "Voir tous mes documents",
+    "Soumettre",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 6,
+   "tables": 0,
+   "cards": 9,
+   "chips": 0,
+   "alerts": [
+    "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'au",
+    "Aucun solde de congés disponible",
+    "Aucun bulletin disponible",
+    "Aucun document"
+   ],
+   "charts": 0,
+   "scrollH": 1422,
+   "empty": true,
+   "words": 96
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "Account Settings",
+   "path": "/account-settings/account",
+   "ms": 18,
+   "spa": true,
+   "shot": "03-dispatcher-account_settings_account.jpg",
+   "finalPath": "/account-settings/account",
+   "h": [
+    "H6:Informations générales",
+    "H6:RH & Administratif",
+    "H6:Spécifique au poste"
+   ],
+   "tabs": [
+    "Compte",
+    "Sécurité",
+    "Préférences"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Préférences",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 31,
+   "tables": 0,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [
+    "0 sur 12 champs obligatoires renseignés"
+   ],
+   "charts": 0,
+   "scrollH": 2216,
+   "empty": false,
+   "words": 104
+  },
+  {
+   "group": "operations",
+   "depth": 0,
+   "title": "Shipments",
+   "path": "/company/shipments",
+   "ms": 23,
+   "spa": true,
+   "shot": "04-dispatcher-company_shipments.jpg",
+   "finalPath": "/company/shipments",
+   "h": [],
+   "tabs": [],
+   "buttons": [
+    "Mes livraisons",
+    "Nouvelle expédition"
+   ],
+   "iconButtons": 4,
+   "inputs": 3,
+   "tables": 1,
+   "cards": 1,
+   "chips": 4,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 97
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Dashboard",
+   "path": "/dashboard",
+   "ms": 21,
+   "spa": true,
+   "shot": "05-dispatcher-dashboard.jpg",
+   "finalPath": "/dashboard",
+   "h": [
+    "H4:Bienvenue, Alice",
+    "H5:Tableau de bord"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Mon espace salarié",
+    "Profil entreprise",
+    "Inviter un membre",
+    "Documents",
+    "Facturation",
+    "Ajouter un widget"
+   ],
+   "iconButtons": 5,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 6,
+   "chips": 20,
+   "alerts": [],
+   "charts": 2,
+   "scrollH": 1286,
+   "empty": true,
+   "words": 243
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Collaborators",
+   "path": "/company/people",
+   "ms": 31,
+   "spa": true,
+   "shot": "06-dispatcher-company_people.jpg",
+   "finalPath": "/company/people",
+   "h": [
+    "H4:Collaborateurs",
+    "H5:Ajouter un membre"
+   ],
+   "tabs": [
+    "Personnes"
+   ],
+   "buttons": [
+    "Outils",
+    "Nouveau",
+    "Personnes",
+    "Ajouter",
+    "Annuler"
+   ],
+   "iconButtons": 15,
+   "inputs": 10,
+   "tables": 1,
+   "cards": 2,
+   "chips": 20,
+   "alerts": [
+    "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquem"
+   ],
+   "charts": 0,
+   "scrollH": 1062,
+   "empty": false,
+   "words": 123
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Company Profile",
+   "path": "/company/profile/overview",
+   "ms": 16,
+   "spa": true,
+   "shot": "07-dispatcher-company_profile_overview.jpg",
+   "finalPath": "/company/profile/overview",
+   "h": [
+    "H5:Paramètres de l'entreprise",
+    "H5:Adresse de l'entreprise",
+    "H5:Adresse de facturation"
+   ],
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "buttons": [
+    "Vue d'ensemble"
+   ],
+   "iconButtons": 0,
+   "inputs": 20,
+   "tables": 0,
+   "cards": 5,
+   "chips": 0,
+   "alerts": [
+    "En fonction du secteur d'activité de votre entreprise, les informations suivantes doivent "
+   ],
+   "charts": 0,
+   "scrollH": 1960,
+   "empty": false,
+   "words": 94
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Documents",
+   "path": "/company/documents/overview",
+   "ms": 145,
+   "spa": true,
+   "shot": "08-dispatcher-company_documents_overview.jpg",
+   "finalPath": "/company/documents/overview",
+   "h": [
+    "H6:Ajouter un document",
+    "H6:Configurer les types de documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Conformité",
+    "Coffre-fort",
+    "Paramètres"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Demandes 3",
+    "Campagnes",
+    "Conformité",
+    "Coffre-fort",
+    "Paramètres",
+    "Accéder au coffre-fort",
+    "Paramètres documents",
+    "Voir 60 manquant(s)",
+    "Voir 3 soumis",
+    "Gérer les types",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtons": 1,
+   "inputs": 4,
+   "tables": 0,
+   "cards": 11,
+   "chips": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce doc"
+   ],
+   "charts": 0,
+   "scrollH": 1924,
+   "empty": false,
+   "words": 290
+  },
+  {
+   "group": "footer",
+   "depth": 0,
+   "title": "footer-support",
+   "path": "/company/support",
+   "ms": 18,
+   "spa": true,
+   "shot": "09-dispatcher-company_support.jpg",
+   "finalPath": "/company/support",
+   "h": [],
+   "tabs": [],
+   "buttons": [
+    "Nouveau ticket",
+    "Nouveau ticket"
+   ],
+   "iconButtons": 4,
+   "inputs": 4,
+   "tables": 1,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": true,
+   "words": 27
+  }
+ ],
+ "errors": [
+  {
+   "page": null,
+   "console": "Failed to load resource: the server responded with a status of 404 ()"
+  },
+  {
+   "page": "/company/documents/overview",
+   "console": "TypeError: Cannot read properties of undefined (reading 'includes')\n    at n (https://leezr.test/build/assets/VSkeletonLoader-C3bv2YIT.js:1:1458)\n    at Array.map (<anonymous>)\n    at l (https://leezr"
+  }
+ ]
+}

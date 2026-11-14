@@ -1,0 +1,525 @@
+{
+ "user": "owner@leezr.test",
+ "view": [
+  1440,
+  900
+ ],
+ "vars": {
+  "accountless": "employee-1351",
+  "linked": "employee-2",
+  "memberOnly": "user-56",
+  "employeeId": 2
+ },
+ "journeys": [
+  {
+   "journey": "J2 ajouter collaborateur (Collaborateurs)",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/people",
+     "ok": true,
+     "shot": null,
+     "path": "/company/people",
+     "overlay": null,
+     "title": "Collaborateurs",
+     "tabs": [
+      "Personnes",
+      "Rôles & autorisations"
+     ],
+     "fields": [
+      "Rechercher un collaborateur…[text-field]",
+      "Compte[text-field]",
+      "Emploi[text-field]",
+      "?[text-field]",
+      "Prénom[text-field]",
+      "Nom[text-field]",
+      "E-mail[text-field]",
+      "Rôle[text-field]"
+     ],
+     "buttons": [
+      "Outils",
+      "Nouveau",
+      "Personnes",
+      "Rôles & autorisations",
+      "Ajouter",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement."
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "click",
+     "arg": "^\\s*Nouveau\\s*$",
+     "ok": true,
+     "shot": "j-a-01-people-new.jpg",
+     "path": "/company/people",
+     "overlay": "overlay",
+     "title": "Collaborateurs",
+     "tabs": [],
+     "fields": [],
+     "buttons": [],
+     "menu": [
+      "Inviter un utilisateurCrée un accès applicatif (compte + rôl",
+      "Créer une fiche salariéFiche RH sans compte (ajout d'accès u"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "esc",
+     "arg": "",
+     "ok": true,
+     "shot": null,
+     "path": "/company/people",
+     "overlay": null,
+     "title": "Collaborateurs",
+     "tabs": [
+      "Personnes",
+      "Rôles & autorisations"
+     ],
+     "fields": [
+      "Rechercher un collaborateur…[text-field]",
+      "Compte[text-field]",
+      "Emploi[text-field]",
+      "?[text-field]",
+      "Prénom[text-field]",
+      "Nom[text-field]",
+      "E-mail[text-field]",
+      "Rôle[text-field]"
+     ],
+     "buttons": [
+      "Outils",
+      "Nouveau",
+      "Personnes",
+      "Rôles & autorisations",
+      "Ajouter",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement."
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "click",
+     "arg": "^\\s*Outils\\s*$",
+     "ok": true,
+     "shot": "j-a-02-people-tools.jpg",
+     "path": "/company/people",
+     "overlay": "overlay",
+     "title": "Collaborateurs",
+     "tabs": [],
+     "fields": [],
+     "buttons": [],
+     "menu": [
+      "Import, export et actions groupéesListe des salariés (import",
+      "Champs personnalisésRégler les champs du profil des membres."
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "esc",
+     "arg": "",
+     "ok": true,
+     "shot": null,
+     "path": "/company/people",
+     "overlay": null,
+     "title": "Collaborateurs",
+     "tabs": [
+      "Personnes",
+      "Rôles & autorisations"
+     ],
+     "fields": [
+      "Rechercher un collaborateur…[text-field]",
+      "Compte[text-field]",
+      "Emploi[text-field]",
+      "?[text-field]",
+      "Prénom[text-field]",
+      "Nom[text-field]",
+      "E-mail[text-field]",
+      "Rôle[text-field]"
+     ],
+     "buttons": [
+      "Outils",
+      "Nouveau",
+      "Personnes",
+      "Rôles & autorisations",
+      "Ajouter",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Si l'adresse e-mail n'est pas encore enregistrée, une invitation sera envoyée automatiquement."
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  },
+  {
+   "journey": "J2b ajouter employé (Workforce)",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/workforce/employees",
+     "ok": true,
+     "shot": null,
+     "path": "/company/workforce/employees",
+     "overlay": null,
+     "title": "Collaborateurs 52",
+     "tabs": [],
+     "fields": [
+      "Rechercher un employé…[text-field]",
+      "?[text-field]",
+      "Choisir un fichier CSV[file-input]"
+     ],
+     "buttons": [
+      "Ajouter un employé",
+      "Filtres",
+      "Télécharger le modèle",
+      "Suivant"
+     ],
+     "menu": [],
+     "steps": [
+      "1Fichier",
+      "2Correspondance",
+      "3Prévisualisation",
+      "4Résultat"
+     ],
+     "alerts": [
+      "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; auc"
+     ],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "click",
+     "arg": "Ajouter un employé",
+     "ok": true,
+     "shot": "j-a-03-wf-add.jpg",
+     "path": "/company/workforce/employees",
+     "overlay": "Ajouter un employé",
+     "title": "Collaborateurs 52",
+     "tabs": [],
+     "fields": [
+      "Prénom *[text-field*]",
+      "Nom *[text-field*]",
+      "Email[text-field]",
+      "Téléphone[text-field]",
+      "Matricule[text-field]",
+      "?[text-field]"
+     ],
+     "buttons": [
+      "Annuler",
+      "Créer"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "esc",
+     "arg": "",
+     "ok": true,
+     "shot": null,
+     "path": "/company/workforce/employees",
+     "overlay": null,
+     "title": "Collaborateurs 52",
+     "tabs": [],
+     "fields": [
+      "Rechercher un employé…[text-field]",
+      "?[text-field]",
+      "Choisir un fichier CSV[file-input]"
+     ],
+     "buttons": [
+      "Ajouter un employé",
+      "Filtres",
+      "Télécharger le modèle",
+      "Suivant"
+     ],
+     "menu": [],
+     "steps": [
+      "1Fichier",
+      "2Correspondance",
+      "3Prévisualisation",
+      "4Résultat"
+     ],
+     "alerts": [
+      "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; auc"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  },
+  {
+   "journey": "J5 fiche liée",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/people/employee-2",
+     "ok": true,
+     "shot": "j-a-04-file-linked.jpg",
+     "path": "/company/people/employee-2",
+     "overlay": null,
+     "title": "Alice Martin",
+     "tabs": [
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie",
+      "Historique"
+     ],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Modifier",
+      "Générer un contrat",
+      "Gérer l'accès",
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie",
+      "Historique",
+      "Faire",
+      "Faire",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "Informations du collaborateurFait",
+      "Contrat de travailFait",
+      "Signature du contratFaire",
+      "Accès à l'espace collaborateurFait",
+      "Programmer le premier créneauFaire"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  },
+  {
+   "journey": "J5b fiche sans compte",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/people/employee-1351",
+     "ok": true,
+     "shot": "j-a-05-file-accountless.jpg",
+     "path": "/company/people/employee-1351",
+     "overlay": null,
+     "title": "Antoine Mercier",
+     "tabs": [
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie"
+     ],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Modifier",
+      "Générer un contrat",
+      "Gérer l'accès",
+      "Rattacher à un compte",
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie",
+      "Faire",
+      "Faire",
+      "Faire",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "Informations du collaborateurFait",
+      "Contrat de travailFait",
+      "Signature du contratFaire",
+      "Accès à l'espace collaborateurFaire",
+      "Programmer le premier créneauFaire"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  },
+  {
+   "journey": "J5c fiche membre seul",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/people/user-56",
+     "ok": true,
+     "shot": "j-a-06-file-member.jpg",
+     "path": "/company/people/user-56",
+     "overlay": null,
+     "title": "consultation@leezr.test",
+     "tabs": [
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Documents",
+      "Bulletins de paie",
+      "Historique"
+     ],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Créer la fiche salarié",
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Documents",
+      "Bulletins de paie",
+      "Historique",
+      "Créer la fiche salarié",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  },
+  {
+   "journey": "J5d fiche Workforce",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/workforce/employees/2",
+     "ok": true,
+     "shot": "j-a-07-file-wf.jpg",
+     "path": "/company/people/employee-2",
+     "overlay": null,
+     "title": "Alice Martin",
+     "tabs": [
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie",
+      "Historique"
+     ],
+     "fields": [
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Collaborateurs",
+      "Modifier",
+      "Générer un contrat",
+      "Gérer l'accès",
+      "Vue d'ensemble",
+      "Informations",
+      "Accès & autorisations",
+      "Emploi",
+      "Contrat",
+      "Planning",
+      "Temps & pointage",
+      "Congés & absences",
+      "Documents",
+      "Bulletins de paie",
+      "Historique",
+      "Faire",
+      "Faire",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [
+      "Informations du collaborateurFait",
+      "Contrat de travailFait",
+      "Signature du contratFaire",
+      "Accès à l'espace collaborateurFait",
+      "Programmer le premier créneauFaire"
+     ],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

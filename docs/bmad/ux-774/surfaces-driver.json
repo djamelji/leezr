@@ -1,0 +1,177 @@
+{
+ "profile": "bob@leezr.test",
+ "landing": "/home",
+ "surfaces": [
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Space",
+   "path": "/company/my-space/overview",
+   "ms": 34,
+   "spa": true,
+   "shot": "01-driver-company_my_space_overview.jpg",
+   "finalPath": "/company/my-space/overview",
+   "h": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 1,
+   "chips": 1,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 73
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "My Work",
+   "path": "/company/workforce/me",
+   "ms": 22,
+   "spa": true,
+   "shot": "02-driver-company_workforce_me.jpg",
+   "finalPath": "/company/workforce/me",
+   "h": [
+    "H4:Mon espace",
+    "H5:Demander un congé"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Commencer la journée",
+    "Actualiser",
+    "Demander un congé",
+    "Voir la paie",
+    "Voir tous mes documents",
+    "Soumettre",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 6,
+   "tables": 1,
+   "cards": 9,
+   "chips": 1,
+   "alerts": [
+    "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'au",
+    "Aucun bulletin disponible",
+    "Aucun document"
+   ],
+   "charts": 0,
+   "scrollH": 1480,
+   "empty": true,
+   "words": 105
+  },
+  {
+   "group": "account",
+   "depth": 0,
+   "title": "Account Settings",
+   "path": "/account-settings/account",
+   "ms": 18,
+   "spa": true,
+   "shot": "03-driver-account_settings_account.jpg",
+   "finalPath": "/account-settings/account",
+   "h": [
+    "H6:Informations générales",
+    "H6:RH & Administratif",
+    "H6:Spécifique au poste"
+   ],
+   "tabs": [
+    "Compte",
+    "Sécurité",
+    "Préférences"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Préférences",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtons": 0,
+   "inputs": 32,
+   "tables": 0,
+   "cards": 1,
+   "chips": 0,
+   "alerts": [
+    "0 sur 14 champs obligatoires renseignés"
+   ],
+   "charts": 0,
+   "scrollH": 2219,
+   "empty": false,
+   "words": 108
+  },
+  {
+   "group": "operations",
+   "depth": 0,
+   "title": "My Deliveries",
+   "path": "/company/my-deliveries",
+   "ms": 19,
+   "spa": true,
+   "shot": "04-driver-company_my_deliveries.jpg",
+   "finalPath": "/company/my-deliveries",
+   "h": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtons": 2,
+   "inputs": 2,
+   "tables": 1,
+   "cards": 1,
+   "chips": 2,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 900,
+   "empty": false,
+   "words": 34
+  },
+  {
+   "group": "company",
+   "depth": 0,
+   "title": "Dashboard",
+   "path": "/dashboard",
+   "ms": 16,
+   "spa": true,
+   "shot": "05-driver-dashboard.jpg",
+   "finalPath": "/home",
+   "h": [
+    "H4:Bonjour, Bob",
+    "H5:Mes widgets"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée"
+   ],
+   "iconButtons": 0,
+   "inputs": 0,
+   "tables": 0,
+   "cards": 9,
+   "chips": 1,
+   "alerts": [],
+   "charts": 0,
+   "scrollH": 1374,
+   "empty": true,
+   "words": 80
+  }
+ ],
+ "errors": [
+  {
+   "page": null,
+   "console": "Failed to load resource: the server responded with a status of 404 ()"
+  }
+ ]
+}

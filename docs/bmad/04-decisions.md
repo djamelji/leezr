@@ -27993,3 +27993,17 @@ Règle retenue : seul un contrat en vigueur (actif ou suspendu) se termine. Avec
 **Verdict** : **🟢 GO DEV — prêt à préparer la préproduction** côté cycles de vie métier. NO-GO PROD inchangé (conditions d'ADR-771). La préproduction n'est pas démarrée.
 
 **Règles** : DEV uniquement, aucun push, aucune migration, aucun accès distant, Billing et calcul de paie intacts.
+
+---
+
+## ADR-774 — Company Experience 2.0 : audit produit/UX/UI et roadmap
+
+**Date** : 2026-11-14 · **Base** : `09da42ab`
+
+**Contexte** : la préparation de préproduction, les nouveaux modules et les développements non indispensables sont suspendus. La priorité devient l'ergonomie de l'espace Company, jugé trop complexe pour une entreprise utilisatrice.
+
+**Décision** : audit en lecture seule avant toute modification. Livrable : `docs/bmad/COMPANY-EXPERIENCE-2.0-AUDIT.md` (diagnostic, inventaire de 34 surfaces, 17 parcours ouverts et mesurés sans soumission, matrice de 20 frictions, architecture cible, roadmap UX0 → UX6). Preuves : `docs/bmad/ux-774/` (captures et mesures JSON), scripts rejouables `tests/e2e/adr774-ux-audit-*.spec.js`.
+
+**Orientation proposée (non validée)** : menu par intentions (Accueil, Équipe, Planning & temps, Documents, Paie, Activité, Réglages), les modules apportant des capacités à ces espaces via `ModuleManifest` et `NavGroupRegistry`, sans jobdomain en dur ; fiche à 5 onglets ; Documents en 4 vues ; un seul parcours d'ajout d'une personne. Premier lot recommandé : UX0 (navigation et principes transversaux).
+
+**Conséquences** : aucun code applicatif modifié, aucune migration, aucune donnée créée. Aucune implémentation avant GO explicite. Non exécutés et déclarés comme tels : première connexion, soumission des formulaires, import de bulletins, signature et approbation de bout en bout.

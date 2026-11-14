@@ -1,0 +1,256 @@
+{
+ "groups": [
+  {
+   "key": "workforce",
+   "titleKey": "nav.groups.workforce",
+   "items": [
+    {
+     "key": "workforce-time",
+     "title": "Time Tracking",
+     "to": {
+      "name": "company-workforce-time"
+     },
+     "icon": "tabler-clock",
+     "permission": "workforce.timesheet_view",
+     "children": []
+    },
+    {
+     "key": "workforce-planning",
+     "title": "Planning",
+     "to": {
+      "name": "company-workforce-planning"
+     },
+     "icon": "tabler-calendar-week",
+     "permission": "workforce.planning_view",
+     "children": []
+    },
+    {
+     "key": "workforce-leave",
+     "title": "Leave",
+     "to": {
+      "name": "company-workforce-leave"
+     },
+     "icon": "tabler-beach",
+     "permission": "workforce.leave_request",
+     "children": []
+    },
+    {
+     "key": "workforce-payroll",
+     "title": "Payroll",
+     "to": {
+      "name": "company-workforce-payroll"
+     },
+     "icon": "tabler-receipt",
+     "permission": "workforce.payroll_prepare",
+     "children": []
+    },
+    {
+     "key": "workforce-organization",
+     "title": "Organization",
+     "to": {
+      "name": "company-workforce-organization-tab",
+      "params": {
+       "tab": "departments"
+      }
+     },
+     "icon": "tabler-hierarchy-2",
+     "permission": "workforce.view",
+     "children": []
+    },
+    {
+     "key": "workforce-settings",
+     "title": "HR Settings",
+     "to": {
+      "name": "company-workforce-settings-tab",
+      "params": {
+       "tab": "general"
+      }
+     },
+     "icon": "tabler-adjustments-cog",
+     "permission": "workforce.view",
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "account",
+   "titleKey": "nav.groups.account",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "operations",
+   "titleKey": "nav.groups.operations",
+   "items": [
+    {
+     "key": "shipments",
+     "title": "Shipments",
+     "to": {
+      "name": "company-shipments"
+     },
+     "icon": "tabler-truck",
+     "permission": "shipments.view",
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "company",
+   "titleKey": "nav.groups.company",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "dashboard"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "people",
+     "title": "Collaborators",
+     "to": {
+      "name": "company-people"
+     },
+     "icon": "tabler-users",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "workflows",
+     "title": "Workflows",
+     "to": {
+      "name": "company-workflows"
+     },
+     "icon": "tabler-automation",
+     "permission": "automations.view",
+     "children": []
+    },
+    {
+     "key": "company-profile",
+     "title": "Company Profile",
+     "to": {
+      "name": "company-profile-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-building-community",
+     "permission": "settings.view",
+     "children": []
+    },
+    {
+     "key": "documents",
+     "title": "Documents",
+     "to": {
+      "name": "company-documents-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-file-text",
+     "permission": null,
+     "children": []
+    },
+    {
+     "key": "billing",
+     "title": "Billing",
+     "to": {
+      "name": "company-billing-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-receipt",
+     "permission": "billing.manage",
+     "children": []
+    },
+    {
+     "key": "audit",
+     "title": "Audit Log",
+     "to": {
+      "name": "company-audit"
+     },
+     "icon": "tabler-file-search",
+     "permission": "audit.view",
+     "children": []
+    },
+    {
+     "key": "modules",
+     "title": "Modules",
+     "to": {
+      "name": "company-modules"
+     },
+     "icon": "tabler-puzzle",
+     "permission": "modules.manage",
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-support",
+   "label": "footer.support",
+   "to": {
+    "name": "company-support"
+   },
+   "href": null,
+   "icon": "tabler-message-circle-cog",
+   "sortOrder": 10
+  },
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}
