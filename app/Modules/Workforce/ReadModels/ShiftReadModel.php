@@ -126,4 +126,23 @@ class ShiftReadModel
             'total_planned_minutes' => $shifts->sum(fn ($s) => $s->plannedWorkMinutes()),
         ];
     }
+
+    /** Self-service (W-HR-UX-4 §6) : the person's PUBLISHED shifts in a window — never HR drafts. */
+    public static function publishedForEmployee(int $companyId, int $employeeId, Carbon $from, Carbon $to): array
+    {
+        return Shift::withoutGlobalScopes()
+            ->where('company_id', $companyId)->where('employee_id', $employeeId)
+            ->where('status', Shift::STATUS_PUBLISHED)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('start_at')
+            ->get(['id', 'date', 'start_at', 'end_at', 'status', 'notes'])
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'date' => $s->date?->toDateString(),
+                'start_at' => $s->start_at?->toIso8601String(),
+                'end_at' => $s->end_at?->toIso8601String(),
+                'status' => $s->status,
+                'notes' => $s->notes,
+            ])->all();
+    }
 }

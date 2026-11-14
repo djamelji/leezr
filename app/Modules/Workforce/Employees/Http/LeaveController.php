@@ -141,6 +141,7 @@ class LeaveController extends Controller
         $employee = Employee::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->findOrFail($validated['employee_id']);
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employee->id, 'leave'), 403); // ADR-780 : self or report only
 
         try {
             return response()->json(app(RequestLeaveUseCase::class)->execute(
@@ -293,6 +294,7 @@ class LeaveController extends Controller
     {
         $companyId = $request->attributes->get('company_id');
         Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($employeeId);
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'leave'), 403); // ADR-780 : view-all, self or direct report
 
         return response()->json(
             LeaveBalanceReadModel::forEmployee($companyId, $employeeId, $request->query('year') ? (int) $request->query('year') : null)

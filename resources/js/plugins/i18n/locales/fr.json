@@ -8765,8 +8765,8 @@
       "leaveType": "Type d'absence",
       "dateFrom": "Date de début",
       "dateTo": "Date de fin",
-      "duration": "Durée",
-      "durationHint": "Calculée à partir des dates ; modifiable par demi-journée.",
+      "duration": "Durée à décompter",
+      "durationHint": "Estimée à partir des dates (jours du calendrier) ; modifiable par demi-journée.",
       "partial": "Quelques heures seulement (sur une journée)",
       "startTime": "Heure de début",
       "endTime": "Heure de fin",
@@ -9472,14 +9472,14 @@
     "filters": "Filtres",
     "days": "{n} jour | {n} jours",
     "leave": {
-      "computed": "Calculée selon le contrat : {days} ({hours})",
+      "computed": "Estimation : {days} ({hours}). Chaque jour du calendrier est compté ; jours fériés et jours non travaillés ne sont pas retirés. Corrigez si besoin.",
       "available": "Solde disponible : {days}",
       "insufficient": "Solde insuffisant : {days} disponible(s)",
-      "weekendNote": "La période contient un week-end : le calcul compte chaque jour du calendrier. Ajustez la durée si besoin.",
+      "weekendNote": "La période contient un samedi ou un dimanche : il est compté dans l'estimation. Retirez-le de la durée s'il n'est pas travaillé.",
       "daysSuffix": "jour(s)",
       "send": "Envoyer la demande",
       "comment": "Commentaire (facultatif)",
-      "pickDates": "Choisissez les dates : la durée est calculée automatiquement."
+      "pickDates": "Choisissez les dates : une estimation en jours du calendrier est proposée, à vérifier."
     },
     "openEntry": "Votre pointage du {date} est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée."
   }

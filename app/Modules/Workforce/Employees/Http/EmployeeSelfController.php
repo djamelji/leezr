@@ -2,7 +2,6 @@
 
 namespace App\Modules\Workforce\Employees\Http;
 
-use App\Core\Documents\GeneratedDocument;
 use App\Core\Models\Company;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\Services\WorkforceRuleResolver;
@@ -11,6 +10,7 @@ use App\Modules\Workforce\ReadModels\EmployeeReadModel;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
 use App\Modules\Workforce\ReadModels\LeaveBalanceReadModel;
 use App\Modules\Workforce\ReadModels\LeaveRequestReadModel;
+use App\Modules\Workforce\ReadModels\ShiftReadModel;
 use App\Modules\Workforce\ReadModels\TimeEntryReadModel;
 use App\Modules\Workforce\UseCases\ClockInUseCase;
 use App\Modules\Workforce\UseCases\ClockOutUseCase;
@@ -44,47 +44,10 @@ class EmployeeSelfController
         $employee = $this->resolveEmployee($request);
         $companyId = $request->attributes->get('company_id');
 
-        $todayEntry = TimeEntry::withoutCompanyScope()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->where('date', today()->toDateString())
-            ->with('breaks')
-            ->latest('clock_in')
-            ->first();
-
-        // ADR-779 (UX4) — an entry left OPEN on a previous day blocks today's clock-in (ClockInUseCase).
-        // The person is told so instead of being offered « Commencer » that the server refuses. Closing
-        // it now would record the whole gap as worked time : the correction belongs to the manager.
-        $openEntry = $todayEntry && $todayEntry->status !== TimeEntry::STATUS_COMPLETED ? null : TimeEntry::withoutCompanyScope()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->where('date', '<', today()->toDateString())
-            ->active()
-            ->latest('clock_in')
-            ->first();
-
         return response()->json([
-            'open_entry' => $openEntry ? [
-                'id' => $openEntry->id,
-                'date' => $openEntry->date?->toDateString(),
-                'status' => $openEntry->status,
-            ] : null,
+            // ADR-779 : today's entry + an entry left open on a previous day (TimeEntryReadModel).
+            ...TimeEntryReadModel::selfClockState($companyId, $employee->id),
             'employee' => EmployeeReadModel::detail($companyId, $employee->id, withAccount: true), // son propre compte
-            'today_clock' => $todayEntry ? [
-                'id' => $todayEntry->id,
-                'status' => $todayEntry->status,
-                'clock_in' => $todayEntry->clock_in?->toIso8601String(),
-                'clock_out' => $todayEntry->clock_out?->toIso8601String(),
-                'total_worked_minutes' => $todayEntry->total_worked_minutes,
-                'total_break_minutes' => $todayEntry->total_break_minutes,
-                'breaks' => $todayEntry->breaks->map(fn ($b) => [
-                    'id' => $b->id,
-                    'type' => $b->type,
-                    'start_at' => $b->start_at?->toIso8601String(),
-                    'end_at' => $b->end_at?->toIso8601String(),
-                    'duration_minutes' => $b->duration_minutes,
-                ]),
-            ] : null,
             'leave_balances' => LeaveBalanceReadModel::forEmployee($companyId, $employee->id),
             // Resolved break rules (WorkforceRuleResolver §2): the UI countdown/policy come from
             // the server + rules engine, never from Vue constants. Flattened for the client.
@@ -92,24 +55,12 @@ class EmployeeSelfController
         ]);
     }
 
-    /** Flatten the resolved break spec for the frontend (values + policy only). */
+    /** Resolved break rules, flattened by the rules engine (never Vue constants). */
     private function breakRulesPayload(int $companyId): array
     {
         $company = Company::withoutGlobalScopes()->find($companyId);
-        if (! $company) {
-            return [];
-        }
-        $spec = app(WorkforceRuleResolver::class)->resolveBreakRules($company);
 
-        return [
-            'min_duration_minutes' => $spec['min_duration_minutes']['value'] ?? null,
-            'target_duration_minutes' => $spec['target_duration_minutes']['value'] ?? null,
-            'max_duration_minutes' => $spec['max_duration_minutes']['value'] ?? null,
-            'enforcement' => $spec['enforcement']['value'] ?? 'signaled',
-            'early_resume_policy' => $spec['early_resume_policy']['value'] ?? 'warn',
-            'paid' => $spec['paid']['value'] ?? false,
-            'included_in_worktime' => $spec['included_in_worktime']['value'] ?? false,
-        ];
+        return $company ? app(WorkforceRuleResolver::class)->breakRulesForClient($company) : [];
     }
 
     /** GET /workforce/me/today */
@@ -149,12 +100,7 @@ class EmployeeSelfController
         $employee = $this->resolveEmployee($request);
         $companyId = $request->attributes->get('company_id');
 
-        $entry = TimeEntry::withoutCompanyScope()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->active()
-            ->latest('clock_in')
-            ->firstOrFail();
+        $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id);
 
         try {
             $entry = app(ClockOutUseCase::class)->execute($entry);
@@ -172,12 +118,7 @@ class EmployeeSelfController
         $companyId = $request->attributes->get('company_id');
         $validated = $request->validate(['type' => 'nullable|string|in:lunch,rest,personal']);
 
-        $entry = TimeEntry::withoutCompanyScope()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->where('status', TimeEntry::STATUS_WORKING)
-            ->latest('clock_in')
-            ->firstOrFail();
+        $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id, TimeEntry::STATUS_WORKING);
 
         try {
             $break = app(StartBreakUseCase::class)->execute($entry, $validated['type'] ?? 'rest');
@@ -194,12 +135,7 @@ class EmployeeSelfController
         $employee = $this->resolveEmployee($request);
         $companyId = $request->attributes->get('company_id');
 
-        $entry = TimeEntry::withoutCompanyScope()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->where('status', TimeEntry::STATUS_ON_BREAK)
-            ->latest('clock_in')
-            ->firstOrFail();
+        $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id, TimeEntry::STATUS_ON_BREAK);
 
         // Early-resume policy (server-enforced, driven by the rules engine — never a Vue constant).
         $rules = $this->breakRulesPayload($companyId);
@@ -247,23 +183,8 @@ class EmployeeSelfController
         $from = Carbon::today();
         $to = (clone $from)->addDays((int) $request->integer('days', 14));
 
-        $shifts = \App\Core\Workforce\Shift::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $employee->id)
-            ->where('status', \App\Core\Workforce\Shift::STATUS_PUBLISHED)
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->orderBy('start_at')
-            ->get(['id', 'date', 'start_at', 'end_at', 'status', 'notes']);
-
         return response()->json([
-            'shifts' => $shifts->map(fn ($s) => [
-                'id' => $s->id,
-                'date' => $s->date?->toDateString(),
-                'start_at' => $s->start_at?->toIso8601String(),
-                'end_at' => $s->end_at?->toIso8601String(),
-                'status' => $s->status,
-                'notes' => $s->notes,
-            ])->all(),
+            'shifts' => ShiftReadModel::publishedForEmployee($companyId, $employee->id, $from, $to),
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
         ]);

@@ -13,7 +13,11 @@ test('M6.A — « Planning » est une entrée de nav dédiée qui ouvre directem
   await page.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
 
   const nav = page.locator('.layout-vertical-nav')
-  // Deux entrées DISTINCTES dans « Ressources humaines » : Planning (prévisionnel) et Temps (réel).
+  // ADR-775 (UX0) : les entrées vivent dans le groupe repliable « Planning & temps » ; on l'ouvre comme
+  // un utilisateur. Deux entrées DISTINCTES : Planning (prévisionnel) et Temps & pointages (réel).
+  const group = nav.locator('.nav-group', { hasText: 'Planning & temps' }).first()
+  if (!(await group.evaluate(el => el.classList.contains('open')).catch(() => false)))
+    await group.locator('.nav-group-label').first().click()
   const planningLink = nav.locator('a[href$="/company/workforce/planning"]').first()
   const timeLink = nav.locator('a[href$="/company/workforce/time"]').first()
   await expect(planningLink, 'entrée Planning dédiée').toBeVisible({ timeout: 10000 })

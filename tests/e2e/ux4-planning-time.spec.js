@@ -172,6 +172,9 @@ test('UX4 responsable : créneau, absence, présences (propriétaire, registre d
     await setPicker(page, 'leave-to', iso(tue))
     await expect(page.locator('[data-test="leave-duration"] input'), 'durée calculée par le moteur').toHaveValue('2')
     await expect(page.locator('[data-test="leave-balance"]'), 'solde affiché en jours').toContainText(/Solde disponible : [0-9]+(,[0-9]+)? jours/)
+    await expect(page.locator('[data-test="leave-duration"]'), 'méthode affichée : estimation').toContainText(/Estimation : 2 jours/)
+    // Correction manuelle autorisée (demi-journée) : c'est elle qui est envoyée et enregistrée.
+    await page.locator('[data-test="leave-duration"] input').fill('1.5')
     await shot(page, 'j-desktop-03-leave-form')
     const [lr] = await Promise.all([
       page.waitForResponse(r => /\/api\/workforce\/leaves$/.test(r.url()) && r.request().method() === 'POST'),
@@ -179,15 +182,16 @@ test('UX4 responsable : créneau, absence, présences (propriétaire, registre d
     ])
     expect(lr.status(), `absence demandée (${(await lr.text()).slice(0, 160)})`).toBe(201)
     const leave = await lr.json()
-    expect(JSON.parse(lr.request().postData() || '{}').days_count_hundredths, 'centièmes exacts transmis').toBe(200)
-    m.demander_absence = await read(4)
+    expect(JSON.parse(lr.request().postData() || '{}').days_count_hundredths, 'correction manuelle transmise telle quelle').toBe(150)
+    expect(leave.days_count_hundredths, 'valeur enregistrée = valeur affichée').toBe(150)
+    m.demander_absence = await read(5)
 
     // ── 6. Approuver (la demande est résumée dans la confirmation) ───────────────────────────
     await page.waitForTimeout(1000)
     read = await meter(page)
     net.mark('approuver')
     await page.locator(`[data-test="leave-approve-${leave.id}"]`).click()
-    await expect(page.locator('[data-test="leave-confirm-summary"]')).toContainText('2 jours')
+    await expect(page.locator('[data-test="leave-confirm-summary"]')).toContainText('1,5 jour')
     const [ap] = await Promise.all([
       page.waitForResponse(r => new RegExp(`/api/workforce/leaves/${leave.id}/approve$`).test(r.url())),
       page.locator('[data-test="leave-confirm"]').click(),
@@ -306,7 +310,7 @@ test('UX4 salarié mobile : pointage ouvert expliqué, demander une absence (Bob
     await page.locator('[data-test="me-leave-to"] input').fill(iso(e))
     await expect(page.locator('[data-test="me-leave-days"] input'), 'durée calculée (3 jours)').toHaveValue('3')
     await expect(page.locator('[data-test="me-leave-balance"]')).toContainText(/Solde disponible/)
-    await expect(page.locator('[data-test="me-leave-days"]'), 'calcul affiché').toContainText(/Calculée selon le contrat/)
+    await expect(page.locator('[data-test="me-leave-days"]'), 'calcul affiché').toContainText(/Estimation : /)
     await page.waitForTimeout(400)
     await shot(page, 'j-mobile-05-leave')
     await page.locator('[data-test="me-leave-reason"] textarea').fill(`Recette ${run.runId}`)

@@ -196,4 +196,47 @@ class TimeEntryReadModel
 
         return sprintf('%dh%02d', $h, $m);
     }
+
+    /**
+     * Self-service clock state of ONE person (ADR-779/780) : today's entry with its breaks, and an
+     * entry left OPEN on a previous day (it blocks today's clock-in ; the correction is the manager's).
+     *
+     * @return array{today_clock: ?array, open_entry: ?array}
+     */
+    public static function selfClockState(int $companyId, int $employeeId): array
+    {
+        $today = TimeEntry::withoutCompanyScope()->where('company_id', $companyId)->where('employee_id', $employeeId)
+            ->where('date', today()->toDateString())->with('breaks')->latest('clock_in')->first();
+        $open = $today && $today->status !== TimeEntry::STATUS_COMPLETED ? null : TimeEntry::withoutCompanyScope()
+            ->where('company_id', $companyId)->where('employee_id', $employeeId)
+            ->where('date', '<', today()->toDateString())->active()->latest('clock_in')->first();
+
+        return [
+            'open_entry' => $open ? ['id' => $open->id, 'date' => $open->date?->toDateString(), 'status' => $open->status] : null,
+            'today_clock' => $today ? [
+                'id' => $today->id,
+                'status' => $today->status,
+                'clock_in' => $today->clock_in?->toIso8601String(),
+                'clock_out' => $today->clock_out?->toIso8601String(),
+                'total_worked_minutes' => $today->total_worked_minutes,
+                'total_break_minutes' => $today->total_break_minutes,
+                'breaks' => $today->breaks->map(fn ($b) => [
+                    'id' => $b->id,
+                    'type' => $b->type,
+                    'start_at' => $b->start_at?->toIso8601String(),
+                    'end_at' => $b->end_at?->toIso8601String(),
+                    'duration_minutes' => $b->duration_minutes,
+                ]),
+            ] : null,
+        ];
+    }
+
+    /** The person's latest entry in an active state (optionally one precise status), or 404. */
+    public static function latestActiveOrFail(int $companyId, int $employeeId, ?string $status = null): TimeEntry
+    {
+        $q = TimeEntry::withoutCompanyScope()->where('company_id', $companyId)->where('employee_id', $employeeId);
+        $status ? $q->where('status', $status) : $q->active();
+
+        return $q->latest('clock_in')->firstOrFail();
+    }
 }

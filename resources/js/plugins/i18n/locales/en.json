@@ -8765,8 +8765,8 @@
       "leaveType": "Absence type",
       "dateFrom": "Start Date",
       "dateTo": "End Date",
-      "duration": "Duration",
-      "durationHint": "Computed from the dates; adjustable by half-day.",
+      "duration": "Duration to deduct",
+      "durationHint": "Estimated from the dates (calendar days); adjustable by half-day.",
       "partial": "A few hours only (single day)",
       "startTime": "Start time",
       "endTime": "End time",
@@ -9472,14 +9472,14 @@
     "filters": "Filters",
     "days": "{n} day | {n} days",
     "leave": {
-      "computed": "Computed from the contract: {days} ({hours})",
+      "computed": "Estimate: {days} ({hours}). Every calendar day is counted; public holidays and non-working days are not removed. Correct if needed.",
       "available": "Available balance: {days}",
       "insufficient": "Insufficient balance: {days} available",
-      "weekendNote": "The period includes a weekend: the calculation counts every calendar day. Adjust the duration if needed.",
+      "weekendNote": "The period includes a Saturday or Sunday: it is counted in the estimate. Remove it from the duration if it is not worked.",
       "daysSuffix": "day(s)",
       "send": "Send request",
       "comment": "Comment (optional)",
-      "pickDates": "Pick the dates: the duration is computed automatically."
+      "pickDates": "Pick the dates: an estimate in calendar days is proposed, to be checked."
     },
     "openEntry": "Your clock-in of {date} was never closed. Your manager must correct it before you can start a new day."
   }

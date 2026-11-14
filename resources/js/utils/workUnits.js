@@ -39,5 +39,8 @@ export function formatDays(hundredths, t, locale = 'fr') {
   if (days === null || Number.isNaN(days)) return '—'
   const text = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(days)
 
-  return t('timeSpace.days', { n: text }, Math.abs(days) > 1 ? 2 : 1)
+  // Français : pluriel à partir de 2 (« 1,5 jour ») ; autres langues : pluriel sauf 1 (« 1.5 days »).
+  const plural = String(locale).startsWith('fr') ? Math.abs(days) >= 2 : Math.abs(days) !== 1
+
+  return t('timeSpace.days', { n: text }, plural ? 2 : 1)
 }

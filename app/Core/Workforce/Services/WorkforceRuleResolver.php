@@ -76,6 +76,22 @@ class WorkforceRuleResolver
 
     // ── Public API ─────────────────────────────────────────────────────────────────────────
 
+    /** Resolved break spec flattened for a client (values + policy only ; no provenance). */
+    public function breakRulesForClient(Company $company): array
+    {
+        $spec = $this->resolveBreakRules($company);
+
+        return [
+            'min_duration_minutes' => $spec['min_duration_minutes']['value'] ?? null,
+            'target_duration_minutes' => $spec['target_duration_minutes']['value'] ?? null,
+            'max_duration_minutes' => $spec['max_duration_minutes']['value'] ?? null,
+            'enforcement' => $spec['enforcement']['value'] ?? 'signaled',
+            'early_resume_policy' => $spec['early_resume_policy']['value'] ?? 'warn',
+            'paid' => $spec['paid']['value'] ?? false,
+            'included_in_worktime' => $spec['included_in_worktime']['value'] ?? false,
+        ];
+    }
+
     /** @return array<string, array> keyed by rule — explainable resolved break spec. */
     public function resolveBreakRules(Company $company, ?Carbon $at = null, ?EmploymentContract $contract = null): array
     {

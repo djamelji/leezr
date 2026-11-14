@@ -61,7 +61,7 @@
     "tabs": []
    },
    "leave": {
-    "landed": "/dashboard",
+    "landed": "/company/403",
     "allowed": false,
     "tabs": []
    },
@@ -87,7 +87,7 @@
     "tabs": []
    },
    "leave": {
-    "landed": "/home",
+    "landed": "/company/403",
     "allowed": false,
     "tabs": []
    },
@@ -258,12 +258,12 @@
     "tabs": []
    },
    "time": {
-    "landed": "/company/403",
+    "landed": "/dashboard",
     "allowed": false,
     "tabs": []
    },
    "leave": {
-    "landed": "/dashboard",
+    "landed": "/company/403",
     "allowed": false,
     "tabs": []
    },

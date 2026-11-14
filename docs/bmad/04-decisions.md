@@ -28166,3 +28166,31 @@ UX3 validé (8 documents de recette conservés, libellés validés). Audit cibl�
 `Ux4SelfLeavePreviewTest` 6/6 ; `ux4-planning-time.spec.js` 6/6 (8 parcours responsable avec écritures, pointage complet et absence sur mobile, 8 profils, entreprise sans Workforce, tablette/mobile/sombre, anciennes routes) ; suite complète 4286 réussis / 12 ignorés / 3 échecs préexistants (`ControllerSizeInvariantTest`) ; build propre ; régression navigateur 27/28 (M6.A n°1 obsolète depuis UX0).
 
 **Verdict** : 🟢 GO DEV. UX5 non commencé.
+
+---
+
+## ADR-780 — Company Experience 2.0 / UX4.1 : périmètre des soldes, contrôleur self-service, estimation des absences
+
+**Date** : 2026-11-14 · **Base** : `8c933f07` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX4.1.md`
+
+### Contexte
+
+Réserves d'ADR-779 : `GET /workforce/employees/{id}/leave-balances` ne vérifiait que l'entreprise (tout détenteur de `leave_request` lisait le solde d'un collègue) ; `EmployeeSelfController` passé de 322 à 366 lignes ; durée d'absence présentée comme « calculée selon le contrat » alors que le moteur compte les jours calendaires.
+
+### Décisions
+
+1. Soldes et dépôt d'une demande (`POST /workforce/leaves`) soumis à la politique existante `WorkforceAccess::canViewEmployeeData(…, 'leave')` : vue globale, soi, rapport direct. Aucun système parallèle, aucune permission modifiée.
+2. `EmployeeSelfController` allégé vers des composants existants (`TimeEntryReadModel`, `ShiftReadModel`, `WorkforceRuleResolver`) sans changer ses réponses : 287 lignes.
+3. La durée d'absence est présentée comme une **estimation en jours du calendrier** (« Durée à décompter », jours fériés et jours non travaillés non retirés), corrigeable par demi-journée ; la valeur affichée est celle enregistrée. Aucun calcul ajouté dans Vue ; le moteur de décompte reste un chantier métier distinct.
+4. Test historique `workforce-m6a-navigation` aligné sur la navigation UX0 (ouverture du groupe repliable).
+
+### Conséquences
+
+- Réserves : `GET /workforce/leaves/statistics` expose des agrégats d'entreprise à tout détenteur de `leave_request` ; `EmployeeSelfController` (287) et `LeaveController` (311) restent au-dessus du seuil d'architecture ; risques du décompte calendaire documentés.
+- Données : une demande annulée de plus sur la fiche de Bob (ids 68, 69, 71, 73) ; 8 documents UX3 intacts.
+
+### Validation
+
+`Ux41LeaveBalanceScopeTest` 8/8 (3 échouent sur le code d'avant) ; tests self-service 42/42 ; E2E UX4 6/6 et M6.A 4/4 ; suite complète 4294 réussis / 12 ignorés / 3 échecs historiques (`ControllerSizeInvariantTest`) ; build propre.
+
+**Verdict** : 🟢 GO DEV. UX5 non commencé.
