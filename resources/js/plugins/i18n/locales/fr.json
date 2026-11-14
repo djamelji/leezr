@@ -2695,6 +2695,14 @@
       "vaultSubtitle": "Les documents d'entreprise (certificats, assurances, etc.) apparaîtront ici une fois activés.",
       "memberDocsTitle": "Aucun document requis",
       "memberDocsSubtitle": "Aucun type de document n'est activé pour ce membre."
+    },
+    "renewal": {
+      "requested": "Renouvellement demandé",
+      "requestedHint": "Ce document arrive à échéance : déposez une nouvelle version.",
+      "submitted": "À valider",
+      "submittedHint": "Une nouvelle version a été déposée et attend sa validation.",
+      "rejected": "Refusé",
+      "rejectedHint": "La version déposée a été refusée : déposez-en une nouvelle."
     }
   },
   "fieldGroups": {
@@ -6865,7 +6873,10 @@
       "none": "Non signé",
       "pending": "En attente",
       "signed": "Signé",
-      "declined": "Refusé"
+      "declined": "Refusé",
+      "expired": "Expirée",
+      "cancelled": "Annulée",
+      "failed": "En échec"
     },
     "emptyState": {
       "title": "Aucun document généré",

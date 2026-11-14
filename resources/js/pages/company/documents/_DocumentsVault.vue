@@ -2,6 +2,8 @@
 import CompanyDocumentsVault from '@/views/pages/company-settings/CompanyDocumentsVault.vue'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 import { useAuthStore } from '@/core/stores/auth'
+import { useAppToast } from '@/composables/useAppToast'
+import { $api } from '@/utils/api'
 
 const { t } = useI18n()
 const store = useCompanyDocumentsStore()
@@ -18,6 +20,29 @@ const uploadedCount = computed(() =>
 )
 
 const emit = defineEmits(['openCreateDrawer'])
+
+// ADR-772 — obligations portées par l'ENTREPRISE : une demande de renouvellement interne suit le même
+// circuit que pour une personne (à fournir → soumis → validé / refusé), sur le coffre de l'entreprise.
+const { toast } = useAppToast()
+const renewals = computed(() => companyDocuments.value.filter(d => d.request_status && d.request_status !== 'approved' && d.request_status !== 'cancelled'))
+const reviewing = ref(null)
+const RENEWAL = {
+  requested: { color: 'warning', key: 'requested' },
+  to_replace: { color: 'warning', key: 'requested' },
+  rejected: { color: 'error', key: 'rejected' },
+  submitted: { color: 'info', key: 'submitted' },
+  in_review: { color: 'info', key: 'submitted' },
+}
+const review = async (doc, status) => {
+  reviewing.value = `${doc.code}-${status}`
+  try {
+    await $api(`/company/documents/${doc.code}/review`, { method: 'PUT', body: { status } })
+    toast(t('documents.reviewSaved'), 'success')
+    await store.fetchCompanyDocuments()
+  }
+  catch (e) { toast(Object.values(e?.data?.errors || {})[0]?.[0] || e?.data?.message || t('documents.reviewFailed'), 'error') }
+  finally { reviewing.value = null }
+}
 </script>
 
 <template>
@@ -73,6 +98,63 @@ const emit = defineEmits(['openCreateDrawer'])
           {{ t('documents.summaryUploaded', { count: uploadedCount }) }}
         </VChip>
       </div>
+
+      <VList
+        v-if="renewals.length"
+        lines="two"
+        border
+        rounded
+        class="py-0 mb-4"
+        data-test="company-renewals"
+      >
+        <VListItem
+          v-for="(doc, i) in renewals"
+          :key="doc.code"
+          :class="{ 'border-t': i > 0 }"
+          :data-test="`company-renewal-${doc.code}`"
+        >
+          <VListItemTitle class="font-weight-medium">
+            {{ doc.label }}
+          </VListItemTitle>
+          <VListItemSubtitle>
+            {{ t('companyDocuments.renewal.' + (RENEWAL[doc.request_status]?.key || 'requested') + 'Hint') }}
+            <span v-if="doc.request_review_note"> — {{ doc.request_review_note }}</span>
+          </VListItemSubtitle>
+          <template #append>
+            <div class="d-flex align-center flex-wrap justify-end gap-2">
+              <VChip
+                :color="RENEWAL[doc.request_status]?.color || 'warning'"
+                size="small"
+                variant="tonal"
+                label
+              >
+                {{ t('companyDocuments.renewal.' + (RENEWAL[doc.request_status]?.key || 'requested')) }}
+              </VChip>
+              <template v-if="doc.can_review && canEdit">
+                <VBtn
+                  size="small"
+                  color="success"
+                  variant="tonal"
+                  :loading="reviewing === `${doc.code}-approved`"
+                  data-test="company-renewal-approve"
+                  @click="review(doc, 'approved')"
+                >
+                  {{ t('documents.approve') }}
+                </VBtn>
+                <VBtn
+                  size="small"
+                  color="error"
+                  variant="tonal"
+                  :loading="reviewing === `${doc.code}-rejected`"
+                  @click="review(doc, 'rejected')"
+                >
+                  {{ t('documents.reject') }}
+                </VBtn>
+              </template>
+            </div>
+          </template>
+        </VListItem>
+      </VList>
 
       <CompanyDocumentsVault
         v-if="hasDocuments"

@@ -114,7 +114,8 @@ class SubjectDocumentReadModel
             $doc['due_date'] = $request?->due_date?->toDateString();
             $doc['is_overdue'] = (bool) $request?->isOverdue();
             $doc['has_file'] = $hasFile;
-            $doc['can_review'] = false;
+            // ADR-772 : une pièce soumise pour un salarié sans compte se valide comme celle d'un membre.
+            $doc['can_review'] = $request?->status === \App\Core\Documents\DocumentRequest::STATUS_SUBMITTED;
             $doc['compliance_status'] = $state['consolidated'];
             $doc['satisfies_obligation'] = $state['satisfies_obligation'];
             $doc['confidentiality'] = DocumentConfidentiality::forTypeCode($doc['code']);

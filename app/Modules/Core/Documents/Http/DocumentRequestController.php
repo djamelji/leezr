@@ -255,25 +255,10 @@ class DocumentRequestController
         $skipped = 0;
 
         foreach ($docRequests as $docRequest) {
-            $membership = Membership::where('company_id', $company->id)
-                ->where('user_id', $docRequest->user_id)
-                ->first();
-
-            if (! $membership) {
-                $skipped++;
-
-                continue;
-            }
-
             try {
-                $useCase->execute(new ReviewMemberDocumentData(
-                    actor: $actor,
-                    company: $company,
-                    membershipId: $membership->id,
-                    documentCode: $docRequest->documentType->code,
-                    status: $validated['action'],
-                    reviewNote: $validated['review_note'] ?? null,
-                ));
+                // ADR-772 : la file valide par SUJET — membre ou salarié sans compte, même use case.
+                $subject = new DocumentSubject($docRequest->document_subject_type ?: DocumentSubject::TYPE_USER, (int) ($docRequest->document_subject_id ?: $docRequest->user_id));
+                $useCase->reviewSubject($actor, $company, $subject, $docRequest->documentType->code, $validated['action'], $validated['review_note'] ?? null);
                 $processed++;
             } catch (\Throwable) {
                 $skipped++;

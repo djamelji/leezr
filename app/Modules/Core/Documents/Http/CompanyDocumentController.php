@@ -155,6 +155,19 @@ class CompanyDocumentController extends Controller
         return Storage::disk('local')->download($version->file_path, $version->file_name);
     }
 
+    /** ADR-772 — review of a company document under an (internal renewal) request : same use case as persons. */
+    public function review(Request $request, string $code, \App\Modules\Core\Members\UseCases\ReviewMemberDocumentUseCase $useCase): JsonResponse
+    {
+        $data = $request->validate(['status' => ['required', 'in:approved,rejected'], 'review_note' => ['nullable', 'string', 'max:2000']]);
+        $company = $request->attributes->get('company');
+
+        $result = $useCase->reviewSubject($request->user(), $company, \App\Core\Documents\DocumentSubject::company((int) $company->id), $code, $data['status'], $data['review_note'] ?? null);
+
+        return response()->json(['message' => 'Document review saved.', 'review' => [
+            'code' => $result->code, 'status' => $result->status, 'review_note' => $result->reviewNote, 'reviewed_at' => $result->reviewedAt,
+        ]]);
+    }
+
     public function destroy(Request $request, string $code): JsonResponse
     {
         $company = $request->attributes->get('company');

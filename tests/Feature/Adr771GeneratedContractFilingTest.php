@@ -379,4 +379,83 @@ class Adr771GeneratedContractFilingTest extends TestCase
         // The stored document itself does carry it (it is the real contract).
         $this->assertStringContainsString('271828', json_encode($doc->generation_snapshot));
     }
+
+    // ═══ ADR-772 — real signature state everywhere, and end of collaboration ═══
+
+    private function registryStatus(Employee $employee, GeneratedDocument $doc): ?string
+    {
+        $rows = $this->as($this->owner)->getJson("/api/workforce/documents?employee_id={$employee->id}")->assertOk()->json('data');
+
+        return collect($rows)->firstWhere('id', $doc->id)['signature_status'] ?? null;
+    }
+
+    public function test_adr772_hr_registry_shows_the_real_signature_state(): void
+    {
+        // Declined.
+        $contract = $this->hrContract($this->linked);
+        $doc = $this->generate($this->linked);
+        $req = $this->requestSignature($doc, $this->linked);
+        $this->assertSame('pending', $this->registryStatus($this->linked, $doc));
+        $row = collect($this->as($this->person)->getJson('/api/workforce/signature/me')->json('signatures'))->firstWhere('request_id', $req->id);
+        $token = basename($this->as($this->person)->postJson("/api/workforce/signature/me/{$row['id']}/open")->json('url'));
+        $this->postJson("/api/public/signature/{$token}/decline", ['reason' => 'Non'])->assertOk();
+
+        $this->assertSame('declined', $this->registryStatus($this->linked, $doc), 'registry');
+        $this->assertSame('declined', $this->as($this->owner)->getJson("/api/workforce/documents/{$doc->id}")->assertOk()->json('signature_status'), 'detail');
+        $this->assertSame('declined', collect($this->as($this->person)->getJson('/api/workforce/me/documents')->json('documents'))->firstWhere('id', $doc->id)['signature_status'], 'self-service');
+
+        // A new request after the refusal : the state follows the LATEST request, then the real signature.
+        $second = $this->requestSignature($doc, $this->linked);
+        $this->assertSame('pending', $this->registryStatus($this->linked, $doc));
+        $this->sign($second);
+        $this->assertSame('signed', $this->registryStatus($this->linked, $doc));
+
+        // Cancelled.
+        $this->hrContract($this->outsider);
+        $docCancelled = $this->generate($this->outsider);
+        $reqCancelled = $this->requestSignature($docCancelled, $this->outsider);
+        $this->as($this->owner)->postJson("/api/workforce/signature/{$reqCancelled->id}/cancel", ['reason' => 'Erreur'])->assertOk();
+        $this->assertSame('cancelled', $this->registryStatus($this->outsider, $docCancelled));
+
+        // Expired (scheduled command).
+        $this->hrContract($this->accountless);
+        $docExpired = $this->generate($this->accountless);
+        $reqExpired = $this->requestSignature($docExpired, $this->accountless);
+        SignatureRequest::withoutGlobalScopes()->whereKey($reqExpired->id)->update(['expires_at' => now()->subHour()]);
+        $this->artisan('workforce:signature-expire')->assertSuccessful();
+        $this->assertSame(SignatureRequest::STATUS_EXPIRED, $reqExpired->fresh()->status);
+        $this->assertSame('expired', $this->registryStatus($this->accountless, $docExpired));
+
+        // A document status never changes the HR contract.
+        $this->assertSame(EmploymentContract::STATUS_DRAFT, $contract->fresh()->status);
+        // Another company sees none of it.
+        $this->as($this->otherOwner, $this->other)->getJson("/api/workforce/documents/{$doc->id}")->assertStatus(404);
+    }
+
+    public function test_adr772_end_of_collaboration_with_a_draft_contract_is_an_explicit_refusal(): void
+    {
+        $contract = $this->hrContract($this->linked); // draft
+        $url = "/api/workforce/employees/{$this->linked->id}/terminate";
+
+        $res = $this->as($this->owner)->postJson($url, ['reason' => 'Fin de periode'])->assertStatus(422);
+        $res->assertJsonValidationErrors(['contract']);
+        $this->assertSame(['active', null], [$this->linked->fresh()->status, $this->linked->fresh()->termination_date]);
+        $this->assertSame([EmploymentContract::STATUS_DRAFT, true], [$contract->fresh()->status, (bool) $contract->fresh()->is_current]);
+
+        // RBAC and tenant : unchanged.
+        $this->as($this->teamManager)->postJson($url, ['reason' => 'x'])->assertStatus(403);
+        $this->as($this->otherOwner, $this->other)->postJson($url, ['reason' => 'x'])->assertStatus(404);
+
+        // Once the contract is in force, the end of collaboration terminates the employee AND the contract.
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->linked->id}/contracts/{$contract->id}/activate")->assertOk();
+        $this->as($this->owner)->postJson($url, ['reason' => 'Fin de periode'])->assertOk();
+        $this->assertSame('terminated', $this->linked->fresh()->status);
+        $this->assertSame(EmploymentContract::STATUS_TERMINATED, $contract->fresh()->status);
+
+        // Already terminated : explicit refusal, not a 500.
+        $this->as($this->owner)->postJson($url, ['reason' => 'encore'])->assertStatus(422);
+
+        // No contract at all : the end of collaboration is recorded.
+        $this->as($this->owner)->postJson("/api/workforce/employees/{$this->outsider->id}/terminate", ['reason' => 'Depart'])->assertOk();
+    }
 }

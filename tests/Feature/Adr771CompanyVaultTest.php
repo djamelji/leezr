@@ -174,11 +174,10 @@ class Adr771CompanyVaultTest extends TestCase
         CompanyDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->subDay()]);
         $this->assertSame(1, (int) ($slot()['expired'] ?? 0));
 
-        // Known limit, pinned : the scheduled renewal engine only handles PERSON documents ;
-        // an expiring company document is reported by compliance but no renewal request is opened.
+        // ADR-772 : the scheduled renewal now opens an internal request borne by the Company subject.
         \App\Core\Documents\CompanyDocumentSetting::updateOrCreate(['company_id' => $this->a->id], ['auto_renew_enabled' => true, 'renew_days_before' => 30]);
         CompanyDocument::where('company_id', $this->a->id)->update(['expires_at' => now()->addDays(5)]);
         $this->artisan('documents:auto-renew')->assertSuccessful();
-        $this->assertSame(0, \App\Core\Documents\DocumentRequest::withoutGlobalScopes()->where('company_id', $this->a->id)->count());
+        $this->assertSame(['company'], \App\Core\Documents\DocumentRequest::withoutGlobalScopes()->where('company_id', $this->a->id)->pluck('document_subject_type')->all());
     }
 }

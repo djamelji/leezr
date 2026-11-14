@@ -157,8 +157,47 @@ class DocumentLifecycleOrchestrator
                 }
             });
 
+        $count += $this->renewCompanyDocuments($setting, $windowEnd, $dryRun);
+
         return $count;
     }
+
+    /**
+     * ADR-772 — obligations portées par l'ENTREPRISE elle-même (assurance, K-bis, licence…) : même
+     * phase, même moteur de demandes, même garde anti-doublon. Le sujet est `company` ; la demande de
+     * renouvellement est INTERNE (adressée aux gestionnaires de l'entreprise par `notify`), jamais
+     * rattachée à un salarié.
+     */
+    private function renewCompanyDocuments(CompanyDocumentSetting $setting, Carbon $windowEnd, bool $dryRun): int
+    {
+        $count = 0;
+        $subject = DocumentSubject::company((int) $setting->company_id);
+        $active = [DocumentRequest::STATUS_REQUESTED, DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_IN_REVIEW, DocumentRequest::STATUS_TO_REPLACE];
+
+        $docs = \App\Core\Documents\CompanyDocument::where('company_id', $setting->company_id)
+            ->whereNotNull('expires_at')->whereNotNull('document_type_id')
+            ->where('expires_at', '>', Carbon::now())->where('expires_at', '<=', $windowEnd)->get();
+
+        foreach ($docs as $doc) {
+            $type = DocumentType::find($doc->document_type_id);
+            $existing = $type ? $this->requests->findExisting($doc->company_id, $subject, $type->id) : null;
+            if (! $type || ($existing && in_array($existing->status, $active, true))) {
+                continue;
+            }
+            if (! $dryRun) {
+                $req = $this->requests->open($doc->company_id, $subject, $type, null, null, $doc->expires_at->toDateString(), true);
+                DocumentRequestEvent::create([
+                    'company_id' => $doc->company_id, 'document_request_id' => $req->id, 'event' => DocumentRequestEvent::E_RENEWED,
+                    'created_at' => Carbon::now(), 'metadata' => ['reason' => 'expiring', 'expires_at' => $doc->expires_at->toDateString(), 'subject' => 'company'],
+                ]);
+                $this->notify($doc->company_id, $subject, $type, 'documents.request_new', null);
+            }
+            $count++;
+        }
+
+        return $count;
+    }
+
 
     /**
      * RELANCES : pour chaque demande active, calcule les tiers DUS (politique configurable),
@@ -333,8 +372,13 @@ class DocumentLifecycleOrchestrator
     }
 
     /** Document courant lié à une demande (par sujet, tolérant aux lignes legacy). */
-    private function documentFor(DocumentRequest $req): ?MemberDocument
+    private function documentFor(DocumentRequest $req): ?\Illuminate\Database\Eloquent\Model
     {
+        // ADR-772 : une demande portée par l'entreprise suit le document du coffre de l'entreprise.
+        if ($req->document_subject_type === DocumentSubject::TYPE_COMPANY) {
+            return \App\Core\Documents\CompanyDocument::where('company_id', $req->company_id)->where('document_type_id', $req->document_type_id)->first();
+        }
+
         return MemberDocument::where('company_id', $req->company_id)
             ->where('document_type_id', $req->document_type_id)
             ->where(function ($w) use ($req) {

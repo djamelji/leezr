@@ -101,6 +101,8 @@ class WorkforceDocumentController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($id);
 
+        GeneratedDocumentReadModel::applyRealSignatureState(collect([$document]), (int) $companyId); // ADR-772 : état réel
+
         // P2 (ADR-684): generation_snapshot may embed salaries — scrub for non-comp viewers.
         return response()->json(PayrollConfidentiality::scrub($document, PayrollConfidentiality::canRead($request)));
     }

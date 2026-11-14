@@ -27893,3 +27893,54 @@ Conditions de GO PROD, chacune vérifiable sur l'environnement cible :
 8. Signature externe : laissée désactivée, ou prestataire réel connecté avec une finalisation de bout en bout prouvée.
 
 **Règles** : DEV uniquement, aucun push, aucune migration nouvelle dans ce lot, aucune donnée ni aucun fichier supprimé, Billing et calcul de paie intacts, aucun déploiement.
+
+---
+
+## ADR-772 — Finalisation des cycles documentaires
+
+**Date** : 2026-11-14
+**Contexte** : quatre défauts métier relevés au checkpoint ADR-771 (`2e8c59ca`), à corriger avant la préparation de production. Aucun nouveau moteur : extension de `DocumentRequestService`, `ReviewMemberDocumentUseCase`, `DocumentLifecycleOrchestrator` et des read-models existants. Chaque défaut a un test rouge avant correction.
+
+### P0 — Dossier d'un salarié sans compte
+
+Défaut : aucune route ne permettait de valider ou refuser la pièce d'un salarié sans compte (la validation passait par un id de membership) ; la fiche proposait pourtant l'action (`…/people/{ref}/documents/{code}/review` n'existait pas, y compris pour une personne liée) ; la file de validation ignorait ces demandes. La pièce restait « soumise » et n'était donc jamais renouvelée.
+
+Correction : **une seule logique de validation, par sujet** — `ReviewMemberDocumentUseCase::reviewSubject()` (membre ou fiche sans compte) ; l'ancienne entrée par membership y délègue. Route `PUT /company/people/{personRef}/documents/{code}/review` (`documents.manage`) ; la file de validation (`bulk-action`) passe par le sujet ; `can_review` exposé pour un salarié sans compte. Aucun compte créé ; aucune notification adressée à une personne sans compte (les gestionnaires restent notifiés par le cycle planifié).
+Cycle prouvé par HTTP et commandes : demande → dépôt administratif (soumission) → refus motivé → remplacement (version précédente conservée) → validation → échéance → renouvellement planifié (une seule demande, idempotent) → nouveau dépôt → validation → conformité ; historique complet.
+
+### P1 — Renouvellement des documents de l'entreprise
+
+Le même moteur porte désormais les obligations de l'entreprise, sujet `company` :
+- **détection et renouvellement** : `DocumentLifecycleOrchestrator` (même phase, même garde anti-doublon) ouvre une demande interne pour un document du coffre qui arrive à échéance ;
+- **relances** : la phase de relance existante suit le document du coffre de l'entreprise ;
+- **nouvelle version** : le dépôt dans le coffre soumet la demande ouverte (aucune demande n'est créée sans renouvellement en cours) ;
+- **validation / refus** : `PUT /company/documents/{code}/review` (`documents.manage`), même use case ;
+- **conformité** : un document en cours de renouvellement n'est « valide » qu'une fois validé ;
+- **coffre** : `request_status`, `request_review_note`, `due_date`, `can_review` ; l'écran du coffre liste les renouvellements et permet de valider ou refuser.
+Destinataires : les gestionnaires de l'entreprise (propriétaire et rôles administratifs, règle `notify` existante). Aucun sujet salarié, aucun document de personne créé.
+
+### P1 — Statuts de signature du registre RH
+
+Cause : `generated_documents.signature_status` est une projection écrite à l'envoi et à la complétion seulement ; son automate interdit de repasser de « refusé » à « en attente ». La corriger seule aurait figé « refusé » sur un document re-soumis.
+Correction côté lecture, **le moteur de signature fait foi** : `GeneratedDocumentReadModel::realSignatureState()` — signé si une demande est complétée et scellée ; sinon l'état de la dernière demande (en attente, refusée, expirée, annulée, en échec) ; sinon la valeur stockée (statuts manuels hors moteur). Appliqué au registre, au détail, au dossier du collaborateur et à « Mon activité ». Rien n'est enregistré ; le contrat RH n'est jamais modifié. Limite : le filtre du registre par statut de signature porte encore sur la colonne.
+
+### P1 — Fin de collaboration
+
+Cause : `TerminateEmployeeUseCase` tentait de terminer le contrat courant ; un contrat en brouillon ne peut pas l'être (il n'a jamais pris effet) → exception non gérée → 500.
+Règle retenue : seul un contrat en vigueur (actif ou suspendu) se termine. Avec un contrat courant en brouillon, la fin de collaboration est **refusée (422, champ `contract`)** avant toute écriture, avec la marche à suivre (activer le contrat). Un collaborateur déjà sorti reçoit aussi un 422 au lieu d'un 500. Sans contrat, la fin de collaboration est enregistrée. Aucun module de fin de contrat créé.
+
+### Tests
+
+`Adr772AccountlessEmployeeDocumentCycleTest` (2), `Adr772CompanyDocumentRenewalTest` (2), deux tests ajoutés à `Adr771GeneratedContractFilingTest` (registre, fin de collaboration). RBAC (`documents.view` refusé, manager refusé) et isolation entre entreprises vérifiés dans chacun. Ajusté : `Adr771CompanyVaultTest` (la limite « pas de renouvellement » qu'il figeait est levée). E2E : `adr772-document-cycles`, `adr771-generated-documents`.
+
+### Défauts résiduels
+
+1. Une demande validée sans nouveau fichier sur un document toujours proche de l'échéance est rouverte à l'exécution suivante (comportement identique pour les personnes).
+2. Filtre du registre RH par statut de signature : sur la colonne projetée, pas sur l'état réel.
+3. Un contrat en brouillon ne peut être ni supprimé ni annulé par API : pour sortir un collaborateur dans ce cas, il faut activer le contrat.
+4. Campagnes documentaires : toujours réservées aux personnes.
+5. Reportés d'ADR-770/771 (performance, accessibilité, anciens scripts E2E, trois échecs historiques de `ControllerSizeInvariantTest`).
+
+**Verdict** : **🟢 GO DEV.** NO-GO PROD inchangé (conditions d'ADR-771).
+
+**Règles** : DEV uniquement, aucun push, aucune migration, aucun accès distant, Billing et moteur de paie intacts.

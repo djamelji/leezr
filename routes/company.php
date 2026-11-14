@@ -289,6 +289,9 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.view');
     Route::get('/company/documents/{code}/versions/{versionId}/download', [CompanyDocumentController::class, 'downloadVersion'])
         ->middleware('company.access:use-permission,documents.view');
+    // ADR-772 : validation / refus d'un document de l'ENTREPRISE (demande de renouvellement interne).
+    Route::put('/company/documents/{code}/review', [CompanyDocumentController::class, 'review'])
+        ->middleware('company.access:use-permission,documents.manage');
     Route::delete('/company/documents/{code}', [CompanyDocumentController::class, 'destroy'])
         ->middleware('company.access:use-permission,documents.manage');
 
@@ -355,6 +358,10 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
         ->middleware('company.access:use-permission,documents.view');
     Route::get('/company/people/{personRef}/documents/{code}/versions/{versionId}/download', [PersonDocumentController::class, 'downloadVersion'])
         ->middleware('company.access:use-permission,documents.view');
+
+    // ADR-772 : validation / refus par personRef — membre OU salarié sans compte (même use case).
+    Route::put('/company/people/{personRef}/documents/{code}/review', [\App\Modules\Core\Documents\Http\PersonDocumentReviewController::class, 'review'])
+        ->middleware('company.access:use-permission,documents.manage');
 
     // Document review workflow (ADR-176)
     Route::put('/company/members/{id}/documents/{code}/review', [MemberDocumentController::class, 'review'])

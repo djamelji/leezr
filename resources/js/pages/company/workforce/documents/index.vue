@@ -107,7 +107,8 @@ function formatSubject(type, id) {
 }
 
 const signatureColor = status => {
-  const map = { none: 'secondary', pending: 'warning', signed: 'success', declined: 'error' }
+  // ADR-772 : état RÉEL du moteur de signature (refusée, expirée, annulée ne restent plus « en attente »).
+  const map = { none: 'secondary', pending: 'warning', signed: 'success', declined: 'error', expired: 'secondary', cancelled: 'secondary', failed: 'error' }
 
   return map[status] || 'secondary'
 }
@@ -118,6 +119,9 @@ const signatureLabel = status => {
     pending: t('workforceDocuments.signatureStatuses.pending'),
     signed: t('workforceDocuments.signatureStatuses.signed'),
     declined: t('workforceDocuments.signatureStatuses.declined'),
+    expired: t('workforceDocuments.signatureStatuses.expired'),
+    cancelled: t('workforceDocuments.signatureStatuses.cancelled'),
+    failed: t('workforceDocuments.signatureStatuses.failed'),
   }
 
   return map[status] || status

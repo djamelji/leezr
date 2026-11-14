@@ -91,12 +91,17 @@ class DocumentComplianceReadModel
             ->get()
             ->keyBy('document_type_id');
 
+        $companyRequests = \App\Core\Documents\DocumentRequest::where('company_id', $companyId)
+            ->where('document_subject_type', \App\Core\Documents\DocumentSubject::TYPE_COMPANY)->get()->keyBy('document_type_id');
+
         $allSlots = [];
 
         foreach ($companyTypeIds as $typeId) {
             $type = $types->get($typeId);
             $doc = $companyDocs->get($typeId);
-            $state = State::evaluate($doc, null);
+            // ADR-772 : une demande de renouvellement en cours sur le document de l'entreprise compte.
+            $companyRequest = $companyRequests->get($typeId);
+            $state = State::evaluate($doc, in_array($companyRequest?->status, ['submitted', 'in_review', 'rejected', 'to_replace'], true) ? $companyRequest->status : null);
 
             $allSlots[] = self::slot($typeId, $type, DocumentType::SCOPE_COMPANY, null, null, null, $state);
         }

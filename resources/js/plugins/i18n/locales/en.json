@@ -2695,6 +2695,14 @@
       "vaultSubtitle": "Company documents (certificates, insurance, etc.) will appear here once activated.",
       "memberDocsTitle": "No documents required",
       "memberDocsSubtitle": "No document types are activated for this member."
+    },
+    "renewal": {
+      "requested": "Renewal requested",
+      "requestedHint": "This document is about to expire: upload a new version.",
+      "submitted": "To validate",
+      "submittedHint": "A new version was uploaded and is awaiting validation.",
+      "rejected": "Rejected",
+      "rejectedHint": "The uploaded version was rejected: upload a new one."
     }
   },
   "fieldGroups": {
@@ -6865,7 +6873,10 @@
       "none": "Not signed",
       "pending": "Pending",
       "signed": "Signed",
-      "declined": "Declined"
+      "declined": "Declined",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "failed": "Failed"
     },
     "emptyState": {
       "title": "No generated documents",

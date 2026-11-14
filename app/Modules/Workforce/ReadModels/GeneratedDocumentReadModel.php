@@ -78,6 +78,7 @@ class GeneratedDocumentReadModel
 
         // Enrichissement collaborateur par PAGE (batch, pas de N+1).
         self::attachEmployees($paginator->getCollection(), $companyId);
+        self::applyRealSignatureState($paginator->getCollection(), $companyId);
 
         return $paginator;
     }
@@ -183,9 +184,53 @@ class GeneratedDocumentReadModel
             ->with(['template:id,code,name'])
             ->get();
 
-        return $employeeDocs->merge($contractDocs)->merge($leaveDocs)
+        return self::applyRealSignatureState($employeeDocs->merge($contractDocs)->merge($leaveDocs), $companyId)
             ->sortByDesc('generated_at')
             ->values();
+    }
+
+    /**
+     * ADR-772 — the signature state SHOWN for a document is the real state of the signature engine,
+     * not the `signature_status` column (a projection that is only written on send and on completion,
+     * so a declined, expired or cancelled request stayed « pending » in the registry forever).
+     *
+     *   signed    : a request is COMPLETED and sealed ;
+     *   pending   : the latest request is in progress ;
+     *   declined / expired / cancelled / failed : state of the latest request ;
+     *   otherwise : the stored value (documents signed outside the engine keep their manual status).
+     *
+     * Read-side only : nothing is saved, and the HR contract is never touched.
+     */
+    public static function realSignatureState(GeneratedDocument $doc, ?\App\Modules\Workforce\Signature\Models\SignatureRequest $latest, bool $hasSealedSignature): string
+    {
+        if ($hasSealedSignature) {
+            return GeneratedDocument::SIGNATURE_SIGNED;
+        }
+
+        return match ($latest?->status) {
+            'pending', 'partially_signed' => GeneratedDocument::SIGNATURE_PENDING,
+            'declined', 'expired', 'cancelled', 'failed' => $latest->status,
+            default => (string) $doc->signature_status,
+        };
+    }
+
+    /** Sets the real signature state on a page of documents (one query, in memory, never saved). */
+    public static function applyRealSignatureState(Collection $docs, int $companyId): Collection
+    {
+        if ($docs->isEmpty()) {
+            return $docs;
+        }
+        $requests = \App\Modules\Workforce\Signature\Models\SignatureRequest::withoutGlobalScopes()->where('company_id', $companyId)
+            ->whereIn('generated_document_id', $docs->pluck('id'))->where('status', '!=', 'draft')->orderBy('id')
+            ->get(['id', 'generated_document_id', 'status', 'signed_document_path'])->groupBy('generated_document_id');
+
+        foreach ($docs as $doc) {
+            $ofDoc = $requests->get($doc->id, collect());
+            $sealed = $ofDoc->contains(fn ($r) => $r->status === 'completed' && $r->signed_document_path !== null);
+            $doc->setAttribute('signature_status', self::realSignatureState($doc, $ofDoc->last(), $sealed));
+        }
+
+        return $docs;
     }
 
     /**
@@ -215,11 +260,7 @@ class GeneratedDocumentReadModel
                 // État de signature VRAI, lu sur les demandes : « signé » seulement si une demande est
                 // complétée et scellée ; un refus, une expiration ou une annulation ne restent pas « en
                 // attente » (la colonne du document n'est qu'une projection, non mise à jour dans ces cas).
-                'signature_status' => $signed !== null ? 'signed' : match ($last?->status) {
-                    'pending', 'partially_signed' => 'pending',
-                    'declined', 'expired', 'cancelled', 'failed' => $last->status,
-                    default => $d->signature_status === 'signed' ? 'pending' : $d->signature_status,
-                },
+                'signature_status' => self::realSignatureState($d, $last, $signed !== null),
                 'signature_request' => $last ? ['id' => $last->id, 'status' => $last->status] : null,
                 'signed' => ['available' => $signed !== null, 'signature_request_id' => $signed?->id, 'completed_at' => $signed?->completed_at?->toIso8601String()],
                 'can_download' => (bool) $canOpen($d),

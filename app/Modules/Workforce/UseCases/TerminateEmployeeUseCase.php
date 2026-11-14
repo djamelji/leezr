@@ -13,8 +13,21 @@ class TerminateEmployeeUseCase
     {
         $terminationDate ??= now();
 
+        // ADR-772 : les refus métier sont des erreurs explicites (422), plus des exceptions non gérées (500).
         if (! $employee->canTransitionTo(Employee::STATUS_TERMINATED)) {
-            throw new \DomainException("Cannot terminate employee in status {$employee->status}");
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => ["La fin de collaboration ne peut pas être enregistrée pour un collaborateur au statut « {$employee->status} »."],
+            ]);
+        }
+
+        // Règle contractuelle : seul un contrat EN VIGUEUR (actif ou suspendu) se termine. Un contrat
+        // encore en brouillon n'a jamais pris effet — il ne peut pas être « terminé », et le laisser
+        // courant sur un collaborateur sorti casserait l'historique contractuel. Rien n'est écrit.
+        $current = $employee->currentContract;
+        if ($current && ! in_array($current->status, ['terminated'], true) && ! $current->canTransitionTo('terminated')) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'contract' => ["Le contrat en cours est au statut « {$current->status} » : activez-le avant d'enregistrer la fin de collaboration."],
+            ]);
         }
 
         return DB::transaction(function () use ($employee, $reason, $terminationDate) {

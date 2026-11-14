@@ -140,6 +140,15 @@ class UploadCompanyDocumentUseCase
             ProcessDocumentAiJob::dispatch(CompanyDocument::class, $document->id, $type->id);
         }
 
+        // ADR-772 : si une demande (renouvellement) est ouverte sur ce document de l'entreprise, le dépôt
+        // la soumet à validation — même moteur que pour les personnes. Sans demande, rien n'est créé.
+        $requests = app(\App\Core\Documents\Services\DocumentRequestService::class);
+        $subject = \App\Core\Documents\DocumentSubject::company((int) $data->company->id);
+        $open = $requests->findExisting($data->company->id, $subject, $type->id);
+        if ($open && in_array($open->status, [\App\Core\Documents\DocumentRequest::STATUS_REQUESTED, \App\Core\Documents\DocumentRequest::STATUS_REJECTED, \App\Core\Documents\DocumentRequest::STATUS_TO_REPLACE], true)) {
+            $requests->markSubmitted($data->company->id, $subject, $type, $data->actor);
+        }
+
         return new UploadCompanyDocumentResult(
             id: $document->id,
             code: $type->code,

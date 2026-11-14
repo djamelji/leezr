@@ -43,8 +43,12 @@ class CompanyDocumentReadModel
             ->get()
             ->keyBy('document_type_id');
 
+        // ADR-772 : demandes portées par l'entreprise (renouvellement interne), par type.
+        $requests = \App\Core\Documents\DocumentRequest::where('company_id', $company->id)
+            ->where('document_subject_type', \App\Core\Documents\DocumentSubject::TYPE_COMPANY)->get()->keyBy('document_type_id');
+
         // 3. Enrich each document with upload status + lifecycle (ADR-384)
-        $documents = array_map(function ($doc) use ($uploads, $typeIds) {
+        $documents = array_map(function ($doc) use ($uploads, $typeIds, $requests) {
             $typeId = $typeIds->get($doc['code']);
             $upload = $typeId ? $uploads->get($typeId) : null;
 
@@ -66,6 +70,12 @@ class CompanyDocumentReadModel
                 $upload !== null,
                 $upload?->expires_at,
             );
+
+            $request = $typeId ? $requests->get($typeId) : null;
+            $doc['request_status'] = $request?->status;
+            $doc['request_review_note'] = $request?->review_note;
+            $doc['due_date'] = $request?->due_date?->toDateString();
+            $doc['can_review'] = $request?->status === \App\Core\Documents\DocumentRequest::STATUS_SUBMITTED;
 
             return $doc;
         }, $documents);
