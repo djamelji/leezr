@@ -191,8 +191,8 @@
       "workflows": "Automations",
       "workforce-me": "My work",
       "workforce-employees": "Employees",
-      "workforce-time": "Time tracking",
-      "workforce-leave": "Leave & absences",
+      "workforce-time": "Time & clock-ins",
+      "workforce-leave": "Absences",
       "workforce-planning": "Planning",
       "workforce-payroll": "Payroll",
       "workforce-documents": "Documents",
@@ -7534,9 +7534,9 @@
       "conventionCollective": "Collective Agreement",
       "compensationSection": "Compensation",
       "compensationType": "Compensation Type",
-      "baseSalaryCents": "Monthly Gross Salary (cents)",
-      "hourlyRateCents": "Hourly Rate (cents)",
-      "dailyRateCents": "Daily Rate (cents)",
+      "baseSalaryCents": "Monthly gross salary",
+      "hourlyRateCents": "Hourly rate",
+      "dailyRateCents": "Daily rate",
       "amountInCents": "Amount in cents (e.g. 250000 = €2,500.00)",
       "day": "day",
       "hourlyRate": "Hourly rate",
@@ -7700,8 +7700,8 @@
       "level": "Level",
       "descriptionField": "Description",
       "defaultRate": "Default Hourly Rate",
-      "defaultRateLabel": "Default Hourly Rate (cents)",
-      "defaultRateHint": "Hourly rate in cents, used when employee has no compensation plan",
+      "defaultRateLabel": "Default hourly rate",
+      "defaultRateHint": "Used when the employee has no compensation plan.",
       "employeeCount": "Employees",
       "add": "Add Job Role",
       "edit": "Edit Job Role",
@@ -8181,7 +8181,7 @@
   },
   "planning": {
     "title": "Planning",
-    "subtitle": "Schedule shifts, manage templates and intervention sites",
+    "subtitle": "Organise the days: time slots, templates and work locations",
     "today": "Today",
     "selectDraft": "Select draft",
     "shiftActions": "Shift actions",
@@ -8711,7 +8711,7 @@
         "unknown": "Not applicable"
       }
     },
-    "rowSummary": "{hours}h · {days}d",
+    "rowSummary": "{hours} · {days}d",
     "shift": {
       "untitled": "Shift"
     },
@@ -8721,7 +8721,8 @@
       "moveTo": "Move to…",
       "targetDay": "Target day",
       "targetEmployee": "Target employee",
-      "move": "Move"
+      "move": "Move",
+      "uncoveredCount": "{n} uncovered need(s) this day"
     },
     "publishWeek": "Publish week",
     "publishSelection": "Publish ({n})",
@@ -8736,8 +8737,8 @@
     "dateTo": "To",
     "daysCount": "Number of days",
     "reason": "Reason",
-    "title": "Leave",
-    "subtitle": "Manage your employees' leave requests",
+    "title": "Absences",
+    "subtitle": "Requests, calendar and balances of the team",
     "newRequest": "New Request",
     "searchPlaceholder": "Search employee…",
     "filterStatus": "Filter by status",
@@ -8761,16 +8762,16 @@
     },
     "fields": {
       "employee": "Employee",
-      "leaveType": "Leave Type",
+      "leaveType": "Absence type",
       "dateFrom": "Start Date",
       "dateTo": "End Date",
-      "duration": "Duration (hundredths of day)",
-      "durationHint": "E.g. 100 = 1 day, 50 = 0.5 day",
-      "partial": "Partial absence (a few hours / half-day)",
+      "duration": "Duration",
+      "durationHint": "Computed from the dates; adjustable by half-day.",
+      "partial": "A few hours only (single day)",
       "startTime": "Start time",
       "endTime": "End time",
       "deductionSuggested": "Suggested: {days}d ({hours}h) — adjustable",
-      "reason": "Reason",
+      "reason": "Comment (optional)",
       "reviewNote": "Reason / note"
     },
     "actions": {
@@ -8844,10 +8845,10 @@
         "annualDays": "Days per year",
         "annualDaysHint": "Number of days accrued over a full year.",
         "accrualMode": "Accrual mode",
-        "carryOver": "Carry over allowed",
-        "carryOverHint": "Allow the unused balance to roll over to the next year.",
+        "carryOver": "Maximum carry-over",
+        "carryOverHint": "Days that can be carried over to next year.",
         "maxBalance": "Maximum balance",
-        "maxBalanceHint": "Cumulative cap (0 = no limit).",
+        "maxBalanceHint": "Accumulation cap in days (0 = no limit).",
         "requiresApproval": "Approval required",
         "isPaid": "Paid leave",
         "sortOrder": "Display order"
@@ -9448,5 +9449,38 @@
     "time": {
       "plan": "Prepare the schedule"
     }
+  },
+  "timeSpace": {
+    "title": "Planning & time",
+    "views": {
+      "planning": "Planning",
+      "time": "Time & clock-ins",
+      "leave": "Absences",
+      "me": "My work"
+    },
+    "short": {
+      "planning": "Planning",
+      "time": "Time",
+      "leave": "Absences",
+      "me": "Me"
+    },
+    "more": "More actions",
+    "moreOptions": "More options (template, note)",
+    "duplicate": "Duplicate",
+    "duration": "Duration: {h} h {m}",
+    "overnight": "ends the next day",
+    "filters": "Filters",
+    "days": "{n} day | {n} days",
+    "leave": {
+      "computed": "Computed from the contract: {days} ({hours})",
+      "available": "Available balance: {days}",
+      "insufficient": "Insufficient balance: {days} available",
+      "weekendNote": "The period includes a weekend: the calculation counts every calendar day. Adjust the duration if needed.",
+      "daysSuffix": "day(s)",
+      "send": "Send request",
+      "comment": "Comment (optional)",
+      "pickDates": "Pick the dates: the duration is computed automatically."
+    },
+    "openEntry": "Your clock-in of {date} was never closed. Your manager must correct it before you can start a new day."
   }
 }

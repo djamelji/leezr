@@ -1,0 +1,17 @@
+{
+  "measures": {
+    "consulter_mon_planning": {
+      "clicks": 0,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "pointer_pause_reprise_fin": {
+      "clicks": 4,
+      "fields": 0,
+      "pages": 0,
+      "hscroll": false
+    }
+  },
+  "errors": []
+}

@@ -1,0 +1,16 @@
+{
+  "measures": {
+    "pointage_ouvert_explique": true,
+    "demander_absence_salarie": {
+      "clicks": 2,
+      "fields": 3,
+      "pages": 0,
+      "hscroll": false
+    },
+    "annulation_demande": {
+      "id": 71,
+      "status": 200
+    }
+  },
+  "errors": []
+}

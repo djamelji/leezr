@@ -28135,3 +28135,34 @@ UX2 validé. L'espace Documents comptait 8 onglets et 3 sous-onglets ; aucune re
 Tests de recherche (droits, cloisonnement, pagination, téléchargement) ; `ux3-documents.spec.js` (10 parcours avec écriture, 4 profils, entreprise sans Workforce, mobile) ; suite complète et build : voir le checkpoint.
 
 **Verdict** : 🟢 GO DEV. UX4 non commencé.
+
+---
+
+## ADR-779 — Company Experience 2.0 / UX4 : Planning & temps, espace unique, mobile, unités métier
+
+**Date** : 2026-11-14 · **Base** : `9bdc3b05` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX4.md`
+
+### Contexte
+
+UX3 validé (8 documents de recette conservés, libellés validés). Audit ciblé : Planning inutilisable sur smartphone (page de 485 px pour 390 px, F09) ; trois pages sans lien entre elles ; durée d'absence saisie en centièmes de jour, plafond et report en centièmes implicites, « (centimes) » sur des champs saisis en euros (F11) ; le salarié saisissait seul son nombre de jours ; un pointage resté ouvert un autre jour proposait « Commencer » que le serveur refusait.
+
+### Décisions
+
+1. **En-tête commun** `TimeSpaceHeader` sur Planning, Temps & pointages, Absences et Mon activité : vues filtrées par la permission réelle de chaque route et la capacité personnelle serveur (`time_clock`) ; routes inchangées, aucune page fusionnée.
+2. **Planning** : création par sélection d'une plage dans la vue Jour (tiroir prérempli, confirmation obligatoire) ; tiroir réduit à l'essentiel (modèle et note repliés, lieu seulement s'il existe, lieu unique appliqué) ; « Modifier » depuis la fiche d'un brouillon ; « Dupliquer » depuis l'édition ; filtres desktop repliés ; mobile : actions secondaires dans « ⋯ », jour courant, besoins non couverts résumés, tiroirs à la largeur de l'écran.
+3. **Absences** : durée en jours (pas 0,5) proposée par `LeaveDeductionCalculator`, solde du type affiché, avertissement week-end ; côté salarié, même moteur via `POST /workforce/me/leaves/deduction-preview` (fiche active de la personne connectée, lecture seule) ; confirmation d'approbation résumée.
+4. **Unités** : `utils/workUnits.js` (minutes → « 7 h 30 », centièmes → « 2,5 jours », jours → centièmes exacts) ; plafond/report en jours ; libellés monétaires sans « (centimes) » ; « shift » → « créneau » en français.
+5. **Pointage** : `GET /workforce/me` expose `open_entry` (pointage actif d'un jour antérieur) ; l'écran l'explique et ne propose plus « Commencer ». Aucune fermeture automatique (elle compterait l'intervalle comme travaillé).
+6. **Recette** : `e2e:teardown-run` accepte `time_entry` (id exact de la réponse, créé après le début de l'exécution, entreprise de l'exécution).
+
+### Conséquences
+
+- Aucune migration, aucune permission ajoutée ni élargie, aucun moteur (planning, congés, pointage, paie, Billing) modifié ; règles légales, conflits, isolation et premier jour de semaine inchangés.
+- Résiduels déclarés : décompte en jours calendaires (pas de rythme de travail ni de fériés par Market), plafond/report non appliqués, soldes par collaborateur sans contrôle de périmètre (préexistant), grille Semaine dense.
+- Données de recette : fiches et pointages supprimés ; trois demandes d'absence annulées (68, 69, 71) restent sur la fiche de démonstration de Bob (journal en ajout seul).
+
+### Validation
+
+`Ux4SelfLeavePreviewTest` 6/6 ; `ux4-planning-time.spec.js` 6/6 (8 parcours responsable avec écritures, pointage complet et absence sur mobile, 8 profils, entreprise sans Workforce, tablette/mobile/sombre, anciennes routes) ; suite complète 4286 réussis / 12 ignorés / 3 échecs préexistants (`ControllerSizeInvariantTest`) ; build propre ; régression navigateur 27/28 (M6.A n°1 obsolète depuis UX0).
+
+**Verdict** : 🟢 GO DEV. UX5 non commencé.

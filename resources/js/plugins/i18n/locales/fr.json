@@ -191,8 +191,8 @@
       "workflows": "Automatisations",
       "workforce-me": "Mon activité",
       "workforce-employees": "Collaborateurs",
-      "workforce-time": "Pointage",
-      "workforce-leave": "Congés & absences",
+      "workforce-time": "Temps & pointages",
+      "workforce-leave": "Absences",
       "workforce-planning": "Planning",
       "workforce-payroll": "Paie",
       "workforce-documents": "Documents",
@@ -7345,7 +7345,7 @@
       "WorkforceHoursTrend": "Heures travaillées (7 jours)",
       "WorkforceHoursTrendDesc": "Tendance des heures travaillées sur 7 jours",
       "PlanningShifts": "Planning de la semaine",
-      "PlanningShiftsDesc": "Shifts planifiés et créneaux non couverts",
+      "PlanningShiftsDesc": "Créneaux planifiés et créneaux non couverts",
       "headcountLabel": "Effectifs",
       "headcountCaption": "{n} en congé",
       "headcountAllPresent": "Aucun en congé",
@@ -7367,11 +7367,11 @@
       "anomaliesIncomplete": "{n} pointage(s) incomplet(s)",
       "anomaliesNotClocked": "{n} non pointé(s)",
       "planningTitle": "Planning de la semaine",
-      "planningShiftsLabel": "shifts planifiés",
+      "planningShiftsLabel": "créneaux planifiés",
       "planningUnassigned": "{n} non couverts",
       "planningUnassignedLine": "{n} non assignés",
       "planningAssigned": "{n} assignés",
-      "planningNone": "Aucun shift planifié cette semaine",
+      "planningNone": "Aucun créneau planifié cette semaine",
       "actionValidate": "Valider",
       "actionApprove": "Approuver",
       "actionPlan": "Planifier",
@@ -7382,7 +7382,7 @@
       "hoursPeak": "Meilleur jour",
       "hoursEmpty": "Aucune heure saisie sur la période",
       "loadError": "Erreur de chargement",
-      "planningAllAssigned": "Tous les shifts assignés",
+      "planningAllAssigned": "Tous les créneaux assignés",
       "anomaliesBreakdown": "{incomplete} incomplets · {notClocked} non pointés"
     }
   },
@@ -7534,9 +7534,9 @@
       "conventionCollective": "Convention collective",
       "compensationSection": "Rémunération",
       "compensationType": "Type de rémunération",
-      "baseSalaryCents": "Salaire brut mensuel (centimes)",
-      "hourlyRateCents": "Taux horaire (centimes)",
-      "dailyRateCents": "Taux journalier (centimes)",
+      "baseSalaryCents": "Salaire brut mensuel",
+      "hourlyRateCents": "Taux horaire",
+      "dailyRateCents": "Taux journalier",
       "amountInCents": "Montant en centimes (ex: 250000 = 2 500,00 €)",
       "day": "jour",
       "hourlyRate": "Taux horaire",
@@ -7700,8 +7700,8 @@
       "level": "Niveau",
       "descriptionField": "Description",
       "defaultRate": "Taux horaire par défaut",
-      "defaultRateLabel": "Taux horaire par défaut (centimes)",
-      "defaultRateHint": "Taux horaire en centimes, utilisé si l'employé n'a pas de plan de rémunération",
+      "defaultRateLabel": "Taux horaire par défaut",
+      "defaultRateHint": "Utilisé si le collaborateur n'a pas de plan de rémunération.",
       "employeeCount": "Employés",
       "add": "Ajouter un poste",
       "edit": "Modifier le poste",
@@ -8181,7 +8181,7 @@
   },
   "planning": {
     "title": "Planning",
-    "subtitle": "Planifiez les shifts, gérez les modèles et les lieux d'intervention",
+    "subtitle": "Organisez les journées : créneaux, modèles et lieux d'intervention",
     "today": "Aujourd'hui",
     "selectDraft": "Sélectionner le brouillon",
     "shiftActions": "Actions du créneau",
@@ -8229,19 +8229,19 @@
         "conflict": "Homonyme"
       }
     },
-    "newShift": "Nouveau shift",
-    "editShift": "Modifier le shift",
-    "shiftCreated": "Shift créé",
-    "shiftUpdated": "Shift mis à jour",
-    "shiftDeleted": "Shift supprimé",
-    "shiftCancelled": "Shift annulé",
+    "newShift": "Nouveau créneau",
+    "editShift": "Modifier le créneau",
+    "shiftCreated": "Créneau créé",
+    "shiftUpdated": "Créneau mis à jour",
+    "shiftDeleted": "Créneau supprimé",
+    "shiftCancelled": "Créneau annulé",
     "publish": "Publier",
     "publishSelected": "Publier la sélection",
-    "published": "Shifts publiés",
+    "published": "Créneaux publiés",
     "selectAll": "Tout sélectionner",
     "bulkCreate": "Création en lot",
-    "bulkCreated": "Shifts créés en lot",
-    "bulkHint": "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs shifts en une fois.",
+    "bulkCreated": "Créneaux créés en lot",
+    "bulkHint": "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs créneaux en une fois.",
     "weekOf": "Semaine du",
     "to": "au",
     "tabs": {
@@ -8259,16 +8259,16 @@
     },
     "copyWeek": {
       "button": "Copier la semaine précédente",
-      "done": "{created} shift(s) copié(s) en brouillon · {skipped} ignoré(s)"
+      "done": "{created} créneau(x) copié(s) en brouillon · {skipped} ignoré(s)"
     },
     "duplicateShift": {
       "menu": "Dupliquer (lendemain)",
-      "done": "Shift dupliqué en brouillon"
+      "done": "Créneau dupliqué en brouillon"
     },
     "quickAssign": {
       "arm": "Affecter un modèle",
       "hint": "Choisissez un modèle puis cliquez une cellule vide",
-      "done": "Shift affecté depuis le modèle"
+      "done": "Créneau affecté depuis le modèle"
     },
     "activities": {
       "count": "{n} activité(s)",
@@ -8277,7 +8277,7 @@
       "dayDetail": "Détail de la journée",
       "addActivity": "Ajouter une activité",
       "editActivity": "Modifier l'activité",
-      "empty": "Aucune activité planifiée dans ce shift.",
+      "empty": "Aucune activité planifiée dans ce créneau.",
       "untitled": "Activité",
       "duplicate": "Dupliquer",
       "created": "Activité ajoutée",
@@ -8285,9 +8285,9 @@
       "duplicated": "Activité dupliquée",
       "cancelled": "Activité annulée",
       "deleted": "Activité supprimée",
-      "conflict": "Conflit : l'activité dépasse les bornes du shift, chevauche une autre activité ou excède le temps travaillable.",
-      "deleteBlocked": "Seules les activités d'un shift brouillon peuvent être supprimées — annulez plutôt.",
-      "publishedHint": "Shift publié : les ajouts/modifications d'activités sont tracés et ne modifient ni les horaires du shift ni le temps pointé.",
+      "conflict": "Conflit : l'activité dépasse les bornes du créneau, chevauche une autre activité ou excède le temps travaillable.",
+      "deleteBlocked": "Seules les activités d'un créneau brouillon peuvent être supprimées — annulez plutôt.",
+      "publishedHint": "Créneau publié : les ajouts/modifications d'activités sont tracés et ne modifient ni les horaires du créneau ni le temps pointé.",
       "warnings": {
         "travel": "Activité enregistrée — attention : temps de déplacement entre lieux inconnu."
       },
@@ -8297,10 +8297,10 @@
         "end": "Fin"
       },
       "errors": {
-        "bounds": "L'activité doit rester dans les bornes du shift.",
+        "bounds": "L'activité doit rester dans les bornes du créneau.",
         "break": "L'activité chevauche une pause planifiée.",
-        "overlap": "L'activité en chevauche une autre dans ce shift.",
-        "capacity": "Les activités dépassent le temps travaillable du shift (pause préservée).",
+        "overlap": "L'activité en chevauche une autre dans ce créneau.",
+        "capacity": "Les activités dépassent le temps travaillable du créneau (pause préservée).",
         "order": "La fin doit être après le début."
       }
     },
@@ -8308,7 +8308,7 @@
       "title": "Couverture",
       "tooltip": "Affecté {assigned} sur {needed} requis",
       "manage": "Besoins de personnel",
-      "hint": "Définissez le nombre de collaborateurs attendus par jour. La couverture compare le besoin aux shifts affectés (jamais le même employé deux fois).",
+      "hint": "Définissez le nombre de collaborateurs attendus par jour. La couverture compare le besoin aux créneaux affectés (jamais le même employé deux fois).",
       "allDay": "Journée entière",
       "created": "Besoin créé",
       "updated": "Besoin mis à jour",
@@ -8360,7 +8360,7 @@
       "summaryOk": "Couverture OK"
     },
     "stats": {
-      "totalShifts": "Shifts au total",
+      "totalShifts": "Créneaux au total",
       "hoursPlanned": "Heures planifiées",
       "published": "Publiés",
       "draft": "Brouillons"
@@ -8385,16 +8385,16 @@
       "end": "Fin"
     },
     "emptyGrid": {
-      "title": "Aucun shift planifié",
-      "description": "Créez un nouveau shift ou utilisez la création en lot pour démarrer votre planning."
+      "title": "Aucun créneau planifié",
+      "description": "Créez un nouveau créneau ou utilisez la création en lot pour démarrer votre planning."
     },
     "deleteShift": {
-      "title": "Supprimer le shift",
-      "text": "Êtes-vous sûr de vouloir supprimer ce shift ? Cette action est irréversible."
+      "title": "Supprimer le créneau",
+      "text": "Êtes-vous sûr de vouloir supprimer ce créneau ? Cette action est irréversible."
     },
     "cancelShift": {
-      "title": "Annuler le shift",
-      "text": "Voulez-vous annuler ce shift ?",
+      "title": "Annuler le créneau",
+      "text": "Voulez-vous annuler ce créneau ?",
       "reason": "Motif d'annulation"
     },
     "templates": {
@@ -8403,7 +8403,7 @@
       "created": "Modèle créé",
       "updated": "Modèle mis à jour",
       "deleted": "Modèle supprimé",
-      "empty": "Aucun modèle de shift",
+      "empty": "Aucun modèle de créneau",
       "emptyDescription": "Créez votre premier modèle pour accélérer la planification.",
       "deleteTitle": "Supprimer le modèle",
       "deleteText": "Êtes-vous sûr de vouloir supprimer ce modèle ?",
@@ -8440,10 +8440,10 @@
         "worked": "Travail prévu",
         "horairesOnly": "Aucune activité — horaires seuls.",
         "issueZero": "« {label} » : durée nulle.",
-        "issueBounds": "« {label} » dépasse les horaires du shift.",
+        "issueBounds": "« {label} » dépasse les horaires du créneau.",
         "issueOverlap": "Deux activités se chevauchent.",
         "issueBreakOverlap": "« {label} » chevauche une pause.",
-        "issueBreakBounds": "Une pause dépasse les horaires du shift."
+        "issueBreakBounds": "Une pause dépasse les horaires du créneau."
       }
     },
     "presets": {
@@ -8505,7 +8505,7 @@
         "name": "Nom",
         "strategy": "Stratégie",
         "day": "Jour",
-        "template": "Modèle de shift",
+        "template": "Modèle de créneau",
         "kind": "Type",
         "employee": "Salarié",
         "headcount": "Effectif"
@@ -8535,7 +8535,7 @@
       "updated": "Lieu mis à jour",
       "deleted": "Lieu supprimé",
       "empty": "Aucun lieu d'intervention",
-      "emptyDescription": "Ajoutez vos sites, agences ou lieux clients pour les associer aux shifts.",
+      "emptyDescription": "Ajoutez vos sites, agences ou lieux clients pour les associer aux créneaux.",
       "deleteTitle": "Supprimer le lieu",
       "deleteText": "Êtes-vous sûr de vouloir supprimer ce lieu ?",
       "columns": {
@@ -8564,17 +8564,17 @@
     "calendar": {
       "absence": "Absence",
       "conflict": "Chevauchement",
-      "shift": "Shift",
+      "shift": "Créneau",
       "plannedMinutes": "Durée prévue",
-      "conflictDetail": "Ce shift chevauche une absence approuvée — vérification requise.",
-      "conflictsBanner": "{count} shift(s) en chevauchement avec une absence approuvée."
+      "conflictDetail": "Ce créneau chevauche une absence approuvée — vérification requise.",
+      "conflictsBanner": "{count} créneau(x) en chevauchement avec une absence approuvée."
     },
     "ops": {
-      "moved": "Shift déplacé",
+      "moved": "Créneau déplacé",
       "reassigned": "Collaborateur réaffecté",
       "resolve": "Résoudre",
       "reassign": "Réaffecter",
-      "reassignTitle": "Réaffecter le shift",
+      "reassignTitle": "Réaffecter le créneau",
       "reassignHint": "Collaborateurs potentiellement disponibles sur cette plage (choix explicite requis).",
       "confirmReassign": "Réaffecter",
       "moveTitle": "Confirmer le déplacement",
@@ -8604,12 +8604,12 @@
       "intro": "Choisissez un point de départ. Tout aboutit au même calendrier — vous pourrez ajuster ensuite.",
       "recommended": "Recommandé",
       "copyPrev": "Reprendre la semaine précédente",
-      "copyPrevDesc": "Recopie les shifts de la semaine passée en brouillons.",
+      "copyPrevDesc": "Recopie les créneaux de la semaine passée en brouillons.",
       "copyWeek": "Copier une autre semaine",
       "copyWeekDesc": "Choisir la semaine source et les collaborateurs.",
       "weekTpl": "Appliquer une semaine type",
       "weekTplDesc": "Une ou plusieurs semaines — nominatif, par besoins ou mixte.",
-      "templatesStart": "Partir des modèles de shift",
+      "templatesStart": "Partir des modèles de créneau",
       "templatesStartDesc": "Armez un modèle puis cliquez les cellules à remplir.",
       "scratch": "Partir de zéro",
       "scratchDesc": "Construire manuellement, cellule par cellule."
@@ -8646,13 +8646,13 @@
       "favorite": "Favori"
     },
     "dnd": {
-      "created": "Shift créé",
-      "moved": "Shift déplacé",
+      "created": "Créneau créé",
+      "moved": "Créneau déplacé",
       "sameCell": "Même cellule",
       "absent": "Collaborateur absent ce jour",
       "stale": "Modifié entre-temps — rechargez puis réessayez",
       "dragShiftHint": "Glisser pour déplacer (brouillon)",
-      "publishedLocked": "Shift publié — non déplaçable (utilisez la révision)"
+      "publishedLocked": "Créneau publié — non déplaçable (utilisez la révision)"
     },
     "overstaffing": {
       "title": "Dépassement du besoin",
@@ -8668,16 +8668,16 @@
       "nothing": "Rien à annuler",
       "done": "Opération annulée",
       "redone": "Opération rétablie",
-      "concurrent": "Impossible d'annuler : ce shift a été modifié par une autre personne.",
+      "concurrent": "Impossible d'annuler : ce créneau a été modifié par une autre personne.",
       "failed": "Annulation impossible"
     },
     "copy": {
-      "copyShift": "Copier ce shift",
+      "copyShift": "Copier ce créneau",
       "copyDay": "Copier la journée",
       "copyWeek": "Copier la semaine",
-      "copied": "{n} shift(s) copié(s)",
+      "copied": "{n} créneau(x) copié(s)",
       "clipboard": "{n} copié(s)",
-      "dayLabel": "Journée ({n} shifts)",
+      "dayLabel": "Journée ({n} créneaux)",
       "pasteHere": "Coller ici",
       "done": "{n} brouillon(s) créé(s) · {blocked} ignoré(s)",
       "noneApplicable": "Aucune cellule applicable (conflits/absences).",
@@ -8686,7 +8686,7 @@
       "weekBefore2": "Il y a 2 semaines",
       "employeesOptional": "Collaborateurs (tous si vide)",
       "previewBtn": "Prévisualiser",
-      "confirmWeek": "Copier {n} shift(s)"
+      "confirmWeek": "Copier {n} créneau(x)"
     },
     "bulk": {
       "selected": "{n} cellule(s) sélectionnée(s)",
@@ -8706,29 +8706,30 @@
         "no_contract": "Pas de contrat actif",
         "out_of_scope": "Hors de votre périmètre",
         "absent": "Collaborateur absent",
-        "overlap": "Chevauchement avec un shift",
+        "overlap": "Chevauchement avec un créneau",
         "regulatory": "Règle de temps de travail",
         "unknown": "Non applicable"
       }
     },
-    "rowSummary": "{hours}h · {days} j",
+    "rowSummary": "{hours} · {days} j",
     "shift": {
-      "untitled": "Shift"
+      "untitled": "Créneau"
     },
     "mobile": {
-      "noShift": "Aucun shift ce jour.",
+      "noShift": "Aucun créneau ce jour.",
       "uncovered": "Besoins non couverts",
       "moveTo": "Déplacer vers…",
       "targetDay": "Jour cible",
       "targetEmployee": "Collaborateur cible",
-      "move": "Déplacer"
+      "move": "Déplacer",
+      "uncoveredCount": "{n} besoin(s) non couvert(s) ce jour"
     },
     "publishWeek": "Publier la semaine",
     "publishSelection": "Publier ({n})",
     "publishNoDraft": "Aucun brouillon à publier.",
-    "publishConflict": "Publication impossible : conflit détecté (aucun shift publié).",
+    "publishConflict": "Publication impossible : conflit détecté (aucun créneau publié).",
     "publishConfirmTitle": "Publier le planning ?",
-    "publishConfirmText": "{shifts} shift(s) brouillon pour {employees} collaborateur(s) vont être publiés.",
+    "publishConfirmText": "{shifts} créneau(x) brouillon pour {employees} collaborateur(s) vont être publiés.",
     "publishAtomicHint": "Publication atomique : en cas de conflit, rien n'est publié. Les collaborateurs concernés seront notifiés (lot suivant)."
   },
   "leaves": {
@@ -8736,8 +8737,8 @@
     "dateTo": "Au",
     "daysCount": "Nombre de jours",
     "reason": "Motif",
-    "title": "Congés",
-    "subtitle": "Gérez les demandes de congés de vos employés",
+    "title": "Absences",
+    "subtitle": "Demandes, calendrier et soldes de l'équipe",
     "newRequest": "Nouvelle demande",
     "searchPlaceholder": "Rechercher un employé…",
     "filterStatus": "Filtrer par statut",
@@ -8760,17 +8761,17 @@
       "status": "Statut"
     },
     "fields": {
-      "employee": "Employé",
-      "leaveType": "Type de congé",
+      "employee": "Collaborateur",
+      "leaveType": "Type d'absence",
       "dateFrom": "Date de début",
       "dateTo": "Date de fin",
-      "duration": "Durée (centièmes de jour)",
-      "durationHint": "Ex : 100 = 1 jour, 50 = 0,5 jour",
-      "partial": "Absence partielle (quelques heures / demi-journée)",
+      "duration": "Durée",
+      "durationHint": "Calculée à partir des dates ; modifiable par demi-journée.",
+      "partial": "Quelques heures seulement (sur une journée)",
       "startTime": "Heure de début",
       "endTime": "Heure de fin",
       "deductionSuggested": "Suggestion : {days} j ({hours} h) — ajustable",
-      "reason": "Motif",
+      "reason": "Commentaire (facultatif)",
       "reviewNote": "Motif / commentaire"
     },
     "actions": {
@@ -8844,10 +8845,10 @@
         "annualDays": "Jours par an",
         "annualDaysHint": "Nombre de jours acquis sur une année pleine.",
         "accrualMode": "Mode d'acquisition",
-        "carryOver": "Report autorisé",
-        "carryOverHint": "Autorise le report du solde non consommé sur l'année suivante.",
+        "carryOver": "Report maximal",
+        "carryOverHint": "Jours reportables sur l'année suivante.",
         "maxBalance": "Solde maximum",
-        "maxBalanceHint": "Plafond de cumul (0 = pas de limite).",
+        "maxBalanceHint": "Plafond de cumul en jours (0 = pas de limite).",
         "requiresApproval": "Validation requise",
         "isPaid": "Congé payé",
         "sortOrder": "Ordre d'affichage"
@@ -9448,5 +9449,38 @@
     "time": {
       "plan": "Préparer le planning"
     }
+  },
+  "timeSpace": {
+    "title": "Planning & temps",
+    "views": {
+      "planning": "Planning",
+      "time": "Temps & pointages",
+      "leave": "Absences",
+      "me": "Mon activité"
+    },
+    "short": {
+      "planning": "Planning",
+      "time": "Temps",
+      "leave": "Absences",
+      "me": "Moi"
+    },
+    "more": "Plus d'actions",
+    "moreOptions": "Plus d'options (modèle, note)",
+    "duplicate": "Dupliquer",
+    "duration": "Durée : {h} h {m}",
+    "overnight": "se termine le lendemain",
+    "filters": "Filtres",
+    "days": "{n} jour | {n} jours",
+    "leave": {
+      "computed": "Calculée selon le contrat : {days} ({hours})",
+      "available": "Solde disponible : {days}",
+      "insufficient": "Solde insuffisant : {days} disponible(s)",
+      "weekendNote": "La période contient un week-end : le calcul compte chaque jour du calendrier. Ajustez la durée si besoin.",
+      "daysSuffix": "jour(s)",
+      "send": "Envoyer la demande",
+      "comment": "Commentaire (facultatif)",
+      "pickDates": "Choisissez les dates : la durée est calculée automatiquement."
+    },
+    "openEntry": "Votre pointage du {date} est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée."
   }
 }

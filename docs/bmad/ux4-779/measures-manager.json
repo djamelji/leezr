@@ -1,0 +1,54 @@
+{
+  "measures": {
+    "creer_creneau": {
+      "clicks": 4,
+      "fields": 1,
+      "pages": 0,
+      "hscroll": false
+    },
+    "modifier_creneau": {
+      "clicks": 3,
+      "fields": 1,
+      "pages": 0,
+      "hscroll": false
+    },
+    "dupliquer_creneau": {
+      "clicks": 4,
+      "fields": 0,
+      "pages": 0,
+      "hscroll": false
+    },
+    "consulter_presences": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "demander_absence": {
+      "clicks": 7,
+      "fields": 4,
+      "pages": 1,
+      "hscroll": false
+    },
+    "approuver_absence": {
+      "clicks": 2,
+      "fields": 0,
+      "pages": 0,
+      "hscroll": false
+    },
+    "consulter_solde": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 0,
+      "hscroll": false
+    },
+    "identifier_anomalie": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "anomalies_visibles": 0
+  },
+  "errors": []
+}

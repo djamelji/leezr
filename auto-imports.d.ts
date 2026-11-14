@@ -48,6 +48,7 @@ declare global {
   const createViewerUrl: typeof import('./resources/js/utils/pdf.js')['createViewerUrl']
   const currencySymbol: typeof import('./resources/js/utils/money.js')['currencySymbol']
   const customRef: typeof import('vue')['customRef']
+  const daysToHundredths: typeof import('./resources/js/utils/workUnits.js')['daysToHundredths']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
@@ -63,6 +64,8 @@ declare global {
   const formatDate: typeof import('./resources/js/utils/datetime.js')['formatDate']
   const formatDateTime: typeof import('./resources/js/utils/datetime.js')['formatDateTime']
   const formatDateToMonthShort: typeof import('@core/utils/formatters')['formatDateToMonthShort']
+  const formatDays: typeof import('./resources/js/utils/workUnits.js')['formatDays']
+  const formatMinutes: typeof import('./resources/js/utils/workUnits.js')['formatMinutes']
   const formatMoney: typeof import('./resources/js/utils/money.js')['formatMoney']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -70,6 +73,7 @@ declare global {
   const getXsrfToken: typeof import('./resources/js/utils/csrf.js')['getXsrfToken']
   const h: typeof import('vue')['h']
   const hasKey: typeof import('./resources/js/utils/webcryptoSigner.js')['hasKey']
+  const hundredthsToDays: typeof import('./resources/js/utils/workUnits.js')['hundredthsToDays']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
@@ -461,6 +465,7 @@ declare module 'vue' {
     readonly createViewerUrl: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['createViewerUrl']>
     readonly currencySymbol: UnwrapRef<typeof import('./resources/js/utils/money.js')['currencySymbol']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
+    readonly daysToHundredths: UnwrapRef<typeof import('./resources/js/utils/workUnits.js')['daysToHundredths']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
@@ -476,6 +481,8 @@ declare module 'vue' {
     readonly formatDate: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDate']>
     readonly formatDateTime: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['formatDateTime']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('@core/utils/formatters')['formatDateToMonthShort']>
+    readonly formatDays: UnwrapRef<typeof import('./resources/js/utils/workUnits.js')['formatDays']>
+    readonly formatMinutes: UnwrapRef<typeof import('./resources/js/utils/workUnits.js')['formatMinutes']>
     readonly formatMoney: UnwrapRef<typeof import('./resources/js/utils/money.js')['formatMoney']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
@@ -483,6 +490,7 @@ declare module 'vue' {
     readonly getXsrfToken: UnwrapRef<typeof import('./resources/js/utils/csrf.js')['getXsrfToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasKey: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['hasKey']>
+    readonly hundredthsToDays: UnwrapRef<typeof import('./resources/js/utils/workUnits.js')['hundredthsToDays']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>

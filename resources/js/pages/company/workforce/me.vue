@@ -2,10 +2,14 @@
 import { useWorkforceClockStore } from '@/core/stores/workforce-clock'
 import { useAppToast } from '@/composables/useAppToast'
 import { $api } from '@/utils/api'
+import { useDisplay } from 'vuetify'
+import { daysToHundredths, formatDays, formatMinutes } from '@/utils/workUnits'
+import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
 
 definePage({ meta: { module: 'workforce' } })
 
 const { t, locale } = useI18n()
+const { width: viewportWidth } = useDisplay()
 const router = useRouter()
 const clockStore = useWorkforceClockStore()
 const { toast } = useAppToast()
@@ -99,8 +103,38 @@ const leaveTypeOptions = computed(() =>
 
 function openLeaveDrawer() {
   leaveForm.value = { leave_type_id: leaveTypeOptions.value[0]?.value ?? null, date_from: '', date_to: '', days: 1, reason: '' }
+  leaveComputed.value = null
   isLeaveDrawerOpen.value = true
 }
+
+// ADR-779 (UX4) — la durée est PROPOSÉE par le moteur existant dès que les dates sont choisies
+// (modifiable par demi-journée) ; le solde du type choisi est affiché ; le serveur reste juge.
+const leaveComputed = ref(null)
+const leaveBalanceOf = computed(() => leaveBalances.value.find(b => b.leave_type_id === leaveForm.value.leave_type_id) || null)
+const leaveShort = computed(() => leaveBalanceOf.value && leaveForm.value.days
+  && leaveBalanceOf.value.available < daysToHundredths(leaveForm.value.days))
+const leaveHasWeekend = computed(() => {
+  const { date_from: a, date_to: b } = leaveForm.value
+  if (!a || !b || a === b) return false
+  for (let d = new Date(`${a}T00:00:00`), end = new Date(`${b}T00:00:00`), i = 0; d <= end && i < 400; d.setDate(d.getDate() + 1), i++)
+    if (d.getDay() === 0 || d.getDay() === 6) return true
+
+  return false
+})
+let leavePreviewSeq = 0 // seule la DERNIÈRE période demandée fait foi (réponses tardives ignorées)
+watch(() => [leaveForm.value.date_from, leaveForm.value.date_to], async ([from, to]) => {
+  if (from && !to) { leaveForm.value.date_to = from; return }
+  const seq = ++leavePreviewSeq
+  leaveComputed.value = null
+  if (!from || !to || to < from) return
+  try {
+    const res = await clockStore.previewLeave({ dateFrom: from, dateTo: to })
+    if (seq !== leavePreviewSeq) return
+    leaveComputed.value = res
+    if (res?.days_count_hundredths) leaveForm.value.days = res.days_count_hundredths / 100
+  }
+  catch { if (seq === leavePreviewSeq) leaveComputed.value = null }
+})
 
 async function submitSelfLeave() {
   leaveSubmitting.value = true
@@ -109,7 +143,7 @@ async function submitSelfLeave() {
       leaveTypeId: leaveForm.value.leave_type_id,
       dateFrom: leaveForm.value.date_from,
       dateTo: leaveForm.value.date_to,
-      daysCountHundredths: Math.round(Number(leaveForm.value.days) * 100),
+      daysCountHundredths: daysToHundredths(leaveForm.value.days),
       reason: leaveForm.value.reason,
     })
     toast(t('workforceMe.leaveRequested'), 'success')
@@ -162,13 +196,7 @@ const meBreakResumeLabel = computed(() => {
 })
 
 // ── Time formatting ─────────────────────────────────────────
-function formatMinutes(minutes) {
-  if (!minutes || minutes <= 0) return '0h00'
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-
-  return `${h}h${String(m).padStart(2, '0')}`
-}
+// ADR-779 : formatMinutes partagé (« 7 h 30 ») — importé de @/utils/workUnits.
 
 function formatTime(isoString) {
   if (!isoString) return '--:--'
@@ -236,23 +264,15 @@ function signatureChipProps(status) {
 
 <template>
   <div>
-    <!-- Page Header — E3-R/R2 : flex-wrap pour éviter le débordement horizontal sur mobile (A1) -->
-    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ t('workforceMe.title') }}
-        </h4>
-        <p
-          v-if="employee"
-          class="text-body-1 text-medium-emphasis mb-0"
-        >
-          {{ t('workforceMe.welcome', { name: employeeName }) }}
-        </p>
-      </div>
-      <div class="d-flex gap-2 flex-wrap">
+    <!-- ADR-779 (UX4) — « Mon temps » dans l'espace Planning & temps ; le pointage reste l'action principale. -->
+    <TimeSpaceHeader
+      active="me"
+      :subtitle="employee ? t('workforceMe.welcome', { name: employeeName }) : ''"
+    >
+      <template #actions>
         <!-- Clock actions -->
         <VBtn
-          v-if="clockStore.clockStatus === 'not_started'"
+          v-if="employee && clockStore.clockStatus === 'not_started' && !clockStore.openEntry"
           color="success"
           prepend-icon="tabler-player-play"
           :loading="clockActionLoading"
@@ -300,12 +320,24 @@ function signatureChipProps(status) {
           color="primary"
           prepend-icon="tabler-refresh"
           :loading="loading"
+          :aria-label="t('workforceMe.refresh')"
           @click="clockStore.fetchProfile(); fetchDocuments()"
         >
           {{ t('workforceMe.refresh') }}
         </VBtn>
-      </div>
-    </div>
+      </template>
+    </TimeSpaceHeader>
+
+    <!-- ADR-779 (UX4) — pointage resté ouvert un autre jour : on explique au lieu d'un « Commencer » refusé. -->
+    <VAlert
+      v-if="clockStore.openEntry && clockStore.clockStatus === 'not_started'"
+      type="warning"
+      variant="tonal"
+      class="mb-6"
+      data-test="me-open-entry"
+    >
+      {{ t('timeSpace.openEntry', { date: new Date(clockStore.openEntry.date + 'T00:00:00').toLocaleDateString(locale) }) }}
+    </VAlert>
 
     <!-- Loading state -->
     <div
@@ -998,7 +1030,7 @@ function signatureChipProps(status) {
       v-model="isLeaveDrawerOpen"
       temporary
       location="end"
-      width="420"
+      :width="Math.min(420, viewportWidth || 420)"
     >
       <div class="pa-6">
         <h5 class="text-h5 mb-4">
@@ -1031,14 +1063,31 @@ function signatureChipProps(status) {
             type="number"
             min="0.5"
             step="0.5"
-            :label="t('leaves.daysCount')"
+            :label="t('leaves.fields.duration')"
+            :suffix="t('timeSpace.leave.daysSuffix')"
+            :hint="leaveComputed ? t('timeSpace.leave.computed', { days: formatDays(leaveComputed.days_count_hundredths, t, locale), hours: formatMinutes(Math.round(leaveComputed.hours_count_hundredths * 0.6)) }) : t('timeSpace.leave.pickDates')"
+            persistent-hint
             data-test="me-leave-days"
-            class="mb-4"
+            class="mb-2"
           />
+          <div
+            v-if="leaveHasWeekend"
+            class="text-caption text-warning mb-2"
+          >
+            {{ t('timeSpace.leave.weekendNote') }}
+          </div>
+          <div
+            v-if="leaveBalanceOf"
+            class="text-body-2 mb-4"
+            :class="leaveShort ? 'text-error' : 'text-medium-emphasis'"
+            data-test="me-leave-balance"
+          >
+            {{ leaveShort ? t('timeSpace.leave.insufficient', { days: formatDays(leaveBalanceOf.available, t, locale) }) : t('timeSpace.leave.available', { days: formatDays(leaveBalanceOf.available, t, locale) }) }}
+          </div>
           <AppTextarea
             v-model="leaveForm.reason"
             data-test="me-leave-reason"
-            :label="t('leaves.reason')"
+            :label="t('timeSpace.leave.comment')"
             rows="2"
             class="mb-4"
           />
@@ -1048,7 +1097,7 @@ function signatureChipProps(status) {
               :loading="leaveSubmitting"
               data-test="me-leave-submit"
             >
-              {{ t('common.submit') }}
+              {{ t('timeSpace.leave.send') }}
             </VBtn>
             <VBtn
               variant="tonal"

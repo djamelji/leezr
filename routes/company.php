@@ -550,6 +550,7 @@ Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')
     Route::post('/break/end', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'endBreak']);
     Route::get('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaves']);
     Route::post('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'createLeave']);
+    Route::post('/leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveDeductionPreview']); // ADR-779
     Route::get('/leave-balances', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveBalances']);
     Route::get('/documents', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'documents']);
     // ADR-771 : la personne télécharge SES documents générés (original ou version signée) — propriété.

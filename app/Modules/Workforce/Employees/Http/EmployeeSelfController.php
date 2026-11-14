@@ -52,7 +52,23 @@ class EmployeeSelfController
             ->latest('clock_in')
             ->first();
 
+        // ADR-779 (UX4) — an entry left OPEN on a previous day blocks today's clock-in (ClockInUseCase).
+        // The person is told so instead of being offered « Commencer » that the server refuses. Closing
+        // it now would record the whole gap as worked time : the correction belongs to the manager.
+        $openEntry = $todayEntry && $todayEntry->status !== TimeEntry::STATUS_COMPLETED ? null : TimeEntry::withoutCompanyScope()
+            ->where('company_id', $companyId)
+            ->where('employee_id', $employee->id)
+            ->where('date', '<', today()->toDateString())
+            ->active()
+            ->latest('clock_in')
+            ->first();
+
         return response()->json([
+            'open_entry' => $openEntry ? [
+                'id' => $openEntry->id,
+                'date' => $openEntry->date?->toDateString(),
+                'status' => $openEntry->status,
+            ] : null,
             'employee' => EmployeeReadModel::detail($companyId, $employee->id, withAccount: true), // son propre compte
             'today_clock' => $todayEntry ? [
                 'id' => $todayEntry->id,
@@ -296,6 +312,34 @@ class EmployeeSelfController
         }
 
         return response()->json($leaveRequest, 201);
+    }
+
+    /**
+     * POST /workforce/me/leaves/deduction-preview — ADR-779 (UX4).
+     *
+     * The person sees the duration the EXISTING engine (LeaveDeductionCalculator) proposes for her own
+     * period, before sending. Same suggestion as the manager form ; read-only ; the employee is always
+     * the authenticated person's active record (never a parameter).
+     */
+    public function leaveDeductionPreview(Request $request): JsonResponse
+    {
+        $employee = $this->resolveEmployee($request);
+
+        $validated = $request->validate([
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+        ]);
+
+        $contract = $employee->currentContract;
+        if (! $contract) {
+            return response()->json(['message' => 'Employee has no active contract.'], 422);
+        }
+
+        return response()->json(app(\App\Modules\Workforce\Services\LeaveDeductionCalculator::class)->suggest(
+            $contract,
+            $validated['date_from'],
+            $validated['date_to'],
+        ));
     }
 
     /** GET /workforce/me/leave-balances */

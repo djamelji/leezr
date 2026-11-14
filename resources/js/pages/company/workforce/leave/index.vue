@@ -1,6 +1,9 @@
 <script setup>
 import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
+import { formatDays, formatMinutes, daysToHundredths, hundredthsToDays } from '@/utils/workUnits'
+import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
+import { useDisplay } from 'vuetify'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { $api } from '@/utils/api'
@@ -11,6 +14,7 @@ import LeaveRequestDetailDialog from './_LeaveRequestDetailDialog.vue'
 definePage({ meta: { module: 'workforce_leave', permission: 'workforce.leave_request', anyPermission: ['workforce.leave_view_all', 'workforce.leave_approve'] } })
 
 const { t, locale } = useI18n()
+const { width: viewportWidth } = useDisplay()
 const { toast } = useAppToast()
 const store = useLeavesStore()
 const employeesStore = useEmployeesStore()
@@ -21,12 +25,8 @@ const activeTab = ref('requests')
 // ── Shared helpers ───────────────────────────────────────────
 const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '\u2014'
 
-const formatDuration = hundredths => {
-  if (!hundredths && hundredths !== 0) return '\u2014'
-  const days = (hundredths / 100).toFixed(2)
-
-  return t('workforceMe.daysUnit', { count: days })
-}
+// ADR-779 (UX4) — quantités de congés en jours lisibles (« 2,5 jours »), jamais en centièmes.
+const formatDuration = hundredths => formatDays(hundredths, t, locale.value)
 
 const getLeaveTypeColor = leaveType => {
   if (!leaveType) return 'primary'
@@ -129,12 +129,47 @@ const deductionHint = ref(null)
 const resetForm = () => {
   formData.value = emptyForm()
   deductionHint.value = null
+  formBalances.value = []
 }
 
+// ADR-779 (UX4) — la durée se lit et se saisit en JOURS (pas de 0,5) ; l'API garde les centièmes
+// exacts. La valeur proposée vient du moteur (LeaveDeductionCalculator) ; elle reste modifiable et
+// c'est la valeur transmise qui fait foi (règle ADR-717), le contrôle de solde restant serveur.
+const durationDays = computed({
+  get: () => hundredthsToDays(formData.value.days_count_hundredths),
+  set: v => { formData.value.days_count_hundredths = daysToHundredths(v) },
+})
+const formBalances = ref([])
+const loadFormBalances = async () => {
+  formBalances.value = []
+  if (!formData.value.employee_id) return
+  try {
+    const res = await store.fetchBalances(formData.value.employee_id)
+    formBalances.value = res?.balances ?? res?.data ?? (Array.isArray(res) ? res : [])
+  } catch { formBalances.value = [] }
+}
+const selectedBalance = computed(() => formBalances.value.find(b => b.leave_type_id === formData.value.leave_type_id) || null)
+const balanceShort = computed(() => selectedBalance.value && formData.value.days_count_hundredths
+  && selectedBalance.value.available < formData.value.days_count_hundredths)
+// Le moteur compte les jours calendaires : on signale une période qui contient un samedi ou un dimanche.
+const rangeHasWeekend = computed(() => {
+  const { date_from: a, date_to: b } = formData.value
+  if (!a || !b || a === b) return false
+  for (let d = new Date(`${a}T00:00:00`), end = new Date(`${b}T00:00:00`), i = 0; d <= end && i < 400; d.setDate(d.getDate() + 1), i++)
+    if (d.getDay() === 0 || d.getDay() === 6) return true
+
+  return false
+})
+const computedLabel = computed(() => deductionHint.value
+  ? t('timeSpace.leave.computed', { days: formatDays(deductionHint.value.days_count_hundredths, t, locale.value), hours: formatMinutes(Math.round(deductionHint.value.hours_count_hundredths * 0.6)) })
+  : '')
+
 // Suggestion de décompte (jours/heures) selon le contrat — ne force rien, pré-remplit seulement.
+let deductionSeq = 0 // ADR-779 : seule la dernière demande de calcul fait foi
 const computeDeduction = async () => {
   if (!formData.value.employee_id || !formData.value.date_from || !formData.value.date_to) return
   if (formData.value.partial && (!formData.value.start_time || !formData.value.end_time)) return
+  const seq = ++deductionSeq
   try {
     const res = await store.deductionPreview({
       employeeId: formData.value.employee_id,
@@ -143,6 +178,7 @@ const computeDeduction = async () => {
       startTime: formData.value.partial ? formData.value.start_time : null,
       endTime: formData.value.partial ? formData.value.end_time : null,
     })
+    if (seq !== deductionSeq) return
     formData.value.days_count_hundredths = res.days_count_hundredths
     deductionHint.value = res
   } catch { /* suggestion indisponible → saisie manuelle */ }
@@ -183,7 +219,9 @@ const confirmText = ref('')
 const confirmLoading = ref(false)
 
 const impactedShifts = ref([])
+const confirmItem = ref(null)
 const openConfirm = async (action, item) => {
+  confirmItem.value = item
   confirmAction.value = action
   confirmTargetId.value = item.id
   impactedShifts.value = []
@@ -467,6 +505,15 @@ onMounted(async () => {
 
 // Lazy-load tab data on first visit
 const calendarLoaded = ref(false)
+// ADR-779 (UX4) — plafond et report saisis en JOURS (l'API garde des centièmes exacts).
+const maxBalanceDays = computed({
+  get: () => hundredthsToDays(typeFormData.value.max_balance_hundredths),
+  set: v => { typeFormData.value.max_balance_hundredths = daysToHundredths(v) },
+})
+const carryOverDays = computed({
+  get: () => hundredthsToDays(typeFormData.value.carry_over_hundredths),
+  set: v => { typeFormData.value.carry_over_hundredths = daysToHundredths(v) },
+})
 const configLoaded = ref(false)
 
 watch(activeTab, tab => {
@@ -485,21 +532,18 @@ watch(activeTab, tab => {
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('leaves.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('leaves.subtitle') }}
-        </p>
-      </div>
+    <!-- ADR-779 (UX4) — en-tête commun « Planning & temps » (vue Absences) -->
+    <TimeSpaceHeader
+      active="leave"
+      :subtitle="$t('leaves.subtitle')"
+    >
+      <template #actions>
       <VBtn
         v-if="activeTab === 'requests'"
         v-can="'workforce.leave_request'"
         color="primary"
         prepend-icon="tabler-calendar-plus"
+        data-test="leave-new"
         @click="isDrawerOpen = true"
       >
         {{ $t('leaves.newRequest') }}
@@ -513,7 +557,8 @@ watch(activeTab, tab => {
       >
         {{ $t('leaves.config.newType') }}
       </VBtn>
-    </div>
+      </template>
+    </TimeSpaceHeader>
 
     <!-- Tabs -->
     <VTabs
@@ -724,6 +769,8 @@ watch(activeTab, tab => {
                   size="x-small"
                   color="success"
                   :title="$t('leaves.actions.approve')"
+                  :aria-label="$t('leaves.actions.approve')"
+                  :data-test="`leave-approve-${item.id}`"
                   @click.stop="openConfirm('approve', item)"
                 >
                   <VIcon
@@ -739,6 +786,8 @@ watch(activeTab, tab => {
                   size="x-small"
                   color="error"
                   :title="$t('leaves.actions.reject')"
+                  :aria-label="$t('leaves.actions.reject')"
+                  :data-test="`leave-reject-${item.id}`"
                   @click.stop="openConfirm('reject', item)"
                 >
                   <VIcon
@@ -753,6 +802,8 @@ watch(activeTab, tab => {
                   size="x-small"
                   color="secondary"
                   :title="$t('leaves.actions.cancel')"
+                  :aria-label="$t('leaves.actions.cancel')"
+                  :data-test="`leave-cancel-${item.id}`"
                   @click.stop="openConfirm('cancel', item)"
                 >
                   <VIcon
@@ -1160,7 +1211,7 @@ watch(activeTab, tab => {
       v-model="isDrawerOpen"
       temporary
       location="end"
-      width="400"
+      :width="Math.min(400, viewportWidth || 400)"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -1187,7 +1238,8 @@ watch(activeTab, tab => {
                 :items="employeeItems"
                 :label="$t('leaves.fields.employee')"
                 :rules="[v => !!v || $t('validation.required')]"
-                @update:model-value="computeDeduction"
+                data-test="leave-employee"
+                @update:model-value="computeDeduction(); loadFormBalances()"
               />
             </VCol>
             <VCol cols="12">
@@ -1196,11 +1248,13 @@ watch(activeTab, tab => {
                 :items="leaveTypeItems"
                 :label="$t('leaves.fields.leaveType')"
                 :rules="[v => !!v || $t('validation.required')]"
+                data-test="leave-type"
               />
             </VCol>
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.date_from"
+                data-test="leave-from"
                 :label="$t('leaves.fields.dateFrom')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1210,6 +1264,7 @@ watch(activeTab, tab => {
             <VCol cols="12">
               <AppDateTimePicker
                 v-model="formData.date_to"
+                data-test="leave-to"
                 :label="$t('leaves.fields.dateTo')"
                 :config="{ dateFormat: 'Y-m-d' }"
                 :rules="[v => !!v || $t('validation.required')]"
@@ -1247,20 +1302,39 @@ watch(activeTab, tab => {
             </template>
             <VCol cols="12">
               <AppTextField
-                v-model.number="formData.days_count_hundredths"
+                v-model.number="durationDays"
                 :label="$t('leaves.fields.duration')"
-                :hint="deductionHint ? $t('leaves.fields.deductionSuggested', { days: (deductionHint.days_count_hundredths / 100).toFixed(2), hours: (deductionHint.hours_count_hundredths / 100).toFixed(2) }) : $t('leaves.fields.durationHint')"
+                :hint="computedLabel || $t('leaves.fields.durationHint')"
                 persistent-hint
                 type="number"
+                step="0.5"
+                min="0.5"
+                :suffix="$t('timeSpace.leave.daysSuffix')"
+                data-test="leave-duration"
                 :rules="[v => (v !== null && v > 0) || $t('validation.required')]"
               />
+              <div
+                v-if="rangeHasWeekend"
+                class="text-caption text-warning mt-2"
+                data-test="leave-weekend-note"
+              >
+                {{ $t('timeSpace.leave.weekendNote') }}
+              </div>
+              <div
+                v-if="selectedBalance"
+                class="text-body-2 mt-2"
+                :class="balanceShort ? 'text-error' : 'text-medium-emphasis'"
+                data-test="leave-balance"
+              >
+                {{ balanceShort ? $t('timeSpace.leave.insufficient', { days: formatDuration(selectedBalance.available) }) : $t('timeSpace.leave.available', { days: formatDuration(selectedBalance.available) }) }}
+              </div>
             </VCol>
             <VCol cols="12">
               <AppTextField
                 v-model="formData.reason"
                 :label="$t('leaves.fields.reason')"
                 type="textarea"
-                rows="3"
+                rows="2"
               />
             </VCol>
             <VCol cols="12">
@@ -1275,8 +1349,9 @@ watch(activeTab, tab => {
                   type="submit"
                   color="primary"
                   :loading="formLoading"
+                  data-test="leave-submit"
                 >
-                  {{ $t('common.create') }}
+                  {{ $t('timeSpace.leave.send') }}
                 </VBtn>
               </div>
             </VCol>
@@ -1355,7 +1430,9 @@ watch(activeTab, tab => {
             </VCol>
             <VCol cols="12">
               <AppTextField
-                v-model.number="typeFormData.max_balance_hundredths"
+                v-model.number="maxBalanceDays"
+                step="0.5"
+                :suffix="$t('timeSpace.leave.daysSuffix')"
                 :label="$t('leaves.config.fields.maxBalance')"
                 :hint="$t('leaves.config.fields.maxBalanceHint')"
                 persistent-hint
@@ -1365,7 +1442,9 @@ watch(activeTab, tab => {
             </VCol>
             <VCol cols="12">
               <AppTextField
-                v-model.number="typeFormData.carry_over_hundredths"
+                v-model.number="carryOverDays"
+                step="0.5"
+                :suffix="$t('timeSpace.leave.daysSuffix')"
                 :label="$t('leaves.config.fields.carryOver')"
                 :hint="$t('leaves.config.fields.carryOverHint')"
                 persistent-hint
@@ -1428,6 +1507,19 @@ watch(activeTab, tab => {
         </VCardTitle>
         <VCardText>
           {{ confirmText }}
+          <!-- ADR-779 (UX4) — la décision se prend en voyant la demande : type, dates, durée. -->
+          <div
+            v-if="confirmItem"
+            class="mt-3 pa-3 rounded border text-body-2"
+            data-test="leave-confirm-summary"
+          >
+            <div class="font-weight-medium">
+              {{ confirmItem.leave_type?.name || '' }}
+            </div>
+            <div class="text-medium-emphasis">
+              {{ formatDate(confirmItem.date_from) }} → {{ formatDate(confirmItem.date_to) }} · {{ formatDuration(confirmItem.days_count_hundredths) }}
+            </div>
+          </div>
           <!-- §7 — shifts publiés impactés (avertissement, pas un blocage) -->
           <VAlert
             v-if="confirmAction === 'approve' && impactedShifts.length"
@@ -1445,7 +1537,7 @@ watch(activeTab, tab => {
                 :key="s.id"
                 class="text-caption"
               >
-                {{ new Date(s.date + 'T00:00:00').toLocaleDateString(locale.value) }}
+                {{ new Date(s.date + 'T00:00:00').toLocaleDateString(locale) }}
               </li>
             </ul>
             <div class="text-caption mt-1">
@@ -1464,6 +1556,7 @@ watch(activeTab, tab => {
           <VBtn
             :color="confirmAction === 'approve' ? 'success' : confirmAction === 'reject' ? 'error' : 'secondary'"
             :loading="confirmLoading"
+            data-test="leave-confirm"
             @click="executeConfirmAction"
           >
             {{ $t('common.confirm') }}

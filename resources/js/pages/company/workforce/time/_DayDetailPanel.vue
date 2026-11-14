@@ -1,4 +1,5 @@
 <script setup>
+import { formatMinutes } from '@/utils/workUnits'
 // PRODUCT-UX-2 (LOT B2, P0) — panneau « Journée collaborateur » : depuis une ligne du cockpit, tout
 // le contexte PRÉVU / RÉEL / ANALYSE d'une journée + les ACTIONS AUTORISÉES (corriger le pointage via
 // le workflow TRACÉ existant, ouvrir la fiche, basculer sur Planning/Présences). Réutilise les
@@ -49,7 +50,7 @@ watch(() => [props.modelValue, props.row?.employee_id], ([open]) => { if (open) 
 
 // ── Helpers ──
 const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : null
-const fmtMin = m => (m === null || m === undefined) ? '—' : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
+const fmtMin = m => formatMinutes(m) // ADR-779 : « 7 h 30 »
 const reconColor = x => ({ matched: 'success', ambiguous: 'warning', not_clocked: 'secondary', no_shift: 'info' }[x] || 'secondary')
 const reconLabel = x => t(`timeCockpit.recon.${x}`, x)
 const statusColor = s => ({ working: 'success', on_break: 'warning', completed: 'info', on_leave: 'primary', idle: 'secondary' }[s] || 'secondary')

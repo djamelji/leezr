@@ -1,0 +1,77 @@
+{
+  "planning": {
+    "path": "/company/workforce/planning",
+    "vw": 1440,
+    "scrollW": 1440,
+    "overflowing": 2465,
+    "buttons": 527,
+    "tabs": [
+      "Planning",
+      "Temps & pointages",
+      "Absences",
+      "Mon activité"
+    ],
+    "h4": [
+      "Planning & temps"
+    ],
+    "tech": 0
+  },
+  "time": {
+    "path": "/company/workforce/time",
+    "vw": 1440,
+    "scrollW": 1440,
+    "overflowing": 191,
+    "buttons": 14,
+    "tabs": [
+      "Planning",
+      "Temps & pointages",
+      "Absences",
+      "Mon activité",
+      "Aujourd'hui",
+      "Présences",
+      "Feuilles de temps"
+    ],
+    "h4": [
+      "Planning & temps"
+    ],
+    "tech": 0
+  },
+  "leave": {
+    "path": "/company/workforce/leave",
+    "vw": 1440,
+    "scrollW": 1440,
+    "overflowing": 357,
+    "buttons": 22,
+    "tabs": [
+      "Planning",
+      "Temps & pointages",
+      "Absences",
+      "Mon activité",
+      "Demandes",
+      "Calendrier",
+      "Soldes",
+      "Types de congés"
+    ],
+    "h4": [
+      "Planning & temps"
+    ],
+    "tech": 0
+  },
+  "me": {
+    "path": "/company/workforce/me",
+    "vw": 1440,
+    "scrollW": 1440,
+    "overflowing": 106,
+    "buttons": 19,
+    "tabs": [
+      "Planning",
+      "Temps & pointages",
+      "Absences",
+      "Mon activité"
+    ],
+    "h4": [
+      "Planning & temps"
+    ],
+    "tech": 0
+  }
+}

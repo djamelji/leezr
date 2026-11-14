@@ -5,6 +5,8 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import { useDisplay } from 'vuetify'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
+import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
+import { formatMinutes } from '@/utils/workUnits'
 import PlanningCalendar from './_PlanningCalendar.vue'
 import ActivityDay from './_ActivityDay.vue'
 import PostsView from './_PostsView.vue'
@@ -22,7 +24,9 @@ const store = usePlanningStore()
 const employeesStore = useEmployeesStore()
 const { can } = useCan()
 
-const { smAndDown } = useDisplay()
+const { smAndDown, width: viewportWidth } = useDisplay()
+// Tiroirs : pleine largeur sur smartphone (jamais plus large que l'écran).
+const drawerWidth = computed(() => Math.min(400, viewportWidth.value || 400))
 
 // ── M6.D — ÉTAT DE VUE PARTAGÉ : une seule expérience Planning, 4 modes ──────
 // Un unique ancrage de date (planningAnchor) + des filtres partagés alimentent
@@ -179,6 +183,7 @@ const employeeItems = computed(() =>
   })),
 )
 
+const locationNameById = id => (id ? store.allLocations.find(l => l.id === id)?.name : null) || null
 const locationItems = computed(() =>
   store.allLocations.map(l => ({
     title: l.name,
@@ -261,7 +266,7 @@ const rowSummary = row => {
     })
   })
 
-  return { hours: (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1), days }
+  return { hours: (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1), label: formatMinutes(mins), days }
 }
 const shiftHex = shift => shift?.template_snapshot?.color || shift?.template_color
   || (shift?.status === 'published' ? '#1f8a54' : shift?.status === 'cancelled' ? '#c23b3b' : '#8691a8')
@@ -558,6 +563,17 @@ const empName = s => `${s.employee?.first_name ?? ''} ${s.employee?.last_name ??
 
 // ── Vue JOUR mobile (§8) : navigation par jour + lignes collaborateurs avec blocs métier ──
 const mobileDayIdx = ref(0)
+// ADR-779 (UX4) — sur smartphone, la journée affichée par défaut est AUJOURD'HUI (si elle est dans la
+// semaine chargée), pas le premier jour de la semaine.
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+let mobileTodayApplied = false
+watch(() => weekDates.value, dates => {
+  if (mobileTodayApplied || !dates?.length) return
+  mobileTodayApplied = true
+  const i = dates.indexOf(todayIso())
+  if (i >= 0) mobileDayIdx.value = i
+}, { immediate: true })
+const mobileUncoveredOpen = ref(false)
 const mobileDayDate = computed(() => weekDates.value[mobileDayIdx.value])
 const mobileDayLabel = computed(() => {
   const d = mobileDayDate.value
@@ -624,7 +640,7 @@ const mobileCreate = () => openCreateShift(null, mobileDayDate.value)
 
 // Besoins NON couverts du jour (mobile) : lignes de couverture avec gap > 0.
 const mobileUncovered = computed(() => coverageReqs.value.filter(r => r.date === mobileDayDate.value && r.gap > 0)
-  .map(r => ({ label: r.category_name || r.label || t('planning.coverage.anyPresence'), window: `${(r.start_time || '').slice(0, 5)}–${(r.end_time || '').slice(0, 5)}`, assigned: r.assigned, headcount: r.headcount })))
+  .map(r => ({ label: r.category_name || r.label || t('planning.coverage.anyPresence'), window: r.start_time && r.end_time ? `${r.start_time.slice(0, 5)}–${r.end_time.slice(0, 5)}` : '', assigned: r.assigned, headcount: r.headcount })))
 
 // ── Grid filters (Smart Planning SP1a) ──────────────────────
 // M6.D — ré-aliasés sur l'état partagé (filtres communs à Semaine/Jour/Postes/Mois).
@@ -632,6 +648,8 @@ const gridDepartment = fTeam
 const gridLocation = fSite
 const gridActivity = fActivity
 const gridStatus = fStatus
+const gridFiltersOpen = ref(false)
+const gridFilterCount = computed(() => [gridDepartment.value, gridLocation.value, gridActivity.value, gridStatus.value].filter(v => v !== null && v !== undefined && v !== '').length)
 
 const departmentItems = computed(() => employeesStore.departments.map(d => ({ title: d.name, value: d.id })))
 const coverageCategoryItems = computed(() => store.coverageCategories.filter(c => c.enabled !== false).map(c => ({ title: c.name, value: c.id })))
@@ -749,7 +767,7 @@ const groupHours = rows => {
     if (d > 0) mins += Math.max(0, d - brk)
   })))
 
-  return (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1)
+  return formatMinutes(mins)
 }
 // Un shift traverse minuit si son heure de fin murale précède son heure de début (marqueur « nuit »).
 const shiftCrossesMidnight = shift => {
@@ -856,6 +874,7 @@ const replicateCovLine = async line => {
 
 // ── SP1a.1 — copie de semaine, duplication, affectation rapide par modèle ──
 const armedTemplateId = ref(null)
+const gridFiltersVisible = computed(() => gridFiltersOpen.value || gridFilterCount.value > 0 || !!armedTemplateId.value)
 const armedTemplateItems = computed(() => store.allTemplates.filter(t => t.enabled !== false).map(t => ({ title: t.name, value: t.id })))
 
 const copyPreviousWeek = async () => {
@@ -1704,7 +1723,7 @@ const weekSummary = computed(() => {
     if (d > 0) mins += Math.max(0, d - brk)
   })
 
-  return { total: list.length, draft, published, hours: (mins / 60).toFixed(mins % 60 === 0 ? 0 : 1) }
+  return { total: list.length, draft, published, hours: formatMinutes(mins) }
 })
 
 // ── Shift status helpers ─────────────────────────────────────
@@ -1826,11 +1845,58 @@ const resetShiftForm = () => {
   }
 }
 
-const openCreateShift = (employeeId = null, date = null) => {
+// ADR-779 (UX4) — création préremplie : collaborateur, date et plage horaire connus d'avance
+// (sélection dans le calendrier jour, cellule de la grille, jour mobile). Rien n'est enregistré
+// sans « Créer » : les contrôles serveur (conflits, absences, règles légales) s'appliquent à la soumission.
+const openCreateShift = (employeeId = null, date = null, startTime = null, endTime = null) => {
   resetShiftForm()
   if (employeeId) shiftFormData.value.employee_id = employeeId
   if (date) shiftFormData.value.date = date
+  if (startTime) shiftFormData.value.start_at = startTime
+  if (endTime) shiftFormData.value.end_at = endTime
+  // Un seul lieu actif : il est appliqué d'office (modifiable).
+  if (store.allLocations.length === 1) shiftFormData.value.work_location_id = store.allLocations[0].id
+  shiftMoreOpen.value = false
   isShiftDrawerOpen.value = true
+}
+const shiftMoreOpen = ref(false)
+// Durée lisible du créneau (nuit comprise : fin ≤ début ⇒ lendemain). Affichage seulement.
+const shiftDurationLabel = computed(() => {
+  const toMin = v => { const m = /^(\d{2}):(\d{2})/.exec(v || ''); return m ? (+m[1]) * 60 + (+m[2]) : null }
+  const a = toMin(shiftFormData.value.start_at)
+  const b = toMin(shiftFormData.value.end_at)
+  if (a === null || b === null) return ''
+  const d = b > a ? b - a : b + 1440 - a
+
+  return t('timeSpace.duration', { h: Math.floor(d / 60), m: String(d % 60).padStart(2, '0') }) + (b <= a ? ` · ${t('timeSpace.overnight')}` : '')
+})
+// ADR-779 (UX4) — « Modifier » depuis la fiche d'un créneau du calendrier jour : on relit le créneau
+// exact (liste existante bornée au jour et au collaborateur) puis on ouvre le tiroir d'édition.
+const editFromCalendar = async () => {
+  const sel = calSelected.value
+  if (!sel?.shift_id) return
+  let shift = (store.weekShifts || []).find(x => x.id === sel.shift_id)
+  if (!shift) {
+    const day = String(sel.start || '').slice(0, 10)
+    try {
+      const res = await store.fetchShifts({ employeeId: sel.employee_id, from: day, to: day, perPage: 50 })
+      shift = (res?.data ?? []).find(x => x.id === sel.shift_id)
+    } catch { shift = null }
+  }
+  if (!shift) { toast(t('common.error'), 'error'); return }
+  calDetailOpen.value = false
+  openEditShift(shift)
+}
+// Calendrier jour : une plage sélectionnée ouvre la création préremplie (date + heures).
+const onCalendarRange = ({ date, start, end }) => { if (canEditShifts.value) openCreateShift(null, date, start, end) }
+// Dupliquer depuis l'édition : même collaborateur, mêmes heures, lieu et modèle ; le lendemain par défaut.
+const duplicateFromEdit = () => {
+  const src = { ...shiftFormData.value }
+  const d = src.date ? new Date(`${src.date}T00:00:00`) : null
+  if (d) d.setDate(d.getDate() + 1)
+  const next = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
+  editingShift.value = null
+  shiftFormData.value = { ...src, date: next }
 }
 
 // ANO-009: the time inputs are type="time" and need "HH:MM", but the backend stores
@@ -1904,6 +1970,7 @@ const submitShift = async () => {
     isShiftDrawerOpen.value = false
     resetShiftForm()
     fetchWeekData()
+    calRef.value?.refetch?.() // ADR-779 : la vue Jour montre aussitôt le créneau créé/modifié
   } catch (error) {
     toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
   } finally {
@@ -2604,18 +2671,13 @@ watch(activeTab, tab => {
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div v-if="!embedded">
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('planning.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('planning.subtitle') }}
-        </p>
-      </div>
-      <VSpacer v-else />
-      <div class="d-flex gap-2">
+    <!-- ADR-779 (UX4) — en-tête commun de l'espace « Planning & temps » : vues + action principale. -->
+    <TimeSpaceHeader
+      active="planning"
+      :subtitle="$t('planning.subtitle')"
+      :bare="embedded"
+    >
+      <template #actions>
         <VBtn
           v-if="activeTab === 'planning' && selectedDraftIds.length > 0"
           v-can="'workforce.planning_manage'"
@@ -2626,7 +2688,7 @@ watch(activeTab, tab => {
           {{ $t('planning.publishSelected', { count: selectedDraftIds.length }) }}
         </VBtn>
         <VBtn
-          v-if="activeTab === 'planning'"
+          v-if="activeTab === 'planning' && !smAndDown"
           v-can="'workforce.planning_manage'"
           variant="outlined"
           prepend-icon="tabler-copy"
@@ -2635,7 +2697,7 @@ watch(activeTab, tab => {
           {{ $t('planning.bulkCreate') }}
         </VBtn>
         <VBtn
-          v-if="activeTab === 'planning'"
+          v-if="activeTab === 'planning' && !smAndDown"
           v-can="'workforce.planning_manage'"
           color="primary"
           data-test="shift-add"
@@ -2643,6 +2705,41 @@ watch(activeTab, tab => {
           @click="openCreateShift()"
         >
           {{ $t('planning.newShift') }}
+        </VBtn>
+        <!-- Mobile : les actions secondaires passent dans « Plus » (rien n'est retiré). -->
+        <VBtn
+          v-if="activeTab !== 'templates' && smAndDown && canEditShifts"
+          variant="tonal"
+          color="secondary"
+          icon="tabler-dots"
+          :aria-label="$t('timeSpace.more')"
+          data-test="planning-more"
+        >
+          <VIcon icon="tabler-dots" />
+          <VMenu
+            activator="parent"
+            location="bottom end"
+          >
+            <VList min-width="240">
+              <VListItem
+                prepend-icon="tabler-wand"
+                data-test="prepare-week-open"
+                :title="$t('planning.prepare.open')"
+                @click="openPrepareWeek"
+              />
+              <VListItem
+                prepend-icon="tabler-copy"
+                :title="$t('planning.bulkCreate')"
+                @click="isBulkDrawerOpen = true"
+              />
+              <VListItem
+                prepend-icon="tabler-template"
+                data-test="plan-view-templates"
+                :title="$t('planning.modes.templates', 'Modèles')"
+                @click="viewMode = 'templates'"
+              />
+            </VList>
+          </VMenu>
         </VBtn>
         <VBtn
           v-if="activeTab === 'templates'"
@@ -2690,13 +2787,13 @@ watch(activeTab, tab => {
         >
           {{ $t('planning.templates.newTemplate') }}
         </VBtn>
-      </div>
-    </div>
+      </template>
+    </TimeSpaceHeader>
 
     <!-- M6.D — SOUS-NAVIGATION UNIQUE : 4 modes opérationnels partageant date + filtres + contexte.
          « Modèles » = entrée secondaire (gestion contextuelle). Pas de « Planning → Planning ». -->
     <div class="d-flex align-center flex-wrap gap-3 mb-5">
-      <div class="d-inline-flex rounded-lg border pa-1 planning-view-switch">
+      <div class="d-inline-flex rounded-lg border pa-1 planning-view-switch" :class="{ 'w-100 justify-space-between': smAndDown }">
         <VBtn
           v-for="s in planningModes"
           :key="s.value"
@@ -2736,6 +2833,7 @@ watch(activeTab, tab => {
 
       <!-- Modèles — entrée secondaire (gestion contextuelle), pas un mode opérationnel de 1er niveau. -->
       <VBtn
+        v-if="!smAndDown || !canEditShifts"
         :variant="viewMode === 'templates' ? 'flat' : 'tonal'"
         :color="viewMode === 'templates' ? 'primary' : 'secondary'"
         size="small"
@@ -2749,6 +2847,7 @@ watch(activeTab, tab => {
 
       <!-- M6.C — action PRINCIPALE de construction : un seul point d'entrée vers tous les parcours. -->
       <VBtn
+        v-if="!smAndDown"
         v-can="'workforce.planning_manage'"
         color="primary"
         prepend-icon="tabler-wand"
@@ -2824,6 +2923,7 @@ watch(activeTab, tab => {
               view="timeGridDay"
               :anchor-date="anchorIso"
               @select="onSelectEvent"
+              @range="onCalendarRange"
               @conflicts="calConflicts = $event"
               @move="onShiftMove"
             />
@@ -2856,7 +2956,7 @@ watch(activeTab, tab => {
                 <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.start') }}</span><span>{{ fmtDateTime(calSelected.start) }}</span></div>
                 <div class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.end') }}</span><span>{{ fmtDateTime(calSelected.end) }}</span></div>
                 <div v-if="calSelected.location" class="d-flex justify-space-between mb-1"><span class="text-medium-emphasis">{{ $t('planning.fields.location') }}</span><span>{{ calSelected.location }}</span></div>
-                <div class="d-flex justify-space-between"><span class="text-medium-emphasis">{{ $t('planning.calendar.plannedMinutes') }}</span><span>{{ calSelected.planned_minutes }} min</span></div>
+                <div class="d-flex justify-space-between"><span class="text-medium-emphasis">{{ $t('planning.calendar.plannedMinutes') }}</span><span>{{ formatMinutes(calSelected.planned_minutes) }}</span></div>
                 <VAlert v-if="calSelected.has_conflict" type="error" variant="tonal" density="compact" class="mt-3">
                   {{ $t('planning.calendar.conflictDetail') }}
                 </VAlert>
@@ -2868,6 +2968,16 @@ watch(activeTab, tab => {
             <VCardText class="d-flex justify-end gap-3 pt-0">
               <VBtn variant="outlined" color="secondary" @click="calDetailOpen = false">
                 {{ $t('common.close') }}
+              </VBtn>
+              <VBtn
+                v-if="calSelected.kind === 'shift' && calSelected.status === 'draft' && canEditShifts"
+                variant="tonal"
+                color="primary"
+                prepend-icon="tabler-edit"
+                data-test="cal-shift-edit"
+                @click="editFromCalendar"
+              >
+                {{ $t('common.edit') }}
               </VBtn>
               <!-- Résolution/réaffectation : brouillons uniquement (publié figé) -->
               <VBtn
@@ -3059,21 +3169,31 @@ watch(activeTab, tab => {
             </VCardText>
             <VDivider />
             <!-- Besoins non couverts du jour -->
+            <!-- ADR-779 (UX4) — résumé repliable : les besoins ne masquent plus les créneaux du jour. -->
             <VCardText v-if="mobileUncovered.length" class="py-2">
-              <div class="text-caption text-medium-emphasis mb-1">
-                {{ $t('planning.mobile.uncovered') }}
-              </div>
-              <VChip
-                v-for="(u, i) in mobileUncovered"
-                :key="i"
-                color="error"
-                variant="tonal"
-                size="small"
-                label
-                class="me-1 mb-1"
+              <button
+                type="button"
+                class="d-flex align-center gap-2 w-100 text-start text-error text-body-2"
+                data-test="mobile-uncovered-toggle"
+                :aria-expanded="mobileUncoveredOpen"
+                @click="mobileUncoveredOpen = !mobileUncoveredOpen"
               >
-                {{ u.label }} {{ u.window }} · {{ u.assigned }}/{{ u.headcount }}
-              </VChip>
+                <VIcon icon="tabler-alert-triangle" size="18" />
+                <span class="flex-grow-1">{{ $t('planning.mobile.uncoveredCount', { n: mobileUncovered.length }) }}</span>
+                <VIcon :icon="mobileUncoveredOpen ? 'tabler-chevron-up' : 'tabler-chevron-down'" size="18" />
+              </button>
+              <VExpandTransition>
+                <div v-if="mobileUncoveredOpen" class="mt-2">
+                  <div
+                    v-for="(u, i) in mobileUncovered"
+                    :key="i"
+                    class="d-flex align-center gap-2 py-1 text-body-2"
+                  >
+                    <span class="text-truncate flex-grow-1">{{ u.label }}<span v-if="u.window" class="text-medium-emphasis"> · {{ u.window }}</span></span>
+                    <VChip color="error" variant="tonal" size="x-small" label>{{ u.assigned }}/{{ u.headcount }}</VChip>
+                  </div>
+                </div>
+              </VExpandTransition>
             </VCardText>
             <VDivider v-if="mobileUncovered.length" />
             <VCardText>
@@ -3134,6 +3254,10 @@ watch(activeTab, tab => {
                       >+{{ shiftActivityCount(shift) }}</span>
                     </span>
                     <span class="plan-shift__time">{{ formatShiftRange(shift) }} · {{ shift.status === 'published' ? $t('workforce.statuses.shift.published', 'Publié') : $t('workforce.statuses.shift.draft', 'Brouillon') }}</span>
+                    <span
+                      v-if="locationNameById(shift.work_location_id)"
+                      class="plan-shift__time text-truncate"
+                    ><VIcon icon="tabler-map-pin" size="12" /> {{ locationNameById(shift.work_location_id) }}</span>
                   </button>
                   <!-- Action sheet tactile (tap) — cible ≥ 40px -->
                   <VMenu location="bottom end">
@@ -3192,7 +3316,7 @@ watch(activeTab, tab => {
           <VDivider vertical class="my-1" />
           <div class="d-flex align-center gap-2">
             <VIcon icon="tabler-clock" size="18" class="text-medium-emphasis" />
-            <span class="text-body-1 font-weight-medium">{{ weekSummary.hours }}h</span>
+            <span class="text-body-1 font-weight-medium">{{ weekSummary.hours }}</span>
             <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.hoursPlanned') }}</span>
           </div>
         </div>
@@ -3375,8 +3499,34 @@ watch(activeTab, tab => {
               </VBtn>
             </div>
 
-            <!-- Grid filters (Smart Planning SP1a) -->
+            <!-- Grid filters (Smart Planning SP1a) — ADR-779 (UX4) : repliés derrière « Filtres » ;
+                 ouverts d'office dès qu'un filtre ou un modèle armé est actif (rien de caché en silence). -->
             <div class="d-flex flex-wrap align-center gap-3 mt-4">
+              <VBtn
+                variant="tonal"
+                color="secondary"
+                size="small"
+                prepend-icon="tabler-filter"
+                data-test="plan-filters-toggle"
+                :aria-expanded="gridFiltersVisible"
+                @click="gridFiltersOpen = !gridFiltersVisible"
+              >
+                {{ $t('timeSpace.filters') }}
+                <VChip
+                  v-if="gridFilterCount"
+                  size="x-small"
+                  color="primary"
+                  class="ms-2"
+                >
+                  {{ gridFilterCount }}
+                </VChip>
+              </VBtn>
+            </div>
+            <div
+              v-if="gridFiltersVisible"
+              class="d-flex flex-wrap align-center gap-3 mt-3"
+              data-test="plan-filters"
+            >
               <AppSelect
                 v-model="gridDepartment"
                 :items="departmentItems"
@@ -3779,7 +3929,7 @@ watch(activeTab, tab => {
                       <VIcon icon="tabler-users-group" size="15" class="text-medium-emphasis" />
                       <span class="font-weight-bold text-truncate">{{ group.label }}</span>
                       <VChip size="x-small" variant="tonal" label>{{ group.count }}</VChip>
-                      <span class="text-caption text-medium-emphasis">{{ groupHours(group.rows) }}h</span>
+                      <span class="text-caption text-medium-emphasis">{{ groupHours(group.rows) }}</span>
                     </div>
                   </th>
                 </tr>
@@ -3812,7 +3962,7 @@ watch(activeTab, tab => {
                           <span
                             v-if="rowSummary(row).days"
                             class="text-caption text-disabled"
-                          >{{ (groupBy !== 'team' && row.employee?.department_id) ? '· ' : '' }}{{ $t('planning.rowSummary', { hours: rowSummary(row).hours, days: rowSummary(row).days }) }}</span>
+                          >{{ (groupBy !== 'team' && row.employee?.department_id) ? '· ' : '' }}{{ $t('planning.rowSummary', { hours: rowSummary(row).label, days: rowSummary(row).days }) }}</span>
                         </div>
                       </div>
                     </div>
@@ -4073,7 +4223,7 @@ watch(activeTab, tab => {
             <!-- Break -->
             <template #item.break_duration_minutes="{ item }">
               <span v-if="item.break_duration_minutes">
-                {{ item.break_duration_minutes }} min
+                {{ formatMinutes(item.break_duration_minutes) }}
               </span>
               <span
                 v-else
@@ -4308,7 +4458,7 @@ watch(activeTab, tab => {
       v-model="isShiftDrawerOpen"
       temporary
       location="end"
-      width="400"
+      :width="drawerWidth"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -4348,16 +4498,6 @@ watch(activeTab, tab => {
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
-            <VCol cols="12">
-              <AppSelect
-                v-model="shiftFormData.schedule_template_id"
-                :items="templateItems"
-                :label="$t('planning.fields.template')"
-                clearable
-                :hint="$t('planning.fields.templateHint')"
-                persistent-hint
-              />
-            </VCol>
             <VCol cols="6">
               <AppTextField
                 v-model="shiftFormData.start_at"
@@ -4376,22 +4516,61 @@ watch(activeTab, tab => {
                 :rules="[v => !!v || $t('validation.required')]"
               />
             </VCol>
-            <VCol cols="12">
+            <VCol
+              v-if="shiftDurationLabel"
+              cols="12"
+              class="pt-0"
+            >
+              <span
+                class="text-body-2 text-medium-emphasis"
+                data-test="shift-duration"
+              ><VIcon icon="tabler-clock" size="16" class="me-1" />{{ shiftDurationLabel }}</span>
+            </VCol>
+            <VCol
+              v-if="locationItems.length"
+              cols="12"
+            >
               <AppSelect
                 v-model="shiftFormData.work_location_id"
+                data-test="shift-location"
                 :items="locationItems"
                 :label="$t('planning.fields.location')"
                 clearable
               />
             </VCol>
-            <VCol cols="12">
-              <AppTextField
-                v-model="shiftFormData.notes"
-                :label="$t('planning.fields.notes')"
-                type="textarea"
-                rows="2"
-              />
+            <!-- Options : modèle (préremplit heures et lieu) et note — repliées, jamais perdues. -->
+            <VCol cols="12" class="py-0">
+              <VBtn
+                variant="text"
+                size="small"
+                class="px-0"
+                data-test="shift-more"
+                :prepend-icon="shiftMoreOpen || shiftFormData.schedule_template_id || shiftFormData.notes ? 'tabler-chevron-up' : 'tabler-chevron-down'"
+                @click="shiftMoreOpen = !shiftMoreOpen"
+              >
+                {{ $t('timeSpace.moreOptions') }}
+              </VBtn>
             </VCol>
+            <template v-if="shiftMoreOpen || shiftFormData.schedule_template_id || shiftFormData.notes">
+              <VCol cols="12">
+                <AppSelect
+                  v-model="shiftFormData.schedule_template_id"
+                  :items="templateItems"
+                  :label="$t('planning.fields.template')"
+                  clearable
+                  :hint="$t('planning.fields.templateHint')"
+                  persistent-hint
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="shiftFormData.notes"
+                  :label="$t('planning.fields.notes')"
+                  type="textarea"
+                  rows="2"
+                />
+              </VCol>
+            </template>
             <VCol cols="12">
               <div class="d-flex gap-3 justify-end">
                 <VBtn
@@ -4399,6 +4578,16 @@ watch(activeTab, tab => {
                   @click="isShiftDrawerOpen = false"
                 >
                   {{ $t('common.cancel') }}
+                </VBtn>
+                <VBtn
+                  v-if="isShiftEditMode"
+                  variant="tonal"
+                  color="secondary"
+                  prepend-icon="tabler-copy"
+                  data-test="shift-duplicate"
+                  @click="duplicateFromEdit"
+                >
+                  {{ $t('timeSpace.duplicate') }}
                 </VBtn>
                 <VBtn
                   type="submit"
@@ -4420,7 +4609,7 @@ watch(activeTab, tab => {
       v-model="isBulkDrawerOpen"
       temporary
       location="end"
-      width="400"
+      :width="drawerWidth"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -4518,7 +4707,7 @@ watch(activeTab, tab => {
       v-model="isTemplateDrawerOpen"
       temporary
       location="end"
-      width="400"
+      :width="drawerWidth"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -4840,7 +5029,7 @@ watch(activeTab, tab => {
       class="wf-scroll-drawer"
       temporary
       location="end"
-      width="420"
+      :width="Math.min(420, viewportWidth || 420)"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">
@@ -4925,7 +5114,7 @@ watch(activeTab, tab => {
               {{ p.name }}
             </div>
             <div class="text-caption text-disabled">
-              {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ p.default_duration_minutes }} min</span>
+              {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ formatMinutes(p.default_duration_minutes) }}</span>
             </div>
           </div>
           <VSwitch
@@ -4998,7 +5187,7 @@ watch(activeTab, tab => {
                   {{ p.name }}
                 </div>
                 <div class="text-caption text-disabled">
-                  {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ p.default_duration_minutes }} min</span>
+                  {{ p.activity_type || '—' }}<span v-if="p.default_duration_minutes"> · {{ formatMinutes(p.default_duration_minutes) }}</span>
                 </div>
               </div>
               <VIcon icon="tabler-plus" size="16" />
@@ -5828,7 +6017,7 @@ watch(activeTab, tab => {
       class="wf-scroll-drawer"
       temporary
       location="end"
-      :width="420"
+      :width="Math.min(420, viewportWidth || 420)"
     >
       <div class="pa-5">
         <div class="d-flex align-center justify-space-between mb-4">
@@ -6235,7 +6424,7 @@ watch(activeTab, tab => {
       v-model="isLocationDrawerOpen"
       temporary
       location="end"
-      width="400"
+      :width="drawerWidth"
     >
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">

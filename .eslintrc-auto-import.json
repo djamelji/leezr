@@ -413,6 +413,10 @@
     "webcryptoSupported": true,
     "whenever": true,
     "useHomeActions": true,
-    "useSpaceActions": true
+    "useSpaceActions": true,
+    "daysToHundredths": true,
+    "formatDays": true,
+    "formatMinutes": true,
+    "hundredthsToDays": true
   }
 }

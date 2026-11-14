@@ -14,6 +14,8 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   // State
   const employee = ref(null)
   const todayClock = ref(null)
+  // ADR-779 — pointage resté ouvert un jour précédent (bloque « Commencer » côté serveur).
+  const openEntry = ref(null)
   const leaveBalances = ref([])
   const breakRules = ref(null) // resolved by the backend WorkforceRuleResolver (never Vue constants)
   const loading = ref(false)
@@ -173,6 +175,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
 
       employee.value = data.employee
       todayClock.value = data.today_clock
+      openEntry.value = data.open_entry ?? null
       leaveBalances.value = data.leave_balances || []
       breakRules.value = data.break_rules || null
     }
@@ -249,6 +252,11 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
   }
 
   // ANO-007: self-service leave request (open to any active employee via /workforce/me).
+  // ADR-779 (UX4) — durée proposée par le moteur existant pour MA période (lecture seule).
+  async function previewLeave({ dateFrom, dateTo }) {
+    return $api('/workforce/me/leaves/deduction-preview', { method: 'POST', body: { date_from: dateFrom, date_to: dateTo } })
+  }
+
   async function createLeave({ leaveTypeId, dateFrom, dateTo, daysCountHundredths, reason }) {
     const data = await $api('/workforce/me/leaves', {
       method: 'POST',
@@ -270,6 +278,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     stopTicker()
     employee.value = null
     todayClock.value = null
+    openEntry.value = null
     leaveBalances.value = []
     loading.value = false
     error.value = null
@@ -287,6 +296,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
 
     // Computed
     clockStatus,
+    openEntry,
     isWorking,
     isOnBreak,
     isCompleted,
@@ -322,6 +332,7 @@ export const useWorkforceClockStore = defineStore('workforce-clock', () => {
     startBreak,
     endBreak,
     createLeave,
+    previewLeave,
     reset,
   }
 })

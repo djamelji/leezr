@@ -1,0 +1,55 @@
+{
+  "planning": {
+    "path": "/company/workforce/planning",
+    "vw": 390,
+    "scrollW": 485,
+    "overflowing": 1382,
+    "buttons": 88,
+    "tabs": [],
+    "h4": [
+      "Planning"
+    ],
+    "tech": 0
+  },
+  "time": {
+    "path": "/company/workforce/time",
+    "vw": 390,
+    "scrollW": 390,
+    "overflowing": 191,
+    "buttons": 10,
+    "tabs": [],
+    "h4": [
+      "Temps de travail"
+    ],
+    "tech": 0
+  },
+  "leave": {
+    "path": "/company/workforce/leave",
+    "vw": 390,
+    "scrollW": 390,
+    "overflowing": 405,
+    "buttons": 18,
+    "tabs": [
+      "Demandes",
+      "Calendrier",
+      "Soldes",
+      "Types de congés"
+    ],
+    "h4": [
+      "Congés"
+    ],
+    "tech": 1
+  },
+  "me": {
+    "path": "/company/workforce/me",
+    "vw": 390,
+    "scrollW": 390,
+    "overflowing": 101,
+    "buttons": 15,
+    "tabs": [],
+    "h4": [
+      "Mon activité"
+    ],
+    "tech": 0
+  }
+}

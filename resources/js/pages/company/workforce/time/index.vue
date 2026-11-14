@@ -7,6 +7,8 @@ import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
 import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 import TimeCockpit from './_TimeCockpit.vue'
+import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
+import { formatMinutes } from '@/utils/workUnits'
 // PRODUCT-UX-2 (LOT B1) → ADR-729 (M6.A) — espace « Temps & présences » (pointage/RÉEL) : Aujourd'hui
 // (cockpit prévu/réel) + Présences + Feuilles de temps. Le PLANNING PRÉVISIONNEL n'est plus un onglet
 // ici : il a sa propre entrée de premier niveau (company-workforce-planning). Pas de 2ᵉ moteur.
@@ -120,11 +122,8 @@ watch(entriesOptions, fetchEntries, { deep: true })
 // ── Format helpers ───────────────────────────────────────────
 const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '-'
 
-const formatHours = minutes => {
-  if (minutes == null) return '0.0h'
-
-  return `${(minutes / 60).toFixed(1)}h`
-}
+// ADR-779 (UX4) — heures lisibles (« 7 h 30 »), plus de décimales (« 7.5h »).
+const formatHours = minutes => formatMinutes(minutes ?? 0)
 
 const anomalyIcon = type => {
   const icons = {
@@ -508,17 +507,11 @@ onMounted(() => {
       </div>
     </VAlert>
 
-    <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('timeWork.spaceTitle') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('timeWork.spaceSubtitle') }}
-        </p>
-      </div>
-    </div>
+    <!-- ADR-779 (UX4) — en-tête commun « Planning & temps » (vue Temps & pointages) -->
+    <TimeSpaceHeader
+      active="time"
+      :subtitle="$t('timeWork.spaceSubtitle')"
+    />
 
     <!-- 3 activités : Aujourd'hui · Présences · Feuilles de temps (navigation supérieure) -->
     <AppSectionNavigation

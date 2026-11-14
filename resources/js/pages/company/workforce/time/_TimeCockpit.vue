@@ -1,4 +1,5 @@
 <script setup>
+import { formatMinutes } from '@/utils/workUnits'
 // W-G5 (ADR-646) — cockpit Pointage : synthèse opérationnelle + tableau prévu/réalisé réconcilié +
 // correction guidée (motif obligatoire). Données scopées/filtrées côté serveur. Aucun recalcul paie.
 import { useTimesheetsStore } from '@/modules/company/workforce/timesheets.store'
@@ -75,7 +76,7 @@ const reconColor = r => ({ matched: 'success', ambiguous: 'warning', not_clocked
 const statusColor = s => ({ working: 'success', on_break: 'warning', completed: 'info', on_leave: 'primary', idle: 'secondary' }[s] || 'secondary')
 
 const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : null
-const fmtMinutes = m => (m === null || m === undefined) ? null : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
+const fmtMinutes = m => (m === null || m === undefined) ? null : formatMinutes(m) // ADR-779
 // Jamais "00:00" quand inconnu : « Non renseigné ».
 const orNa = v => v ?? `— ${t('timeCockpit.notProvided')}`
 

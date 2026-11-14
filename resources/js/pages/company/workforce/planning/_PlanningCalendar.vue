@@ -20,7 +20,7 @@ const props = defineProps({
   view: { type: String, default: null },
   anchorDate: { type: [String, Date], default: null },
 })
-const emit = defineEmits(['select', 'conflicts', 'move'])
+const emit = defineEmits(['select', 'conflicts', 'move', 'range'])
 
 const { locale } = useI18n()
 const { smAndDown } = useDisplay()
@@ -127,6 +127,16 @@ const calendarOptions = computed(() => ({
   buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Agenda' },
   events: fetchEvents,
   eventClick({ event }) { emit('select', event.extendedProps) },
+  // ADR-779 (UX4) — choisir une plage horaire ouvre la création préremplie (date + heures).
+  // Rien n'est créé ici : le parent ouvre le formulaire, la création reste confirmée.
+  selectable: props.editable,
+  selectMirror: true,
+  select(info) {
+    const a = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(info.startStr || '')
+    const b = /T(\d{2}:\d{2})/.exec(info.endStr || '')
+    refCalendar.value?.getApi()?.unselect()
+    if (a) emit('range', { date: a[1], start: a[2], end: b ? b[1] : null })
+  },
   eventDrop: onEventChange,
   eventResize: onEventChange,
   // E3-B : ne pas masquer les heures de nuit (shifts traversant minuit visibles sur la journée).

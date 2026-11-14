@@ -75,7 +75,7 @@ test('manager: create employee → add contract → schedule shift (persisted)',
   await page.goto('/company/workforce/planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1800)
   await page.locator('[data-test="shift-add"]').click()
-  await expect(page.getByText('Nouveau shift').first()).toBeVisible({ timeout: 10000 })
+  await expect(page.getByText('Nouveau créneau').first()).toBeVisible({ timeout: 10000 })
 
   // Employee autocomplete — open, type, pick the option for our new employee.
   await page.locator('[data-test="shift-employee"]').click()

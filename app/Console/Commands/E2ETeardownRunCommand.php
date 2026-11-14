@@ -56,7 +56,7 @@ class E2ETeardownRunCommand extends Command
         $ids = fn (string $type) => $records->get($type, collect())->pluck('id')->map(fn ($i) => (int) $i)->unique()->values()->all();
 
         if ($companyId > 0) {
-            CompanyContext::runFor($companyId, function () use ($ids, $owned, $dry, &$report) {
+            CompanyContext::runFor($companyId, function () use ($ids, $owned, $dry, $since, &$report) {
                 // Children first : contracts → employees → memberships.
                 foreach ($ids('employee') as $id) {
                     $e = Employee::find($id);
@@ -75,6 +75,20 @@ class E2ETeardownRunCommand extends Command
                     $report['deleted'][] = "employee:{$id}";
                 }
 
+                // ADR-779 : clock entries a run made for an EXISTING demo person (self-service journey).
+                // A time entry carries no free text, so ownership = exact id read from the API response
+                // + created after the run started + inside the run's company. Breaks go with the entry.
+                foreach ($ids('time_entry') as $id) {
+                    $te = \App\Core\Workforce\TimeEntry::find($id);
+                    if (! $te || $te->created_at === null || Carbon::parse($te->created_at)->lessThan($since)) {
+                        $report['skipped'][] = "time_entry:{$id}";
+
+                        continue;
+                    }
+                    $dry || $te->delete();
+                    $report['deleted'][] = "time_entry:{$id}";
+                }
+
                 foreach ($ids('membership') as $id) {
                     $m = Membership::with('user')->find($id);
                     if (! $m || ! $owned($m->user?->email, $m->created_at)) {
@@ -87,7 +101,7 @@ class E2ETeardownRunCommand extends Command
                 }
             });
         } else {
-            foreach (['employee', 'membership'] as $type) {
+            foreach (['employee', 'membership', 'time_entry'] as $type) {
                 foreach ($ids($type) as $id) {
                     $report['skipped'][] = "{$type}:{$id}";
                 }

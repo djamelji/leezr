@@ -71,6 +71,7 @@ declare module 'vue' {
     TablePagination: typeof import('./resources/js/@core/components/TablePagination.vue')['default']
     TheCustomizer: typeof import('./resources/js/@core/components/TheCustomizer.vue')['default']
     ThemeSwitcher: typeof import('./resources/js/@core/components/ThemeSwitcher.vue')['default']
+    TimeSpaceHeader: typeof import('./resources/js/components/workforce/TimeSpaceHeader.vue')['default']
     TiptapEditor: typeof import('./resources/js/@core/components/TiptapEditor.vue')['default']
     TwoFactorAuthDialog: typeof import('./resources/js/components/dialogs/TwoFactorAuthDialog.vue')['default']
     UserInfoEditDialog: typeof import('./resources/js/components/dialogs/UserInfoEditDialog.vue')['default']

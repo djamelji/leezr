@@ -1,0 +1,278 @@
+{
+ "owner": {
+  "navEntries": [
+   "space-time"
+  ],
+  "views": {
+   "planning": {
+    "landed": "/company/workforce/planning",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   },
+   "time": {
+    "landed": "/company/workforce/time",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   },
+   "leave": {
+    "landed": "/company/workforce/leave",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   }
+  },
+  "errors": []
+ },
+ "admin": {
+  "navEntries": [],
+  "views": {
+   "planning": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "time": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "leave": {
+    "landed": "/dashboard",
+    "allowed": false,
+    "tabs": []
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": []
+   }
+  },
+  "errors": []
+ },
+ "bob": {
+  "navEntries": [],
+  "views": {
+   "planning": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "time": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "leave": {
+    "landed": "/home",
+    "allowed": false,
+    "tabs": []
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": []
+   }
+  },
+  "errors": []
+ },
+ "salarie": {
+  "navEntries": [
+   "workforce-time"
+  ],
+  "views": {
+   "planning": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "time": {
+    "landed": "/company/workforce/time",
+    "allowed": true,
+    "tabs": [
+     "time",
+     "me"
+    ]
+   },
+   "leave": {
+    "landed": "/dashboard",
+    "allowed": false,
+    "tabs": []
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": [
+     "time",
+     "me"
+    ]
+   }
+  },
+  "errors": []
+ },
+ "manager": {
+  "navEntries": [
+   "space-time"
+  ],
+  "views": {
+   "planning": {
+    "landed": "/company/workforce/planning",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "time": {
+    "landed": "/company/workforce/time",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "leave": {
+    "landed": "/company/workforce/leave",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   }
+  },
+  "errors": []
+ },
+ "rh-nopay": {
+  "navEntries": [
+   "space-time"
+  ],
+  "views": {
+   "planning": {
+    "landed": "/company/workforce/planning",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "time": {
+    "landed": "/company/workforce/time",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "leave": {
+    "landed": "/company/workforce/leave",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave"
+    ]
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": [
+     "planning",
+     "time",
+     "leave",
+     "me"
+    ]
+   }
+  },
+  "errors": []
+ },
+ "consultation": {
+  "navEntries": [],
+  "views": {
+   "planning": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "time": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "leave": {
+    "landed": "/dashboard",
+    "allowed": false,
+    "tabs": []
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": []
+   }
+  },
+  "errors": []
+ },
+ "pay": {
+  "navEntries": [],
+  "views": {
+   "planning": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "time": {
+    "landed": "/company/403",
+    "allowed": false,
+    "tabs": []
+   },
+   "leave": {
+    "landed": "/dashboard",
+    "allowed": false,
+    "tabs": []
+   },
+   "me": {
+    "landed": "/company/workforce/me",
+    "allowed": true,
+    "tabs": []
+   }
+  },
+  "errors": []
+ }
+}
