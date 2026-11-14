@@ -1,0 +1,40 @@
+{
+ "profile": {
+  "tag": "manager",
+  "email": "manager@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [
+  "onboarding_incomplete=14",
+  "timesheets_to_approve=2",
+  "leave_to_approve=1"
+ ],
+ "actions": [
+  "time.plan"
+ ],
+ "opened": [
+  {
+   "key": "onboarding_incomplete",
+   "path": "/company/workforce/employees"
+  },
+  {
+   "key": "timesheets_to_approve",
+   "path": "/company/workforce/time?tab=timesheets"
+  },
+  {
+   "key": "leave_to_approve",
+   "path": "/company/workforce/leave"
+  },
+  {
+   "key": "time.plan",
+   "path": "/company/workforce/planning"
+  }
+ ],
+ "metrics": {
+  "height": 1068,
+  "cards": 7,
+  "customize": true,
+  "addWidgetVisible": false
+ },
+ "network": []
+}

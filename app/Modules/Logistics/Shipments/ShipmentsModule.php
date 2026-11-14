@@ -17,6 +17,7 @@ class ShipmentsModule implements ModuleDefinition
             surface: 'operations',
             sortOrder: 100,
             capabilities: new Capabilities(
+                priorityProviders: [\App\Modules\Logistics\Shipments\Home\ShipmentsHomePriorities::class], // ADR-776
                 navItems: [
                     ['key' => 'shipments', 'title' => 'Shipments', 'to' => ['name' => 'company-shipments'], 'icon' => 'tabler-truck', 'permission' => 'shipments.view', 'surface' => 'operations'],
                     ['key' => 'my-deliveries', 'title' => 'My Deliveries', 'to' => ['name' => 'company-my-deliveries'], 'icon' => 'tabler-truck-delivery', 'permission' => 'shipments.view_own', 'excludePermission' => 'shipments.view', 'surface' => 'operations'], // ADR-391: nav only for drivers (excludePermission hides when user has full view)

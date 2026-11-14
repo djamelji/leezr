@@ -85,6 +85,8 @@ Route::get('/dashboard/layout', [CompanyDashboardLayoutController::class, 'show'
 Route::put('/dashboard/layout', [CompanyDashboardLayoutController::class, 'update'])
     ->middleware('company.access:manage-structure');
 Route::get('/dashboard/suggestions', [CompanyDashboardLayoutController::class, 'suggestions']);
+// ADR-776 (UX1) — « À traiter » : contributions des modules actifs, filtrées par les droits réels.
+Route::get('/dashboard/priorities', \App\Modules\Core\Dashboard\Http\HomePrioritiesController::class);
 Route::get('/dashboard/onboarding', [OnboardingStatusController::class, '__invoke']);
 Route::post('/dashboard/onboarding/dismiss', [OnboardingStatusController::class, 'dismiss']);
 Route::post('/dashboard/onboarding/reopen', [OnboardingStatusController::class, 'reopen']);

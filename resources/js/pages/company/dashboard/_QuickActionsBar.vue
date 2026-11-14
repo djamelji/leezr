@@ -10,36 +10,28 @@ const { actions } = useHomeActions()
 <template>
   <VCard
     v-if="actions.length"
-    class="mb-6"
+    class="h-100"
     data-test="home-actions"
   >
-    <VCardText>
-      <div class="d-flex align-center gap-2 mb-3">
-        <VIcon
-          icon="tabler-rocket"
-          size="20"
-          color="primary"
-        />
-        <span class="text-body-1 font-weight-medium">{{ t('dashboard.quickActions.title') }}</span>
-      </div>
-      <div class="d-flex flex-wrap gap-3">
-        <VBtn
-          v-for="action in actions"
-          :key="action.key"
-          :to="action.to"
-          color="primary"
-          variant="tonal"
-          :data-test="`home-action-${action.key}`"
-          size="small"
-        >
-          <VIcon
-            start
-            :icon="action.icon"
-            size="18"
-          />
-          {{ t(action.label) }}
-        </VBtn>
-      </div>
+    <VCardItem class="pb-2">
+      <VCardTitle class="text-h6">
+        {{ t('home.sections.actions') }}
+      </VCardTitle>
+    </VCardItem>
+    <VCardText class="d-flex flex-column gap-2 pt-0">
+      <VBtn
+        v-for="action in actions"
+        :key="action.key"
+        :to="action.to"
+        color="primary"
+        variant="tonal"
+        block
+        class="justify-start"
+        :prepend-icon="action.icon"
+        :data-test="`home-action-${action.key}`"
+      >
+        {{ t(action.label) }}
+      </VBtn>
     </VCardText>
   </VCard>
 </template>

@@ -80,7 +80,7 @@ const onCancel = () => {
           variant="elevated"
           @click="onConfirmation"
         >
-          Confirm
+          {{ $t('common.confirm') }}
         </VBtn>
 
         <VBtn
@@ -88,7 +88,7 @@ const onCancel = () => {
           variant="tonal"
           @click="onCancel"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </VBtn>
       </VCardText>
     </VCard>

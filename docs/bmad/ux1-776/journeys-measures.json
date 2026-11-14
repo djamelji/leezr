@@ -1,0 +1,57 @@
+{
+ "priorites": {
+  "clicks": 0,
+  "pages": 0,
+  "visibles": 7
+ },
+ "ajouter_personne": {
+  "clicks": 4,
+  "pages": 1,
+  "path": [
+   "/dashboard",
+   "/company/people"
+  ]
+ },
+ "acces_demande": {
+  "clicks": 1,
+  "pages": 1,
+  "path": [
+   "/dashboard",
+   "/company/documents/requests"
+  ]
+ },
+ "validation": {
+  "clicks": 3,
+  "pages": 1,
+  "path": [
+   "/dashboard",
+   "/company/documents/requests"
+  ]
+ },
+ "depot_document": {
+  "clicks": 1,
+  "pages": 1,
+  "path": [
+   "/dashboard",
+   "/company/documents/vault"
+  ]
+ },
+ "planning": {
+  "clicks": 1,
+  "pages": 1,
+  "path": [
+   "/dashboard",
+   "/company/workforce/planning"
+  ]
+ },
+ "teardown": {
+  "run_id": "rmwfw47apqxdkoy",
+  "dry_run": false,
+  "deleted": [
+   "membership:77",
+   "user:70"
+  ],
+  "skipped": []
+ },
+ "network": []
+}

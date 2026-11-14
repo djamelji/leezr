@@ -1,0 +1,17 @@
+{
+ "profile": {
+  "tag": "paie",
+  "email": "pay@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [],
+ "actions": [],
+ "opened": [],
+ "metrics": {
+  "height": 900,
+  "cards": 1,
+  "customize": true,
+  "addWidgetVisible": false
+ },
+ "network": []
+}

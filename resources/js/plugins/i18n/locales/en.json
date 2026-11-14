@@ -4541,7 +4541,9 @@
     "sections": {
       "todo": "To handle",
       "situation": "Situation",
-      "quickAccess": "Quick access"
+      "quickAccess": "Quick access",
+      "actions": "Actions",
+      "overview": "Overview"
     },
     "allClear": {
       "title": "All clear",
@@ -4553,7 +4555,12 @@
       "time_anomalies": "Clock-in anomalies",
       "signatures_pending": "Pending signatures",
       "payroll_to_control": "Payroll periods to control",
-      "onboarding_incomplete": "Onboarding to complete"
+      "onboarding_incomplete": "Onboarding to complete",
+      "documents_to_review": "Documents to review",
+      "documents_expired": "Expired documents",
+      "documents_expiring": "Documents expiring soon",
+      "shipments_late": "Late shipments",
+      "shipments_unassigned": "Shipments to assign"
     },
     "situation": {
       "activeEmployees": "Active employees",
@@ -4566,7 +4573,14 @@
       "leave": "Leave",
       "payroll": "Payroll & filings",
       "documents": "Documents"
-    }
+    },
+    "todoCount": "{n} item | {n} items",
+    "todoError": "The items to process could not be loaded.",
+    "todoPartial": "Some information is temporarily unavailable.",
+    "customize": "Customize",
+    "customizeDone": "Done",
+    "overviewEmpty": "No indicator to display for now.",
+    "overviewEmptyEditable": "No indicator displayed. Use “Customize” to add some."
   },
   "companyDashboard": {
     "title": "Dashboard",

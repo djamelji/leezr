@@ -25,6 +25,7 @@ class DocumentsModule implements ModuleDefinition
                     ['key' => 'documents', 'title' => 'Documents', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-file-text', 'anyPermission' => ['documents.view', 'workforce_documents.view', 'workforce_signature.view'], 'surface' => 'structure', 'group' => 'documents', 'sort' => 10],
                 ],
                 routeNames: ['company-documents-tab'],
+                priorityProviders: [\App\Modules\Core\Documents\Home\DocumentsHomePriorities::class], // ADR-776
                 actions: [ // ADR-775
                     ['key' => 'documents.request', 'space' => 'documents', 'icon' => 'tabler-file-import', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'requests']], 'permission' => 'documents.manage', 'home' => true, 'primary' => true, 'sort' => 10],
                     ['key' => 'documents.deposit', 'space' => 'documents', 'icon' => 'tabler-file-upload', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'vault']], 'permission' => 'documents.manage', 'home' => true, 'sort' => 20],

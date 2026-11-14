@@ -1,0 +1,50 @@
+{
+ "profile": {
+  "tag": "dispatcher",
+  "email": "admin@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [
+  "shipments_late=1",
+  "documents_to_review=2",
+  "shipments_unassigned=1"
+ ],
+ "actions": [
+  "team.add-person",
+  "documents.request",
+  "documents.deposit"
+ ],
+ "opened": [
+  {
+   "key": "shipments_late",
+   "path": "/company/shipments?status=in_transit"
+  },
+  {
+   "key": "documents_to_review",
+   "path": "/company/documents/requests?status=submitted"
+  },
+  {
+   "key": "shipments_unassigned",
+   "path": "/company/shipments"
+  },
+  {
+   "key": "team.add-person",
+   "path": "/company/people?action=invite"
+  },
+  {
+   "key": "documents.request",
+   "path": "/company/documents/requests"
+  },
+  {
+   "key": "documents.deposit",
+   "path": "/company/documents/vault"
+  }
+ ],
+ "metrics": {
+  "height": 1384,
+  "cards": 7,
+  "customize": true,
+  "addWidgetVisible": false
+ },
+ "network": []
+}

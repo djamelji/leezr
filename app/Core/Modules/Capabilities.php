@@ -16,6 +16,8 @@ final class Capabilities
         public readonly array $footerLinks = [],
         /** ADR-775 — contextual actions contributed to an intent space (see ActionBuilder). */
         public readonly array $actions = [],
+        /** ADR-776 — classes implementing App\Core\Home\HomePriorityProvider (« À traiter » on the home). */
+        public readonly array $priorityProviders = [],
     ) {}
 
     public function toArray(): array
@@ -28,6 +30,7 @@ final class Capabilities
             'settings_panels' => $this->settingsPanels,
             'footer_links' => $this->footerLinks,
             'actions' => $this->actions,
+            'priority_providers' => $this->priorityProviders,
         ];
     }
 }

@@ -34,7 +34,8 @@ const rateColor = rate => {
 }
 
 // ─── Filters ────────────────────────────────────────────
-const statusFilter = ref('all')
+// ADR-776 : un lien « À traiter » ouvre la conformité déjà filtrée (?status=expired|expiring|missing).
+const statusFilter = ref(['missing', 'expiring', 'expired'].includes(useRoute().query.status) ? useRoute().query.status : 'all')
 const statusOptions = computed(() => [
   { title: t('companyDocuments.compliance.all'), value: 'all' },
   { title: t('companyDocuments.compliance.missing'), value: 'missing' },

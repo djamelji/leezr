@@ -1,0 +1,29 @@
+{
+ "profile": {
+  "tag": "rh",
+  "email": "rh-nopay@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [
+  "onboarding_incomplete=14",
+  "leave_to_approve=1"
+ ],
+ "actions": [],
+ "opened": [
+  {
+   "key": "onboarding_incomplete",
+   "path": "/company/workforce/employees"
+  },
+  {
+   "key": "leave_to_approve",
+   "path": "/company/workforce/leave"
+  }
+ ],
+ "metrics": {
+  "height": 1026,
+  "cards": 6,
+  "customize": true,
+  "addWidgetVisible": false
+ },
+ "network": []
+}

@@ -23,7 +23,8 @@ const canManage = computed(() => auth.hasPermission('documents.manage'))
 
 // ─── Filters ────────────────────────────────────────────
 const searchQuery = ref('')
-const filterStatus = ref(null)
+// ADR-776 : un lien « À traiter » ouvre la file déjà filtrée (?status=submitted).
+const filterStatus = ref(['requested', 'submitted'].includes(useRoute().query.status) ? useRoute().query.status : null)
 const filterDocType = ref(null)
 
 const statusFilterItems = computed(() => [

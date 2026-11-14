@@ -28039,3 +28039,35 @@ L'audit ADR-774 est validé. Le menu Company reflétait les modules (18 entrées
 `Ux0IntentNavigationTest` (8 tests) ; 23 fichiers de tests de navigation adaptés ; recette navigateur `ux0-intent-navigation.spec.js` 9/9 (8 profils réels, entreprise sans Workforce, changement d'entreprise, aucun refus réseau) ; scripts ADR-774 rejoués ; mobile et sombre capturés ; suite complète et build : voir le checkpoint.
 
 **Verdict** : 🟢 GO DEV. UX1 non commencé.
+
+---
+
+## ADR-776 — Company Experience 2.0 / UX1 : accueil centré sur les priorités
+
+**Date** : 2026-11-14 · **Base** : `9d670877` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX1.md`
+
+### Contexte
+
+UX0 validé. L'accueil Company affichait des priorités limitées à Workforce, des réglages de widgets en premier plan et des cartes d'accueil redondantes. Objectif : réduire la distance entre l'ouverture de Leezr et une action métier, sans nouveau moteur de widgets.
+
+### Décisions
+
+1. **Registre de priorités** : `Capabilities::$priorityProviders` (contrat `App\Core\Home\HomePriorityProvider`), assemblé par `HomePrioritiesBuilder`, servi par `GET /api/dashboard/priorities`. Modules actifs uniquement, droits réels du demandeur (`HomeContext`, même règle que la navigation), entreprise de la requête, compteurs nuls écartés, tri par urgence, contribution en échec isolée (`unavailable`). Le Core ne nomme aucun métier.
+2. **Contributions** : Documents (à valider, expirés, expirant — source : read-model de conformité), Workforce (read-model existant ADR-682, même garde `workforce.view`), Expéditions (en retard, à affecter — définitions des indicateurs existants).
+3. **Liens actionnables** : les onglets Demandes et Conformité et la liste des expéditions lisent leur filtre dans l'adresse.
+4. **Hiérarchie de l'accueil** : À traiter, Actions (registre UX0), Vue d'ensemble. Le catalogue, l'édition de la disposition et les suggestions passent derrière « Personnaliser ». Cartes « première visite » supprimées.
+5. **Moteur de widgets inchangé** : dispositions enregistrées, défauts par rôle et jobdomain, redimensionnement et permissions conservés.
+6. **Rôle Driver** : `members.invite` vient du lot `members.team_access` du préréglage logistique. Analyse et correction proposée dans le document ; aucune modification appliquée.
+7. Boutons de la boîte de confirmation commune traduits (« Confirmer », « Annuler »).
+
+### Conséquences
+
+- Une entreprise sans Workforce a désormais des priorités (documents, activité) ; aucun appel Workforce n'est émis pour elle.
+- `/workforce/dashboard/priorities` reste en place (non supprimé) ; l'accueil ne l'appelle plus.
+- Aucune migration, aucune permission ajoutée ou élargie, Billing et paie intacts.
+
+### Validation
+
+`Ux1HomePrioritiesTest` (5 tests) ; `ux1-home.spec.js` 9/9 (7 profils, parcours avec écriture sous registre d'exécution, entreprise sans Workforce) ; mobile, tablette, sombre ; suite complète et build : voir le checkpoint.
+
+**Verdict** : 🟢 GO DEV. UX2 non commencé.

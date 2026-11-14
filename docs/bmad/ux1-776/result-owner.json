@@ -1,0 +1,75 @@
+{
+ "profile": {
+  "tag": "owner",
+  "email": "owner@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [
+  "shipments_late=1",
+  "onboarding_incomplete=14",
+  "documents_to_review=2",
+  "timesheets_to_approve=2",
+  "leave_to_approve=1",
+  "shipments_unassigned=1",
+  "signatures_pending=7"
+ ],
+ "actions": [
+  "team.add-person",
+  "time.plan",
+  "documents.request",
+  "documents.deposit"
+ ],
+ "opened": [
+  {
+   "key": "shipments_late",
+   "path": "/company/shipments?status=in_transit"
+  },
+  {
+   "key": "onboarding_incomplete",
+   "path": "/company/workforce/employees"
+  },
+  {
+   "key": "documents_to_review",
+   "path": "/company/documents/requests?status=submitted"
+  },
+  {
+   "key": "timesheets_to_approve",
+   "path": "/company/workforce/time?tab=timesheets"
+  },
+  {
+   "key": "leave_to_approve",
+   "path": "/company/workforce/leave"
+  },
+  {
+   "key": "shipments_unassigned",
+   "path": "/company/shipments"
+  },
+  {
+   "key": "signatures_pending",
+   "path": "/company/documents/hr"
+  },
+  {
+   "key": "team.add-person",
+   "path": "/company/people?action=invite"
+  },
+  {
+   "key": "time.plan",
+   "path": "/company/workforce/planning"
+  },
+  {
+   "key": "documents.request",
+   "path": "/company/documents/requests"
+  },
+  {
+   "key": "documents.deposit",
+   "path": "/company/documents/vault"
+  }
+ ],
+ "metrics": {
+  "height": 2004,
+  "cards": 14,
+  "customize": true,
+  "addWidgetVisible": false
+ },
+ "network": []
+}

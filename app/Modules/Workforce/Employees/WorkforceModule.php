@@ -46,6 +46,7 @@ class WorkforceModule implements ModuleDefinition
                     ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 30],
                 ],
                 routeNames: [],
+                priorityProviders: [\App\Modules\Workforce\Home\WorkforceHomePriorities::class], // ADR-776
                 actions: [ // ADR-775 — même intention « Ajouter une personne » pour qui gère les fiches sans inviter
                     ['key' => 'team.add-employee', 'space' => 'team', 'icon' => 'tabler-user-plus', 'to' => ['name' => 'company-people', 'query' => ['action' => 'create']], 'permission' => 'workforce.manage', 'excludePermission' => 'members.invite', 'home' => true, 'primary' => true, 'sort' => 10],
                 ],

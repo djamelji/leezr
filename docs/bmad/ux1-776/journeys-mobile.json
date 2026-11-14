@@ -1,0 +1,61 @@
+{
+ "user": "owner@leezr.test",
+ "view": [
+  390,
+  844
+ ],
+ "vars": {
+  "accountless": "employee-1351",
+  "linked": "employee-2",
+  "memberOnly": "user-56",
+  "employeeId": 2
+ },
+ "journeys": [
+  {
+   "journey": "home",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/dashboard",
+     "ok": true,
+     "shot": "j-mobile-01-home.jpg",
+     "path": "/dashboard",
+     "overlay": null,
+     "title": "Bienvenue, Djamel",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Mon activité",
+      "Ajouter une personne",
+      "Préparer le planning",
+      "Demander un document",
+      "Déposer un document",
+      "Personnaliser",
+      "Passer au supérieur"
+     ],
+     "menu": [
+      "Expéditions en retard1",
+      "Intégrations à compléter14",
+      "Documents à valider2",
+      "Feuilles de temps à valider2",
+      "Congés à approuver1",
+      "Expéditions à affecter1",
+      "Signatures en attente7",
+      "Documents manquantsNombre de documents requis non encore dép",
+      "Documents expirésNombre de documents dont la date de validit",
+      "Conformité par typeTaux de conformité des documents groupé p",
+      "Feuilles de temps à validerFeuilles de temps soumises en att",
+      "Congés à approuverDemandes de congé en attente d’approbation",
+      "Configuration initialeÉtapes de mise en route de votre entre",
+      "Expéditions du jourExpéditions planifiées pour aujourd'hui"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

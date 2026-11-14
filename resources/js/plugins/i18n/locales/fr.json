@@ -4541,7 +4541,9 @@
     "sections": {
       "todo": "À traiter",
       "situation": "Situation",
-      "quickAccess": "Accès rapides"
+      "quickAccess": "Accès rapides",
+      "actions": "Actions",
+      "overview": "Vue d'ensemble"
     },
     "allClear": {
       "title": "Rien à traiter",
@@ -4553,7 +4555,12 @@
       "time_anomalies": "Anomalies de pointage",
       "signatures_pending": "Signatures en attente",
       "payroll_to_control": "Périodes de paie à contrôler",
-      "onboarding_incomplete": "Intégrations à compléter"
+      "onboarding_incomplete": "Intégrations à compléter",
+      "documents_to_review": "Documents à valider",
+      "documents_expired": "Documents expirés",
+      "documents_expiring": "Documents qui expirent bientôt",
+      "shipments_late": "Expéditions en retard",
+      "shipments_unassigned": "Expéditions à affecter"
     },
     "situation": {
       "activeEmployees": "Collaborateurs actifs",
@@ -4566,7 +4573,14 @@
       "leave": "Congés",
       "payroll": "Paie & déclarations",
       "documents": "Documents"
-    }
+    },
+    "todoCount": "{n} sujet | {n} sujets",
+    "todoError": "Les éléments à traiter n'ont pas pu être chargés.",
+    "todoPartial": "Certaines informations sont momentanément indisponibles.",
+    "customize": "Personnaliser",
+    "customizeDone": "Terminer",
+    "overviewEmpty": "Aucun indicateur à afficher pour le moment.",
+    "overviewEmptyEditable": "Aucun indicateur affiché. Utilisez « Personnaliser » pour en ajouter."
   },
   "companyDashboard": {
     "title": "Tableau de bord",

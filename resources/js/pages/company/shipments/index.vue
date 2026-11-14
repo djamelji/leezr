@@ -11,7 +11,7 @@ const shipmentStore = useShipmentStore()
 const router = useRouter()
 
 const isLoading = ref(true)
-const statusFilter = ref('')
+const statusFilter = ref(typeof useRoute().query.status === 'string' ? useRoute().query.status : '') // ADR-776 : lien filtré depuis l'accueil
 const searchQuery = ref('')
 
 const canManage = computed(() => auth.hasPermission('shipments.create'))

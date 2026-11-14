@@ -1,0 +1,24 @@
+{
+ "profile": {
+  "tag": "consultation",
+  "email": "consultation@leezr.test"
+ },
+ "landing": "/dashboard",
+ "priorities": [
+  "onboarding_incomplete=14"
+ ],
+ "actions": [],
+ "opened": [
+  {
+   "key": "onboarding_incomplete",
+   "path": "/company/workforce/employees"
+  }
+ ],
+ "metrics": {
+  "height": 900,
+  "cards": 2,
+  "customize": false,
+  "addWidgetVisible": false
+ },
+ "network": []
+}
