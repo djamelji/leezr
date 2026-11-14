@@ -1,0 +1,268 @@
+{
+ "navEntries": [
+  {
+   "key": "company-profile",
+   "to": {
+    "name": "company-profile-tab",
+    "params": {
+     "tab": "overview"
+    }
+   }
+  },
+  {
+   "key": "workforce-organization",
+   "to": {
+    "name": "company-workforce-organization-tab",
+    "params": {
+     "tab": "departments"
+    }
+   }
+  },
+  {
+   "key": "workforce-settings",
+   "to": {
+    "name": "company-workforce-settings-tab",
+    "params": {
+     "tab": "general"
+    }
+   }
+  },
+  {
+   "key": "workflows",
+   "to": {
+    "name": "company-workflows"
+   }
+  },
+  {
+   "key": "modules",
+   "to": {
+    "name": "company-modules"
+   }
+  },
+  {
+   "key": "billing",
+   "to": {
+    "name": "company-billing-tab",
+    "params": {
+     "tab": "overview"
+    }
+   }
+  },
+  {
+   "key": "audit",
+   "to": {
+    "name": "company-audit"
+   }
+  }
+ ],
+ "pages": {
+  "desktop:company-profile": {
+   "path": "/company/profile/overview",
+   "scrollW": 1440,
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "fields": 20,
+   "buttons": 3,
+   "tech": [],
+   "h": [
+    "Paramètres de l'entreprise",
+    "Adresse de l'entreprise",
+    "Adresse de facturation"
+   ]
+  },
+  "desktop:workforce-organization": {
+   "path": "/company/workforce/organization/departments",
+   "scrollW": 1440,
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "fields": 15,
+   "buttons": 23,
+   "tech": [],
+   "h": [
+    "Organisation",
+    "Ajouter un département",
+    "Ajouter un poste"
+   ]
+  },
+  "desktop:workforce-settings": {
+   "path": "/company/workforce/settings/general",
+   "scrollW": 1440,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  },
+  "desktop:workflows": {
+   "path": "/company/workflows",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Aucune règle d'automatisation"
+   ]
+  },
+  "desktop:modules": {
+   "path": "/company/modules",
+   "scrollW": 1440,
+   "tabs": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout"
+   ],
+   "fields": 1,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Modules"
+   ]
+  },
+  "desktop:billing": {
+   "path": "/company/billing/overview",
+   "scrollW": 1440,
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "fields": 0,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Pro",
+    "0,00 €"
+   ]
+  },
+  "desktop:audit": {
+   "path": "/company/audit",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 49,
+   "tech": [
+    "ID"
+   ],
+   "h": []
+  },
+  "mobile:company-profile": {
+   "path": "/company/profile/overview",
+   "scrollW": 390,
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "fields": 20,
+   "buttons": 3,
+   "tech": [],
+   "h": [
+    "Paramètres de l'entreprise",
+    "Adresse de l'entreprise",
+    "Adresse de facturation"
+   ]
+  },
+  "mobile:workforce-organization": {
+   "path": "/company/workforce/organization/departments",
+   "scrollW": 390,
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "fields": 15,
+   "buttons": 23,
+   "tech": [],
+   "h": [
+    "Organisation",
+    "Ajouter un département",
+    "Ajouter un poste"
+   ]
+  },
+  "mobile:workforce-settings": {
+   "path": "/company/workforce/settings/general",
+   "scrollW": 390,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  },
+  "mobile:workflows": {
+   "path": "/company/workflows",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Aucune règle d'automatisation"
+   ]
+  },
+  "mobile:modules": {
+   "path": "/company/modules",
+   "scrollW": 390,
+   "tabs": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout"
+   ],
+   "fields": 1,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Modules"
+   ]
+  },
+  "mobile:billing": {
+   "path": "/company/billing/overview",
+   "scrollW": 390,
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "fields": 0,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Pro",
+    "0,00 €"
+   ]
+  },
+  "mobile:audit": {
+   "path": "/company/audit",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 31,
+   "tech": [
+    "ID"
+   ],
+   "h": []
+  }
+ }
+}

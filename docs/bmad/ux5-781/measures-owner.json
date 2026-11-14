@@ -1,0 +1,55 @@
+{
+  "measures": {
+    "menu_sub_entries": 0,
+    "ouvrir_reglages": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "sections": [
+      "company",
+      "organization",
+      "access",
+      "work",
+      "documents",
+      "billing",
+      "automation"
+    ],
+    "entries_first_level": 10,
+    "advanced_folded": true,
+    "trouver_role": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "parametre_absence": {
+      "clicks": 1,
+      "fields": 1,
+      "pages": 1,
+      "hscroll": false
+    },
+    "abonnement_factures": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "integration_etat": "Prestataire de test : à configurer avant la production",
+    "profil_etat": "2 information(s) obligatoire(s) à compléter",
+    "type_document": {
+      "clicks": 1,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    },
+    "preferences_puis_retour": {
+      "clicks": 2,
+      "fields": 0,
+      "pages": 1,
+      "hscroll": false
+    }
+  },
+  "errors": []
+}

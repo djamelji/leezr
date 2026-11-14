@@ -18,8 +18,13 @@ return [
         'body' => 'La facture #:invoice_id de :amount a été créée.',
     ],
     'billing_payment_received' => [
-        'title' => 'Paiement reçu',
-        'body' => 'Un paiement de :amount a été reçu.',
+        'title' => 'Paiement effectué',
+        'body' => 'Votre facture de :amount est acquittée.',
+    ],
+    // ADR-781 — Platform side : money collected from a customer company.
+    'platform_payment_collected' => [
+        'title' => 'Paiement encaissé',
+        'body' => ':company_name a réglé :amount (facture :invoice_number).',
     ],
     'billing_plan_changed' => [
         'title' => 'Plan modifié',

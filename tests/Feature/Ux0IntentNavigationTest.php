@@ -111,12 +111,15 @@ class Ux0IntentNavigationTest extends TestCase
         $bare = NavBuilder::forCompany($this->company(false), null, 'management');
         $this->assertSame(['home', 'team', 'documents', 'settings'], array_column($this->nav($bare), 'key'));
 
-        // One settings capability only : ONE direct entry labelled « Réglages », no sub-menu.
+        // One settings capability only : ONE entry labelled « Réglages ». Since ADR-781 (UX5) Settings is
+        // a HUB : the entry opens the hub page, which lists the (filtered) entries — never a sub-menu.
         $one = NavBuilder::forCompany($this->company(true), ['members.view', 'settings.view'], 'management');
         $settings = collect($one)->firstWhere('key', 'settings')['items'];
-        $this->assertSame(['company-profile'], array_column($settings, 'key'));
+        $this->assertSame(['space-settings'], array_column($settings, 'key'));
         $this->assertSame('nav.groups.settings', $settings[0]['labelKey']);
-        $this->assertSame([], $settings[0]['children']);
+        $this->assertSame(['name' => 'company-settings'], $settings[0]['to']);
+        $this->assertTrue($settings[0]['hub']);
+        $this->assertSame(['company-profile'], array_column($settings[0]['children'], 'key'));
 
         // One time capability only : the item itself, under its own label.
         $leave = NavBuilder::forCompany($this->company(true), ['workforce.leave_request', 'workforce.leave_approve'], 'management');

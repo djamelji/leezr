@@ -1,0 +1,157 @@
+{
+ "owner": {
+  "entries": [
+   "company-profile",
+   "workforce-organization",
+   "workforce-settings",
+   "settings-roles",
+   "workflows",
+   "modules",
+   "settings-leave-types",
+   "settings-documents",
+   "billing",
+   "settings-templates",
+   "audit",
+   "settings-signature"
+  ],
+  "shown": [
+   "company-profile",
+   "workforce-organization",
+   "settings-roles",
+   "workforce-settings",
+   "settings-leave-types",
+   "settings-documents",
+   "settings-templates",
+   "billing",
+   "workflows",
+   "settings-signature"
+  ],
+  "visits": {
+   "company-profile": true,
+   "workforce-organization": true,
+   "workforce-settings": true,
+   "settings-roles": true,
+   "workflows": true,
+   "modules": true,
+   "settings-leave-types": true,
+   "settings-documents": true,
+   "billing": true,
+   "settings-templates": true,
+   "audit": true,
+   "settings-signature": true
+  },
+  "sensitive": {},
+  "errors": []
+ },
+ "admin": {
+  "entries": [
+   "company-profile",
+   "settings-documents"
+  ],
+  "shown": [
+   "company-profile",
+   "settings-documents"
+  ],
+  "visits": {
+   "company-profile": true,
+   "settings-documents": true
+  },
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/company/403",
+   "modules": "/company/403"
+  },
+  "errors": []
+ },
+ "rh-nopay": {
+  "entries": [
+   "workforce-organization",
+   "workforce-settings",
+   "settings-leave-types"
+  ],
+  "shown": [
+   "workforce-organization",
+   "workforce-settings",
+   "settings-leave-types"
+  ],
+  "visits": {
+   "workforce-organization": true,
+   "workforce-settings": true,
+   "settings-leave-types": true
+  },
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/company/403",
+   "modules": "/dashboard"
+  },
+  "errors": []
+ },
+ "manager": {
+  "entries": [
+   "workforce-organization",
+   "workforce-settings"
+  ],
+  "shown": [
+   "workforce-organization",
+   "workforce-settings"
+  ],
+  "visits": {
+   "workforce-organization": true,
+   "workforce-settings": true
+  },
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/company/403",
+   "modules": "/company/403"
+  },
+  "errors": []
+ },
+ "bob": {
+  "entries": [],
+  "shown": [],
+  "visits": {},
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/home",
+   "modules": "/company/403"
+  },
+  "errors": []
+ },
+ "pay": {
+  "entries": [],
+  "shown": [],
+  "visits": {},
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/dashboard",
+   "modules": "/company/403"
+  },
+  "errors": []
+ },
+ "consultation": {
+  "entries": [
+   "workforce-organization"
+  ],
+  "shown": [],
+  "visits": {
+   "workforce-organization": true
+  },
+  "sensitive": {
+   "billing": "/dashboard",
+   "roles": "/company/403",
+   "modules": "/company/403"
+  },
+  "errors": []
+ },
+ "salarie": {
+  "entries": [],
+  "shown": [],
+  "visits": {},
+  "sensitive": {
+   "billing": "/company/403",
+   "roles": "/dashboard",
+   "modules": "/company/403"
+  },
+  "errors": []
+ }
+}

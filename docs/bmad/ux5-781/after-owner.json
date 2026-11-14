@@ -1,0 +1,513 @@
+{
+ "navEntries": [
+  {
+   "key": "space-settings",
+   "to": {
+    "name": "company-settings"
+   }
+  },
+  {
+   "key": "company-profile",
+   "to": {
+    "name": "company-profile-tab",
+    "params": {
+     "tab": "overview"
+    }
+   }
+  },
+  {
+   "key": "workforce-organization",
+   "to": {
+    "name": "company-workforce-organization-tab",
+    "params": {
+     "tab": "departments"
+    }
+   }
+  },
+  {
+   "key": "workforce-settings",
+   "to": {
+    "name": "company-workforce-settings-tab",
+    "params": {
+     "tab": "general"
+    }
+   }
+  },
+  {
+   "key": "settings-roles",
+   "to": {
+    "name": "company-people",
+    "query": {
+     "tab": "roles"
+    }
+   }
+  },
+  {
+   "key": "workflows",
+   "to": {
+    "name": "company-workflows"
+   }
+  },
+  {
+   "key": "modules",
+   "to": {
+    "name": "company-modules"
+   }
+  },
+  {
+   "key": "settings-leave-types",
+   "to": {
+    "name": "company-workforce-leave",
+    "query": {
+     "tab": "config"
+    }
+   }
+  },
+  {
+   "key": "settings-documents",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "settings"
+    }
+   }
+  },
+  {
+   "key": "billing",
+   "to": {
+    "name": "company-billing-tab",
+    "params": {
+     "tab": "overview"
+    }
+   }
+  },
+  {
+   "key": "settings-templates",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "templates"
+    }
+   }
+  },
+  {
+   "key": "audit",
+   "to": {
+    "name": "company-audit"
+   }
+  },
+  {
+   "key": "settings-signature",
+   "to": {
+    "name": "company-workforce-settings-tab",
+    "params": {
+     "tab": "signature"
+    }
+   }
+  }
+ ],
+ "pages": {
+  "desktop:space-settings": {
+   "path": "/company/settings",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 1,
+   "buttons": 1,
+   "tech": [],
+   "h": [
+    "Réglages",
+    "Entreprise",
+    "Organisation",
+    "Accès & sécurité"
+   ]
+  },
+  "desktop:company-profile": {
+   "path": "/company/profile/overview",
+   "scrollW": 1440,
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "fields": 14,
+   "buttons": 3,
+   "tech": [],
+   "h": [
+    "Paramètres de l'entreprise",
+    "Adresse de l'entreprise",
+    "Adresse de facturation",
+    "Informations administratives"
+   ]
+  },
+  "desktop:workforce-organization": {
+   "path": "/company/workforce/organization/departments",
+   "scrollW": 1440,
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "fields": 15,
+   "buttons": 23,
+   "tech": [],
+   "h": [
+    "Organisation",
+    "Ajouter un département",
+    "Ajouter un poste"
+   ]
+  },
+  "desktop:workforce-settings": {
+   "path": "/company/workforce/settings/general",
+   "scrollW": 1440,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  },
+  "desktop:settings-roles": {
+   "path": "/company/people",
+   "scrollW": 1440,
+   "tabs": [
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "fields": 7,
+   "buttons": 53,
+   "tech": [],
+   "h": [
+    "Équipe",
+    "Nouveau rôle",
+    "Ajouter une personne"
+   ]
+  },
+  "desktop:workflows": {
+   "path": "/company/workflows",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Aucune règle d'automatisation"
+   ]
+  },
+  "desktop:modules": {
+   "path": "/company/modules",
+   "scrollW": 1440,
+   "tabs": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout"
+   ],
+   "fields": 1,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Modules"
+   ]
+  },
+  "desktop:settings-leave-types": {
+   "path": "/company/workforce/leave",
+   "scrollW": 1440,
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés"
+   ],
+   "fields": 21,
+   "buttons": 32,
+   "tech": [],
+   "h": [
+    "Planning & temps",
+    "Nouvelle demande",
+    "Nouveau type de congé"
+   ]
+  },
+  "desktop:settings-documents": {
+   "path": "/company/documents/settings",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 43,
+   "buttons": 12,
+   "tech": [],
+   "h": [
+    "Documents",
+    "Créer un type de document"
+   ]
+  },
+  "desktop:billing": {
+   "path": "/company/billing/overview",
+   "scrollW": 1440,
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "fields": 0,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Pro",
+    "0,00 €"
+   ]
+  },
+  "desktop:settings-templates": {
+   "path": "/company/documents/templates",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 13,
+   "buttons": 29,
+   "tech": [
+    "code"
+   ],
+   "h": [
+    "Documents",
+    "Modifier le modèle",
+    "Générer un document",
+    "Créer un type de document"
+   ]
+  },
+  "desktop:audit": {
+   "path": "/company/audit",
+   "scrollW": 1440,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 49,
+   "tech": [
+    "ID"
+   ],
+   "h": []
+  },
+  "desktop:settings-signature": {
+   "path": "/company/workforce/settings/signature",
+   "scrollW": 1440,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 10,
+   "buttons": 5,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  },
+  "mobile:space-settings": {
+   "path": "/company/settings",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 1,
+   "buttons": 1,
+   "tech": [],
+   "h": [
+    "Réglages",
+    "Entreprise",
+    "Organisation",
+    "Accès & sécurité"
+   ]
+  },
+  "mobile:company-profile": {
+   "path": "/company/profile/overview",
+   "scrollW": 390,
+   "tabs": [
+    "Vue d'ensemble"
+   ],
+   "fields": 14,
+   "buttons": 3,
+   "tech": [],
+   "h": [
+    "Paramètres de l'entreprise",
+    "Adresse de l'entreprise",
+    "Adresse de facturation",
+    "Informations administratives"
+   ]
+  },
+  "mobile:workforce-organization": {
+   "path": "/company/workforce/organization/departments",
+   "scrollW": 390,
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "fields": 15,
+   "buttons": 23,
+   "tech": [],
+   "h": [
+    "Organisation",
+    "Ajouter un département",
+    "Ajouter un poste"
+   ]
+  },
+  "mobile:workforce-settings": {
+   "path": "/company/workforce/settings/general",
+   "scrollW": 390,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  },
+  "mobile:settings-roles": {
+   "path": "/company/people",
+   "scrollW": 390,
+   "tabs": [
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "fields": 7,
+   "buttons": 53,
+   "tech": [],
+   "h": [
+    "Équipe",
+    "Nouveau rôle",
+    "Ajouter une personne"
+   ]
+  },
+  "mobile:workflows": {
+   "path": "/company/workflows",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 6,
+   "tech": [],
+   "h": [
+    "Aucune règle d'automatisation"
+   ]
+  },
+  "mobile:modules": {
+   "path": "/company/modules",
+   "scrollW": 390,
+   "tabs": [
+    "Extensions 3",
+    "Inclus 15",
+    "Actifs 7",
+    "Tout"
+   ],
+   "fields": 1,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Modules"
+   ]
+  },
+  "mobile:settings-leave-types": {
+   "path": "/company/workforce/leave",
+   "scrollW": 390,
+   "tabs": [
+    "Planning",
+    "Temps",
+    "Absences",
+    "Moi",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés"
+   ],
+   "fields": 21,
+   "buttons": 31,
+   "tech": [],
+   "h": [
+    "Planning & temps",
+    "Nouvelle demande",
+    "Nouveau type de congé"
+   ]
+  },
+  "mobile:settings-documents": {
+   "path": "/company/documents/settings",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 43,
+   "buttons": 12,
+   "tech": [],
+   "h": [
+    "Documents",
+    "Créer un type de document"
+   ]
+  },
+  "mobile:billing": {
+   "path": "/company/billing/overview",
+   "scrollW": 390,
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "fields": 0,
+   "buttons": 10,
+   "tech": [],
+   "h": [
+    "Pro",
+    "0,00 €"
+   ]
+  },
+  "mobile:settings-templates": {
+   "path": "/company/documents/templates",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 13,
+   "buttons": 29,
+   "tech": [
+    "code"
+   ],
+   "h": [
+    "Documents",
+    "Modifier le modèle",
+    "Générer un document",
+    "Créer un type de document"
+   ]
+  },
+  "mobile:audit": {
+   "path": "/company/audit",
+   "scrollW": 390,
+   "tabs": [],
+   "fields": 2,
+   "buttons": 31,
+   "tech": [
+    "ID"
+   ],
+   "h": []
+  },
+  "mobile:settings-signature": {
+   "path": "/company/workforce/settings/signature",
+   "scrollW": 390,
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "Contrats de travail",
+    "Signature électronique"
+   ],
+   "fields": 10,
+   "buttons": 5,
+   "tech": [],
+   "h": [
+    "Paramètres RH"
+   ]
+  }
+ }
+}

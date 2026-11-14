@@ -74,6 +74,11 @@ watch(billingIsSameAsCompany, val => {
   if (val)
     copyCompanyToBilling()
 })
+// Tant que « identique » est actif, l'adresse de facturation suit celle de l'entreprise.
+watch(() => companyAddressCodes.map(c => dynamicForm.value[c]), () => {
+  if (billingIsSameAsCompany.value)
+    copyCompanyToBilling()
+})
 
 // ─── Unsaved changes tracking ────────────────────────
 const formSnapshot = computed(() => ({
@@ -97,7 +102,11 @@ const initForm = () => {
   }
   dynamicForm.value = df
 
-  billingIsSameAsCompany.value = false
+  // ADR-781 (UX5) — l'interrupteur reflète les données : adresse de facturation vide ou identique à
+  // celle de l'entreprise ⇒ « identique », et ses champs ne sont pas redemandés.
+  billingIsSameAsCompany.value = companyAddressFields.value.length > 0 && Object.entries(addressMap)
+    .filter(([, dst]) => hasField(dst))
+    .every(([src, dst]) => !df[dst] || (df[dst] || '') === (df[src] || ''))
 
   // Sync original snapshot so isDirty resets to false
   nextTick(() => markClean())
@@ -112,6 +121,8 @@ const handleSave = async () => {
   isLoading.value = true
 
   try {
+    if (billingIsSameAsCompany.value)
+      copyCompanyToBilling()
     const payload = { name: form.value.name }
 
     if (dynamicFields.value.length > 0) {
@@ -167,6 +178,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="form.name"
+              data-test="company-name"
               :label="t('companySettings.companyName')"
               :placeholder="t('companySettings.companyNamePlaceholder')"
               :rules="[requiredValidator]"
@@ -181,6 +193,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="dynamicForm.company_phone"
+              data-test="company-phone"
               :label="fieldLabel('company_phone')"
               :placeholder="phonePlaceholder"
               :disabled="!canEdit"
@@ -295,7 +308,7 @@ const confirmReset = () => {
 
         <VRow>
           <VCol
-            v-if="hasField('billing_address')"
+            v-if="hasField('billing_address') && !billingIsSameAsCompany"
             cols="12"
           >
             <AppTextField
@@ -306,7 +319,7 @@ const confirmReset = () => {
             />
           </VCol>
           <VCol
-            v-if="hasField('billing_complement')"
+            v-if="hasField('billing_complement') && !billingIsSameAsCompany"
             cols="12"
           >
             <AppTextField
@@ -317,7 +330,7 @@ const confirmReset = () => {
             />
           </VCol>
           <VCol
-            v-if="hasField('billing_city')"
+            v-if="hasField('billing_city') && !billingIsSameAsCompany"
             cols="12"
             md="6"
           >
@@ -329,7 +342,7 @@ const confirmReset = () => {
             />
           </VCol>
           <VCol
-            v-if="hasField('billing_postal_code')"
+            v-if="hasField('billing_postal_code') && !billingIsSameAsCompany"
             cols="12"
             md="6"
           >
@@ -341,7 +354,7 @@ const confirmReset = () => {
             />
           </VCol>
           <VCol
-            v-if="hasField('billing_region')"
+            v-if="hasField('billing_region') && !billingIsSameAsCompany"
             cols="12"
             md="6"
           >
@@ -366,7 +379,7 @@ const confirmReset = () => {
             />
           </VCol>
           <VCol
-            v-if="settingsStore.marketInfo?.market_name"
+            v-if="settingsStore.marketInfo?.market_name && !billingIsSameAsCompany"
             cols="12"
             md="6"
           >
@@ -386,6 +399,9 @@ const confirmReset = () => {
       class="mt-6"
     >
       <VCardText>
+        <h5 class="text-h5 mb-6">
+          {{ t('settingsHub.adminInfo') }}
+        </h5>
         <VRow>
           <DynamicFormRenderer
             v-model="dynamicForm"
@@ -402,6 +418,7 @@ const confirmReset = () => {
       class="d-flex flex-wrap gap-4 mt-6"
     >
       <VBtn
+        data-test="company-save"
         v-can="'settings.manage'"
         type="submit"
         :loading="isLoading"

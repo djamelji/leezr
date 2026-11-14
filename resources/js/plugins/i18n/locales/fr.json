@@ -199,12 +199,17 @@
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Ressources humaines",
+      "workforce-settings": "Paramètres RH",
       "workforce-contract-templates": "Contrats de travail",
       "workforce-signature": "Signatures",
       "workforce-home": "Accueil",
       "my-space": "Mon espace",
-      "personal-home": "Accueil personnel"
+      "personal-home": "Accueil personnel",
+      "settings-roles": "Rôles & permissions",
+      "settings-documents": "Types de documents",
+      "settings-templates": "Modèles de documents",
+      "settings-signature": "Signature électronique",
+      "settings-leave-types": "Types d'absence"
     }
   },
   "roles": {
@@ -6008,8 +6013,8 @@
     "billing_payment_failed_body": "Une tentative de paiement pour la facture #{invoice_id} a échoué.",
     "billing_invoice_created_title": "Nouvelle facture",
     "billing_invoice_created_body": "La facture #{invoice_id} de {amount} a été créée.",
-    "billing_payment_received_title": "Paiement reçu",
-    "billing_payment_received_body": "Un paiement de {amount} a été reçu.",
+    "billing_payment_received_title": "Paiement effectué",
+    "billing_payment_received_body": "Votre facture de {amount} est acquittée.",
     "billing_plan_changed_title": "Plan modifié",
     "billing_plan_changed_body": "Votre plan a été changé pour {plan_name}.",
     "billing_trial_expiring_title": "Essai expirant",
@@ -6068,7 +6073,9 @@
     "platform_account_suspended_body": "Le compte de {company_name} a été suspendu.",
     "scopeCompany": "Entreprise",
     "scopePlatform": "Plateforme",
-    "scopeBoth": "Les deux"
+    "scopeBoth": "Les deux",
+    "platform_payment_collected_title": "Paiement encaissé",
+    "platform_payment_collected_body": "{company_name} a réglé {amount} (facture {invoice_number})."
   },
   "support": {
     "title": "Support",
@@ -6534,12 +6541,12 @@
         "line3": "Des questions ? Contactez notre équipe support."
       },
       "payment_received": {
-        "subject": "Paiement reçu — {amount} {currency}",
+        "subject": "Paiement confirmé — facture acquittée ({amount} {currency})",
         "greeting": "Bonjour {name},",
-        "line1": "Nous avons bien reçu votre paiement.",
+        "line1": "Votre paiement a bien été effectué : votre facture d'abonnement Leezr est acquittée.",
         "invoice": "Facture",
-        "action": "Voir la facturation",
-        "line2": "Merci pour votre paiement."
+        "action": "Voir mes factures",
+        "line2": "Merci pour votre confiance. Aucune action n'est nécessaire."
       },
       "payment_failed": {
         "subject": "Échec du paiement — action requise",
@@ -9481,6 +9488,52 @@
       "comment": "Commentaire (facultatif)",
       "pickDates": "Choisissez les dates : une estimation en jours du calendrier est proposée, à vérifier."
     },
-    "openEntry": "Votre pointage du {date} est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée."
+    "openEntry": "Votre pointage du {date} est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée.",
+    "preferences": "Préférences"
+  },
+  "settingsHub": {
+    "title": "Réglages",
+    "subtitle": "Ce qui configure votre entreprise, rangé par sujet. Les réglages rares sont regroupés en bas, dans « Administration avancée ».",
+    "search": "Rechercher un réglage",
+    "empty": "Aucun réglage n'est accessible avec vos droits.",
+    "noMatch": "Aucun réglage ne correspond à votre recherche.",
+    "sections": {
+      "company": "Entreprise",
+      "organization": "Organisation",
+      "access": "Accès & sécurité",
+      "work": "Travail & RH",
+      "documents": "Documents",
+      "billing": "Abonnement & factures",
+      "automation": "Automatisations & intégrations"
+    },
+    "levels": {
+      "essential": "Essentiel"
+    },
+    "advanced": "Administration avancée",
+    "advancedHint": "Rarement nécessaire",
+    "status": {
+      "missingFields": "{n} information(s) obligatoire(s) à compléter",
+      "complete": "Complet",
+      "providerTest": "Prestataire de test : à configurer avant la production",
+      "providerReady": "Prestataire configuré"
+    },
+    "back": "Retour",
+    "backToSettings": "Réglages",
+    "adminInfo": "Informations administratives",
+    "hints": {
+      "company-profile": "Nom, coordonnées, adresses et informations légales.",
+      "workforce-organization": "Sites et lieux d'intervention, services, postes.",
+      "settings-roles": "Ce que chaque rôle peut voir et faire.",
+      "audit": "Historique des actions sensibles.",
+      "workforce-settings": "Semaine, règles de temps, contrats et signature.",
+      "settings-leave-types": "Congés, RTT, maladie… et leurs droits annuels.",
+      "settings-documents": "Pièces demandées, obligations et durées de validité.",
+      "settings-templates": "Contrats et attestations générés automatiquement.",
+      "billing": "Formule, consommation, moyens de paiement et factures.",
+      "workflows": "Tâches et notifications déclenchées automatiquement.",
+      "settings-signature": "Prestataire et options de la signature électronique.",
+      "modules": "Activer ou retirer des fonctionnalités."
+    },
+    "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau."
   }
 }

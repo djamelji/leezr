@@ -18,7 +18,7 @@ class CoreModulesModule implements ModuleDefinition
             sortOrder: 30,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'modules', 'title' => 'Modules', 'to' => ['name' => 'company-modules'], 'icon' => 'tabler-puzzle', 'permission' => 'modules.manage', 'surface' => 'structure', 'group' => 'settings', 'sort' => 50],
+                    ['key' => 'modules', 'title' => 'Modules', 'to' => ['name' => 'company-modules'], 'icon' => 'tabler-puzzle', 'permission' => 'modules.manage', 'surface' => 'structure', 'group' => 'settings', 'sort' => 50, 'settings' => ['section' => 'automation', 'level' => 'advanced']],
                 ],
                 routeNames: ['company-modules'],
                 middlewareKey: 'core.modules',

@@ -8,6 +8,7 @@
 import { useDisplay } from 'vuetify'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
+import { useSettingsEntry } from '@/composables/useSettingsEntry'
 
 const props = defineProps({
   active: { type: String, required: true }, // planning | time | leave | me
@@ -19,6 +20,8 @@ const { t } = useI18n()
 const { smAndDown } = useDisplay()
 const { can, moduleActive } = useCompanyPermissionContext()
 const space = usePersonalSpaceStore()
+// ADR-781 (UX5) — les préférences de l'espace, à un clic, seulement si l'utilisateur peut les ouvrir.
+const { to: preferencesTo } = useSettingsEntry('workforce-settings')
 
 onMounted(() => { space.load() })
 
@@ -70,6 +73,16 @@ const views = computed(() => [
       </div>
       <VSpacer v-else />
       <div class="d-flex align-center flex-wrap gap-2">
+        <VBtn
+          v-if="preferencesTo && !bare && !smAndDown"
+          :to="preferencesTo"
+          variant="text"
+          color="secondary"
+          prepend-icon="tabler-adjustments"
+          data-test="space-preferences"
+        >
+          {{ t('timeSpace.preferences') }}
+        </VBtn>
         <slot name="actions" />
       </div>
     </div>

@@ -157,6 +157,7 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <!-- En-tête : titre · recherche · Nouveau · Outils -->
     <div class="d-flex align-center flex-wrap gap-3 mb-5">
       <h4 class="text-h4">

@@ -238,6 +238,7 @@ onMounted(() => {
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <!-- Header -->
     <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
       <div>

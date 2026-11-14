@@ -96,12 +96,14 @@ class LeaveRequestReadModel
             ]);
     }
 
-    public static function statistics(int $companyId, ?int $year = null): array
+    /** @param  int[]|null  $employeeIds  null = whole company (view-all) ; otherwise the requester's perimeter */
+    public static function statistics(int $companyId, ?int $year = null, ?array $employeeIds = null): array
     {
         $year ??= (int) now()->format('Y');
 
         $requests = LeaveRequest::withoutCompanyScope()
             ->where('company_id', $companyId)
+            ->when($employeeIds !== null, fn ($q) => $q->whereIn('employee_id', $employeeIds))
             ->whereYear('date_from', $year)
             ->selectRaw('status, COUNT(*) as count, SUM(days_count_hundredths) as total_days')
             ->groupBy('status')

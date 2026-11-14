@@ -1,0 +1,27 @@
+{
+  "measures": {
+    "profil_champs_visibles": 1,
+    "modifier_coordonnees": {
+      "clicks": 3,
+      "fields": 1,
+      "pages": 2,
+      "hscroll": false
+    },
+    "configurer_site": {
+      "clicks": 5,
+      "fields": 1,
+      "pages": 3,
+      "hscroll": false
+    },
+    "modifier_preference": {
+      "clicks": 5,
+      "fields": 1,
+      "pages": 2,
+      "hscroll": false
+    },
+    "restore_name": 200,
+    "delete_location": 200,
+    "restore_week_start": 200
+  },
+  "errors": []
+}

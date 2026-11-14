@@ -27,7 +27,9 @@ class WorkforceContractModule implements ModuleDefinition
                 // PRODUCT-UX-2 (LOT A) — l'entrée de nav dédiée est retirée : les modèles de contrat
                 // vivent dans l'espace « Documents » unifié (onglet Modèles). La route reste active
                 // (deep-link + onglet). Permission workforce_contract.view inchangée.
-                navItems: [],
+                navItems: [ // ADR-781 — Settings hub entry (same permission as Documents › Templates)
+                    ['key' => 'settings-templates', 'title' => 'Document templates', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'templates']], 'icon' => 'tabler-template', 'permission' => 'workforce_contract.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 61, 'settings' => ['section' => 'documents', 'level' => 'regular']],
+                ],
                 routeNames: [],
                 actions: [ // ADR-775 — action de CONTEXTE (une personne) : l'hôte (fiche) l'ouvre en place
                     ['key' => 'team.generate-contract', 'space' => 'team', 'context' => 'person', 'icon' => 'tabler-file-certificate', 'to' => null, 'permission' => 'workforce.contracts', 'sort' => 30],

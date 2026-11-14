@@ -105,6 +105,7 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <div class="d-flex align-center flex-wrap gap-2 mb-4">
       <div>
         <h4 class="text-h4 mb-1">{{ t('peopleList.title') }}</h4>

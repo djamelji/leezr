@@ -199,14 +199,16 @@ class NotificationTopicRegistry
                 'description' => 'Notification when a new invoice is generated',
             ],
             'billing.payment_received' => [
-                'label' => 'Payment Received',
+                // ADR-781 — CUSTOMER side (company owner) : its subscription invoice is paid. Key kept for
+                // stored preferences ; wording is « payment made », never « payment received ».
+                'label' => 'Payment Confirmed',
                 'category' => 'billing',
                 'scope' => 'company',
-                'icon' => 'tabler-cash',
+                'icon' => 'tabler-receipt',
                 'severity' => 'success',
                 'default_channels' => ['in_app'],
                 'sort_order' => 3,
-                'description' => 'Notification when a payment is successfully received',
+                'description' => 'Confirmation that your subscription invoice has been paid',
             ],
             'billing.plan_changed' => [
                 'label' => 'Plan Changed',
@@ -458,6 +460,17 @@ class NotificationTopicRegistry
                 'default_channels' => ['in_app', 'email'],
                 'sort_order' => 22,
                 'description' => 'Notification when a company requests cancellation',
+            ],
+            // ADR-781 — SELLER side : a customer company's payment has been collected.
+            'platform.payment_collected' => [
+                'label' => 'Payment Collected (Admin)',
+                'category' => 'billing',
+                'scope' => 'platform',
+                'icon' => 'tabler-cash',
+                'severity' => 'success',
+                'default_channels' => ['in_app'],
+                'sort_order' => 22,
+                'description' => 'Notification when a customer company payment is collected',
             ],
             'platform.payment_failed_alert' => [
                 'label' => 'Payment Failed (Admin)',

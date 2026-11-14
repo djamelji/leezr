@@ -23,6 +23,8 @@ class WorkforceLeaveModule implements ModuleDefinition
                     // (leave_view_all OU leave_approve) pour lister sans filtre. Les salariés demandent leurs
                     // congés depuis « Mon espace » (/workforce/me), pas ici → pas de menu management pour eux.
                     ['key' => 'workforce-leave', 'title' => 'Leave', 'to' => ['name' => 'company-workforce-leave'], 'icon' => 'tabler-beach', 'permission' => 'workforce.leave_request', 'anyPermission' => ['workforce.leave_view_all', 'workforce.leave_approve'], 'surface' => 'hr', 'group' => 'time', 'sort' => 30],
+                    // ADR-781 — Settings hub entry : types of absence (same guards as the page + leave_manage).
+                    ['key' => 'settings-leave-types', 'title' => 'Absence types', 'to' => ['name' => 'company-workforce-leave', 'query' => ['tab' => 'config']], 'icon' => 'tabler-beach', 'permission' => 'workforce.leave_request', 'allPermissions' => ['workforce.leave_manage'], 'anyPermission' => ['workforce.leave_view_all', 'workforce.leave_approve'], 'surface' => 'hr', 'group' => 'settings', 'sort' => 55, 'settings' => ['section' => 'work', 'level' => 'regular']],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_leave',

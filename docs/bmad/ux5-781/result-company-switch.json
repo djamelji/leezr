@@ -1,0 +1,26 @@
+{
+ "before": [
+  "company-profile",
+  "workforce-organization",
+  "workforce-settings",
+  "settings-roles",
+  "workflows",
+  "modules",
+  "settings-leave-types",
+  "settings-documents",
+  "billing",
+  "settings-templates",
+  "audit",
+  "settings-signature"
+ ],
+ "after": [
+  "company-profile",
+  "settings-roles",
+  "workflows",
+  "modules",
+  "settings-documents",
+  "billing",
+  "audit"
+ ],
+ "shownAfter": 5
+}

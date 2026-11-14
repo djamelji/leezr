@@ -182,4 +182,60 @@ class Ux41LeaveBalanceScopeTest extends TestCase
         $hr = $this->userWith(['workforce.leave_request', 'workforce.leave_view_all']);
         $this->file($hr, $this->stranger)->assertCreated();
     }
+
+    // ── ADR-781 (UX5) — statistics follow the same perimeter ─────────────────────────────────────
+
+    private function stats(User $u, ?Company $as = null)
+    {
+        return $this->actingAs($u)->getJson('/api/workforce/leaves/statistics?year=2026', ['X-Company-Id' => ($as ?? $this->company)->id]);
+    }
+
+    private function seedRequests(): void
+    {
+        foreach ([[$this->report, 'pending'], [$this->stranger, 'pending'], [$this->stranger, 'approved'], [$this->manager, 'approved']] as [$e, $st]) {
+            LeaveRequest::withoutGlobalScopes()->create([
+                'company_id' => $this->company->id, 'employee_id' => $e->id, 'leave_type_id' => $this->cp->id,
+                'date_from' => '2026-06-01', 'date_to' => '2026-06-02', 'days_count_hundredths' => 200, 'status' => $st,
+            ]);
+        }
+        $foreignType = LeaveType::withoutGlobalScopes()->create(['company_id' => $this->other->id, 'code' => 'CP', 'name' => 'CP', 'accrual_mode' => 'monthly']);
+        LeaveRequest::withoutGlobalScopes()->create([
+            'company_id' => $this->other->id, 'employee_id' => $this->foreign->id, 'leave_type_id' => $foreignType->id,
+            'date_from' => '2026-06-01', 'date_to' => '2026-06-02', 'days_count_hundredths' => 200, 'status' => 'pending',
+        ]);
+    }
+
+    public function test_statistics_whole_company_for_view_all_and_owner_only(): void
+    {
+        $this->seedRequests();
+        $hr = $this->userWith(['workforce.leave_request', 'workforce.leave_view_all']);
+        $this->stats($hr)->assertOk()->assertJsonPath('pending.count', 2)->assertJsonPath('approved.count', 2);
+        $this->stats($this->userWith([], null, 'owner'))->assertOk()->assertJsonPath('pending.count', 2);
+    }
+
+    public function test_statistics_of_a_manager_cover_self_and_direct_reports(): void
+    {
+        $this->seedRequests();
+        $mgr = $this->userWith(['workforce.leave_request'], $this->manager);
+        $this->stats($mgr)->assertOk()->assertJsonPath('pending.count', 1)->assertJsonPath('approved.count', 1);
+    }
+
+    public function test_statistics_of_an_employee_are_personal_only(): void
+    {
+        $this->seedRequests();
+        $self = $this->userWith(['workforce.leave_request'], $this->report);
+        $res = $this->stats($self)->assertOk()->assertJsonPath('pending.count', 1);
+        $this->assertNull($res->json('approved'), 'aucun indicateur sur les autres');
+
+        $noRecord = $this->userWith(['workforce.leave_request']);
+        $this->assertSame([], $this->stats($noRecord)->assertOk()->json());
+        $this->stats($this->userWith(['workforce.view']))->assertForbidden();
+    }
+
+    public function test_statistics_never_count_another_company(): void
+    {
+        $this->seedRequests();
+        $hr = $this->userWith(['workforce.leave_request', 'workforce.leave_view_all']);
+        $this->stats($hr)->assertOk()->assertJsonPath('pending.count', 2); // the foreign pending one is not counted
+    }
 }

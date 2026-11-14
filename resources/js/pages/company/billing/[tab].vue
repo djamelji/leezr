@@ -40,6 +40,7 @@ const currentTabTitle = computed(() => {
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <PageBreadcrumbs
       :items="[
         { title: t('breadcrumbs.dashboard'), to: { name: 'dashboard' } },

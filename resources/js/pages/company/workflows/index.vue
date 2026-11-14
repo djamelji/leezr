@@ -78,6 +78,7 @@ onMounted(() => {
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <!-- Error alert -->
     <VAlert
       v-if="store.error"

@@ -18,7 +18,7 @@ class CoreBillingModule implements ModuleDefinition
             sortOrder: 25,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'company-billing-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-receipt', 'permission' => 'billing.manage', 'surface' => 'structure', 'group' => 'settings', 'sort' => 60],
+                    ['key' => 'billing', 'title' => 'Billing', 'to' => ['name' => 'company-billing-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-receipt', 'permission' => 'billing.manage', 'surface' => 'structure', 'group' => 'settings', 'sort' => 60, 'settings' => ['section' => 'billing', 'level' => 'regular']],
                 ],
                 routeNames: ['company-billing-tab'],
                 middlewareKey: 'core.billing',

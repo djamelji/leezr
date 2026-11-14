@@ -7,6 +7,8 @@
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
+import { useWorldStore } from '@/core/stores/world'
+import { useDisplay } from 'vuetify'
 
 const { t } = useI18n()
 const store = usePlanningStore()
@@ -44,12 +46,17 @@ onMounted(load)
 // Drawer
 const drawer = ref(false)
 const editingId = ref(null)
+const world = useWorldStore()
+const { width: viewportWidth } = useDisplay()
+const moreOpen = ref(false)
 const form = ref({ name: '', type: 'internal', address: '', timezone: '', client_name: '', enabled: true })
 const saving = ref(false)
 
 const openCreate = () => {
   editingId.value = null
-  form.value = { name: '', type: 'internal', address: '', timezone: '', client_name: '', enabled: true }
+  // ADR-781 (UX5) — fuseau de l'entreprise (marché) prérempli ; modifiable dans les options.
+  form.value = { name: '', type: 'internal', address: '', timezone: world.timezone || '', client_name: '', enabled: true }
+  moreOpen.value = false
   drawer.value = true
 }
 const openEdit = item => {
@@ -137,7 +144,7 @@ const doDelete = async () => {
     </VCard>
 
     <!-- Drawer -->
-    <VNavigationDrawer class="wf-scroll-drawer" v-model="drawer" temporary location="end" width="420">
+    <VNavigationDrawer class="wf-scroll-drawer" v-model="drawer" temporary location="end" :width="Math.min(420, viewportWidth || 420)">
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">{{ editingId ? $t('organization.locations.edit') : $t('organization.locations.add') }}</h5>
         <VBtn icon variant="text" size="small" @click="drawer = false"><VIcon icon="tabler-x" /></VBtn>
@@ -145,15 +152,20 @@ const doDelete = async () => {
       <VDivider />
       <div class="pa-4">
         <VForm @submit.prevent="submit">
-          <AppTextField v-model="form.name" :label="$t('organization.locations.columns.name')" class="mb-3" :rules="[v => !!v || $t('validation.required')]" />
+          <AppTextField v-model="form.name" :label="$t('organization.locations.columns.name')" data-test="org-loc-name" class="mb-3" :rules="[v => !!v || $t('validation.required')]" />
           <AppSelect v-model="form.type" :items="typeOptions" :label="$t('organization.locations.columns.type')" class="mb-3" />
           <AppTextField v-if="form.type === 'client_site'" v-model="form.client_name" :label="$t('organization.locations.clientName')" class="mb-3" />
           <AppTextField v-model="form.address" :label="$t('organization.locations.columns.address')" class="mb-3" />
-          <AppTextField v-model="form.timezone" :label="$t('organization.locations.timezone')" placeholder="Europe/Paris" class="mb-3" />
-          <VSwitch v-model="form.enabled" :label="$t('organization.locations.columns.active')" color="primary" class="mb-3" />
+          <VBtn variant="text" size="small" class="px-0 mb-2" :prepend-icon="moreOpen ? 'tabler-chevron-up' : 'tabler-chevron-down'" data-test="org-loc-more" @click="moreOpen = !moreOpen">
+            {{ $t('timeSpace.moreOptions') }}
+          </VBtn>
+          <template v-if="moreOpen">
+            <AppTextField v-model="form.timezone" :label="$t('organization.locations.timezone')" :hint="$t('settingsHub.timezoneHint')" persistent-hint placeholder="Europe/Paris" class="mb-3" />
+            <VSwitch v-model="form.enabled" :label="$t('organization.locations.columns.active')" color="primary" class="mb-3" />
+          </template>
           <div class="d-flex gap-3 justify-end">
             <VBtn variant="outlined" @click="drawer = false">{{ $t('common.cancel') }}</VBtn>
-            <VBtn type="submit" color="primary" :loading="saving">{{ $t('common.save') }}</VBtn>
+            <VBtn type="submit" color="primary" :loading="saving" data-test="org-loc-submit">{{ $t('common.save') }}</VBtn>
           </div>
         </VForm>
       </div>

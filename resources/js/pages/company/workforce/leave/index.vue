@@ -532,6 +532,7 @@ watch(activeTab, tab => {
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <!-- ADR-779 (UX4) — en-tête commun « Planning & temps » (vue Absences) -->
     <TimeSpaceHeader
       active="leave"

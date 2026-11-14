@@ -30,6 +30,14 @@ final class NavItem
         public readonly ?string $excludePermission = null,
         /** ADR-775 — personal FACT the entry needs (e.g. `employment`) ; see NavBuilder::forCompany(). */
         public readonly ?string $requires = null,
+        /**
+         * ADR-781 (UX5) — how the entry is presented in the Settings hub :
+         * ['section' => company|organization|access|work|documents|billing|automation,
+         *  'level' => essential|regular|advanced, 'status' => optional status probe key].
+         */
+        public readonly ?array $settings = null,
+        /** ADR-781 — extra permissions that must ALL be held (mirrors a target page's guards). */
+        public readonly ?array $allPermissions = null,
     ) {}
 
     public static function fromManifestArray(array $data, int $moduleSortOrder = 0): self
@@ -51,6 +59,8 @@ final class NavItem
             sort: $data['sort'] ?? $moduleSortOrder,
             excludePermission: $data['excludePermission'] ?? null,
             requires: $data['requires'] ?? null,
+            settings: $data['settings'] ?? null,
+            allPermissions: $data['allPermissions'] ?? null,
         );
     }
 
@@ -70,6 +80,7 @@ final class NavItem
             'plans' => $this->plans,
             'tags' => $this->tags,
             'sort' => $this->sort,
+            'settings' => $this->settings,
         ];
     }
 

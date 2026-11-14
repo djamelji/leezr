@@ -101,6 +101,7 @@ onMounted(() => { load(); loadWeekStart() })
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <div class="mb-6">
       <h4 class="text-h4 font-weight-bold">
         {{ t('hrSettings.title') }}

@@ -22,6 +22,7 @@ class DocumentsModule implements ModuleDefinition
                 // signatures (`workforce_signature.view`). Chaque onglet reste gated par sa permission réelle
                 // (aucun élargissement d'accès : un profil ne voit que les onglets qu'il peut réellement ouvrir).
                 navItems: [
+                    ['key' => 'settings-documents', 'title' => 'Document types & rules', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'settings']], 'icon' => 'tabler-file-settings', 'permission' => 'documents.configure', 'surface' => 'structure', 'group' => 'settings', 'sort' => 60, 'settings' => ['section' => 'documents', 'level' => 'regular']], // ADR-781
                     ['key' => 'documents', 'title' => 'Documents', 'to' => ['name' => 'company-documents-tab', 'params' => ['tab' => 'todo']], 'icon' => 'tabler-file-text', 'anyPermission' => ['documents.view', 'workforce_documents.view', 'workforce_signature.view'], 'surface' => 'structure', 'group' => 'documents', 'sort' => 10],
                 ],
                 routeNames: ['company-documents-tab'],

@@ -40,10 +40,10 @@ class WorkforceModule implements ModuleDefinition
                     // périmètre de données reste décidé par WorkforceAccess (soi + rapports, ou RH).
                     ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'team', 'sort' => 10],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'time', 'sort' => 20],
-                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20],
+                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20, 'settings' => ['section' => 'organization', 'level' => 'essential']],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).
-                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 30],
+                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 30, 'settings' => ['section' => 'work', 'level' => 'regular']],
                 ],
                 routeNames: [],
                 priorityProviders: [\App\Modules\Workforce\Home\WorkforceHomePriorities::class], // ADR-776

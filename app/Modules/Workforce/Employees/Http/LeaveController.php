@@ -306,6 +306,7 @@ class LeaveController extends Controller
         return response()->json(LeaveRequestReadModel::statistics(
             $request->attributes->get('company_id'),
             $request->query('year') ? (int) $request->query('year') : null,
+            WorkforceAccess::hasViewAll($request, 'leave') ? null : WorkforceAccess::visibleEmployeeIds($request, 'leave'), // ADR-781
         ));
     }
 }

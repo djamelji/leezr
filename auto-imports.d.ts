@@ -345,6 +345,7 @@ declare global {
   const useSessionExpired: typeof import('./resources/js/composables/useSessionExpired.js')['useSessionExpired']
   const useSessionGovernance: typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']
   const useSessionStorage: typeof import('@vueuse/core')['useSessionStorage']
+  const useSettingsEntry: typeof import('./resources/js/composables/useSettingsEntry.js')['useSettingsEntry']
   const useShare: typeof import('@vueuse/core')['useShare']
   const useSkins: typeof import('@core/composable/useSkins')['useSkins']
   const useSlots: typeof import('vue')['useSlots']
@@ -762,6 +763,7 @@ declare module 'vue' {
     readonly useSessionExpired: UnwrapRef<typeof import('./resources/js/composables/useSessionExpired.js')['useSessionExpired']>
     readonly useSessionGovernance: UnwrapRef<typeof import('./resources/js/composables/useSessionGovernance.js')['useSessionGovernance']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
+    readonly useSettingsEntry: UnwrapRef<typeof import('./resources/js/composables/useSettingsEntry.js')['useSettingsEntry']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
     readonly useSkins: UnwrapRef<typeof import('@core/composable/useSkins')['useSkins']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>

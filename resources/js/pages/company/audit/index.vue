@@ -66,6 +66,7 @@ onMounted(() => loadData())
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <VCard>
       <VCardTitle class="d-flex align-center">
         <VIcon

@@ -72,11 +72,13 @@ class NavGroupRegistry
         'documents' => ['icon' => 'tabler-files', 'management' => true],
         'payroll' => ['icon' => 'tabler-receipt', 'management' => true],
         'activity' => ['icon' => 'tabler-briefcase'],
-        'settings' => ['icon' => 'tabler-settings', 'management' => true, 'single' => 'space'],
+        // ADR-781 (UX5) — Settings is a HUB : one menu entry opening `company-settings`, where the
+        // entries contributed by the modules are presented by section and level.
+        'settings' => ['icon' => 'tabler-settings', 'management' => true, 'single' => 'space', 'hub' => 'company-settings'],
         'personal' => ['icon' => 'tabler-user-circle', 'personal' => true],
     ];
 
-    /** @return array{icon: string, management?: bool, single?: string, personal?: bool}|null */
+    /** @return array{icon: string, management?: bool, single?: string, personal?: bool, hub?: string}|null */
     public static function space(string $groupKey): ?array
     {
         return self::COMPANY_SPACES[$groupKey] ?? null;

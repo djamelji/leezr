@@ -83,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \App\Core\Notifications\Listeners\PlatformPaymentCollectedNotifier::register(); // ADR-781
+
         Relation::enforceMorphMap([
             'user' => User::class,
             'company' => Company::class,

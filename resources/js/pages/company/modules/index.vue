@@ -442,6 +442,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
 <template>
   <div>
+    <SettingsReturnLink /> <!-- ADR-781 -->
     <VAlert
       v-if="errorMessage"
       type="error"

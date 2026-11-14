@@ -57,7 +57,8 @@ function companyGroupsToNavItems(groups, auth) {
 
       // Only set children when non-empty — Vuexy uses 'children' in item
       // to decide between VerticalNavLink vs VerticalNavGroup
-      const children = (item.children || []).map(c => ({
+      // ADR-781 (UX5) : a HUB entry (Réglages) is ONE link to its hub page ; its entries live there.
+      const children = (item.hub ? [] : (item.children || [])).map(c => ({
         title: `nav.company.${c.key}`,
         to: c.to,
         icon: { icon: c.icon },

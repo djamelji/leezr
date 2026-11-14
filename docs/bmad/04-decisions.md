@@ -28194,3 +28194,31 @@ Réserves d'ADR-779 : `GET /workforce/employees/{id}/leave-balances` ne vérifia
 `Ux41LeaveBalanceScopeTest` 8/8 (3 échouent sur le code d'avant) ; tests self-service 42/42 ; E2E UX4 6/6 et M6.A 4/4 ; suite complète 4294 réussis / 12 ignorés / 3 échecs historiques (`ControllerSizeInvariantTest`) ; build propre.
 
 **Verdict** : 🟢 GO DEV. UX5 non commencé.
+
+---
+
+## ADR-781 — Company Experience 2.0 / UX5 : Réglages en hub, confidentialité des statistiques, notifications de paiement
+
+**Date** : 2026-11-14 · **Base** : `33bc63c5` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX5.md`
+
+### Contexte
+
+Réglages = sous-menu de 7 entrées, réglages courants rangés ailleurs (rôles, types d'absence, types et modèles de documents, signature), profil d'entreprise à 20 champs. Statistiques d'absences de toute l'entreprise visibles par tout détenteur de `leave_request`. Le propriétaire d'une entreprise cliente recevait « Paiement reçu » pour sa propre facture ; aucun avis d'encaissement côté Platform ; e-mails de facturation envoyés avec leurs clés de traduction.
+
+### Décisions
+
+1. **Statistiques d'absences** : vue globale → entreprise ; sinon périmètre `WorkforceAccess::visibleEmployeeIds` (soi + rapports).
+2. **Paiement** : `billing.payment_received` reste le sujet client (clé conservée) mais devient « Paiement effectué / facture acquittée » ; nouveau sujet Platform `platform.payment_collected` émis à l'encaissement (`PlatformPaymentCollectedNotifier`, observateur côté Notifications, non bloquant, idempotent), pour les utilisateurs Platform `view_billing`. `lang/{fr,en}/email.php` lit le bloc `email` des fichiers de langue de l'interface (source unique). Ni flux de paiement, ni grand livre, ni fichier Billing modifiés.
+3. **Réglages = hub** : l'espace `settings` de `NavGroupRegistry` devient un hub (`hub: company-settings`) — une entrée de menu, entrées conservées dans `children` + `hub: true` (API compatible). `NavItem` porte `settings: {section, level, status?}` et `allPermissions` (toutes requises). Les modules contribuent les réglages qu'ils possèdent au groupe `settings`, avec les gardes de la page cible. Page `/company/settings` : rubriques, recherche, « Essentiel », états « à compléter », Administration avancée repliée. `SettingsReturnLink` et `useSettingsEntry` pour le retour et les liens contextuels (« Préférences » dans Planning & temps).
+4. **Formulaires** : adresse de facturation « identique » déduite des données (champs non redemandés) ; informations administratives titrées ; fuseau d'un nouveau lieu prérempli depuis l'entreprise et rangé en options.
+
+### Conséquences
+
+- Aucune page ni route supprimée, aucune permission ajoutée ou élargie ; le test UX0 « single item » décrit désormais la règle du hub.
+- Résiduels : écrans de réglage denses non refondus (types de documents, paramètres RH), états « à compléter » calculés côté interface, entrée de menu non surlignée sur les pages de réglage.
+
+### Validation
+
+HTTP : statistiques 4, notifications 5, navigation 163 ; E2E `ux5-settings.spec.js` 5/5 (écritures confinées à « Beta Services », restaurées) ; régression UX0, M6.A, UX4 18/18 ; suite complète 4303 réussis / 12 ignorés / 3 échecs historiques ; build propre.
+
+**Verdict** : 🟢 GO DEV. UX6 non commencé.

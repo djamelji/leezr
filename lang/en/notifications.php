@@ -18,8 +18,13 @@ return [
         'body' => 'Invoice #:invoice_id for :amount has been created.',
     ],
     'billing_payment_received' => [
-        'title' => 'Payment Received',
-        'body' => 'Payment of :amount has been received.',
+        'title' => 'Payment made',
+        'body' => 'Your invoice of :amount is paid.',
+    ],
+    // ADR-781 — Platform side : money collected from a customer company.
+    'platform_payment_collected' => [
+        'title' => 'Payment collected',
+        'body' => ':company_name paid :amount (invoice :invoice_number).',
     ],
     'billing_plan_changed' => [
         'title' => 'Plan Changed',

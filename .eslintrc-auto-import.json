@@ -417,6 +417,7 @@
     "daysToHundredths": true,
     "formatDays": true,
     "formatMinutes": true,
-    "hundredthsToDays": true
+    "hundredthsToDays": true,
+    "useSettingsEntry": true
   }
 }

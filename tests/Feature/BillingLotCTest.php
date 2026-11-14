@@ -283,7 +283,9 @@ class BillingLotCTest extends TestCase
         $rendered = $mail->render();
         $html = is_string($rendered) ? $rendered : $rendered->toHtml();
 
-        $this->assertStringContainsString('payment_failed', $html);
+        // ADR-781 : the mail is translated (it used to carry its raw keys, which this test asserted).
+        $this->assertStringNotContainsString('email.billing', $html);
+        $this->assertStringContainsString(e((string) __('email.billing.payment_failed.line2')), $html);
     }
 
     public function test_account_suspended_notification_renders_mail(): void
@@ -294,6 +296,7 @@ class BillingLotCTest extends TestCase
         $rendered = $mail->render();
         $html = is_string($rendered) ? $rendered : $rendered->toHtml();
 
-        $this->assertStringContainsString('account_suspended', $html);
+        $this->assertStringNotContainsString('email.billing', $html); // ADR-781 : translated mail
+        $this->assertStringContainsString(e((string) __('email.billing.account_suspended.line1')), $html);
     }
 }

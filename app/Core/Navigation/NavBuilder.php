@@ -122,7 +122,16 @@ class NavBuilder
 
             $items = $group['items'];
             $labelKey = NavGroupRegistry::titleKey($group['key']);
-            if (count($items) > 1) {
+            if (! empty($space['hub'])) {
+                // ADR-781 (UX5) — a HUB space (Settings) : ONE entry opening its hub page. Its (already
+                // filtered) entries stay in `children` (API contract unchanged) ; `hub` tells the menu to
+                // render a single link — the hub page presents them by section and level.
+                $items = [[
+                    'key' => "space-{$group['key']}", 'title' => $group['key'], 'labelKey' => $labelKey,
+                    'to' => ['name' => $space['hub']], 'icon' => $space['icon'], 'permission' => null, 'tags' => [],
+                    'hub' => true, 'children' => self::flattenItems($items),
+                ]];
+            } elseif (count($items) > 1) {
                 $items = [[
                     'key' => "space-{$group['key']}", 'title' => $group['key'], 'labelKey' => $labelKey,
                     'to' => [], 'icon' => $space['icon'], 'permission' => null, 'tags' => [], 'children' => $items,
@@ -133,6 +142,21 @@ class NavBuilder
             }
 
             $out[] = ['key' => $group['key'], 'titleKey' => '', 'placement' => 'nav', 'items' => $items];
+        }
+
+        return $out;
+    }
+
+    /** @return array<int, array> leaves of a cleaned item tree, in order (hub entries). */
+    private static function flattenItems(array $items): array
+    {
+        $out = [];
+        foreach ($items as $i) {
+            $children = $i['children'] ?? [];
+            if (! empty($i['to'])) {
+                $out[] = array_merge($i, ['children' => []]);
+            }
+            array_push($out, ...self::flattenItems($children));
         }
 
         return $out;
@@ -220,6 +244,11 @@ class NavBuilder
                 // leave_request (route gate) AND one of leave_view_all/leave_approve (unfiltered list).
                 if ($item->permission !== null && ! isset($permissionSet[$item->permission])) {
                     return false;
+                }
+                foreach ($item->allPermissions ?? [] as $perm) { // ADR-781 : every listed permission
+                    if (! isset($permissionSet[$perm])) {
+                        return false;
+                    }
                 }
 
                 // ADR-601: `anyPermission` — visible if the user holds AT LEAST ONE of the keys
@@ -538,6 +567,6 @@ class NavBuilder
             'permission' => $node['permission'],
             'tags' => isset($node['_item']) ? ($node['_item']->tags ?? []) : [],
             'children' => $children,
-        ];
+        ] + (isset($node['_item']) && $node['_item']->settings ? ['settings' => $node['_item']->settings] : []);
     }
 }

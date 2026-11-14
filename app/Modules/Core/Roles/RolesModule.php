@@ -20,7 +20,10 @@ class RolesModule implements ModuleDefinition
                 // ADR-766 (M7) — Roles consolidé dans « Collaborateurs » (People expose l'onglet Rôles via
                 // son `anyPermission` incluant `roles.view`). Plus d'entrée de nav dédiée ; la route reste
                 // enregistrée comme ALIAS (redirige côté front vers People, onglet Rôles).
-                navItems: [],
+                // ADR-781 (UX5) — contributed to the Settings hub only (the Settings space never lists it in the menu).
+                navItems: [
+                    ['key' => 'settings-roles', 'title' => 'Roles & permissions', 'to' => ['name' => 'company-people', 'query' => ['tab' => 'roles']], 'icon' => 'tabler-shield-lock', 'permission' => 'roles.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 40, 'settings' => ['section' => 'access', 'level' => 'regular']],
+                ],
                 routeNames: ['company-roles'],
                 middlewareKey: 'core.roles',
             ),

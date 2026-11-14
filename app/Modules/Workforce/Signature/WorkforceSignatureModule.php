@@ -27,7 +27,9 @@ class WorkforceSignatureModule implements ModuleDefinition
             capabilities: new Capabilities(
                 // PRODUCT-UX-2 (LOT A) — entrée de nav retirée : les signatures vivent dans l'espace
                 // « Documents » unifié (onglet Signatures). Route active (deep-link + onglet).
-                navItems: [],
+                navItems: [ // ADR-781 — Settings hub entry : the only external provider of the product
+                    ['key' => 'settings-signature', 'title' => 'Electronic signature', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'signature']], 'icon' => 'tabler-signature', 'permission' => 'workforce_signature.admin', 'anyPermission' => ['workforce.view'], 'surface' => 'structure', 'group' => 'settings', 'sort' => 70, 'settings' => ['section' => 'automation', 'level' => 'regular', 'status' => 'signature_provider']],
+                ],
                 routeNames: [],
                 middlewareKey: 'workforce_signature',
             ),

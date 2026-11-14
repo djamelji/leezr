@@ -199,12 +199,17 @@
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Human resources",
+      "workforce-settings": "HR settings",
       "workforce-contract-templates": "Employment contracts",
       "workforce-signature": "Signatures",
       "workforce-home": "Home",
       "my-space": "My space",
-      "personal-home": "Personal home"
+      "personal-home": "Personal home",
+      "settings-roles": "Roles & permissions",
+      "settings-documents": "Document types",
+      "settings-templates": "Document templates",
+      "settings-signature": "Electronic signature",
+      "settings-leave-types": "Absence types"
     }
   },
   "roles": {
@@ -6008,8 +6013,8 @@
     "billing_payment_failed_body": "A payment attempt for invoice #{invoice_id} has failed.",
     "billing_invoice_created_title": "New Invoice",
     "billing_invoice_created_body": "Invoice #{invoice_id} for {amount} has been created.",
-    "billing_payment_received_title": "Payment Received",
-    "billing_payment_received_body": "Payment of {amount} has been received.",
+    "billing_payment_received_title": "Payment made",
+    "billing_payment_received_body": "Your invoice of {amount} is paid.",
     "billing_plan_changed_title": "Plan Changed",
     "billing_plan_changed_body": "Your plan has been changed to {plan_name}.",
     "billing_trial_expiring_title": "Trial Expiring",
@@ -6068,7 +6073,9 @@
     "platform_account_suspended_body": "Account for {company_name} suspended.",
     "scopeCompany": "Company",
     "scopePlatform": "Platform",
-    "scopeBoth": "Both"
+    "scopeBoth": "Both",
+    "platform_payment_collected_title": "Payment collected",
+    "platform_payment_collected_body": "{company_name} paid {amount} (invoice {invoice_number})."
   },
   "support": {
     "title": "Support",
@@ -6534,12 +6541,12 @@
         "line3": "Have questions? Contact our support team."
       },
       "payment_received": {
-        "subject": "Payment received — {amount} {currency}",
+        "subject": "Payment confirmed — invoice paid ({amount} {currency})",
         "greeting": "Hello {name},",
-        "line1": "We've received your payment.",
+        "line1": "Your payment went through: your Leezr subscription invoice is paid.",
         "invoice": "Invoice",
-        "action": "View Billing",
-        "line2": "Thank you for your payment."
+        "action": "View my invoices",
+        "line2": "Thank you. No action is needed."
       },
       "payment_failed": {
         "subject": "Payment failed — action required",
@@ -9481,6 +9488,52 @@
       "comment": "Comment (optional)",
       "pickDates": "Pick the dates: an estimate in calendar days is proposed, to be checked."
     },
-    "openEntry": "Your clock-in of {date} was never closed. Your manager must correct it before you can start a new day."
+    "openEntry": "Your clock-in of {date} was never closed. Your manager must correct it before you can start a new day.",
+    "preferences": "Preferences"
+  },
+  "settingsHub": {
+    "title": "Settings",
+    "subtitle": "Everything that configures your company, by topic. Rarely used settings are grouped at the bottom, under “Advanced administration”.",
+    "search": "Search a setting",
+    "empty": "No setting is available with your rights.",
+    "noMatch": "No setting matches your search.",
+    "sections": {
+      "company": "Company",
+      "organization": "Organisation",
+      "access": "Access & security",
+      "work": "Work & HR",
+      "documents": "Documents",
+      "billing": "Subscription & invoices",
+      "automation": "Automations & integrations"
+    },
+    "levels": {
+      "essential": "Essential"
+    },
+    "advanced": "Advanced administration",
+    "advancedHint": "Rarely needed",
+    "status": {
+      "missingFields": "{n} required item(s) to complete",
+      "complete": "Complete",
+      "providerTest": "Test provider: configure before production",
+      "providerReady": "Provider configured"
+    },
+    "back": "Back",
+    "backToSettings": "Settings",
+    "adminInfo": "Administrative information",
+    "hints": {
+      "company-profile": "Name, contact details, addresses and legal information.",
+      "workforce-organization": "Sites and work locations, departments, positions.",
+      "settings-roles": "What each role can see and do.",
+      "audit": "History of sensitive actions.",
+      "workforce-settings": "Week, time rules, contracts and signature.",
+      "settings-leave-types": "Paid leave, sick leave… and yearly entitlements.",
+      "settings-documents": "Requested documents, obligations and validity periods.",
+      "settings-templates": "Contracts and certificates generated automatically.",
+      "billing": "Plan, usage, payment methods and invoices.",
+      "workflows": "Tasks and notifications triggered automatically.",
+      "settings-signature": "Provider and options of electronic signature.",
+      "modules": "Turn features on or off."
+    },
+    "timezoneHint": "Your company's time zone by default; change it only for a site in another time zone."
   }
 }
