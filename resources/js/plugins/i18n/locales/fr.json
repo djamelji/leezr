@@ -183,7 +183,7 @@
       "audit": "Journal d'audit",
       "shipments": "Expéditions",
       "my-deliveries": "Mes livraisons",
-      "company-profile": "Entreprise",
+      "company-profile": "Profil de l'entreprise",
       "account-settings": "Mon compte",
       "support": "Support",
       "documentation": "Centre d'aide",
@@ -197,7 +197,7 @@
       "workforce-payroll": "Paie",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
-      "workforce-organization": "Organisation",
+      "workforce-organization": "Sites, services & postes",
       "workforce-configuration": "Configuration",
       "workforce-settings": "Paramètres RH",
       "workforce-contract-templates": "Contrats de travail",
@@ -1860,7 +1860,7 @@
     "salary": "Rémunération",
     "noContract": "Aucun contrat actif.",
     "situation": "Situation",
-    "nextShift": "Prochain shift",
+    "nextShift": "Prochain créneau",
     "lastClock": "Dernier pointage",
     "pendingLeave": "Congés en attente",
     "historyEmpty": "Aucun événement à afficher.",
@@ -9493,7 +9493,7 @@
   },
   "settingsHub": {
     "title": "Réglages",
-    "subtitle": "Ce qui configure votre entreprise, rangé par sujet. Les réglages rares sont regroupés en bas, dans « Administration avancée ».",
+    "subtitle": "Tout ce qui configure votre entreprise, rangé par sujet.",
     "search": "Rechercher un réglage",
     "empty": "Aucun réglage n'est accessible avec vos droits.",
     "noMatch": "Aucun réglage ne correspond à votre recherche.",
@@ -9503,18 +9503,18 @@
       "access": "Accès & sécurité",
       "work": "Travail & RH",
       "documents": "Documents",
-      "billing": "Abonnement & factures",
-      "automation": "Automatisations & intégrations"
+      "billing": "Abonnement",
+      "automation": "Automatisations"
     },
     "levels": {
       "essential": "Essentiel"
     },
     "advanced": "Administration avancée",
-    "advancedHint": "Rarement nécessaire",
+    "advancedHint": "Rarement nécessaires au quotidien.",
     "status": {
-      "missingFields": "{n} information(s) obligatoire(s) à compléter",
+      "missingFields": "{n} information(s) à compléter",
       "complete": "Complet",
-      "providerTest": "Prestataire de test : à configurer avant la production",
+      "providerTest": "Prestataire de test",
       "providerReady": "Prestataire configuré"
     },
     "back": "Retour",
@@ -9534,6 +9534,25 @@
       "settings-signature": "Prestataire et options de la signature électronique.",
       "modules": "Activer ou retirer des fonctionnalités."
     },
-    "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau."
+    "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau.",
+    "advancedShort": "Avancé",
+    "showAdvanced": "Afficher les réglages avancés ({n})",
+    "sectionHints": {
+      "company": "Identité, coordonnées et informations légales.",
+      "organization": "Sites, services et postes de votre entreprise.",
+      "access": "Qui peut voir et faire quoi.",
+      "work": "Temps de travail, absences et paramètres RH.",
+      "documents": "Pièces demandées, obligations et modèles.",
+      "billing": "Votre formule, vos paiements et vos factures.",
+      "automation": "Tâches automatiques et services connectés."
+    }
+  },
+  "companyForm": {
+    "pageHint": "Identité, coordonnées et informations légales de votre entreprise.",
+    "billingPageHint": "Votre formule, vos moyens de paiement et vos factures.",
+    "identityHint": "Le nom affiché dans Leezr et sur vos documents.",
+    "addressHint": "Adresse du siège, utilisée sur les documents générés.",
+    "billingHint": "Adresse figurant sur vos factures Leezr.",
+    "adminHint": "Informations légales demandées pour votre activité."
   }
 }

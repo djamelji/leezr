@@ -28222,3 +28222,27 @@ Réglages = sous-menu de 7 entrées, réglages courants rangés ailleurs (rôles
 HTTP : statistiques 4, notifications 5, navigation 163 ; E2E `ux5-settings.spec.js` 5/5 (écritures confinées à « Beta Services », restaurées) ; régression UX0, M6.A, UX4 18/18 ; suite complète 4303 réussis / 12 ignorés / 3 échecs historiques ; build propre.
 
 **Verdict** : 🟢 GO DEV. UX6 non commencé.
+
+---
+
+## ADR-782 — Company Experience 2.0 / UX6 : qualité visuelle, socle de composition, refonte de Réglages
+
+**Date** : 2026-11-14 · **Base** : `cdf74a0c` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX6.md` · **Politique UI** : `docs/bmad/06-ui-policy.md` (section ADR-782)
+
+### Contexte
+
+UX0 à UX5 ont simplifié les parcours, mais la qualité visuelle est inégale : la page Réglages empile une VCard par réglage ; plusieurs pages n'ont pas de titre, mélangent onglets en pilules et soulignés, affichent des codes bruts ou des états vides en alertes vives.
+
+### Décisions
+
+1. **Socle de composition** (`resources/js/components/app/`) : `AppPageHeader`, `AppSettingsGroup`, `AppSettingRow`, `AppStatusText`, `AppSurface`, `AppFormSection`. Construits uniquement avec les primitives Vuetify et les variables du thème ; ni seconde bibliothèque, ni modification de `@core`/`@layouts`. La loi « stock Vuexy » continue de s'appliquer aux primitives.
+2. **Réglages** : navigation des rubriques + lignes de réglage dans des surfaces ; états en texte ; avancé discret ; mobile en barre de rubriques. Logique UX5 inchangée.
+3. **Conventions** : en-tête de page commun ; onglets soulignés, masqués s'ils sont seuls ; formulaires en sections « intitulé / champs » ; états vides en texte ; VCard seulement quand elle porte un sens ; jamais de code brut à l'écran.
+4. Application aux pages Profil, Abonnement, Paramètres RH, Organisation, Équipe, Fiche, Mon activité. `/workforce/settings` expose en plus `market_label` et `jobdomain_label` (lecture seule).
+
+### Conséquences
+
+- Aucun parcours rallongé ; aucune permission, aucun moteur modifiés.
+- Restent à traiter visuellement : Accueil (cartes d'indicateurs), Mon activité (cartes), Abonnement (alerte), Documents mobile (tableau), drawers et dialogues, écrans de réglage denses.
+
+**Verdict** : 🟢 GO DEV (voir checkpoint). Préproduction non commencée.

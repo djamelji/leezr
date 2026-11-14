@@ -102,14 +102,10 @@ onMounted(() => { load(); loadWeekStart() })
 <template>
   <div>
     <SettingsReturnLink /> <!-- ADR-781 -->
-    <div class="mb-6">
-      <h4 class="text-h4 font-weight-bold">
-        {{ t('hrSettings.title') }}
-      </h4>
-      <p class="text-body-1 text-medium-emphasis mb-0">
-        {{ t('hrSettings.subtitle') }}
-      </p>
-    </div>
+    <AppPageHeader
+      :title="t('hrSettings.title')"
+      :description="t('hrSettings.subtitle')"
+    />
 
     <VSkeletonLoader
       v-if="loading"
@@ -119,7 +115,7 @@ onMounted(() => { load(); loadWeekStart() })
     <VCard v-else-if="data">
       <VTabs
         v-model="currentTab"
-        class="v-tabs-pill"
+        class="border-b"
         show-arrows
       >
         <VTab
@@ -148,11 +144,11 @@ onMounted(() => { load(); loadWeekStart() })
                 :subtitle="t('hrSettings.company')"
               />
               <VListItem
-                :title="ctx.market_key"
+                :title="ctx.market_label || ctx.market_key"
                 :subtitle="t('hrSettings.market')"
               />
               <VListItem
-                :title="ctx.jobdomain_key"
+                :title="ctx.jobdomain_label || ctx.jobdomain_key"
                 :subtitle="t('hrSettings.jobdomain')"
               />
               <VListItem
@@ -168,7 +164,7 @@ onMounted(() => { load(); loadWeekStart() })
             <p class="text-body-2 text-medium-emphasis mb-2">
               {{ t('workforceSettings.weekStart.hint') }}
             </p>
-            <div class="d-flex gap-3 align-center flex-wrap mb-4">
+            <div class="d-flex gap-3 align-center flex-wrap mb-4" style="max-inline-size: 440px;">
               <AppSelect
                 v-model="weekStart"
                 :items="weekStartOptions"

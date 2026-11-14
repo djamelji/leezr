@@ -88,3 +88,22 @@ resources/ui/presets/
 - Nom descriptif du rôle UI : `UserCrudTable.vue`, `ConfirmDeleteDialog.vue`
 - Pas de préfixe métier dans un preset (ex: pas de `LeezrUserTable.vue`)
 - Le nom décrit la fonction UI, pas le contexte métier
+
+---
+
+## ADR-782 (UX6) — Conventions visuelles Leezr
+
+**Décision** : la loi « UI = stock fini Vuexy » reste valable pour les **primitives** (VBtn, VTextField, VTabs, VDataTable…). Au-dessus, Leezr dispose d'un petit socle de **composants applicatifs de composition** (`resources/js/components/app/`), construits uniquement avec ces primitives et les variables du thème (`--v-theme-*`, `--v-border-color`, opacités d'emphase). Ce n'est pas une seconde bibliothèque : aucun widget nouveau, aucune modification de `@core` ni de `@layouts`, mêmes thèmes clair et sombre.
+
+| Besoin | Convention |
+|---|---|
+| En-tête de page | `AppPageHeader` : titre 24 px semi-gras, une phrase de contexte, actions à droite ; sur mobile, actions pleine largeur |
+| Liste de réglages | `AppSettingsGroup` (titre + phrase + une surface) et `AppSettingRow` (icône discrète, nom, description, état, chevron ; ligne entière cliquable) |
+| État | `AppStatusText` : pastille + texte, pas de puce colorée en série |
+| Formulaire | `AppSurface` + `AppFormSection` : intitulé et explication à gauche, champs à droite ; empilés sous 960 px ; sections séparées par un filet |
+| Onglets | soulignés (`VTabs class="border-b"`) ; plus de pilules ; aucun onglet quand il n'y en a qu'un |
+| État vide | texte `text-body-2 text-medium-emphasis`, pas d'alerte colorée |
+| Alerte | réservée à ce qui demande une action ou bloque |
+| VCard | seulement quand la carte a un sens propre (indicateur, objet manipulable) ; jamais une carte par réglage ou par groupe de champs |
+| Filtres | ligne alignée à gauche, largeurs bornées |
+| Libellés | jamais de code brut (`FR`, `logistique`, `completed`) ni de jargon (« shift ») à l'écran |

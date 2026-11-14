@@ -8,6 +8,7 @@ import { useNavStore } from '@/core/stores/nav'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 import { $api } from '@/utils/api'
+import { useDisplay } from 'vuetify'
 
 definePage({ meta: { surface: 'structure' } })
 
@@ -61,180 +62,218 @@ onMounted(async () => {
       if (!settingsStore.company) await settingsStore.fetchCompany()
       const values = Object.fromEntries((settingsStore.company?.dynamic_fields || []).map(f => [f.code, f.value]))
       const missing = (settingsStore.company?.jobdomain_mandatory_fields || []).filter(f => values[f.code] === null || values[f.code] === undefined || values[f.code] === '')
-      status.value.company_profile = missing.length ? { color: 'warning', text: t('settingsHub.status.missingFields', { n: missing.length }) } : { color: 'success', text: t('settingsHub.status.complete') }
+      status.value.company_profile = missing.length ? { tone: 'warning', text: t('settingsHub.status.missingFields', { n: missing.length }) } : { tone: 'success', text: t('settingsHub.status.complete') }
     } catch { /* pas d'état plutôt qu'un état faux */ }
   }
   if (probes.includes('signature_provider') && can('workforce_signature.view')) {
     try {
       const o = await $api('/workforce/signature/options')
       status.value.signature_provider = (!o?.provider || o?.provider_dev_only)
-        ? { color: 'warning', text: t('settingsHub.status.providerTest') }
-        : { color: 'success', text: t('settingsHub.status.providerReady') }
+        ? { tone: 'warning', text: t('settingsHub.status.providerTest') }
+        : { tone: 'success', text: t('settingsHub.status.providerReady') }
     } catch { /* idem */ }
   }
 })
 const statusOf = e => (e.settings?.status ? status.value[e.settings.status] : null)
+
+// ── ADR-782 (UX6) — composition : rubriques à gauche (desktop) ou en barre défilante (mobile),
+//    rubrique active suivie au défilement. Aucune donnée en plus, aucune requête en plus. ───────────
+const { mdAndUp } = useDisplay()
+const navItems = computed(() => [
+  ...sections.value.map(s => ({ key: s.key, label: t(`settingsHub.sections.${s.key}`), icon: SECTION_ICONS[s.key], count: s.items.length })),
+  ...(advanced.value.length ? [{ key: 'advanced', label: t('settingsHub.advancedShort'), icon: 'tabler-adjustments', count: advanced.value.length }] : []),
+])
+const activeKey = ref(null)
+const goTo = key => {
+  if (key === 'advanced') advancedOpen.value = true
+  activeKey.value = key
+  nextTick(() => document.getElementById(`settings-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+let observer = null
+const observe = () => {
+  observer?.disconnect()
+  if (typeof IntersectionObserver === 'undefined') return
+  observer = new IntersectionObserver(list => {
+    const visible = list.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+    if (visible[0]) activeKey.value = visible[0].target.id.replace('settings-', '')
+  }, { rootMargin: '-96px 0px -55% 0px' })
+  document.querySelectorAll('.settings-content > section[id^="settings-"]').forEach(el => observer.observe(el))
+}
+watch(navItems, () => nextTick(observe), { flush: 'post' })
+onMounted(() => nextTick(observe))
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <div class="settings-hub">
-    <div class="d-flex align-center flex-wrap gap-3 mb-2">
-      <h4 class="text-h4 flex-grow-1">
-        {{ t('settingsHub.title') }}
-      </h4>
-      <AppTextField
-        v-model="search"
-        :placeholder="t('settingsHub.search')"
-        prepend-inner-icon="tabler-search"
-        clearable
-        density="compact"
-        style="max-inline-size: 320px; min-inline-size: 220px;"
-        data-test="settings-search"
-      />
-    </div>
-    <p class="text-body-2 text-medium-emphasis mb-6">
-      {{ t('settingsHub.subtitle') }}
-    </p>
+  <div class="settings-page">
+    <AppPageHeader
+      :title="t('settingsHub.title')"
+      :description="t('settingsHub.subtitle')"
+    >
+      <template #actions>
+        <AppTextField
+          v-model="search"
+          :placeholder="t('settingsHub.search')"
+          prepend-inner-icon="tabler-search"
+          clearable
+          density="compact"
+          class="settings-search"
+          data-test="settings-search"
+        />
+      </template>
+    </AppPageHeader>
 
     <div
       v-if="!entries.length"
-      class="text-center text-medium-emphasis py-12"
+      class="settings-empty"
       data-test="settings-empty"
     >
-      {{ t('settingsHub.empty') }}
+      <VIcon
+        icon="tabler-settings-off"
+        size="28"
+        class="mb-2"
+      />
+      <div>{{ t('settingsHub.empty') }}</div>
     </div>
+
     <div
-      v-else-if="!sections.length && !advanced.length"
-      class="text-center text-medium-emphasis py-12"
+      v-else
+      class="settings-layout"
     >
-      {{ t('settingsHub.noMatch') }}
-    </div>
-
-    <section
-      v-for="s in sections"
-      :key="s.key"
-      class="mb-6"
-      :data-test="`settings-section-${s.key}`"
-    >
-      <div class="d-flex align-center gap-2 mb-3">
-        <VIcon
-          :icon="SECTION_ICONS[s.key]"
-          size="20"
-          class="text-medium-emphasis"
-        />
-        <h5 class="text-h6">
-          {{ t(`settingsHub.sections.${s.key}`) }}
-        </h5>
-      </div>
-      <VRow class="card-grid card-grid-sm">
-        <VCol
-          v-for="e in s.items"
-          :key="e.key"
-          cols="12"
-          sm="6"
-          lg="4"
-        >
-          <VCard
-            :to="e.to"
-            class="settings-entry"
-            :data-test="`settings-entry-${e.key}`"
-          >
-            <VCardText class="d-flex gap-3 align-start">
-              <VAvatar
-                color="primary"
-                variant="tonal"
-                rounded
-                size="40"
-              >
-                <VIcon
-                  :icon="e.icon"
-                  size="22"
-                />
-              </VAvatar>
-              <div class="flex-grow-1 min-w-0">
-                <div class="d-flex align-center flex-wrap gap-2">
-                  <span class="text-body-1 font-weight-medium">{{ e.label }}</span>
-                  <VChip
-                    v-if="e.level === 'essential'"
-                    size="x-small"
-                    color="primary"
-                    variant="tonal"
-                    label
-                  >
-                    {{ t('settingsHub.levels.essential') }}
-                  </VChip>
-                </div>
-                <div
-                  v-if="e.hint"
-                  class="text-body-2 text-medium-emphasis"
-                >
-                  {{ e.hint }}
-                </div>
-                <VChip
-                  v-if="statusOf(e)"
-                  size="small"
-                  :color="statusOf(e).color"
-                  variant="tonal"
-                  class="mt-2"
-                  :data-test="`settings-status-${e.key}`"
-                >
-                  {{ statusOf(e).text }}
-                </VChip>
-              </div>
-              <VIcon
-                icon="tabler-chevron-right"
-                class="text-disabled"
-              />
-            </VCardText>
-          </VCard>
-        </VCol>
-      </VRow>
-    </section>
-
-    <!-- Administration avancée : repliée, jamais au premier niveau. -->
-    <VCard
-      v-if="advanced.length"
-      variant="outlined"
-      data-test="settings-advanced"
-    >
-      <VCardText class="py-3">
+      <!-- Rubriques : colonne à gauche (desktop), barre défilante (mobile) -->
+      <nav
+        v-if="navItems.length > 1"
+        class="settings-nav"
+        :class="{ 'settings-nav--bar': !mdAndUp }"
+        :aria-label="t('settingsHub.title')"
+      >
         <button
+          v-for="n in navItems"
+          :key="n.key"
           type="button"
-          class="d-flex align-center gap-2 w-100 text-start"
-          :aria-expanded="advancedOpen"
-          data-test="settings-advanced-toggle"
-          @click="advancedOpen = !advancedOpen"
+          class="settings-nav__item"
+          :class="{ 'settings-nav__item--active': activeKey === n.key }"
+          :data-test="`settings-nav-${n.key}`"
+          @click="goTo(n.key)"
         >
           <VIcon
-            icon="tabler-adjustments"
-            size="20"
+            :icon="n.icon"
+            size="18"
           />
-          <span class="text-body-1 font-weight-medium flex-grow-1">{{ t('settingsHub.advanced') }}</span>
-          <span class="text-body-2 text-medium-emphasis d-none d-sm-inline">{{ t('settingsHub.advancedHint') }}</span>
-          <VIcon :icon="advancedOpen ? 'tabler-chevron-up' : 'tabler-chevron-down'" />
+          <span class="settings-nav__label">{{ n.label }}</span>
         </button>
-        <VExpandTransition>
-          <VList
-            v-if="advancedOpen"
-            class="mt-2"
-            density="comfortable"
+      </nav>
+
+      <div class="settings-content">
+        <div
+          v-if="!sections.length && !advanced.length"
+          class="settings-empty"
+        >
+          {{ t('settingsHub.noMatch') }}
+        </div>
+
+        <AppSettingsGroup
+          v-for="s in sections"
+          :id="`settings-${s.key}`"
+          :key="s.key"
+          :title="t(`settingsHub.sections.${s.key}`)"
+          :description="t(`settingsHub.sectionHints.${s.key}`)"
+          :data-test="`settings-section-${s.key}`"
+        >
+          <AppSettingRow
+            v-for="e in s.items"
+            :key="e.key"
+            :to="e.to"
+            :icon="e.icon"
+            :title="e.label"
+            :description="e.hint"
+            :hint="e.level === 'essential' ? t('settingsHub.levels.essential') : ''"
+            :status="statusOf(e)"
+            :status-test="`settings-status-${e.key}`"
+            :data-test="`settings-entry-${e.key}`"
+          />
+        </AppSettingsGroup>
+
+        <!-- Administration avancée : discrète, repliée -->
+        <AppSettingsGroup
+          v-if="advanced.length"
+          id="settings-advanced"
+          :title="t('settingsHub.advanced')"
+          :description="t('settingsHub.advancedHint')"
+          quiet
+          data-test="settings-advanced"
+        >
+          <button
+            v-if="!advancedOpen"
+            type="button"
+            class="settings-advanced-toggle"
+            data-test="settings-advanced-toggle"
+            :aria-expanded="advancedOpen"
+            @click="advancedOpen = true"
           >
-            <VListItem
+            {{ t('settingsHub.showAdvanced', { n: advanced.length }) }}
+            <VIcon
+              icon="tabler-chevron-down"
+              size="16"
+            />
+          </button>
+          <template v-else>
+            <AppSettingRow
               v-for="e in advanced"
               :key="e.key"
               :to="e.to"
-              :prepend-icon="e.icon"
+              :icon="e.icon"
               :title="e.label"
-              :subtitle="e.hint"
+              :description="e.hint"
               :data-test="`settings-entry-${e.key}`"
             />
-          </VList>
-        </VExpandTransition>
-      </VCardText>
-    </VCard>
+          </template>
+        </AppSettingsGroup>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.settings-entry { block-size: 100%; }
+.settings-page { max-inline-size: 1024px; }
+.settings-search { inline-size: 300px; max-inline-size: 100%; }
+.settings-layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 32px; align-items: start; }
+.settings-nav { position: sticky; inset-block-start: 88px; display: flex; flex-direction: column; gap: 2px; }
+.settings-nav__item {
+  display: flex; align-items: center; gap: 10px; inline-size: 100%;
+  padding: 7px 10px; border-radius: 8px; text-align: start; white-space: nowrap;
+  font-size: 0.875rem; line-height: 1.3;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.settings-nav__item:hover { background: rgba(var(--v-theme-on-surface), 0.04); color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
+.settings-nav__item--active { background: rgba(var(--v-theme-primary), 0.08); color: rgb(var(--v-theme-primary)); font-weight: 500; }
+.settings-nav__item:focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 1px; }
+.settings-nav__label { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
+.settings-nav__count { font-size: 0.75rem; color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity)); }
+.settings-content { min-inline-size: 0; }
+.settings-empty { padding: 48px 16px; text-align: center; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.settings-advanced-toggle {
+  display: flex; align-items: center; justify-content: space-between; inline-size: 100%;
+  padding: 12px 18px; font-size: 0.875rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+}
+.settings-advanced-toggle:hover { background: rgba(var(--v-theme-on-surface), 0.035); }
+
+/* Mobile / tablette : les rubriques deviennent une barre défilante (le défilement reste DANS la barre). */
+@media (max-width: 959px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .settings-search { inline-size: 100%; }
+  .settings-nav--bar {
+    position: sticky; inset-block-start: 64px; z-index: 2; flex-direction: row; gap: 6px;
+    overflow-x: auto; scrollbar-width: none; margin-inline: -4px; padding: 6px 4px;
+    background: rgb(var(--v-theme-background));
+  }
+  .settings-nav--bar::-webkit-scrollbar { display: none; }
+  .settings-nav--bar .settings-nav__item {
+    inline-size: auto; flex: none; white-space: nowrap; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+  .settings-content { max-inline-size: none; }
+}
 </style>

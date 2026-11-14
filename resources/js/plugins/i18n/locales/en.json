@@ -183,7 +183,7 @@
       "audit": "Audit Log",
       "shipments": "Shipments",
       "my-deliveries": "My Deliveries",
-      "company-profile": "Company",
+      "company-profile": "Company profile",
       "account-settings": "My account",
       "support": "Support",
       "documentation": "Help Center",
@@ -197,7 +197,7 @@
       "workforce-payroll": "Payroll",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
-      "workforce-organization": "Organization",
+      "workforce-organization": "Sites, departments & positions",
       "workforce-configuration": "Configuration",
       "workforce-settings": "HR settings",
       "workforce-contract-templates": "Employment contracts",
@@ -1861,7 +1861,7 @@
     "salary": "Compensation",
     "noContract": "No active contract.",
     "situation": "Situation",
-    "nextShift": "Next shift",
+    "nextShift": "Next time slot",
     "lastClock": "Last clock",
     "pendingLeave": "Pending leave",
     "historyEmpty": "No event to display.",
@@ -9493,7 +9493,7 @@
   },
   "settingsHub": {
     "title": "Settings",
-    "subtitle": "Everything that configures your company, by topic. Rarely used settings are grouped at the bottom, under “Advanced administration”.",
+    "subtitle": "Everything that configures your company, by topic.",
     "search": "Search a setting",
     "empty": "No setting is available with your rights.",
     "noMatch": "No setting matches your search.",
@@ -9503,18 +9503,18 @@
       "access": "Access & security",
       "work": "Work & HR",
       "documents": "Documents",
-      "billing": "Subscription & invoices",
-      "automation": "Automations & integrations"
+      "billing": "Subscription",
+      "automation": "Automations"
     },
     "levels": {
       "essential": "Essential"
     },
     "advanced": "Advanced administration",
-    "advancedHint": "Rarely needed",
+    "advancedHint": "Rarely needed day to day.",
     "status": {
-      "missingFields": "{n} required item(s) to complete",
+      "missingFields": "{n} item(s) to complete",
       "complete": "Complete",
-      "providerTest": "Test provider: configure before production",
+      "providerTest": "Test provider",
       "providerReady": "Provider configured"
     },
     "back": "Back",
@@ -9534,6 +9534,25 @@
       "settings-signature": "Provider and options of electronic signature.",
       "modules": "Turn features on or off."
     },
-    "timezoneHint": "Your company's time zone by default; change it only for a site in another time zone."
+    "timezoneHint": "Your company's time zone by default; change it only for a site in another time zone.",
+    "advancedShort": "Advanced",
+    "showAdvanced": "Show advanced settings ({n})",
+    "sectionHints": {
+      "company": "Identity, contact details and legal information.",
+      "organization": "Your sites, departments and positions.",
+      "access": "Who can see and do what.",
+      "work": "Working time, absences and HR settings.",
+      "documents": "Requested documents, obligations and templates.",
+      "billing": "Your plan, payments and invoices.",
+      "automation": "Automatic tasks and connected services."
+    }
+  },
+  "companyForm": {
+    "pageHint": "Identity, contact details and legal information of your company.",
+    "billingPageHint": "Your plan, payment methods and invoices.",
+    "identityHint": "The name shown in Leezr and on your documents.",
+    "addressHint": "Head office address, used on generated documents.",
+    "billingHint": "Address printed on your Leezr invoices.",
+    "adminHint": "Legal information required for your activity."
   }
 }

@@ -49,9 +49,15 @@ const currentTabTitle = computed(() => {
       ]"
     />
 
+    <!-- ADR-782 (UX6) : en-tête commun ; onglets soulignés, masqués s'il n'y en a qu'un -->
+    <AppPageHeader
+      :title="t('nav.company.billing')"
+      :description="t('companyForm.billingPageHint')"
+    />
     <VTabs
+      v-if="tabs.length > 1"
       v-model="activeTab"
-      class="v-tabs-pill"
+      class="border-b"
     >
       <VTab
         v-for="item in tabs"
@@ -70,7 +76,7 @@ const currentTabTitle = computed(() => {
 
     <VWindow
       v-model="activeTab"
-      class="mt-6 disable-tab-transition"
+      class="mt-5 disable-tab-transition"
       :touch="false"
     >
       <VWindowItem value="plan">

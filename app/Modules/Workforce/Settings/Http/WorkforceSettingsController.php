@@ -49,6 +49,9 @@ class WorkforceSettingsController extends Controller
                 'company_name' => $company->name,
                 'market_key' => $company->market_key,
                 'jobdomain_key' => $company->jobdomain_key,
+                // ADR-782 (UX6) — libellés lisibles (jamais un code brut à l'écran).
+                'market_label' => \App\Core\Markets\Market::where('key', $company->market_key)->value('name') ?? $company->market_key,
+                'jobdomain_label' => \App\Core\Jobdomains\Jobdomain::where('key', $company->jobdomain_key)->value('label') ?? $company->jobdomain_key,
                 'org_profile_key' => $company->org_profile_key,
                 'org_profile_label' => OrgProfileRegistry::label($company->jobdomain_key, $company->org_profile_key),
                 // W-CONTRACT-3B : identité documentaire employeur (données Company existantes, aucune ressaisie — PP2).

@@ -41,7 +41,7 @@ const { t } = useI18n()
             </VAvatar>
           </template>
 
-          <VCardTitle>{{ t('companyBilling.overview.currentPlan') }}</VCardTitle>
+          <VCardTitle class="text-wrap">{{ t('companyBilling.overview.currentPlan') }}</VCardTitle>
         </VCardItem>
 
         <VCardText>
@@ -109,7 +109,7 @@ const { t } = useI18n()
             </VAvatar>
           </template>
 
-          <VCardTitle>{{ t('companyBilling.overview.paymentMethod') }}</VCardTitle>
+          <VCardTitle class="text-wrap">{{ t('companyBilling.overview.paymentMethod') }}</VCardTitle>
         </VCardItem>
 
         <VCardText>
@@ -161,7 +161,7 @@ const { t } = useI18n()
             </VAvatar>
           </template>
 
-          <VCardTitle>{{ t('companyBilling.walletTitle') }}</VCardTitle>
+          <VCardTitle class="text-wrap">{{ t('companyBilling.walletTitle') }}</VCardTitle>
         </VCardItem>
 
         <VCardText>
@@ -201,7 +201,7 @@ const { t } = useI18n()
             </VAvatar>
           </template>
 
-          <VCardTitle>{{ t('companyBilling.invoices') }}</VCardTitle>
+          <VCardTitle class="text-wrap">{{ t('companyBilling.invoices') }}</VCardTitle>
         </VCardItem>
 
         <VCardText>

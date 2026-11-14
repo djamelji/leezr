@@ -165,12 +165,13 @@ const confirmReset = () => {
     v-model="isFormValid"
     @submit.prevent="handleSave"
   >
+    <!-- ADR-782 (UX6) : une surface, des sections (intitulé à gauche, champs à droite). -->
+    <AppSurface>
     <!-- ─── General Info ────────────────────────────── -->
-    <VCard>
-      <VCardText>
-        <h5 class="text-h5 mb-6">
-          {{ t('companySettings.title') }}
-        </h5>
+    <AppFormSection
+      :title="t('companySettings.title')"
+      :description="t('companyForm.identityHint')"
+    >
         <VRow>
           <VCol
             cols="12"
@@ -200,18 +201,14 @@ const confirmReset = () => {
             />
           </VCol>
         </VRow>
-      </VCardText>
-    </VCard>
+    </AppFormSection>
 
     <!-- ─── Company Address ─────────────────────────── -->
-    <VCard
+    <AppFormSection
       v-if="companyAddressFields.length"
-      class="mt-6"
+      :title="t('companySettings.companyAddress')"
+      :description="t('companyForm.addressHint')"
     >
-      <VCardText>
-        <h5 class="text-h5 mb-6">
-          {{ t('companySettings.companyAddress') }}
-        </h5>
         <VRow>
           <VCol
             v-if="hasField('company_address')"
@@ -283,27 +280,21 @@ const confirmReset = () => {
             />
           </VCol>
         </VRow>
-      </VCardText>
-    </VCard>
+    </AppFormSection>
 
     <!-- ─── Billing Address ─────────────────────────── -->
-    <VCard
+    <AppFormSection
       v-if="billingAddressFields.length"
-      class="mt-6"
+      :title="t('companySettings.billingAddress')"
+      :description="t('companyForm.billingHint')"
     >
-      <VCardText>
-        <div class="d-flex justify-space-between align-center mb-6">
-          <h5 class="text-h5">
-            {{ t('companySettings.billingAddress') }}
-          </h5>
-        </div>
 
         <VSwitch
           v-if="companyAddressFields.length"
           v-model="billingIsSameAsCompany"
           :label="t('companySettings.sameAsCompanyAddress')"
           :disabled="!canEdit"
-          class="mb-6"
+          class="mb-2"
         />
 
         <VRow>
@@ -390,18 +381,14 @@ const confirmReset = () => {
             />
           </VCol>
         </VRow>
-      </VCardText>
-    </VCard>
+    </AppFormSection>
 
     <!-- ─── Other Fields (fiscal, etc.) ─────────────── -->
-    <VCard
+    <AppFormSection
       v-if="remainingFields.length"
-      class="mt-6"
+      :title="t('settingsHub.adminInfo')"
+      :description="t('companyForm.adminHint')"
     >
-      <VCardText>
-        <h5 class="text-h5 mb-6">
-          {{ t('settingsHub.adminInfo') }}
-        </h5>
         <VRow>
           <DynamicFormRenderer
             v-model="dynamicForm"
@@ -409,8 +396,8 @@ const confirmReset = () => {
             :disabled="!canEdit"
           />
         </VRow>
-      </VCardText>
-    </VCard>
+    </AppFormSection>
+    </AppSurface>
 
     <!-- ─── Save / Cancel ───────────────────────────── -->
     <div
@@ -452,8 +439,8 @@ const confirmReset = () => {
           <VIcon icon="tabler-clipboard-check" />
         </VAvatar>
       </template>
-      <VCardTitle>{{ t('companySettings.mandatoryByJobdomain') }}</VCardTitle>
-      <VCardSubtitle>{{ t('companySettings.mandatoryByJobdomainHint') }}</VCardSubtitle>
+      <VCardTitle class="text-wrap">{{ t('companySettings.mandatoryByJobdomain') }}</VCardTitle>
+      <VCardSubtitle class="text-wrap">{{ t('companySettings.mandatoryByJobdomainHint') }}</VCardSubtitle>
     </VCardItem>
     <VCardText>
       <VAlert

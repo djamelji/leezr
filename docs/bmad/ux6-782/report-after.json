@@ -1,0 +1,210 @@
+{
+ "after:settings:desktop:light": {
+  "overflow": false,
+  "height": 1616
+ },
+ "after:settings:tablet:light": {
+  "overflow": false,
+  "height": 1669
+ },
+ "after:settings:mobile:light": {
+  "overflow": false,
+  "height": 1989
+ },
+ "after:settings:desktop:dark": {
+  "overflow": false,
+  "height": 1616
+ },
+ "after:settings:tablet:dark": {
+  "overflow": false,
+  "height": 1669
+ },
+ "after:settings:mobile:dark": {
+  "overflow": false,
+  "height": 1989
+ },
+ "after:profile:desktop:light": {
+  "overflow": false,
+  "height": 1466
+ },
+ "after:billing:desktop:light": {
+  "overflow": false,
+  "height": 1303
+ },
+ "after:hr:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:org:desktop:light": {
+  "overflow": false,
+  "height": 1052
+ },
+ "after:team:desktop:light": {
+  "overflow": false,
+  "height": 1050
+ },
+ "after:person:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:profile:mobile:light": {
+  "overflow": false,
+  "height": 2405
+ },
+ "after:billing:mobile:light": {
+  "overflow": false,
+  "height": 2483
+ },
+ "after:hr:mobile:light": {
+  "overflow": false,
+  "height": 867
+ },
+ "after:org:mobile:light": {
+  "overflow": false,
+  "height": 1650
+ },
+ "after:team:mobile:light": {
+  "overflow": false,
+  "height": 1216
+ },
+ "after:person:mobile:light": {
+  "overflow": false,
+  "height": 1291
+ },
+ "after:profile:desktop:dark": {
+  "overflow": false,
+  "height": 1466
+ },
+ "after:billing:desktop:dark": {
+  "overflow": false,
+  "height": 1303
+ },
+ "after:hr:desktop:dark": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:org:desktop:dark": {
+  "overflow": false,
+  "height": 1052
+ },
+ "after:team:desktop:dark": {
+  "overflow": false,
+  "height": 1050
+ },
+ "after:person:desktop:dark": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:profile:mobile:dark": {
+  "overflow": false,
+  "height": 2405
+ },
+ "after:billing:mobile:dark": {
+  "overflow": false,
+  "height": 2483
+ },
+ "after:hr:mobile:dark": {
+  "overflow": false,
+  "height": 867
+ },
+ "after:org:mobile:dark": {
+  "overflow": false,
+  "height": 1650
+ },
+ "after:team:mobile:dark": {
+  "overflow": false,
+  "height": 1216
+ },
+ "after:person:mobile:dark": {
+  "overflow": false,
+  "height": 1291
+ },
+ "after:home:desktop:light": {
+  "overflow": false,
+  "height": 2004
+ },
+ "after:documents:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:planning:desktop:light": {
+  "overflow": false,
+  "height": 1314
+ },
+ "after:time:desktop:light": {
+  "overflow": false,
+  "height": 905
+ },
+ "after:leave:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:me:desktop:light": {
+  "overflow": false,
+  "height": 1790
+ },
+ "after:myspace:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:home:mobile:light": {
+  "overflow": false,
+  "height": 2604
+ },
+ "after:documents:mobile:light": {
+  "overflow": false,
+  "height": 1013
+ },
+ "after:planning:mobile:light": {
+  "overflow": false,
+  "height": 844
+ },
+ "after:time:mobile:light": {
+  "overflow": false,
+  "height": 1020
+ },
+ "after:leave:mobile:light": {
+  "overflow": false,
+  "height": 1175
+ },
+ "after:me:mobile:light": {
+  "overflow": false,
+  "height": 2240
+ },
+ "after:myspace:mobile:light": {
+  "overflow": false,
+  "height": 844
+ },
+ "after:home:desktop:dark": {
+  "overflow": false,
+  "height": 2004
+ },
+ "after:documents:desktop:dark": {
+  "overflow": false,
+  "height": 900
+ },
+ "after:planning:desktop:dark": {
+  "overflow": false,
+  "height": 1314
+ },
+ "after:me:desktop:dark": {
+  "overflow": false,
+  "height": 1790
+ },
+ "after:home:mobile:dark": {
+  "overflow": false,
+  "height": 2604
+ },
+ "after:documents:mobile:dark": {
+  "overflow": false,
+  "height": 1013
+ },
+ "after:planning:mobile:dark": {
+  "overflow": false,
+  "height": 844
+ },
+ "after:me:mobile:dark": {
+  "overflow": false,
+  "height": 2240
+ }
+}

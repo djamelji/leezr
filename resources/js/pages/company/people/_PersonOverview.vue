@@ -198,7 +198,7 @@ const doneCount = computed(() => steps.value.filter(s => s.done).length)
               {{ t('employeeFile.nextShift') }}: {{ emp.planning.date ? formatDate(emp.planning.date) : '—' }}
             </div>
             <div v-if="emp.time">
-              {{ t('employeeFile.lastClock') }}: {{ emp.time.date ? formatDate(emp.time.date) : '—' }} ({{ emp.time.status }})
+              {{ t('employeeFile.lastClock') }}: {{ emp.time.date ? formatDate(emp.time.date) : '—' }} ({{ t(`workforce.statuses.timeEntry.${emp.time.status}`, emp.time.status) }})
             </div>
             <div v-if="emp.leave">
               {{ t('employeeFile.pendingLeave') }}: {{ emp.leave.pending_requests }}

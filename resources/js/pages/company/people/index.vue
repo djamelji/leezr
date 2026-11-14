@@ -164,9 +164,9 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         <!-- ═══ PERSONNES ═══ -->
         <VWindowItem value="people">
           <VCardText class="d-flex flex-wrap gap-3">
-            <AppTextField v-model="search" :placeholder="t('peopleList.searchPlaceholder')" prepend-inner-icon="tabler-search" density="compact" style="max-inline-size: 280px" clearable />
-            <AppSelect v-if="store.facets.access" v-model="filters.access_state" :items="accountStates.map(s => ({ value: s, title: t('people.account.' + s) }))" :placeholder="t('peopleList.account')" density="compact" clearable style="max-inline-size: 200px" />
-            <AppSelect v-if="store.facets.hr" v-model="filters.employment_status" :items="employmentStates.map(s => ({ value: s, title: t('people.empStatus.' + s, s) }))" :placeholder="t('peopleList.employment')" density="compact" clearable style="max-inline-size: 200px" />
+            <AppTextField v-model="search" :placeholder="t('peopleList.searchPlaceholder')" prepend-inner-icon="tabler-search" density="compact" style="flex: 0 1 300px; min-inline-size: 200px" clearable />
+            <AppSelect v-if="store.facets.access" v-model="filters.access_state" :items="accountStates.map(s => ({ value: s, title: t('people.account.' + s) }))" :placeholder="t('peopleList.account')" density="compact" clearable style="flex: 0 1 200px; min-inline-size: 160px" />
+            <AppSelect v-if="store.facets.hr" v-model="filters.employment_status" :items="employmentStates.map(s => ({ value: s, title: t('people.empStatus.' + s, s) }))" :placeholder="t('peopleList.employment')" density="compact" clearable style="flex: 0 1 200px; min-inline-size: 160px" />
           </VCardText>
           <VDivider />
           <VDataTableServer

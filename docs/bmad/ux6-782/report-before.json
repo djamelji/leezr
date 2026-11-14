@@ -1,0 +1,106 @@
+{
+ "before:home:desktop:light": {
+  "overflow": false,
+  "height": 2004
+ },
+ "before:team:desktop:light": {
+  "overflow": false,
+  "height": 1050
+ },
+ "before:person:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "before:documents:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "before:planning:desktop:light": {
+  "overflow": false,
+  "height": 1314
+ },
+ "before:time:desktop:light": {
+  "overflow": false,
+  "height": 905
+ },
+ "before:leave:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "before:me:desktop:light": {
+  "overflow": false,
+  "height": 1842
+ },
+ "before:billing:desktop:light": {
+  "overflow": false,
+  "height": 1226
+ },
+ "before:profile:desktop:light": {
+  "overflow": false,
+  "height": 1734
+ },
+ "before:org:desktop:light": {
+  "overflow": false,
+  "height": 1054
+ },
+ "before:hr:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "before:myspace:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "before:home:mobile:light": {
+  "overflow": false,
+  "height": 2604
+ },
+ "before:team:mobile:light": {
+  "overflow": false,
+  "height": 1132
+ },
+ "before:person:mobile:light": {
+  "overflow": false,
+  "height": 1291
+ },
+ "before:documents:mobile:light": {
+  "overflow": false,
+  "height": 1013
+ },
+ "before:planning:mobile:light": {
+  "overflow": false,
+  "height": 844
+ },
+ "before:time:mobile:light": {
+  "overflow": false,
+  "height": 1020
+ },
+ "before:leave:mobile:light": {
+  "overflow": false,
+  "height": 1175
+ },
+ "before:me:mobile:light": {
+  "overflow": false,
+  "height": 2358
+ },
+ "before:billing:mobile:light": {
+  "overflow": false,
+  "height": 2386
+ },
+ "before:profile:mobile:light": {
+  "overflow": false,
+  "height": 2351
+ },
+ "before:org:mobile:light": {
+  "overflow": false,
+  "height": 1654
+ },
+ "before:hr:mobile:light": {
+  "overflow": false,
+  "height": 871
+ },
+ "before:myspace:mobile:light": {
+  "overflow": false,
+  "height": 844
+ }
+}

@@ -575,9 +575,9 @@ function signatureChipProps(status) {
               <VProgressCircular indeterminate color="primary" size="28" />
             </VCardText>
             <VCardText v-else-if="!shifts.length">
-              <VAlert type="info" variant="tonal" density="compact">
+              <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('workforceMe.noShifts') }}
-              </VAlert>
+              </p>
             </VCardText>
             <VList v-else density="compact">
               <VListItem
@@ -622,13 +622,9 @@ function signatureChipProps(status) {
             </VCardItem>
 
             <VCardText v-if="!currentContract">
-              <VAlert
-                type="info"
-                variant="tonal"
-                density="compact"
-              >
+              <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('workforceMe.noContract') }}
-              </VAlert>
+              </p>
             </VCardText>
 
             <VCardText v-else>
@@ -760,13 +756,9 @@ function signatureChipProps(status) {
             </VCardItem>
 
             <VCardText v-if="!leaveBalances.length">
-              <VAlert
-                type="info"
-                variant="tonal"
-                density="compact"
-              >
+              <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('workforceMe.noLeaveBalances') }}
-              </VAlert>
+              </p>
             </VCardText>
 
             <VCardText v-else>
@@ -848,13 +840,9 @@ function signatureChipProps(status) {
             </VCardItem>
 
             <VCardText v-if="!payslipDocs.length">
-              <VAlert
-                type="info"
-                variant="tonal"
-                density="compact"
-              >
+              <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('workforceMe.noPayslips') }}
-              </VAlert>
+              </p>
             </VCardText>
 
             <VCardText v-else class="px-0">
@@ -945,13 +933,9 @@ function signatureChipProps(status) {
             </VCardText>
 
             <VCardText v-else-if="!documents.length">
-              <VAlert
-                type="info"
-                variant="tonal"
-                density="compact"
-              >
+              <p class="text-body-2 text-medium-emphasis mb-0">
                 {{ t('workforceMe.noDocuments') }}
-              </VAlert>
+              </p>
             </VCardText>
 
             <VCardText v-else class="px-0">
@@ -975,7 +959,9 @@ function signatureChipProps(status) {
                     {{ formatDate(doc.generated_at) }}
                   </VListItemSubtitle>
                   <template #append>
+                    <!-- ADR-782 : « Version signée » dit déjà l'état ; une seule pastille sinon -->
                     <VChip
+                      v-if="doc.signature_status !== 'signed'"
                       :color="signatureChipProps(doc.signature_status).color"
                       size="x-small"
                       label

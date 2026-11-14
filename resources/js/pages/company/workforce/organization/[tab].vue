@@ -239,16 +239,12 @@ onMounted(() => {
 <template>
   <div>
     <SettingsReturnLink /> <!-- ADR-781 -->
-    <!-- Header -->
-    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('organization.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('organization.description') }}
-        </p>
-      </div>
+    <!-- ADR-782 (UX6) : en-tête commun -->
+    <AppPageHeader
+      :title="$t('organization.title')"
+      :description="$t('organization.description')"
+    >
+      <template #actions>
       <VBtn
         v-can="'workforce.manage'"
         variant="tonal"
@@ -257,7 +253,8 @@ onMounted(() => {
       >
         {{ $t('workforceOnboarding.launch') }}
       </VBtn>
-    </div>
+      </template>
+    </AppPageHeader>
 
     <!-- Organisation proposée (preset) — ADR-636 / W-E -->
     <OrganizationPresetCard @applied="fetchDepartments(); fetchRoles()" />
@@ -266,7 +263,7 @@ onMounted(() => {
     <VCard>
       <VTabs
         v-model="currentTab"
-        class="v-tabs-pill"
+        class="border-b"
       >
         <VTab value="departments">
           <VIcon
