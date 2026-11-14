@@ -411,6 +411,8 @@
     "watchTriggerable": true,
     "watchWithFilter": true,
     "webcryptoSupported": true,
-    "whenever": true
+    "whenever": true,
+    "useHomeActions": true,
+    "useSpaceActions": true
   }
 }

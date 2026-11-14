@@ -266,6 +266,7 @@ declare global {
   const useGeolocation: typeof import('@vueuse/core')['useGeolocation']
   const useGlobalLoading: typeof import('./resources/js/composables/useGlobalLoading.js')['useGlobalLoading']
   const useHelpCenter: typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']
+  const useHomeActions: typeof import('./resources/js/composables/useSpaceActions.js')['useHomeActions']
   const useI18n: typeof import('vue-i18n')['useI18n']
   const useId: typeof import('vue')['useId']
   const useIdle: typeof import('@vueuse/core')['useIdle']
@@ -344,6 +345,7 @@ declare global {
   const useSkins: typeof import('@core/composable/useSkins')['useSkins']
   const useSlots: typeof import('vue')['useSlots']
   const useSorted: typeof import('@vueuse/core')['useSorted']
+  const useSpaceActions: typeof import('./resources/js/composables/useSpaceActions.js')['useSpaceActions']
   const useSpeechRecognition: typeof import('@vueuse/core')['useSpeechRecognition']
   const useSpeechSynthesis: typeof import('@vueuse/core')['useSpeechSynthesis']
   const useStepper: typeof import('@vueuse/core')['useStepper']
@@ -677,6 +679,7 @@ declare module 'vue' {
     readonly useGeolocation: UnwrapRef<typeof import('@vueuse/core')['useGeolocation']>
     readonly useGlobalLoading: UnwrapRef<typeof import('./resources/js/composables/useGlobalLoading.js')['useGlobalLoading']>
     readonly useHelpCenter: UnwrapRef<typeof import('./resources/js/composables/useHelpCenter.js')['useHelpCenter']>
+    readonly useHomeActions: UnwrapRef<typeof import('./resources/js/composables/useSpaceActions.js')['useHomeActions']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
@@ -755,6 +758,7 @@ declare module 'vue' {
     readonly useSkins: UnwrapRef<typeof import('@core/composable/useSkins')['useSkins']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
+    readonly useSpaceActions: UnwrapRef<typeof import('./resources/js/composables/useSpaceActions.js')['useSpaceActions']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>
     readonly useSpeechSynthesis: UnwrapRef<typeof import('@vueuse/core')['useSpeechSynthesis']>
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
