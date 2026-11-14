@@ -241,6 +241,11 @@ class ContractController extends Controller
         if ($resolved['error']) {
             return response()->json(['message' => $resolved['error']], 422);
         }
+        // ADR-783 (UX6.2) — un contrat n'est émis qu'avec l'adresse de l'employeur (profil Company) ; rien n'est inventé.
+        $missing = \App\Company\Fields\ReadModels\CompanyLegalIdentity::missingForContract(\App\Company\Fields\ReadModels\CompanyLegalIdentity::for(\App\Core\Models\Company::findOrFail($companyId)));
+        if ($missing) {
+            return response()->json(['message' => __('contracts.employer_identity_incomplete'), 'code' => 'employer_identity_incomplete', 'missing' => $missing, 'fix' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']]], 422);
+        }
 
         try {
             $doc = app(GenerateDocumentUseCase::class)->execute(

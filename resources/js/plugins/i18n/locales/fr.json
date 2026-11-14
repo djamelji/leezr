@@ -1608,7 +1608,8 @@
       "address": "Adresse",
       "city": "Ville",
       "empty": "Aucune information d'entreprise renseignée. Complétez votre fiche entreprise pour enrichir vos contrats.",
-      "edit": "Modifier la fiche entreprise"
+      "edit": "Modifier la fiche entreprise",
+      "missing": "Adresse de l'employeur incomplète : aucun contrat ne peut être généré tant qu'elle n'est pas renseignée."
     },
     "defaults": {
       "title": "Modèles par défaut",
@@ -4047,7 +4048,9 @@
     "summaryActive": "{n} activé(s)",
     "summaryIncluded": "{n} inclus",
     "summaryAvailable": "{n} à découvrir",
-    "summarySubscribed": "{n} souscrit(s)"
+    "summarySubscribed": "{n} souscrit(s)",
+    "featured": "Recommandé",
+    "previewNotice": "Bientôt disponible"
   },
   "contactSales": {
     "title": "Module premium",
@@ -9186,7 +9189,8 @@
     "notValidated": "Modèle non validé juridiquement — vérifiez le contenu avant génération.",
     "generate": "Générer",
     "generated": "Contrat généré et archivé dans le dossier.",
-    "missing": "Variables manquantes : {vars}"
+    "missing": "Variables manquantes : {vars}",
+    "completeProfile": "Compléter le profil de l'entreprise"
   },
   "contractVars": {
     "employee": "Collaborateur",
@@ -9568,5 +9572,107 @@
     "addressHint": "Adresse du siège, utilisée sur les documents générés.",
     "billingHint": "Adresse figurant sur vos factures Leezr.",
     "adminHint": "Informations légales demandées pour votre activité."
+  },
+  "moduleCatalog": {
+    "core_settings": {
+      "name": "Paramètres de l'entreprise",
+      "description": "Nom et configuration de votre entreprise."
+    },
+    "core_documentation": {
+      "name": "Centre d'aide",
+      "description": "Articles et guides pour utiliser Leezr."
+    },
+    "core_roles": {
+      "name": "Rôles",
+      "description": "Rôles de l'entreprise et attribution des permissions."
+    },
+    "core_jobdomain": {
+      "name": "Profil métier",
+      "description": "Secteur d'activité et configuration associée."
+    },
+    "core_dashboard": {
+      "name": "Tableau de bord",
+      "description": "Accueil et indicateurs personnalisables."
+    },
+    "core_audit": {
+      "name": "Journal d'audit",
+      "description": "Historique des actions sensibles, non modifiable."
+    },
+    "core_support": {
+      "name": "Support",
+      "description": "Contacter l'équipe Leezr par ticket."
+    },
+    "core_theme": {
+      "name": "Thème",
+      "description": "Affichage clair, sombre ou automatique."
+    },
+    "core_members": {
+      "name": "Membres",
+      "description": "Comptes de l'entreprise et leurs rôles."
+    },
+    "core_workflows": {
+      "name": "Automatisations",
+      "description": "Règles automatiques : déclencheur, conditions, actions."
+    },
+    "core_documents": {
+      "name": "Documents",
+      "description": "Coffre-fort, demandes, conformité et cycle de vie des documents."
+    },
+    "core_modules": {
+      "name": "Modules",
+      "description": "Découvrir et gérer les produits Leezr."
+    },
+    "core_notifications": {
+      "name": "Notifications",
+      "description": "Boîte de réception et préférences de notification."
+    },
+    "core_billing": {
+      "name": "Abonnement",
+      "description": "Formule, paiements et factures."
+    },
+    "workforce_contract": {
+      "name": "Contrats de travail",
+      "description": "Modèles de contrat, génération et archivage des contrats des collaborateurs."
+    },
+    "workforce_signature": {
+      "name": "Signature électronique",
+      "description": "Faire signer les documents RH émis, quel que soit le prestataire."
+    },
+    "workforce_leave": {
+      "name": "Absences et congés",
+      "description": "Demandes, soldes, acquisitions et validations."
+    },
+    "workforce_documents": {
+      "name": "Documents RH",
+      "description": "Modèles RH, génération de contrats et gestion des documents."
+    },
+    "workforce_payroll": {
+      "name": "Paie",
+      "description": "Préparation, calcul, bulletins, déclarations et export."
+    },
+    "workforce_planning": {
+      "name": "Planning",
+      "description": "Créneaux, lieux d'intervention et calendrier de l'équipe."
+    },
+    "workforce": {
+      "name": "Ressources humaines",
+      "description": "Collaborateurs, contrats, rémunération et temps de travail."
+    },
+    "logistics_shipments": {
+      "name": "Expéditions",
+      "description": "Suivi des expéditions et de leurs étapes."
+    },
+    "logistics_tracking": {
+      "name": "Suivi en temps réel",
+      "description": "Position des expéditions et alertes en direct."
+    },
+    "logistics_fleet": {
+      "name": "Gestion de flotte",
+      "description": "Véhicules, conducteurs et entretien."
+    },
+    "logistics_analytics": {
+      "name": "Analyses logistiques",
+      "description": "Indicateurs et rapports de performance logistique."
+    }
   }
 }

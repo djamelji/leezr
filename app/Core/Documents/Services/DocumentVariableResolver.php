@@ -85,20 +85,20 @@ class DocumentVariableResolver
 
     private static function resolveCompany(Company $company): array
     {
+        // ADR-783 (UX6.2) — one source : the Company profile (legacy columns only as fallback).
+        $id = \App\Company\Fields\ReadModels\CompanyLegalIdentity::for($company);
+        $lines = \App\Company\Fields\ReadModels\CompanyLegalIdentity::documentLines($id);
+
         return [
             'company.name' => $company->name ?? '',
-            'company.legal_status' => $company->legalStatus?->name ?? '',
+            'company.legal_status' => $id['legal_form'] ?? '',
             'company.market' => $company->market?->name ?? '',
             'company.slug' => $company->slug ?? '',
-            'company.siret' => $company->siret ?? '',
-            'company.naf_code' => $company->naf_code ?? '',
-            'company.address' => trim(implode(' ', array_filter([$company->address_street, $company->address_complement]))),
-            'company.city' => trim(implode(' ', array_filter([$company->address_postal_code, $company->address_city]))),
-            'company.address_full' => trim(implode(', ', array_filter([
-                trim(implode(' ', array_filter([$company->address_street, $company->address_complement]))),
-                trim(implode(' ', array_filter([$company->address_postal_code, $company->address_city]))),
-                $company->address_country_code,
-            ]))),
+            'company.siret' => $id['siret'] ?? '',
+            'company.naf_code' => $id['naf_code'] ?? '',
+            'company.address' => $lines['street'],
+            'company.city' => $lines['city'],
+            'company.address_full' => $lines['full'],
         ];
     }
 

@@ -55,15 +55,22 @@ class WorkforceSettingsController extends Controller
                 'org_profile_key' => $company->org_profile_key,
                 'org_profile_label' => OrgProfileRegistry::label($company->jobdomain_key, $company->org_profile_key),
                 // W-CONTRACT-3B : identité documentaire employeur (données Company existantes, aucune ressaisie — PP2).
-                'employer_identity' => [
-                    'name' => $company->name,
-                    'siret' => $company->siret,
-                    'naf_code' => $company->naf_code,
-                    'legal_status' => $company->legalStatus?->name,
-                    'address' => trim(implode(' ', array_filter([$company->address_street, $company->address_complement]))),
-                    'city' => trim(implode(' ', array_filter([$company->address_postal_code, $company->address_city]))),
-                    'country_code' => $company->address_country_code,
-                ],
+                // ADR-783 (UX6.2) : même lecture que les documents générés (profil Company, colonnes en repli).
+                'employer_identity' => (function () use ($company) {
+                    $id = \App\Company\Fields\ReadModels\CompanyLegalIdentity::for($company);
+                    $lines = \App\Company\Fields\ReadModels\CompanyLegalIdentity::documentLines($id);
+
+                    return [
+                        'name' => $id['legal_name'],
+                        'siret' => $id['siret'],
+                        'naf_code' => $id['naf_code'],
+                        'legal_status' => $id['legal_form'],
+                        'address' => $lines['street'],
+                        'city' => $lines['city'],
+                        'country_code' => $id['country_code'],
+                        'missing' => \App\Company\Fields\ReadModels\CompanyLegalIdentity::missingForContract($id),
+                    ];
+                })(),
             ],
         ]);
     }

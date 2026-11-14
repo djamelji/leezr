@@ -80,7 +80,8 @@ class Adr771GeneratedContractFilingTest extends TestCase
     /** @return array{0: Company, 1: User} */
     private function makeCompany(string $slug): array
     {
-        $company = Company::create(['name' => $slug, 'slug' => $slug, 'jobdomain_key' => 'logistique', 'plan_key' => 'pro']);
+        // ADR-783 : un contrat exige l'adresse employeur ; ici données HISTORIQUES (colonnes), lues en repli.
+        $company = Company::create(['name' => $slug, 'slug' => $slug, 'jobdomain_key' => 'logistique', 'plan_key' => 'pro', 'address_street' => '1 rue Test', 'address_postal_code' => '75001', 'address_city' => 'Paris']);
         $this->activateCompanyModules($company);
         foreach (self::MODULES as $m) {
             \App\Core\Modules\CompanyModuleActivationReason::firstOrCreate(['company_id' => $company->id, 'module_key' => $m], ['reason' => \App\Core\Modules\CompanyModuleActivationReason::REASON_DIRECT]);

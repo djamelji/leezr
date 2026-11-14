@@ -28251,3 +28251,26 @@ UX0 à UX5 ont simplifié les parcours, mais la qualité visuelle est inégale :
 `AppStatStrip` et `AppDrawer` rejoignent le socle. Accueil Company plus compact (option `rowHeight` de la grille, Platform inchangé) ; Mon activité en bande d'indicateurs ; alerte de paiement sur une colonne ; Documents mobile en lignes ; grille Semaine allégée par défaut ; tiroirs créneau, absence (responsable, salarié), type d'absence et lieu harmonisés ; Signature en sections ; doublons de pastilles retirés (temps de travail, types de documents) ; Modules : « souscrits » (lecture `is_subscribed`). Aucune modification serveur. Défaut de données signalé : l'identité employeur des contrats lit les colonnes d'adresse alors que le profil enregistre l'adresse en champs dynamiques.
 
 **Verdict** : 🟢 GO DEV (voir checkpoint). Préproduction non commencée.
+
+---
+
+## ADR-783 — Company Experience 2.0 / UX6.2 : identité employeur canonique, catalogue Modules, dialogues
+
+**Date** : 2026-11-14 · **Base** : `a0edf3c7` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX6.2.md`
+
+### Contexte
+
+Les documents générés lisaient l'identité de l'employeur dans des colonnes `companies` non alimentées, alors que le profil Company (champs dynamiques) contient ces informations : un contrat pouvait sortir sans adresse. Catalogue Modules en anglais, bouton « En préparation » trompeur ; dialogues documentaires hétérogènes.
+
+### Décisions
+
+1. **Source canonique de l'identité légale = profil Company** : `CompanyLegalIdentity` (lecture seule ; colonnes historiques en repli ; rien d'inventé), utilisé par `DocumentVariableResolver` et l'écran employeur. Contrat refusé (422 actionnable, lien vers le profil) si l'adresse employeur est incomplète. Documents existants jamais modifiés. DSN hors périmètre (paie).
+2. **Modules** : traductions par clé, état « Bientôt disponible » non cliquable, offres activables d'abord.
+3. **`AppDialog`** rejoint le socle ADR-782 : dépôt, demande, génération de contrat, signature.
+
+### Conséquences
+
+- Une entreprise sans adresse employeur ne peut plus générer de contrat tant que son profil n'est pas complété (nouveau comportement, voulu).
+- Tests : 6 nouveaux ; 2 fixtures de tests existants complétées.
+
+**Verdict** : 🟢 GO DEV. Préproduction non commencée.

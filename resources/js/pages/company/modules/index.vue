@@ -125,10 +125,12 @@ const addonModulesAll = computed(() =>
 )
 
 const addonModules = computed(() => {
-  if (!addonSearchQuery.value) return addonModulesAll.value
+  // ADR-783 (UX6.2) : offres activables d'abord, « Bientôt disponible » ensuite.
+  const ordered = [...addonModulesAll.value].sort((a, b) => Number(a?.commercial_status === 'preview') - Number(b?.commercial_status === 'preview'))
+  if (!addonSearchQuery.value) return ordered
   const q = addonSearchQuery.value.toLowerCase()
 
-  return addonModulesAll.value.filter(m => m.name.toLowerCase().includes(q))
+  return ordered.filter(m => modName(m).toLowerCase().includes(q))
 })
 
 const includedModules = computed(() =>
@@ -146,7 +148,7 @@ const allFilteredModules = computed(() => {
   return moduleStore.modules.filter(m => {
     if (categoryFilter.value !== 'all' && m.category !== categoryFilter.value)
       return false
-    if (searchQuery.value && !m.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    if (searchQuery.value && !modName(m).toLowerCase().includes(searchQuery.value.toLowerCase()))
       return false
 
     return true
@@ -195,6 +197,12 @@ onBeforeUnmount(() => {
 })
 
 // --- Display state helpers ---
+
+// ADR-783 (UX6.2) — noms et descriptions traduits par clé (repli : texte du catalogue Platform).
+const { te } = useI18n()
+const catKey = m => String(m?.key || '').replace(/\./g, '_')
+const modName = m => (m && te(`moduleCatalog.${catKey(m)}.name`) ? t(`moduleCatalog.${catKey(m)}.name`) : (m?.name || ''))
+const modDesc = m => (m && te(`moduleCatalog.${catKey(m)}.description`) ? t(`moduleCatalog.${catKey(m)}.description`) : (m?.description || ''))
 
 // ADR-732 (P0-A) — module « En préparation » : déclaré mais non commercialisable → jamais d'achat/prix.
 const isPreview = module => module?.commercial_status === 'preview'
@@ -298,13 +306,13 @@ const dependencyLabel = reqKey => {
   if (!dep) return null
 
   if (['included', 'active'].includes(dep.display_state))
-    return { name: dep.name, label: t('companyModules.depIncluded'), color: 'success', icon: 'tabler-check' }
+    return { name: modName(dep), label: t('companyModules.depIncluded'), color: 'success', icon: 'tabler-check' }
 
   const price = modulePriceLabel(dep)
   if (price)
-    return { name: dep.name, label: price, color: 'warning', icon: 'tabler-plus' }
+    return { name: modName(dep), label: price, color: 'warning', icon: 'tabler-plus' }
 
-  return { name: dep.name, label: t('companyModules.pricingContactSales'), color: 'secondary', icon: 'tabler-plus' }
+  return { name: modName(dep), label: t('companyModules.pricingContactSales'), color: 'secondary', icon: 'tabler-plus' }
 }
 
 const dependentNames = mod => {
@@ -335,7 +343,7 @@ const activateModule = async module => {
     const addonSub = moduleStore.getAddonSub(module.key)
     if (addonSub?.deactivated_at && new Date(addonSub.deactivated_at) > new Date()) {
       reactivateModuleKey.value = module.key
-      reactivateModuleName.value = module.name
+      reactivateModuleName.value = modName(module)
       reactivateDeactivateDate.value = addonSub.deactivated_at
       reactivateDialog.value = true
 
@@ -343,7 +351,7 @@ const activateModule = async module => {
     }
 
     quoteModuleKey.value = module.key
-    quoteModuleName.value = module.name
+    quoteModuleName.value = modName(module)
     quoteLoading.value = true
     quoteDialog.value = true
     quoteData.value = null
@@ -422,16 +430,16 @@ const doToggle = async (key, isCurrentlyEnabled) => {
   errorMessage.value = ''
 
   const mod = moduleStore.modules.find(m => m.key === key)
-  const modName = mod?.name || key
+  const label = mod ? modName(mod) : key
 
   try {
     if (isCurrentlyEnabled) {
       await moduleStore.disableModule(key)
-      toast(t('companyModules.deactivatedSuccess', { module: modName }), 'success')
+      toast(t('companyModules.deactivatedSuccess', { module: label }), 'success')
     }
     else {
       await moduleStore.enableModule(key)
-      toast(t('companyModules.activatedSuccess', { module: modName }), 'success')
+      toast(t('companyModules.activatedSuccess', { module: label }), 'success')
     }
   }
   catch (error) {
@@ -468,7 +476,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             #actions
           >
             <div
-              class="d-flex align-center gap-4 text-body-2 text-medium-emphasis"
+              class="d-flex align-center flex-wrap gap-x-4 gap-y-1 text-body-2 text-medium-emphasis modules-summary"
               data-test="modules-summary"
             >
               <AppStatusText
@@ -562,7 +570,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           :icon="currentPlaceholderModule.icon_name || 'tabler-puzzle'"
                           size="18"
                         />
-                        {{ currentPlaceholderModule.name }}
+                        {{ modName(currentPlaceholderModule) }}
                       </span>
                     </Transition>
                   </span>
@@ -605,18 +613,18 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </div>
 
                       <h6 class="text-h6 mb-1">
-                        {{ mod.name }}
+                        {{ modName(mod) }}
                         <VChip
                           v-if="mod.is_featured"
                           size="x-small"
                           color="warning"
                           class="ms-1"
                         >
-                          Featured
+                          {{ t('companyModules.featured') }}
                         </VChip>
                       </h6>
                       <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ mod.description || '—' }}
+                        {{ modDesc(mod) || '—' }}
                       </p>
 
                       <!-- ADR-210: Pricing + dependencies -->
@@ -664,19 +672,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
                     <VCardActions class="px-4 pb-4 pt-0">
                       <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat -->
-                      <VBtn
+                      <!-- ADR-783 (UX6.2) : état, pas un bouton — rien à activer ni souscrire -->
+                      <div
                         v-if="isPreview(mod)"
-                        variant="tonal"
-                        color="secondary"
-                        class="flex-grow-1"
-                        disabled
+                        class="d-flex align-center gap-2 text-body-2 text-medium-emphasis py-2"
                         data-test="module-preview-cta"
                       >
-                        <template #prepend>
-                          <VIcon icon="tabler-tools" />
-                        </template>
-                        {{ t('companyModules.statePreparing') }}
-                      </VBtn>
+                        <VIcon icon="tabler-clock-hour-4" size="18" />
+                        {{ t('companyModules.previewNotice') }}
+                      </div>
 
                       <!-- Available → Activate -->
                       <VBtn
@@ -800,10 +804,10 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </div>
 
                       <h6 class="text-h6 mb-1">
-                        {{ mod.name }}
+                        {{ modName(mod) }}
                       </h6>
                       <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ mod.description || '—' }}
+                        {{ modDesc(mod) || '—' }}
                       </p>
 
                       <VChip
@@ -919,10 +923,10 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </div>
 
                       <h6 class="text-h6 mb-1">
-                        {{ mod.name }}
+                        {{ modName(mod) }}
                       </h6>
                       <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ mod.description || '—' }}
+                        {{ modDesc(mod) || '—' }}
                       </p>
 
                       <VChip
@@ -1047,7 +1051,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                           :icon="currentPlaceholderModule.icon_name || 'tabler-puzzle'"
                           size="18"
                         />
-                        {{ currentPlaceholderModule.name }}
+                        {{ modName(currentPlaceholderModule) }}
                       </span>
                     </Transition>
                   </span>
@@ -1108,13 +1112,13 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         class="text-h6 mb-1"
                         :class="{ 'text-disabled': isLocked(mod) }"
                       >
-                        {{ mod.name }}
+                        {{ modName(mod) }}
                       </h6>
                       <p
                         class="text-body-2 text-medium-emphasis mb-3"
                         :class="{ 'text-disabled': isLocked(mod) }"
                       >
-                        {{ mod.description || '—' }}
+                        {{ modDesc(mod) || '—' }}
                       </p>
 
                       <!-- ADR-210: Pricing + dependencies -->
@@ -1165,19 +1169,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
                     <VCardActions class="px-4 pb-4 pt-0">
                       <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat, chip informatif -->
-                      <VBtn
+                      <!-- ADR-783 (UX6.2) : état, pas un bouton — rien à activer ni souscrire -->
+                      <div
                         v-if="isPreview(mod)"
-                        variant="tonal"
-                        color="secondary"
-                        class="flex-grow-1"
-                        disabled
+                        class="d-flex align-center gap-2 text-body-2 text-medium-emphasis py-2"
                         data-test="module-preview-cta"
                       >
-                        <template #prepend>
-                          <VIcon icon="tabler-tools" />
-                        </template>
-                        {{ t('companyModules.statePreparing') }}
-                      </VBtn>
+                        <VIcon icon="tabler-clock-hour-4" size="18" />
+                        {{ t('companyModules.previewNotice') }}
+                      </div>
 
                       <!-- Included / Active → Configure (only if settings panels exist) -->
                       <VBtn
@@ -1676,7 +1676,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             </VAvatar>
             <div class="flex-grow-1">
               <h5 class="text-h5">
-                {{ selectedModule.name }}
+                {{ modName(selectedModule) }}
               </h5>
               <p
                 v-if="previewContent"
@@ -1917,7 +1917,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                   size="16"
                 />
               </template>
-              {{ contactModule.name }}
+              {{ modName(contactModule) }}
             </VChip>
           </div>
 
@@ -2038,4 +2038,5 @@ const doToggle = async (key, isCurrentlyEnabled) => {
   transform: translateY(100%);
   opacity: 0;
 }
+.modules-summary :deep(.app-status-text) { white-space: nowrap; }
 </style>

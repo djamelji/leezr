@@ -195,6 +195,16 @@ const meBreakResumeLabel = computed(() => {
   return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
 })
 
+// ADR-783 (UX6.2) — faits du contrat (mêmes données, présentation compacte).
+const contractFacts = computed(() => (currentContract.value ? [
+  { label: t('workforceMe.contractType'), value: contractTypeLabel(currentContract.value.contract_type) },
+  { label: t('workforceMe.workModel'), value: workModelLabel(currentContract.value.work_model_key) },
+  { label: t('workforceMe.weeklyHours'), value: currentContract.value.weekly_hours ? `${Number(currentContract.value.weekly_hours)} h` : '—' },
+  { label: t('workforceMe.startDate'), value: formatDate(currentContract.value.start_date) },
+  { label: t('workforceMe.department'), value: employee.value?.department?.name },
+  { label: t('workforceMe.jobRole'), value: employee.value?.job_role?.title },
+] : []))
+
 // ADR-782 (UX6.1) — indicateurs du jour (mêmes données qu'avant, présentés en bande).
 const todayStats = computed(() => [
   { key: 'status', label: t('workforceMe.todayStatus'), value: t(clockStatusConfig.value.labelKey), icon: clockStatusConfig.value.icon, tone: clockStatusConfig.value.color === 'secondary' ? 'muted' : clockStatusConfig.value.color },
@@ -524,109 +534,17 @@ function signatureChipProps(status) {
             </VCardText>
 
             <VCardText v-else>
-              <VList density="compact">
-                <VListItem>
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-file-check"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.contractType') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ contractTypeLabel(currentContract.contract_type) }}
-                  </VListItemSubtitle>
-                </VListItem>
-
-                <VListItem>
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-settings"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.workModel') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ workModelLabel(currentContract.work_model_key) }}
-                  </VListItemSubtitle>
-                </VListItem>
-
-                <VListItem>
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-clock"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.weeklyHours') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ currentContract.weekly_hours ? `${currentContract.weekly_hours}h` : '-' }}
-                  </VListItemSubtitle>
-                </VListItem>
-
-                <VListItem>
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-calendar"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.startDate') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ formatDate(currentContract.start_date) }}
-                  </VListItemSubtitle>
-                </VListItem>
-
-                <VListItem v-if="employee.department">
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-building"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.department') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ employee.department.name }}
-                  </VListItemSubtitle>
-                </VListItem>
-
-                <VListItem v-if="employee.job_role">
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-briefcase"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-2 text-medium-emphasis">
-                    {{ t('workforceMe.jobRole') }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-1 font-weight-medium">
-                    {{ employee.job_role.title }}
-                  </VListItemSubtitle>
-                </VListItem>
-              </VList>
+              <!-- ADR-783 (UX6.2) : grille libellé / valeur compacte (au lieu de six lignes à icône) -->
+              <dl class="me-facts">
+                <div
+                  v-for="f in contractFacts"
+                  :key="f.label"
+                  class="me-facts__item"
+                >
+                  <dt>{{ f.label }}</dt>
+                  <dd>{{ f.value || '—' }}</dd>
+                </div>
+              </dl>
             </VCardText>
           </VCard>
         </VCol>
@@ -987,3 +905,10 @@ function signatureChipProps(status) {
     </AppDrawer>
   </div>
 </template>
+
+<style scoped>
+.me-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
+.me-facts__item dt { font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.me-facts__item dd { margin: 2px 0 0; font-size: 0.9375rem; font-weight: 500; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
+@media (max-width: 599px) { .me-facts { grid-template-columns: minmax(0, 1fr); gap: 12px; } }
+</style>

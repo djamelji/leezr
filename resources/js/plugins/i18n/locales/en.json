@@ -1609,7 +1609,8 @@
       "address": "Address",
       "city": "City",
       "empty": "No company information set. Complete your company profile to enrich your contracts.",
-      "edit": "Edit company profile"
+      "edit": "Edit company profile",
+      "missing": "Employer address incomplete: no contract can be generated until it is filled in."
     },
     "defaults": {
       "title": "Default templates",
@@ -4047,7 +4048,9 @@
     "summaryActive": "{n} active",
     "summaryIncluded": "{n} included",
     "summaryAvailable": "{n} to discover",
-    "summarySubscribed": "{n} subscribed"
+    "summarySubscribed": "{n} subscribed",
+    "featured": "Recommended",
+    "previewNotice": "Coming soon"
   },
   "contactSales": {
     "title": "Premium module",
@@ -9186,7 +9189,8 @@
     "notValidated": "Legally unvalidated template — review the content before generating.",
     "generate": "Generate",
     "generated": "Contract generated and archived in the file.",
-    "missing": "Missing variables: {vars}"
+    "missing": "Missing variables: {vars}",
+    "completeProfile": "Complete the company profile"
   },
   "contractVars": {
     "employee": "Employee",
@@ -9568,5 +9572,107 @@
     "addressHint": "Head office address, used on generated documents.",
     "billingHint": "Address printed on your Leezr invoices.",
     "adminHint": "Legal information required for your activity."
+  },
+  "moduleCatalog": {
+    "core_settings": {
+      "name": "Company settings",
+      "description": "Your company name and configuration."
+    },
+    "core_documentation": {
+      "name": "Help center",
+      "description": "Articles and guides to use Leezr."
+    },
+    "core_roles": {
+      "name": "Roles",
+      "description": "Company roles and permission assignments."
+    },
+    "core_jobdomain": {
+      "name": "Industry profile",
+      "description": "Business sector and related configuration."
+    },
+    "core_dashboard": {
+      "name": "Dashboard",
+      "description": "Home and customizable indicators."
+    },
+    "core_audit": {
+      "name": "Audit log",
+      "description": "History of sensitive actions, append-only."
+    },
+    "core_support": {
+      "name": "Support",
+      "description": "Contact the Leezr team by ticket."
+    },
+    "core_theme": {
+      "name": "Theme",
+      "description": "Light, dark or automatic display."
+    },
+    "core_members": {
+      "name": "Members",
+      "description": "Company accounts and their roles."
+    },
+    "core_workflows": {
+      "name": "Automations",
+      "description": "Automatic rules: trigger, conditions, actions."
+    },
+    "core_documents": {
+      "name": "Documents",
+      "description": "Vault, requests, compliance and document lifecycle."
+    },
+    "core_modules": {
+      "name": "Modules",
+      "description": "Discover and manage Leezr products."
+    },
+    "core_notifications": {
+      "name": "Notifications",
+      "description": "Inbox and notification preferences."
+    },
+    "core_billing": {
+      "name": "Subscription",
+      "description": "Plan, payments and invoices."
+    },
+    "workforce_contract": {
+      "name": "Employment contracts",
+      "description": "Contract templates, generation and archiving of employee contracts."
+    },
+    "workforce_signature": {
+      "name": "Electronic signature",
+      "description": "Have issued HR documents signed, whatever the provider."
+    },
+    "workforce_leave": {
+      "name": "Leave and absences",
+      "description": "Requests, balances, accruals and approvals."
+    },
+    "workforce_documents": {
+      "name": "HR documents",
+      "description": "HR templates, contract generation and document management."
+    },
+    "workforce_payroll": {
+      "name": "Payroll",
+      "description": "Preparation, calculation, payslips, declarations and export."
+    },
+    "workforce_planning": {
+      "name": "Planning",
+      "description": "Time slots, work locations and team calendar."
+    },
+    "workforce": {
+      "name": "Human resources",
+      "description": "Employees, contracts, compensation and working time."
+    },
+    "logistics_shipments": {
+      "name": "Shipments",
+      "description": "Track shipments and their steps."
+    },
+    "logistics_tracking": {
+      "name": "Real-time tracking",
+      "description": "Live shipment position and alerts."
+    },
+    "logistics_fleet": {
+      "name": "Fleet management",
+      "description": "Vehicles, drivers and maintenance."
+    },
+    "logistics_analytics": {
+      "name": "Logistics analytics",
+      "description": "Logistics performance indicators and reports."
+    }
   }
 }

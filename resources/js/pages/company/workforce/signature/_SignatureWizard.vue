@@ -105,28 +105,13 @@ const submit = async () => {
 </script>
 
 <template>
-  <VDialog
+  <!-- ADR-783 (UX6.2) : dialogue commun (titre, fermer, pied d'actions stable, plein écran mobile) -->
+  <AppDialog
     :model-value="isDialogVisible"
-    max-width="720"
-    @update:model-value="emit('update:isDialogVisible', $event)"
+    :title="t('signature.wizard.title')"
+    :max-width="720"
+    @update:model-value="v => { if (!v) close() }"
   >
-    <VCard>
-      <VCardItem>
-        <VCardTitle>{{ t('signature.wizard.title') }}</VCardTitle>
-        <template #append>
-          <VBtn
-            icon
-            variant="text"
-            size="small"
-            color="default"
-            @click="close"
-          >
-            <VIcon icon="tabler-x" />
-          </VBtn>
-        </template>
-      </VCardItem>
-
-      <VCardText>
         <VStepper
           v-model="step"
           class="elevation-0 mb-4"
@@ -286,18 +271,16 @@ const submit = async () => {
             {{ t('signature.wizard.confirmNotice') }}
           </VAlert>
         </div>
-      </VCardText>
-
-      <VCardActions class="px-4 pb-4">
+    <template #actions>
         <VBtn
           v-if="step > 0"
           variant="tonal"
           color="secondary"
+          class="me-auto"
           @click="step--"
         >
           {{ t('common.back') }}
         </VBtn>
-        <VSpacer />
         <VBtn
           v-if="step < 3"
           :disabled="!canNext"
@@ -314,7 +297,6 @@ const submit = async () => {
         >
           {{ t('signature.wizard.confirm') }}
         </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+    </template>
+  </AppDialog>
 </template>

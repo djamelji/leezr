@@ -121,15 +121,13 @@ const submit = async () => {
 </script>
 
 <template>
-  <VDialog
+  <!-- ADR-783 (UX6.2) : dialogue commun (titre, fermer, pied d'actions stable, plein écran mobile) -->
+  <AppDialog
     v-model="open"
-    max-width="520"
+    :title="t('documents.deposit.title')"
+    :max-width="520"
   >
-    <VCard
-      :title="t('documents.deposit.title')"
-      data-test="document-deposit"
-    >
-      <VCardText>
+    <div data-test="document-deposit">
         <VAlert
           v-if="message"
           type="error"
@@ -226,11 +224,11 @@ const submit = async () => {
           :error-messages="errors.expires_at"
           data-test="document-deposit-expires"
         />
-      </VCardText>
-      <VCardActions>
-        <VSpacer />
+    </div>
+    <template #actions>
         <VBtn
-          variant="text"
+          variant="outlined"
+          color="secondary"
           @click="open = false"
         >
           {{ t('common.cancel') }}
@@ -244,7 +242,6 @@ const submit = async () => {
         >
           {{ t('documents.deposit.submit') }}
         </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+    </template>
+  </AppDialog>
 </template>

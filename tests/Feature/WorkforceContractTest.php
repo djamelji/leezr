@@ -47,7 +47,8 @@ class WorkforceContractTest extends TestCase
         }
         CompanyPermissionCatalog::sync();
 
-        $this->company = Company::create(['name' => 'Ct Co', 'slug' => 'ct-co', 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
+        // ADR-783 : un contrat exige l'adresse employeur (ici données historiques en colonnes, lues en repli).
+        $this->company = Company::create(['name' => 'Ct Co', 'slug' => 'ct-co', 'jobdomain_key' => 'logistique', 'market_key' => 'FR', 'address_street' => '1 rue Test', 'address_postal_code' => '75001', 'address_city' => 'Paris']);
         foreach (['workforce', 'workforce_documents', 'workforce_contract'] as $m) {
             CompanyModuleActivationReason::create(['company_id' => $this->company->id, 'module_key' => $m, 'reason' => CompanyModuleActivationReason::REASON_DIRECT]);
         }

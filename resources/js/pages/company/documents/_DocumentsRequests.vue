@@ -1069,27 +1069,21 @@ const submitRequest = async () => {
     </VCard>
   </VDialog>
 
-  <!-- Batch Request Dialog -->
-  <VDialog
+  <!-- Batch Request Dialog — ADR-783 (UX6.2) : dialogue commun ; d'abord QUOI, puis À QUI -->
+  <AppDialog
     v-model="isRequestDialogVisible"
-    max-width="600"
+    :title="t('companyDocuments.requests.batchRequest')"
+    :subtitle="t('companyDocuments.requests.batchHint')"
+    :max-width="600"
   >
-    <VCard>
-      <VCardItem>
-        <template #prepend>
-          <VAvatar
-            color="primary"
-            variant="tonal"
-            rounded
-          >
-            <VIcon icon="tabler-send" />
-          </VAvatar>
-        </template>
-        <VCardTitle>{{ t('companyDocuments.requests.batchRequest') }}</VCardTitle>
-        <VCardSubtitle>{{ t('companyDocuments.requests.batchHint') }}</VCardSubtitle>
-      </VCardItem>
-      <VCardText>
         <VRow>
+          <VCol cols="12">
+            <AppSelect
+              v-model="requestForm.document_type_code"
+              :label="t('companyDocuments.requests.selectDocType')"
+              :items="docTypeItems"
+            />
+          </VCol>
           <VCol cols="12">
             <VRadioGroup
               v-model="requestForm.scope"
@@ -1136,18 +1130,11 @@ const submitRequest = async () => {
               closable-chips
             />
           </VCol>
-          <VCol cols="12">
-            <AppSelect
-              v-model="requestForm.document_type_code"
-              :label="t('companyDocuments.requests.selectDocType')"
-              :items="docTypeItems"
-            />
-          </VCol>
         </VRow>
-      </VCardText>
-      <VCardActions class="justify-end">
+    <template #actions>
         <VBtn
-          variant="tonal"
+          variant="outlined"
+          color="secondary"
           @click="isRequestDialogVisible = false"
         >
           {{ t('common.cancel') }}
@@ -1160,9 +1147,8 @@ const submitRequest = async () => {
         >
           {{ t('companyDocuments.requests.sendBatch') }}
         </VBtn>
-      </VCardActions>
-    </VCard>
-  </VDialog>
+    </template>
+  </AppDialog>
 
   <!-- Document preview (ADR-406 S2) -->
   <DocumentViewerDialog

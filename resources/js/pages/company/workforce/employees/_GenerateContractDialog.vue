@@ -22,6 +22,8 @@ const loading = ref(false)
 const previewUrl = ref('')   // URL blob du PDF d'aperçu (même pipeline que la génération)
 const previewing = ref(false)
 const generating = ref(false)
+// ADR-783 (UX6.2) : identité employeur incomplète → message en ligne + lien vers le profil (rien n'est émis).
+const identityError = ref(null)
 
 const templateItems = computed(() => templates.value
   .filter(t => t.status === 'published')
@@ -31,6 +33,7 @@ const revokePreview = () => { if (previewUrl.value) { URL.revokeObjectURL(previe
 
 watch(isOpen, async v => {
   if (v) {
+    identityError.value = null
     revokePreview()
     templateId.value = null
     loading.value = true
@@ -64,88 +67,109 @@ const runPreview = async () => {
 const runGenerate = async () => {
   if (!selectedTemplate.value) return
   generating.value = true
+  identityError.value = null
   try {
     await store.generate({ templateCode: selectedTemplate.value.code, employeeId: props.employeeId })
     toast(t('generateContract.generated'), 'success')
     emit('generated')
     isOpen.value = false
-  } catch (e) { toast((e.data?.message || e.response?._data?.message) || t('common.error'), 'error') }
+  } catch (e) {
+    const body = e.data || e.response?._data || {}
+    if (body.code === 'employer_identity_incomplete') identityError.value = body
+    else toast(body.message || t('common.error'), 'error')
+  }
   finally { generating.value = false }
 }
 </script>
 
 <template>
-  <VDialog
+  <!-- ADR-783 (UX6.2) : dialogue commun (titre, fermer, pied d'actions stable) -->
+  <AppDialog
     v-model="isOpen"
-    :fullscreen="$vuetify.display.smAndDown"
-    max-width="720"
-    scrollable
+    :title="t('generateContract.title')"
+    :subtitle="t('generateContract.hint')"
+    :max-width="720"
   >
-    <VCard>
-      <VCardItem>
-        <VCardTitle>{{ t('generateContract.title') }}</VCardTitle>
-        <VCardSubtitle>{{ t('generateContract.hint') }}</VCardSubtitle>
-      </VCardItem>
-      <VDivider />
-      <VCardText>
-        <AppSelect
-          v-model="templateId"
-          :items="templateItems"
-          :loading="loading"
-          :label="t('generateContract.chooseTemplate')"
-          class="mb-3"
-          @update:model-value="previewHtml = ''"
-        />
-
-        <VAlert
-          v-if="selectedTemplate && selectedTemplate.legal_status !== 'validated'"
-          type="warning"
-          variant="tonal"
-          density="compact"
-          class="mb-3"
-        >
-          {{ t('generateContract.notValidated') }}
-        </VAlert>
-
+    <VAlert
+      v-if="identityError"
+      type="warning"
+      variant="tonal"
+      class="mb-4"
+      data-test="contract-identity-incomplete"
+    >
+      {{ identityError.message }}
+      <div class="mt-2">
         <VBtn
-          v-if="templateId"
-          variant="tonal"
           size="small"
-          prepend-icon="tabler-file-type-pdf"
-          :loading="previewing"
-          class="mb-3"
-          @click="runPreview"
+          variant="flat"
+          color="warning"
+          :to="identityError.fix"
+          @click="isOpen = false"
         >
-          {{ t('generateContract.preview') }}
+          {{ t('generateContract.completeProfile') }}
         </VBtn>
+      </div>
+    </VAlert>
 
-        <!-- Aperçu PDF FIDÈLE (même pipeline que la génération) — jamais un document émis ni signé -->
-        <div v-if="previewUrl">
-          <div class="text-caption text-medium-emphasis mb-2">
-            {{ t('generateContract.previewBadge') }}
-          </div>
-          <iframe
-            :src="previewUrl"
-            title="apercu-contrat"
-            style="inline-size: 100%; block-size: 360px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));"
-          />
-        </div>
-      </VCardText>
-      <VDivider />
-      <VCardText class="d-flex justify-end gap-3">
-        <VBtn variant="outlined" color="secondary" @click="isOpen = false">
-          {{ t('common.cancel') }}
-        </VBtn>
-        <VBtn
-          color="primary"
-          prepend-icon="tabler-file-download"
-          :loading="generating"
-          :disabled="!templateId"
-          @click="runGenerate"
-        >
-          {{ t('generateContract.generate') }}
-        </VBtn>
-      </VCardText>
-    </VCard>
-  </VDialog>
+    <AppSelect
+      v-model="templateId"
+      :items="templateItems"
+      :loading="loading"
+      :label="t('generateContract.chooseTemplate')"
+      class="mb-3"
+    />
+
+    <VAlert
+      v-if="selectedTemplate && selectedTemplate.legal_status !== 'validated'"
+      type="warning"
+      variant="tonal"
+      density="compact"
+      class="mb-3"
+    >
+      {{ t('generateContract.notValidated') }}
+    </VAlert>
+
+    <VBtn
+      v-if="templateId"
+      variant="tonal"
+      size="small"
+      prepend-icon="tabler-file-type-pdf"
+      :loading="previewing"
+      class="mb-3"
+      @click="runPreview"
+    >
+      {{ t('generateContract.preview') }}
+    </VBtn>
+
+    <!-- Aperçu PDF FIDÈLE (même pipeline que la génération) — jamais un document émis ni signé -->
+    <div v-if="previewUrl">
+      <div class="text-caption text-medium-emphasis mb-2">
+        {{ t('generateContract.previewBadge') }}
+      </div>
+      <iframe
+        :src="previewUrl"
+        title="apercu-contrat"
+        style="inline-size: 100%; block-size: 360px; border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));"
+      />
+    </div>
+
+    <template #actions>
+      <VBtn
+        variant="outlined"
+        color="secondary"
+        @click="isOpen = false"
+      >
+        {{ t('common.cancel') }}
+      </VBtn>
+      <VBtn
+        color="primary"
+        prepend-icon="tabler-file-download"
+        :loading="generating"
+        :disabled="!templateId"
+        @click="runGenerate"
+      >
+        {{ t('generateContract.generate') }}
+      </VBtn>
+    </template>
+  </AppDialog>
 </template>

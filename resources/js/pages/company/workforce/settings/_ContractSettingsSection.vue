@@ -69,6 +69,26 @@ const go = p => router.push(p)
         <VCardSubtitle>{{ t('contractSettings.identity.hint') }}</VCardSubtitle>
       </VCardItem>
       <VCardText>
+        <!-- ADR-783 (UX6.2) : adresse employeur incomplète → aucun contrat ne peut être généré -->
+        <VAlert
+          v-if="employerIdentity?.missing?.length"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+          data-test="employer-identity-missing"
+        >
+          {{ t('contractSettings.identity.missing') }}
+          <VBtn
+            size="small"
+            variant="text"
+            color="warning"
+            class="ms-1"
+            :to="{ name: 'company-profile-tab', params: { tab: 'overview' } }"
+          >
+            {{ t('generateContract.completeProfile') }}
+          </VBtn>
+        </VAlert>
         <VAlert
           v-if="!identityRows.length"
           type="warning"
