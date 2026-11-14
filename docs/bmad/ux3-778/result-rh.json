@@ -1,0 +1,21 @@
+{
+ "profile": {
+  "tag": "rh",
+  "email": "rh-nopay@leezr.test",
+  "note": "RH sans droit paie"
+ },
+ "hasDocuments": true,
+ "views": [
+  "people"
+ ],
+ "tools": [],
+ "newActions": [],
+ "search": {
+  "status": 200,
+  "total": 7,
+  "sources": [
+   "generated"
+  ]
+ },
+ "network": []
+}

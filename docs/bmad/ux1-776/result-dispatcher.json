@@ -21,7 +21,7 @@
   },
   {
    "key": "documents_to_review",
-   "path": "/company/documents/requests?status=submitted"
+   "path": "/company/documents/todo"
   },
   {
    "key": "shipments_unassigned",
@@ -33,11 +33,11 @@
   },
   {
    "key": "documents.request",
-   "path": "/company/documents/requests"
+   "path": "/company/documents/people"
   },
   {
    "key": "documents.deposit",
-   "path": "/company/documents/vault"
+   "path": "/company/documents/company"
   }
  ],
  "metrics": {

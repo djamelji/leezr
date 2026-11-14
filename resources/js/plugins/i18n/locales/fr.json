@@ -4518,7 +4518,10 @@
       "terminateHint": "La personne quitte l'entreprise. Son dossier, ses contrats et ses documents sont conservés. Un contrat en brouillon est abandonné.",
       "terminateReason": "Motif",
       "terminateDate": "Date de fin (aujourd’hui par défaut)",
-      "terminated": "Fin de collaboration enregistrée."
+      "terminated": "Fin de collaboration enregistrée.",
+      "nothingToRequest": "Toutes les pièces sont déjà demandées ou fournies.",
+      "noDocumentToSignTitle": "Aucun document à faire signer",
+      "noDocumentToSign": "Cette personne n'a pas de document en attente de signature. Générez d'abord le document à signer, par exemple son contrat."
     },
     "add": {
       "title": "Ajouter une personne",
@@ -4541,6 +4544,59 @@
       "created": "Personne ajoutée.",
       "createdInvited": "Personne ajoutée, invitation préparée.",
       "createdAccessFailed": "Personne ajoutée, mais l'accès n'a pas pu être préparé. {reason}"
+    },
+    "history": {
+      "auth__login": "Connexion",
+      "auth__logout": "Déconnexion",
+      "member__added": "Ajout à l'entreprise",
+      "member__invitation_sent": "Invitation envoyée",
+      "member__invitation_declined": "Invitation refusée",
+      "member__profile_updated": "Informations modifiées",
+      "member__role_changed": "Rôle modifié",
+      "member__suspended": "Accès suspendu",
+      "member__reactivated": "Accès rétabli",
+      "member__removed": "Accès retiré",
+      "employee__created": "Fiche créée",
+      "employee__imported": "Fiche importée",
+      "employee__bulk_updated": "Fiche modifiée (action groupée)",
+      "employee__account_linked": "Compte rattaché à la fiche",
+      "employee__terminated": "Fin de collaboration",
+      "contract__created": "Contrat créé",
+      "contract__activated": "Contrat activé",
+      "contract__cancelled": "Brouillon de contrat abandonné",
+      "contract__terminated": "Contrat terminé",
+      "document__generated": "Document généré",
+      "document__requested": "Document demandé",
+      "document__confidential_access": "Consultation d’un document confidentiel",
+      "document__expiry_extended": "Validité d’un document prolongée",
+      "signature__requested": "Signature demandée",
+      "signature__sent": "Demande de signature envoyée",
+      "signature__signed": "Document signé",
+      "signature__completed": "Signature finalisée",
+      "signature__cancelled": "Demande de signature annulée",
+      "leave_request__created": "Demande de congé",
+      "leave_request__approved": "Congé approuvé",
+      "leave_request__rejected": "Congé refusé",
+      "leave_ledger__accrual": "Acquisition de congés",
+      "leave_ledger__reservation": "Réservation de congés",
+      "timesheet__generated": "Feuille de temps générée",
+      "timesheet__submitted": "Feuille de temps soumise",
+      "timesheet__approved": "Feuille de temps validée",
+      "timesheet__rejected": "Feuille de temps refusée",
+      "timesheet__locked": "Feuille de temps verrouillée",
+      "time_entry__clock_in": "Pointage : arrivée",
+      "time_entry__clock_out": "Pointage : départ",
+      "time_entry__break_start": "Pointage : début de pause",
+      "time_entry__break_end": "Pointage : fin de pause",
+      "time_entry__updated": "Pointage corrigé",
+      "shift__created": "Créneau créé",
+      "shift__updated": "Créneau modifié",
+      "shift__cancelled": "Créneau annulé"
+    },
+    "historyBy": {
+      "user": "par un utilisateur",
+      "system": "automatique",
+      "platform": "par le support"
     }
   },
   "peopleList": {
@@ -5696,7 +5752,95 @@
     "aiAnalyzedBanner": "IA a analysé ce document",
     "aiFieldsExtracted": "{count} champ extrait | {count} champs extraits",
     "aiAnomalies": "{count} anomalie détectée | {count} anomalies détectées",
-    "aiExtractedFields": "Champs extraits"
+    "aiExtractedFields": "Champs extraits",
+    "views": {
+      "todo": "À traiter",
+      "company": "Entreprise",
+      "people": "Collaborateurs",
+      "signatures": "Signatures",
+      "generated": "Documents générés (contrats, attestations)"
+    },
+    "tools": {
+      "label": "Outils",
+      "campaignsHint": "Demander une pièce à plusieurs personnes et suivre les réponses.",
+      "payslipsHint": "Importer, rapprocher et publier des bulletins externes.",
+      "complianceHint": "Conformité détaillée par type et par rôle.",
+      "templates": "Modèles de contrat",
+      "templatesHint": "Modèles utilisés pour générer les contrats.",
+      "settings": "Types & réglages",
+      "settingsHint": "Pièces demandées, rappels, vérification automatique."
+    },
+    "new": {
+      "label": "Nouveau",
+      "deposit": "Déposer un document",
+      "request": "Demander un document",
+      "campaign": "Lancer une demande collective",
+      "sign": "Faire signer",
+      "payslips": "Importer des bulletins"
+    },
+    "search": {
+      "placeholder": "Rechercher un document, une personne…",
+      "sourceLabel": "Provenance",
+      "statusLabel": "Statut",
+      "moreFilters": "Période et échéance",
+      "from": "Du",
+      "to": "Au",
+      "expiresBefore": "Expire avant le",
+      "count": "{n} résultat | {n} résultats",
+      "close": "Fermer la recherche",
+      "error": "La recherche n’a pas pu aboutir.",
+      "empty": "Aucun document ne correspond, parmi ceux que vous pouvez consulter.",
+      "truncated": "Résultats limités aux plus récents : précisez votre recherche.",
+      "source": {
+        "company": "Entreprise",
+        "person": "Collaborateur",
+        "generated": "Document généré"
+      },
+      "status": {
+        "valid": "Valide",
+        "expiring": "Expire bientôt",
+        "expired": "Expiré",
+        "signed": "Signé",
+        "pending_signature": "Signature en cours",
+        "generated": "Généré",
+        "missing": "Manquant"
+      }
+    },
+    "todo": {
+      "clearTitle": "Rien à traiter",
+      "clearHint": "Aucune pièce à valider, aucune échéance proche.",
+      "review": "{n} document à valider | {n} documents à valider",
+      "follow": "À suivre",
+      "rows": {
+        "requested": "Demandes en attente de dépôt",
+        "expired": "Documents expirés",
+        "expiring": "Documents qui expirent bientôt",
+        "renewals": "Renouvellements de l'entreprise",
+        "missing": "Documents manquants",
+        "signatures": "Signatures en attente"
+      }
+    },
+    "deposit": {
+      "title": "Déposer un document",
+      "for": "Pour : ",
+      "company": "L'entreprise",
+      "person": "Une personne",
+      "personLabel": "Personne",
+      "type": "Type de document",
+      "file": "Fichier",
+      "submit": "Déposer"
+    },
+    "state": {
+      "missing": "À fournir",
+      "requested": "Demandé",
+      "pending_validation": "À valider",
+      "rejected": "Refusé",
+      "valid": "Valide",
+      "expiring_soon": "Expire bientôt",
+      "expired": "Expiré"
+    },
+    "replaceFile": "Remplacer le fichier",
+    "moreActions": "Plus d'actions"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",

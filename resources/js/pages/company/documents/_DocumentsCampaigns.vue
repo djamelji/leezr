@@ -84,6 +84,16 @@ const openTracking = async id => {
 const statusColor = s => ({ draft: 'secondary', launching: 'info', active: 'success', completed: 'success', cancelled: 'error' }[s] || 'secondary')
 
 onMounted(fetchAll)
+// ADR-778 (UX3) : « Demande collective » du menu Nouveau ouvre directement la création.
+const route = useRoute()
+const router = useRouter()
+watch(() => route.query.new, v => {
+  if (v !== 'campaign') return
+  drawer.value = true
+  const { new: _, ...query } = route.query
+
+  router.replace({ query })
+}, { immediate: true })
 </script>
 
 <template>

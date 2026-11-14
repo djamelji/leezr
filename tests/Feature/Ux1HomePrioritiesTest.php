@@ -199,7 +199,8 @@ class Ux1HomePrioritiesTest extends TestCase
         $this->assertSame('company-people', $onboarding['to']['name'], 'the single team list, not the legacy employee list');
 
         $source = file_get_contents(app_path('Modules/Workforce/ReadModels/HomePrioritiesReadModel.php'));
-        $this->assertStringContainsString("'name' => 'company-workforce-signature', 'query' => ['status' => 'pending']", $source);
+        // ADR-778 : the Signatures view of the Documents space, already filtered.
+        $this->assertStringContainsString("'name' => 'company-documents-tab', 'params' => ['tab' => 'signatures'], 'query' => ['status' => 'pending']", $source);
         $this->assertStringNotContainsString("'name' => 'company-workforce-employees'", $source);
     }
 }

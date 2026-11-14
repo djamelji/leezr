@@ -41,7 +41,7 @@
    "key": "documents",
    "space": "documents",
    "placement": "nav",
-   "path": "/company/documents/overview"
+   "path": "/company/documents/todo"
   },
   {
    "key": "shipments",

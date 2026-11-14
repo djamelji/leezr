@@ -4,16 +4,20 @@
 // `workforce_signature.view`). Chaque onglet reste gated par sa permission RÉELLE ; aucun élargissement.
 definePage({ meta: { module: 'core.documents', surface: 'structure', anyPermission: ['documents.view', 'workforce_documents.view', 'workforce_signature.view'] } })
 
-import DocumentsOverview from './_DocumentsOverview.vue'
+import DocumentsTodo from './_DocumentsTodo.vue'
+import DocumentsSearch from './_DocumentsSearch.vue'
 import DocumentsRequests from './_DocumentsRequests.vue'
 import DocumentsCampaigns from './_DocumentsCampaigns.vue'
 import DocumentsPayslipImport from './_DocumentsPayslipImport.vue'
 import DocumentsCompliance from './_DocumentsCompliance.vue'
 import DocumentsVault from './_DocumentsVault.vue'
 import DocumentsSettings from './_DocumentsSettings.vue'
-// Registre RH (docs générés + modèles + signatures) RÉUTILISÉ en onglet via `embedded` (ADR-766).
+// Registre RH (documents générés · modèles · signatures) RÉUTILISÉ vue par vue (`only`).
 import HrDocuments from '@/pages/company/workforce/documents/index.vue'
+import SignaturePage from '@/pages/company/workforce/signature/index.vue'
+import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizard.vue'
 import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
+import DocumentDepositDialog from '@/company/views/DocumentDepositDialog.vue'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 
@@ -23,96 +27,91 @@ const router = useRouter()
 const store = useCompanyDocumentsStore()
 const { can, moduleActive } = useCompanyPermissionContext()
 
-// L'onglet RH n'apparaît que si le module workforce_documents est actif ET l'utilisateur a le droit.
+// ── ADR-778 (Company Experience 2.0 / UX3) — Documents par INTENTION ────────────────────────────────
+// Quatre vues : À traiter · Entreprise · Collaborateurs · Signatures. Les fonctions avancées
+// (campagnes, import de bulletins, conformité détaillée, modèles, types & réglages) restent des vues à
+// part entière, ouvertes par « Outils ». Chaque vue garde SA permission réelle : ranger deux
+// fonctions dans une vue ne fusionne ni leurs droits ni leurs données.
 const canHr = computed(() => moduleActive('workforce_documents') && can('workforce_documents.view'))
-
-// ADR-767 : un importateur (`payslips.import` seul) accède à l'onglet pour téléverser et suivre SES lots ;
-// la revue (items/affectations/publication) reste gated `payslips.review`/`.publish` dans l'onglet et côté serveur.
+const canSignatures = computed(() => moduleActive('workforce_signature') && can('workforce_signature.view'))
+const canTemplates = computed(() => moduleActive('workforce_contract') && can('workforce_contract.view'))
+// ADR-767 : un importateur (`payslips.import` seul) suit SES lots ; la revue reste gated dans la vue et côté serveur.
 const canPayslips = computed(() => can('payslips.import') || can('payslips.review'))
 
-const activeTab = computed({
-  get: () => route.params.tab,
-  set: () => route.params.tab,
-})
+const mainViews = computed(() => [
+  { tab: 'todo', title: t('documents.views.todo'), icon: 'tabler-checklist', show: can('documents.view') || canSignatures.value, badge: can('documents.manage') ? store.submittedRequestsCount : 0 },
+  { tab: 'company', title: t('documents.views.company'), icon: 'tabler-building', show: can('documents.view') },
+  { tab: 'people', title: t('documents.views.people'), icon: 'tabler-users', show: can('documents.manage') || canHr.value },
+  { tab: 'signatures', title: t('documents.views.signatures'), icon: 'tabler-signature', show: canSignatures.value },
+].filter(v => v.show))
 
-// ADR-418/766: Tab-level permission gating. Les onglets de gouvernance DMS exigent `documents.view`
-// (donc INVISIBLES pour un profil qui n'a que `workforce_documents.view` → pas de fetch en 403) ;
-// l'onglet RH exige `workforce_documents.view` + module actif (via `hrVisible`).
-const tabPermissions = {
-  overview: 'documents.view',
-  requests: 'documents.manage',
-  campaigns: 'documents.manage',
-  payslips: null, // ADR-767 : visibilité via `canPayslips` (import OU revue), contenu gated dans l'onglet
-  compliance: 'documents.view',
-  vault: 'documents.view',
-  settings: 'documents.configure',
-  hr: null, // visibilité pilotée par `canHr` (module + permission), pas par une clé simple
-}
+const toolViews = computed(() => [
+  { tab: 'campaigns', title: t('documents.campaign.tab'), hint: t('documents.tools.campaignsHint'), icon: 'tabler-send', show: can('documents.manage') },
+  { tab: 'payslips', title: t('documents.payslip.tab'), hint: t('documents.tools.payslipsHint'), icon: 'tabler-cash', show: canPayslips.value },
+  { tab: 'compliance', title: t('companyDocuments.tabs.compliance'), hint: t('documents.tools.complianceHint'), icon: 'tabler-shield-check', show: can('documents.view') },
+  { tab: 'templates', title: t('documents.tools.templates'), hint: t('documents.tools.templatesHint'), icon: 'tabler-file-text', show: canTemplates.value },
+  { tab: 'settings', title: t('documents.tools.settings'), hint: t('documents.tools.settingsHint'), icon: 'tabler-settings', show: can('documents.configure') },
+].filter(v => v.show))
 
-const allTabs = computed(() => [
-  {
-    title: t('companyDocuments.tabs.overview'),
-    icon: 'tabler-layout-dashboard',
-    tab: 'overview',
-  },
-  {
-    title: t('companyDocuments.tabs.requests'),
-    icon: 'tabler-file-text',
-    tab: 'requests',
-    badge: store.submittedRequestsCount || null,
-  },
-  {
-    title: t('documents.campaign.tab'),
-    icon: 'tabler-send',
-    tab: 'campaigns',
-  },
-  {
-    title: t('documents.payslip.tab'),
-    icon: 'tabler-cash',
-    tab: 'payslips',
-    visible: canPayslips.value,
-  },
-  {
-    title: t('companyDocuments.tabs.compliance'),
-    icon: 'tabler-shield-check',
-    tab: 'compliance',
-  },
-  {
-    title: t('companyDocuments.tabs.vault'),
-    icon: 'tabler-folder',
-    tab: 'vault',
-  },
-  {
-    title: t('companyDocuments.tabs.hr'),
-    icon: 'tabler-file-certificate',
-    tab: 'hr',
-    visible: canHr.value,
-  },
-  {
-    title: t('companyDocuments.tabs.settings'),
-    icon: 'tabler-settings',
-    tab: 'settings',
-  },
-])
+// Anciens onglets : leurs liens restent valides et ouvrent la vue qui les contient désormais.
+const resolveLegacy = (tab, query) => ({
+  overview: 'todo',
+  vault: 'company',
+  requests: 'people',
+  hr: query.tab === 'signatures' ? 'signatures' : query.tab === 'templates' ? 'templates' : 'people',
+}[tab] || tab)
 
-// Only show tabs user has permission for (+ visibilité explicite pour l'onglet RH).
-const tabs = computed(() =>
-  allTabs.value.filter(t => {
-    if (t.visible === false) return false
-    const perm = tabPermissions[t.tab]
+const activeTab = computed(() => route.params.tab)
+const currentTool = computed(() => toolViews.value.find(v => v.tab === activeTab.value) || null)
 
-    return !perm || can(perm)
-  }),
-)
-
-// ADR-418/766: Redirect if URL points to a tab the user cannot see (permission OU visibilité RH).
 watch(() => route.params.tab, tab => {
-  const visible = tabs.value.some(t => t.tab === tab)
+  const target = resolveLegacy(tab, route.query)
+  const allowed = [...mainViews.value, ...toolViews.value].some(v => v.tab === target)
+  const next = allowed ? target : (mainViews.value[0]?.tab || toolViews.value[0]?.tab || 'todo')
 
-  if (!visible) {
-    router.replace({ params: { tab: tabs.value[0]?.tab || 'overview' } })
+  if (next !== tab) {
+    const { tab: _, ...query } = route.query
+
+    router.replace({ params: { tab: next }, query: tab === 'hr' ? query : route.query })
   }
 }, { immediate: true })
+
+// ── Recherche transversale (serveur) ──
+const term = ref(typeof route.query.q === 'string' ? route.query.q : '')
+const searching = ref(term.value !== '')
+watch(term, v => { if (v.trim() !== '') searching.value = true })
+const closeSearch = () => { searching.value = false; term.value = '' }
+
+// ── « Nouveau » : chaque entrée ouvre directement le bon formulaire ──
+const depositOpen = ref(false)
+const signOpen = ref(false)
+const go = (tab, query = {}) => router.push({ name: 'company-documents-tab', params: { tab }, query })
+const newActions = computed(() => [
+  can('documents.manage') ? { key: 'deposit', icon: 'tabler-file-upload', run: () => { depositOpen.value = true } } : null,
+  can('documents.manage') ? { key: 'request', icon: 'tabler-file-import', run: () => go('people', { new: 'request' }) } : null,
+  can('documents.manage') ? { key: 'campaign', icon: 'tabler-send', run: () => go('campaigns', { new: 'campaign' }) } : null,
+  canSignatures.value && can('workforce_signature.request') ? { key: 'sign', icon: 'tabler-signature', run: () => { signOpen.value = true } } : null,
+  can('payslips.import') ? { key: 'payslips', icon: 'tabler-cash', run: () => go('payslips') } : null,
+].filter(Boolean))
+
+// Liens directs (accueil, fiche) : `?new=deposit|sign` ouvre le formulaire, `&document=` présélectionne.
+const signDocument = ref(null)
+watch(() => route.query.new, v => {
+  if (v !== 'deposit' && v !== 'sign') return
+  if (v === 'deposit' && can('documents.manage')) depositOpen.value = true
+  if (v === 'sign' && canSignatures.value && can('workforce_signature.request')) {
+    signDocument.value = route.query.document ? Number(route.query.document) : null
+    signOpen.value = true
+  }
+  const { new: _, document: __, ...query } = route.query
+
+  router.replace({ query })
+}, { immediate: true })
+
+const onDeposited = async ({ subject }) => {
+  if (subject === 'company') { await store.fetchCompanyDocuments(); if (activeTab.value !== 'company') go('company') }
+  await Promise.allSettled([store.fetchCompliance(), can('documents.manage') ? store.fetchRequests({ silent: true }) : null])
+}
 
 // ─── Create/Edit drawer ─────────────────────────────────
 const isDrawerOpen = ref(false)
@@ -158,12 +157,80 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
 
 <template>
   <div>
+    <!-- En-tête : titre · recherche · Nouveau · Outils -->
+    <div class="d-flex align-center flex-wrap gap-3 mb-5">
+      <h4 class="text-h4">
+        {{ t('documents.title') }}
+      </h4>
+      <VSpacer />
+      <AppTextField
+        v-model="term"
+        :placeholder="t('documents.search.placeholder')"
+        prepend-inner-icon="tabler-search"
+        clearable
+        density="compact"
+        style="max-inline-size: 320px; min-inline-size: 200px;"
+        data-test="documents-search-input"
+        @click:clear="closeSearch"
+        @keydown.enter="searching = true"
+      />
+      <VBtn
+        v-if="newActions.length"
+        color="primary"
+        prepend-icon="tabler-plus"
+        data-test="documents-new"
+      >
+        {{ t('documents.new.label') }}
+        <VMenu
+          activator="parent"
+          location="bottom end"
+        >
+          <VList min-width="260">
+            <VListItem
+              v-for="a in newActions"
+              :key="a.key"
+              :prepend-icon="a.icon"
+              :data-test="`documents-new-${a.key}`"
+              @click="a.run"
+            >
+              <VListItemTitle>{{ t(`documents.new.${a.key}`) }}</VListItemTitle>
+            </VListItem>
+          </VList>
+        </VMenu>
+      </VBtn>
+      <VBtn
+        v-if="toolViews.length"
+        variant="tonal"
+        color="secondary"
+        prepend-icon="tabler-tool"
+        data-test="documents-tools"
+      >
+        {{ t('documents.tools.label') }}
+        <VMenu
+          activator="parent"
+          location="bottom end"
+        >
+          <VList min-width="300">
+            <VListItem
+              v-for="v in toolViews"
+              :key="v.tab"
+              :prepend-icon="v.icon"
+              :to="{ name: 'company-documents-tab', params: { tab: v.tab } }"
+              :data-test="`documents-tool-${v.tab}`"
+            >
+              <VListItemTitle>{{ v.title }}</VListItemTitle>
+              <VListItemSubtitle>{{ v.hint }}</VListItemSubtitle>
+            </VListItem>
+          </VList>
+        </VMenu>
+      </VBtn>
+    </div>
+
     <!-- Loading -->
     <VSkeletonLoader
       v-if="pageLoading"
       type="heading, card, card"
     />
-
     <!-- Error -->
     <ErrorState
       v-else-if="pageError"
@@ -171,89 +238,120 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
       @retry="pageRetry"
     />
 
+    <!-- Recherche : remplace les vues tant qu'elle est ouverte -->
+    <DocumentsSearch
+      v-else-if="searching"
+      :term="term"
+      @close="closeSearch"
+    />
+
     <!-- Content -->
     <template v-else>
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
-        :to="{ name: 'company-documents-tab', params: { tab: item.tab } }"
+      <!-- Vue avancée : un titre et un retour, pas un cinquième onglet -->
+      <div
+        v-if="currentTool"
+        class="d-flex align-center gap-2 mb-4"
       >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-        <VBadge
-          v-if="item.badge"
-          :content="item.badge"
-          color="error"
-          floating
-          class="ms-2"
-        />
-      </VTab>
-    </VTabs>
-
-    <VWindow
-      v-model="activeTab"
-      class="mt-6 disable-tab-transition"
-      :touch="false"
-    >
-      <VWindowItem value="overview">
-        <DocumentsOverview @navigate="navigateToTab" />
-      </VWindowItem>
-
-      <VWindowItem value="requests">
-        <DocumentsRequests />
-      </VWindowItem>
-
-      <VWindowItem value="campaigns">
-        <DocumentsCampaigns />
-      </VWindowItem>
-
-      <VWindowItem value="payslips">
-        <DocumentsPayslipImport />
-      </VWindowItem>
-
-      <VWindowItem value="compliance">
-        <DocumentsCompliance />
-      </VWindowItem>
-
-      <VWindowItem value="vault">
-        <DocumentsVault @open-create-drawer="openCreateDrawer" />
-      </VWindowItem>
-
-      <!-- Registre RH (docs générés + modèles + signatures) RÉUTILISÉ — gating module + permission -->
-      <VWindowItem
-        v-if="canHr"
-        value="hr"
+        <VBtn
+          variant="text"
+          size="small"
+          prepend-icon="tabler-arrow-left"
+          :to="{ name: 'company-documents-tab', params: { tab: mainViews[0]?.tab || 'todo' } }"
+          data-test="documents-tool-back"
+        >
+          {{ t('documents.title') }}
+        </VBtn>
+        <span class="text-h6">{{ currentTool.title }}</span>
+      </div>
+      <VTabs
+        v-else
+        :model-value="activeTab"
+        class="mb-6"
       >
-        <HrDocuments
-          v-if="activeTab === 'hr'"
-          embedded
-        />
-      </VWindowItem>
+        <VTab
+          v-for="item in mainViews"
+          :key="item.tab"
+          :value="item.tab"
+          :to="{ name: 'company-documents-tab', params: { tab: item.tab } }"
+          :data-test="`documents-view-${item.tab}`"
+        >
+          <VIcon
+            size="20"
+            start
+            :icon="item.icon"
+          />
+          {{ item.title }}
+          <VBadge
+            v-if="item.badge"
+            :content="item.badge"
+            color="error"
+            inline
+            class="ms-2"
+          />
+        </VTab>
+      </VTabs>
 
-      <VWindowItem value="settings">
-        <DocumentsSettings
-          @open-create-drawer="openCreateDrawer"
-          @edit-custom-type="openEditDrawer"
-        />
-      </VWindowItem>
-    </VWindow>
+      <DocumentsTodo v-if="activeTab === 'todo'" />
 
-    <!-- Drawer at page level (outside VWindow) -->
+      <DocumentsVault
+        v-else-if="activeTab === 'company'"
+        @open-create-drawer="openCreateDrawer"
+      />
+
+      <!-- Collaborateurs : pièces demandées aux personnes (documents.manage) + documents générés (registre RH) -->
+      <div v-else-if="activeTab === 'people'">
+        <DocumentsRequests v-if="can('documents.manage')" />
+        <div
+          v-if="canHr"
+          :class="can('documents.manage') ? 'mt-8' : ''"
+          data-test="documents-people-generated"
+        >
+          <h6 class="text-h6 mb-3">
+            {{ t('documents.views.generated') }}
+          </h6>
+          <HrDocuments
+            embedded
+            only="documents"
+          />
+        </div>
+      </div>
+
+      <SignaturePage
+        v-else-if="activeTab === 'signatures' && canSignatures"
+        embedded
+      />
+
+      <DocumentsCampaigns v-else-if="activeTab === 'campaigns'" />
+      <DocumentsPayslipImport v-else-if="activeTab === 'payslips'" />
+      <DocumentsCompliance v-else-if="activeTab === 'compliance'" />
+      <HrDocuments
+        v-else-if="activeTab === 'templates' && canTemplates"
+        embedded
+        only="templates"
+      />
+      <DocumentsSettings
+        v-else-if="activeTab === 'settings'"
+        @open-create-drawer="openCreateDrawer"
+        @edit-custom-type="openEditDrawer"
+      />
+    </template>
+
     <CreateDocumentTypeDrawer
       v-model:is-drawer-open="isDrawerOpen"
       :edit-document="editDocument"
       @created="handleDrawerDone"
       @updated="handleDrawerDone"
     />
-    </template>
+    <DocumentDepositDialog
+      v-model="depositOpen"
+      :subject="activeTab === 'company' ? 'company' : null"
+      @deposited="onDeposited"
+    />
+    <SignatureWizard
+      v-if="canSignatures"
+      v-model:is-dialog-visible="signOpen"
+      :preselected-document-id="signDocument"
+      @created="go('signatures')"
+    />
   </div>
 </template>

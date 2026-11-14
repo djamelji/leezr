@@ -17,7 +17,7 @@
   "pages": 1,
   "path": [
    "/dashboard",
-   "/company/documents/requests"
+   "/company/documents/todo"
   ]
  },
  "validation": {
@@ -25,7 +25,7 @@
   "pages": 1,
   "path": [
    "/dashboard",
-   "/company/documents/requests"
+   "/company/documents/todo"
   ]
  },
  "depot_document": {
@@ -33,7 +33,7 @@
   "pages": 1,
   "path": [
    "/dashboard",
-   "/company/documents/vault"
+   "/company/documents/company"
   ]
  },
  "planning": {
@@ -45,11 +45,11 @@
   ]
  },
  "teardown": {
-  "run_id": "rmwfyvqmjtatc0a",
+  "run_id": "rmwg0t6138r94si",
   "dry_run": false,
   "deleted": [
-   "membership:88",
-   "user:77"
+   "membership:92",
+   "user:80"
   ],
   "skipped": []
  },

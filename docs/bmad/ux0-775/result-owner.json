@@ -62,7 +62,7 @@
    "key": "documents",
    "space": "documents",
    "placement": "nav",
-   "path": "/company/documents/overview"
+   "path": "/company/documents/todo"
   },
   {
    "key": "workforce-payroll",
@@ -158,7 +158,7 @@
   },
   {
    "from": "/company/workforce/documents",
-   "to": "/company/documents/hr"
+   "to": "/company/documents/people"
   },
   {
    "from": "/company/workforce/configuration",

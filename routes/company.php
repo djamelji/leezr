@@ -297,6 +297,9 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     Route::delete('/company/documents/{code}', [CompanyDocumentController::class, 'destroy'])
         ->middleware('company.access:use-permission,documents.manage');
 
+    // ADR-778 (UX3) — recherche documentaire transversale : chaque source applique SES règles d'accès.
+    Route::get('/company/documents/search', \App\Modules\Core\Documents\Http\DocumentSearchController::class)
+        ->middleware('company.access:use-any-permission,documents.view|workforce_documents.view');
     // Document compliance dashboard (ADR-387)
     Route::get('/company/documents/compliance', [DocumentComplianceController::class, 'index'])
         ->middleware('company.access:use-permission,documents.view');

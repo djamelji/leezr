@@ -141,12 +141,14 @@ test('UX2 parcours exécutés (propriétaire, registre d\'exécution)', async ({
     net.mark('déposer un document')
     await page.locator('[data-test="person-actions-menu"]').click()
     await page.locator('[data-test="person-action-add-document"]').click()
-    const section = page.locator('[data-test="person-section-documents"]')
-    await expect(section).toBeVisible({ timeout: 15000 })
-    await section.locator('input[type="file"]').first().setInputFiles({ name: 'piece-ux2.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') })
+    // ADR-778 (UX3) : l'action ouvre directement le dépôt, la personne déjà renseignée.
+    await expect(page.locator('[data-test="document-deposit-subject"]')).toContainText('Lina')
+    await page.locator('[data-test="document-deposit-type"]').click()
+    await page.locator('.v-overlay--active .v-list-item', { hasText: /Certificat m/i }).first().click()
+    await page.locator('[data-test="document-deposit-file"]').setInputFiles({ name: 'piece-ux2.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') })
     const [up] = await Promise.all([
       page.waitForResponse(r => new RegExp(`/api/company/people/employee-${employeeId}/documents/`).test(r.url()) && r.request().method() === 'POST', { timeout: 20000 }),
-      page.locator('.v-overlay--active button').filter({ hasText: /téléverser|confirmer|envoyer|valider|déposer/i }).last().click(),
+      page.locator('[data-test="document-deposit-submit"]').click(),
     ])
     expect(up.status(), 'document déposé').toBeLessThan(300)
     m.deposer_document = await read(1)

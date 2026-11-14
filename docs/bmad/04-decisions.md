@@ -28103,3 +28103,35 @@ UX1 validé. L'ajout d'une personne imposait un choix technique (utilisateur ou 
 `Ux2TeamTest`, tests de dépôt et de priorités ; suite complète 4278 verts (3 échecs historiques inchangés) ; build propre ; recettes navigateur : voir le checkpoint.
 
 **Verdict** : 🟢 GO DEV. UX3 non commencé.
+
+---
+
+## ADR-778 — Company Experience 2.0 / UX3 : Documents par intention, dépôt direct, recherche transversale
+
+**Date** : 2026-11-14 · **Base** : `3076ca9c` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX3.md`
+
+### Contexte
+
+UX2 validé. L'espace Documents comptait 8 onglets et 3 sous-onglets ; aucune recherche commune ; le dépôt n'existait que par le bouton d'une ligne ; la ligne d'une pièce empilait puces et boutons et se coupait sur mobile ; les actions de la fiche renvoyaient à une section au lieu d'ouvrir le formulaire.
+
+### Décisions
+
+1. **Quatre vues** : À traiter, Entreprise, Collaborateurs, Signatures. Campagnes, import de bulletins, conformité, modèles, types et réglages passent sous « Outils » (vues complètes, inchangées). Les composants existants sont réutilisés ; chaque bloc garde sa permission. Anciens onglets : alias.
+2. **« À traiter »** : la file à valider (composant existant, filtré) et des suivis qui ouvrent la vue déjà filtrée.
+3. **« Nouveau »** : dépôt, demande, demande collective, signature, import — chaque entrée ouvre son formulaire ; entrées filtrées par droits.
+4. **Dépôt unique** (`DocumentDepositDialog`) : sujet connu d'avance selon l'origine ; type, fichier, validité seulement si le catalogue l'exige ; endpoints existants.
+5. **Recherche transversale** : `GET /company/documents/search`, sources contribuées par manifeste (`Capabilities::$documentSearchSources`, contrat `DocumentSearchSource`). Chaque source applique ses règles (`DocumentAccessPolicy`, `GeneratedDocumentAccess`) ligne par ligne ; métadonnées de liste seulement ; pagination et profondeur bornée côté serveur.
+6. **Fiche** : actions directes (dépôt, demande, signature avec document présélectionné) et liens `?do=` ; ligne de pièce à un état, une action principale, un menu ; disposition empilée sur petit écran ; historique en libellés métier.
+7. **Démontage des recettes** : supprime les pièces et demandes d'une fiche qu'il possède.
+
+### Conséquences
+
+- Aucune route supprimée, aucune migration, aucune permission ajoutée ni élargie ; moteurs documentaires, signature, Billing et paie intacts.
+- Les liens de priorités et les actions d'accueil pointent vers les nouvelles vues.
+- Les documents générés par les recettes restent en base (immuables) : décision renvoyée à l'utilisateur.
+
+### Validation
+
+Tests de recherche (droits, cloisonnement, pagination, téléchargement) ; `ux3-documents.spec.js` (10 parcours avec écriture, 4 profils, entreprise sans Workforce, mobile) ; suite complète et build : voir le checkpoint.
+
+**Verdict** : 🟢 GO DEV. UX4 non commencé.

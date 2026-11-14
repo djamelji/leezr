@@ -21,6 +21,7 @@ class WorkforceDocumentsModule implements ModuleDefinition
                 // Le registre RH (docs générés + modèles + signatures) est un ONGLET de `/company/documents`.
                 // La route `company-workforce-documents` reste enregistrée comme ALIAS (redirige vers l'onglet RH).
                 navItems: [],
+                documentSearchSources: [\App\Modules\Workforce\Documents\Search\GeneratedDocumentsSearchSource::class], // ADR-778
                 routeNames: ['company-workforce-documents'],
                 middlewareKey: 'workforce_documents',
             ),

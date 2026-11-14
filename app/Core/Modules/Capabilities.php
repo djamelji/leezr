@@ -18,6 +18,8 @@ final class Capabilities
         public readonly array $actions = [],
         /** ADR-776 — classes implementing App\Core\Home\HomePriorityProvider (« À traiter » on the home). */
         public readonly array $priorityProviders = [],
+        /** ADR-778 — classes implementing App\Core\Documents\Search\DocumentSearchSource. */
+        public readonly array $documentSearchSources = [],
     ) {}
 
     public function toArray(): array
@@ -31,6 +33,7 @@ final class Capabilities
             'footer_links' => $this->footerLinks,
             'actions' => $this->actions,
             'priority_providers' => $this->priorityProviders,
+            'document_search_sources' => $this->documentSearchSources,
         ];
     }
 }

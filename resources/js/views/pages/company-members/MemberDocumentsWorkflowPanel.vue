@@ -55,6 +55,9 @@ const viewerDocument = ref(null)
 
 // ADR-192: Document request
 const requestMenuVisible = ref(false)
+
+// ADR-778 (UX3) : un seul état par pièce — la valeur consolidée par le serveur.
+const STATE_COLOR = { missing: 'secondary', requested: 'info', pending_validation: 'warning', rejected: 'error', valid: 'success', expiring_soon: 'warning', expired: 'error' }
 const requestingCode = ref(null)
 
 // ADR-760 (M3) : personRef extrait de resourceBase (ex. /company/people/employee-5 → employee-5)
@@ -322,6 +325,10 @@ const handleViewerDownload = async () => {
     toast(t('documents.failedToUpload'), 'error')
   }
 }
+
+// ADR-778 (UX3) : actions directes de la fiche — « Demander un document » ouvre le choix du type ici,
+// un dépôt fait ailleurs rafraîchit la liste.
+defineExpose({ openRequest: () => { if (requestableDocTypes.value.length) requestMenuVisible.value = true; return requestableDocTypes.value.length > 0 }, refresh: () => fetchDocuments() })
 </script>
 
 <template>
@@ -329,7 +336,7 @@ const handleViewerDownload = async () => {
     <!-- ADR-192: Request Document + ADR-388: Create custom type -->
     <VCardItem v-if="canEdit && !documentsLoading">
       <template #append>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap justify-end">
           <VBtn
             variant="tonal"
             color="secondary"
@@ -398,7 +405,7 @@ const handleViewerDownload = async () => {
 
       <VTable
         v-else
-        class="text-no-wrap"
+        class="text-no-wrap member-documents-table"
       >
         <thead>
           <tr>
@@ -407,7 +414,7 @@ const handleViewerDownload = async () => {
               {{ t('documents.systemMandatory') }}
             </th>
             <th>{{ t('common.status') }}</th>
-            <th style="width: 200px;" />
+            <th style="width: 220px;" />
           </tr>
         </thead>
         <tbody>
@@ -428,112 +435,49 @@ const handleViewerDownload = async () => {
                 :required="doc.required"
               />
             </td>
+            <!-- ADR-778 (UX3) : UN état par pièce (consolidé par le serveur), pas un empilement de puces. -->
             <td>
-              <div class="d-flex align-center gap-2 flex-wrap">
-                <DocumentLifecycleChip
-                  :status="doc.lifecycle_status"
-                  :expires-at="doc.upload?.expires_at"
-                />
-                <DocumentStatusChip :status="doc.request_status" />
-                <DocumentAiChip
-                  v-if="doc.upload"
-                  :analysis="doc.upload.ai_analysis"
-                />
-                <VChip
-                  v-if="doc.upload"
-                  size="small"
-                  variant="tonal"
-                  color="default"
-                >
-                  <VIcon
-                    :icon="fileFormatIcon(doc.upload.mime_type)"
-                    size="14"
-                    start
-                  />
-                  {{ fileFormatLabel(doc.upload.mime_type) }}
-                </VChip>
-                <span
-                  v-else-if="doc.request_status === 'requested'"
-                  class="text-caption text-disabled"
-                >
-                  {{ t('documents.noSubmissionYet') }}
-                </span>
-                <span
-                  v-else-if="!doc.request_status"
-                  class="text-caption text-disabled"
-                >
-                  {{ t('documents.noFileUploaded') }}
-                </span>
+              <VChip
+                :color="STATE_COLOR[doc.compliance_status] || 'secondary'"
+                size="small"
+                variant="tonal"
+                label
+                :data-test="`document-state-${doc.code}`"
+              >
+                {{ t(`documents.state.${doc.compliance_status || 'missing'}`) }}
+              </VChip>
+              <div
+                v-if="doc.upload?.expires_at"
+                class="text-caption text-medium-emphasis mt-1"
+              >
+                {{ t('documents.expiresAt') }} {{ new Date(doc.upload.expires_at).toLocaleDateString() }}
               </div>
             </td>
+            <!-- UNE action principale selon l'état ; le reste dans un menu libellé — rien n'est coupé. -->
             <td>
-              <div class="d-flex gap-1 justify-end">
-                <!-- View document -->
-                <VBtn
-                  v-if="doc.upload"
-                  icon
-                  variant="text"
-                  size="small"
-                  color="primary"
-                  @click="openViewer(doc)"
-                >
-                  <VIcon icon="tabler-eye" />
-                </VBtn>
-
-                <!-- Review actions -->
+              <div class="d-flex gap-1 justify-end align-center">
                 <VBtn
                   v-if="doc.can_review && canEdit"
                   size="small"
                   variant="tonal"
                   color="success"
+                  prepend-icon="tabler-check"
                   :loading="reviewingCode === doc.code"
+                  :data-test="`document-approve-${doc.code}`"
                   @click="handleReview(doc.code, 'approved')"
                 >
-                  <VIcon
-                    icon="tabler-check"
-                    size="16"
-                    start
-                  />
                   {{ t('documents.approve') }}
                 </VBtn>
                 <VBtn
-                  v-if="canEdit && doc.upload?.expires_at && ['requested', 'submitted', 'in_review', 'to_replace', 'rejected'].includes(doc.request_status)"
-                  size="small"
-                  variant="text"
-                  data-test="document-extend"
-                  @click="openExtend(doc.code)"
-                >
-                  {{ t('documents.extend') }}
-                </VBtn>
-                <VBtn
-                  v-if="doc.can_review && canEdit"
+                  v-else-if="canEdit"
                   size="small"
                   variant="tonal"
-                  color="error"
-                  :loading="reviewingCode === doc.code"
-                  @click="openRejectDialog(doc.code)"
-                >
-                  <VIcon
-                    icon="tabler-x"
-                    size="16"
-                    start
-                  />
-                  {{ t('documents.reject') }}
-                </VBtn>
-
-                <VBtn
-                  v-if="canEdit"
-                  size="small"
-                  variant="tonal"
+                  prepend-icon="tabler-upload"
                   :loading="uploadingCode === doc.code"
+                  :data-test="`document-upload-${doc.code}`"
                   @click="$refs[`fileInput_${doc.code}`]?.[0]?.click()"
                 >
-                  <VIcon
-                    icon="tabler-upload"
-                    size="16"
-                    start
-                  />
-                  {{ t('documents.upload') }}
+                  {{ doc.upload ? t('documents.replaceFile') : t('documents.upload') }}
                 </VBtn>
                 <input
                   :ref="`fileInput_${doc.code}`"
@@ -543,38 +487,78 @@ const handleViewerDownload = async () => {
                   :accept="doc.accepted_types.map(t => `.${t}`).join(',')"
                   @change="openUploadDialog(doc, $event.target.files); $event.target.value = ''"
                 >
-                <!-- ADR-757 (DMS M1): téléchargement gated par la policy de confidentialité -->
-                <VBtn
-                  v-if="doc.upload && doc.can_download !== false"
-                  icon
-                  variant="text"
+                <IconBtn
+                  v-if="doc.upload || (doc.can_review && canEdit)"
                   size="small"
-                  :href="`/api${base}/documents/${doc.code}/download`"
-                  target="_blank"
+                  :aria-label="t('documents.moreActions')"
+                  :data-test="`document-more-${doc.code}`"
                 >
-                  <VIcon icon="tabler-download" />
-                </VBtn>
-                <VBtn
-                  v-else-if="doc.upload && doc.can_download === false"
-                  icon
-                  variant="text"
-                  size="small"
-                  color="medium-emphasis"
-                  disabled
-                >
-                  <VIcon icon="tabler-lock" />
-                  <VTooltip activator="parent" location="top">{{ t('documents.confidentialRestricted') }}</VTooltip>
-                </VBtn>
-                <VBtn
-                  v-if="doc.upload && canEdit"
-                  icon
-                  variant="text"
-                  size="small"
-                  color="error"
-                  @click="handleDocDelete(doc.code)"
-                >
-                  <VIcon icon="tabler-trash" />
-                </VBtn>
+                  <VIcon icon="tabler-dots-vertical" />
+                  <VMenu
+                    activator="parent"
+                    location="bottom end"
+                  >
+                    <VList
+                      density="compact"
+                      min-width="220"
+                    >
+                      <VListItem
+                        v-if="doc.upload"
+                        prepend-icon="tabler-eye"
+                        @click="openViewer(doc)"
+                      >
+                        <VListItemTitle>{{ t('documents.preview') }}</VListItemTitle>
+                      </VListItem>
+                      <!-- ADR-757 (DMS M1): téléchargement gated par la policy de confidentialité -->
+                      <VListItem
+                        v-if="doc.upload && doc.can_download !== false"
+                        prepend-icon="tabler-download"
+                        :href="`/api${base}/documents/${doc.code}/download`"
+                        target="_blank"
+                      >
+                        <VListItemTitle>{{ t('documents.download') }}</VListItemTitle>
+                      </VListItem>
+                      <VListItem
+                        v-else-if="doc.upload && doc.can_download === false"
+                        prepend-icon="tabler-lock"
+                        disabled
+                      >
+                        <VListItemTitle>{{ t('documents.confidentialRestricted') }}</VListItemTitle>
+                      </VListItem>
+                      <VListItem
+                        v-if="doc.can_review && canEdit"
+                        prepend-icon="tabler-upload"
+                        @click="$refs[`fileInput_${doc.code}`]?.[0]?.click()"
+                      >
+                        <VListItemTitle>{{ t('documents.replaceFile') }}</VListItemTitle>
+                      </VListItem>
+                      <VListItem
+                        v-if="canEdit && doc.upload?.expires_at && ['requested', 'submitted', 'in_review', 'to_replace', 'rejected'].includes(doc.request_status)"
+                        prepend-icon="tabler-calendar-plus"
+                        data-test="document-extend"
+                        @click="openExtend(doc.code)"
+                      >
+                        <VListItemTitle>{{ t('documents.extend') }}</VListItemTitle>
+                      </VListItem>
+                      <VListItem
+                        v-if="doc.can_review && canEdit"
+                        prepend-icon="tabler-x"
+                        base-color="error"
+                        @click="openRejectDialog(doc.code)"
+                      >
+                        <VListItemTitle>{{ t('documents.reject') }}</VListItemTitle>
+                      </VListItem>
+                      <VListItem
+                        v-if="doc.upload && canEdit"
+                        prepend-icon="tabler-trash"
+                        base-color="error"
+                        @click="handleDocDelete(doc.code)"
+                      >
+                        <VListItemTitle>{{ t('documents.delete') }}</VListItemTitle>
+                      </VListItem>
+                    </VList>
+                  </VMenu>
+                </IconBtn>
               </div>
             </td>
           </tr>
@@ -762,3 +746,32 @@ const handleViewerDownload = async () => {
 
   <ConfirmDialogComponent />
 </template>
+
+<style lang="scss">
+/* ADR-778 (UX3) — sur petit écran, une pièce = un bloc : intitulé, état, actions. Rien n'est hors écran. */
+@media (max-width: 599.98px) {
+  .member-documents-table {
+    thead { display: none; }
+
+    tbody tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      padding-block: 12px;
+      border-block-end: thin solid rgba(var(--v-border-color), var(--v-border-opacity));
+    }
+
+    tbody td {
+      display: block;
+      block-size: auto !important;
+      border: 0 !important;
+      padding: 0 !important;
+      white-space: normal;
+    }
+
+    tbody td:first-child { flex: 1 1 100%; }
+    tbody td:last-child { margin-inline-start: auto; }
+  }
+}
+</style>

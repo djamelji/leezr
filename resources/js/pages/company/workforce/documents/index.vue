@@ -17,7 +17,9 @@ definePage({ meta: { module: 'workforce_documents', permission: 'workforce_docum
 // ADR-766 (M7) — espace Documents UNIFIÉ : cette page vit désormais comme onglet « RH » de
 // `/company/documents`. En standalone (`/company/workforce/documents`), elle REDIRIGE vers l'entrée
 // unique ; montée avec `embedded` par l'espace Documents, elle rend le registre RH (header masqué).
-const props = defineProps({ embedded: { type: Boolean, default: false } })
+// ADR-778 (UX3) : `only` = une seule vue du registre (sans sous-onglets) — l'espace Documents range
+// les documents générés, les modèles et les signatures dans ses propres vues.
+const props = defineProps({ embedded: { type: Boolean, default: false }, only: { type: String, default: null } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
@@ -219,7 +221,7 @@ const route = useRoute()
 const router = useRouter()
 const canTemplates = computed(() => can('workforce_contract.view'))
 const canSignatures = computed(() => can('workforce_signature.view'))
-const activeTab = ref(['templates', 'signatures'].includes(route.query.tab) ? route.query.tab : 'documents')
+const activeTab = ref(props.only || (['templates', 'signatures'].includes(route.query.tab) ? route.query.tab : 'documents'))
 watch(activeTab, v => {
   const q = { ...route.query }
   if (v === 'documents') delete q.tab
@@ -252,7 +254,7 @@ watch(activeTab, v => {
     </div>
 
     <!-- Onglets : Registre · Modèles · Signatures (chaque onglet gated par permission) -->
-    <VTabs v-model="activeTab" class="mb-5">
+    <VTabs v-if="!only" v-model="activeTab" class="mb-5">
       <VTab value="documents" prepend-icon="tabler-files" data-test="doc-tab-documents">
         {{ $t('workforceDocuments.tabs.documents') }}
       </VTab>

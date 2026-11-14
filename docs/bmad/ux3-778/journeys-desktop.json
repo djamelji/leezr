@@ -1,0 +1,113 @@
+{
+ "user": "owner@leezr.test",
+ "view": [
+  1440,
+  900
+ ],
+ "vars": {
+  "accountless": "employee-1351",
+  "linked": "employee-2",
+  "memberOnly": "user-56",
+  "employeeId": 2
+ },
+ "journeys": [
+  {
+   "journey": "hub",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/company/documents/todo",
+     "ok": true,
+     "shot": "j-desktop-01-todo.jpg",
+     "path": "/company/documents/todo",
+     "overlay": "overlay",
+     "title": "Documents",
+     "tabs": [],
+     "fields": [],
+     "buttons": [],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/documents/company",
+     "ok": true,
+     "shot": "j-desktop-02-company.jpg",
+     "path": "/company/documents/company",
+     "overlay": "overlay",
+     "title": "Documents",
+     "tabs": [],
+     "fields": [],
+     "buttons": [],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "goto",
+     "arg": "/company/people/employee-2?tab=documents",
+     "ok": true,
+     "shot": "j-desktop-03-file-documents.jpg",
+     "path": "/company/people/employee-2?tab=documents",
+     "overlay": null,
+     "title": "Alice Martin",
+     "tabs": [
+      "Vue d'ensemble",
+      "Informations & emploi",
+      "Documents & contrats",
+      "Temps & absences",
+      "Accès & autorisations"
+     ],
+     "fields": [
+      "Type de contrat[text-field]",
+      "Modèle de travail[text-field]",
+      "Heures hebdomadaires[text-field]",
+      "?[text-field]",
+      "Convention collective[text-field]",
+      "Type de rémunération[text-field]",
+      "Salaire de base[text-field]",
+      "Libellé du document[text-field]",
+      "Qui fournit ce document ?[text-field]",
+      "Date d'expiration requise[switch]"
+     ],
+     "buttons": [
+      "Équipe",
+      "Modifier",
+      "Actions",
+      "Vue d'ensemble",
+      "Informations & emploi",
+      "Documents & contrats",
+      "Temps & absences",
+      "Accès & autorisations",
+      "Ajouter un contrat",
+      "Annuler",
+      "Créer",
+      "Créer un type personnalisé",
+      "Demander un document",
+      "Approuver",
+      "Téléverser",
+      "Téléverser",
+      "Télécharger",
+      "Voir tout",
+      "Paramètres avancés",
+      "Créer",
+      "Annuler"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [
+      "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

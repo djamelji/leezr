@@ -4518,7 +4518,10 @@
       "terminateHint": "The person leaves the company. Their file, contracts and documents are kept. A draft contract is abandoned.",
       "terminateReason": "Reason",
       "terminateDate": "End date (today by default)",
-      "terminated": "End of collaboration recorded."
+      "terminated": "End of collaboration recorded.",
+      "nothingToRequest": "Every document is already requested or provided.",
+      "noDocumentToSignTitle": "No document to sign",
+      "noDocumentToSign": "This person has no document awaiting signature. Generate the document to sign first, for example the contract."
     },
     "add": {
       "title": "Add a person",
@@ -4541,6 +4544,59 @@
       "created": "Person added.",
       "createdInvited": "Person added, invitation prepared.",
       "createdAccessFailed": "Person added, but access could not be prepared. {reason}"
+    },
+    "history": {
+      "auth__login": "Sign-in",
+      "auth__logout": "Sign-out",
+      "member__added": "Added to the company",
+      "member__invitation_sent": "Invitation sent",
+      "member__invitation_declined": "Invitation declined",
+      "member__profile_updated": "Details updated",
+      "member__role_changed": "Role changed",
+      "member__suspended": "Access suspended",
+      "member__reactivated": "Access restored",
+      "member__removed": "Access removed",
+      "employee__created": "File created",
+      "employee__imported": "File imported",
+      "employee__bulk_updated": "File updated (bulk action)",
+      "employee__account_linked": "Account linked to the file",
+      "employee__terminated": "End of collaboration",
+      "contract__created": "Contract created",
+      "contract__activated": "Contract activated",
+      "contract__cancelled": "Draft contract abandoned",
+      "contract__terminated": "Contract ended",
+      "document__generated": "Document generated",
+      "document__requested": "Document requested",
+      "document__confidential_access": "Confidential document viewed",
+      "document__expiry_extended": "Document validity extended",
+      "signature__requested": "Signature requested",
+      "signature__sent": "Signature request sent",
+      "signature__signed": "Document signed",
+      "signature__completed": "Signature completed",
+      "signature__cancelled": "Signature request cancelled",
+      "leave_request__created": "Leave requested",
+      "leave_request__approved": "Leave approved",
+      "leave_request__rejected": "Leave rejected",
+      "leave_ledger__accrual": "Leave accrual",
+      "leave_ledger__reservation": "Leave reservation",
+      "timesheet__generated": "Timesheet generated",
+      "timesheet__submitted": "Timesheet submitted",
+      "timesheet__approved": "Timesheet approved",
+      "timesheet__rejected": "Timesheet rejected",
+      "timesheet__locked": "Timesheet locked",
+      "time_entry__clock_in": "Clock-in",
+      "time_entry__clock_out": "Clock-out",
+      "time_entry__break_start": "Break started",
+      "time_entry__break_end": "Break ended",
+      "time_entry__updated": "Time entry corrected",
+      "shift__created": "Shift created",
+      "shift__updated": "Shift updated",
+      "shift__cancelled": "Shift cancelled"
+    },
+    "historyBy": {
+      "user": "by a user",
+      "system": "automatic",
+      "platform": "by support"
     }
   },
   "peopleList": {
@@ -5696,7 +5752,95 @@
     "aiAnalyzedBanner": "AI analyzed this document",
     "aiFieldsExtracted": "{count} field extracted | {count} fields extracted",
     "aiAnomalies": "{count} anomaly detected | {count} anomalies detected",
-    "aiExtractedFields": "Extracted fields"
+    "aiExtractedFields": "Extracted fields",
+    "views": {
+      "todo": "To process",
+      "company": "Company",
+      "people": "People",
+      "signatures": "Signatures",
+      "generated": "Generated documents (contracts, certificates)"
+    },
+    "tools": {
+      "label": "Tools",
+      "campaignsHint": "Request a document from several people and follow up.",
+      "payslipsHint": "Import, match and publish external payslips.",
+      "complianceHint": "Detailed compliance by type and role.",
+      "templates": "Contract templates",
+      "templatesHint": "Templates used to generate contracts.",
+      "settings": "Types & settings",
+      "settingsHint": "Requested documents, reminders, automatic checks."
+    },
+    "new": {
+      "label": "New",
+      "deposit": "Upload a document",
+      "request": "Request a document",
+      "campaign": "Start a collective request",
+      "sign": "Request a signature",
+      "payslips": "Import payslips"
+    },
+    "search": {
+      "placeholder": "Search a document, a person…",
+      "sourceLabel": "Source",
+      "statusLabel": "Status",
+      "moreFilters": "Period and expiry",
+      "from": "From",
+      "to": "To",
+      "expiresBefore": "Expires before",
+      "count": "{n} result | {n} results",
+      "close": "Close search",
+      "error": "The search could not complete.",
+      "empty": "No document matches, among those you may view.",
+      "truncated": "Results limited to the most recent: narrow your search.",
+      "source": {
+        "company": "Company",
+        "person": "Person",
+        "generated": "Generated document"
+      },
+      "status": {
+        "valid": "Valid",
+        "expiring": "Expiring soon",
+        "expired": "Expired",
+        "signed": "Signed",
+        "pending_signature": "Signature in progress",
+        "generated": "Generated",
+        "missing": "Missing"
+      }
+    },
+    "todo": {
+      "clearTitle": "Nothing to process",
+      "clearHint": "No document to review, no upcoming expiry.",
+      "review": "{n} document to review | {n} documents to review",
+      "follow": "To follow",
+      "rows": {
+        "requested": "Requests awaiting upload",
+        "expired": "Expired documents",
+        "expiring": "Documents expiring soon",
+        "renewals": "Company renewals",
+        "missing": "Missing documents",
+        "signatures": "Pending signatures"
+      }
+    },
+    "deposit": {
+      "title": "Upload a document",
+      "for": "For: ",
+      "company": "The company",
+      "person": "A person",
+      "personLabel": "Person",
+      "type": "Document type",
+      "file": "File",
+      "submit": "Upload"
+    },
+    "state": {
+      "missing": "To provide",
+      "requested": "Requested",
+      "pending_validation": "To review",
+      "rejected": "Rejected",
+      "valid": "Valid",
+      "expiring_soon": "Expiring soon",
+      "expired": "Expired"
+    },
+    "replaceFile": "Replace the file",
+    "moreActions": "More actions"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "EU Intra-Community Reverse Charge",
   "billing.tax_exemption.export_extra_eu": "VAT Exempt — Export outside EU",

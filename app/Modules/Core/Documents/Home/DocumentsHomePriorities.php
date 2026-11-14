@@ -26,7 +26,7 @@ class DocumentsHomePriorities implements HomePriorityProvider
         $items = [];
 
         if ($home->can('documents.manage')) {
-            $items[] = HomePriority::make('documents_to_review', (int) ($summary['pending_validation'] ?? 0), 'warning', 'tabler-file-check', $tab('requests', ['status' => 'submitted']), 'documents');
+            $items[] = HomePriority::make('documents_to_review', (int) ($summary['pending_validation'] ?? 0), 'warning', 'tabler-file-check', $tab('todo'), 'documents');
         }
         $items[] = HomePriority::make('documents_expired', (int) ($summary['expired'] ?? 0), 'error', 'tabler-file-alert', $tab('compliance', ['status' => 'expired']), 'documents');
         $items[] = HomePriority::make('documents_expiring', (int) ($summary['expiring_soon'] ?? 0), 'warning', 'tabler-file-time', $tab('compliance', ['status' => 'expiring']), 'documents');

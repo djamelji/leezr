@@ -78,7 +78,7 @@ class HomePrioritiesReadModel
             $count = SignatureReadModel::scopedQuery($request, $companyId)
                 ->where('status', 'pending')->count();
             $priorities[] = self::item('signatures_pending', $count, 'info', 'tabler-signature', [
-                'name' => 'company-workforce-signature', 'query' => ['status' => 'pending'], // ADR-777 : la liste des signatures, déjà filtrée
+                'name' => 'company-documents-tab', 'params' => ['tab' => 'signatures'], 'query' => ['status' => 'pending'], // ADR-778 : vue Signatures de l'espace Documents, déjà filtrée
             ]);
         }
 

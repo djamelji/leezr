@@ -1,0 +1,13 @@
+{
+ "company": "Trial Logistics",
+ "views": [
+  "todo",
+  "company",
+  "people"
+ ],
+ "sources": [
+  "company",
+  "person"
+ ],
+ "network": []
+}

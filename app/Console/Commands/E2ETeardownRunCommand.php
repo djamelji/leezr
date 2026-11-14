@@ -67,6 +67,9 @@ class E2ETeardownRunCommand extends Command
                     }
                     if (! $dry) {
                         EmploymentContract::where('employee_id', $e->id)->delete();
+                        // ADR-778 : the documents of an employee the run OWNS go with her (a run that
+                        // uploads a piece for its own employee used to leave the piece and its request).
+                        self::deleteSubjectDocuments($e->company_id, $e->id);
                         $e->forceDelete();
                     }
                     $report['deleted'][] = "employee:{$id}";
@@ -107,5 +110,21 @@ class E2ETeardownRunCommand extends Command
         $this->line(json_encode(['run_id' => $runId, 'dry_run' => $dry] + $report));
 
         return self::SUCCESS;
+    }
+
+    /** Documents, versions, requests and request events whose SUBJECT is this (run-owned) employee. */
+    private static function deleteSubjectDocuments(int $companyId, int $employeeId): void
+    {
+        $subject = fn ($q) => $q->where('company_id', $companyId)->where('document_subject_type', 'employee')->where('document_subject_id', $employeeId);
+        $requests = \App\Core\Documents\DocumentRequest::withoutGlobalScopes()->tap($subject)->pluck('id');
+        \App\Core\Documents\DocumentRequestEvent::whereIn('document_request_id', $requests)->delete();
+        \App\Core\Documents\DocumentRequest::withoutGlobalScopes()->whereIn('id', $requests)->delete();
+        foreach (\App\Core\Documents\MemberDocument::withoutGlobalScopes()->tap($subject)->get() as $doc) {
+            if ($doc->file_path) {
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($doc->file_path);
+            }
+            \App\Core\Documents\DocumentVersion::withoutGlobalScopes()->where('member_document_id', $doc->id)->delete();
+            $doc->delete();
+        }
     }
 }

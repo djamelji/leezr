@@ -274,4 +274,66 @@ class Adr772AccountlessEmployeeDocumentCycleTest extends TestCase
         $this->as($this->viewer, $this->a)->post($base, ['files' => [$this->pdf('NO')], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertStatus(403);
         $this->as($this->ownerB, $this->b)->post($base, ['files' => [$this->pdf('B')], 'expires_at' => $expires], ['Accept' => 'application/json'])->assertStatus(404);
     }
+
+    // ═══ ADR-778 (UX3) — transversal document search : server-side, authorised, tenant-scoped ═══
+
+    public function test_adr778_search_returns_only_what_the_viewer_may_see(): void
+    {
+        $people = "/api/company/people/employee-{$this->employee->id}/documents";
+        $next = now()->addYear()->toDateString();
+        $this->as($this->owner, $this->a)->postJson("{$people}/id_card", ['file' => $this->pdf('ID'), 'expires_at' => $next])->assertOk();
+        $this->as($this->owner, $this->a)->postJson("{$people}/diploma", ['file' => $this->pdf('DIPLOMA')])->assertOk();
+        $this->as($this->owner, $this->a)->postJson('/api/company/documents/kbis', ['file' => $this->pdf('KBIS'), 'expires_at' => $next])->assertOk();
+        $search = fn (User $u, Company $c, array $q = []) => $this->as($u, $c)->getJson('/api/company/documents/search?'.http_build_query($q));
+
+        // Owner : the three documents ; the person is named ; only list-level metadata is returned.
+        $all = $search($this->owner, $this->a)->assertOk()->json();
+        $this->assertSame(3, $all['meta']['total']);
+        $this->assertEqualsCanonicalizing(['company', 'person', 'person'], array_column($all['data'], 'source'));
+        foreach ($all['data'] as $row) {
+            $this->assertEqualsCanonicalizing(['key', 'source', 'name', 'type_code', 'type_label', 'person', 'status', 'expires_at', 'date', 'open', 'download'], array_keys($row));
+            $this->assertStringNotContainsString('documents/', json_encode($row['name']), 'no storage path');
+        }
+        $byName = $search($this->owner, $this->a, ['q' => 'Sans Compte'])->json();
+        $this->assertSame(2, $byName['meta']['total']);
+        $this->assertSame('Sans Compte', $byName['data'][0]['person']['name']);
+        $this->assertSame("employee-{$this->employee->id}", $byName['data'][0]['person']['ref'], 'an employee WITHOUT account is searchable');
+
+        // Criteria are applied on the server.
+        $this->assertSame(1, $search($this->owner, $this->a, ['source' => 'company'])->json('meta.total'));
+        $this->assertSame(1, $search($this->owner, $this->a, ['type' => 'diploma'])->json('meta.total'));
+        $this->assertSame(0, $search($this->owner, $this->a, ['status' => 'expired'])->json('meta.total'));
+        $this->assertSame(2, $search($this->owner, $this->a, ['expires_before' => now()->addYears(2)->toDateString()])->json('meta.total'));
+        $this->assertSame(2, $search($this->owner, $this->a, ['person' => "employee-{$this->employee->id}"])->json('meta.total'));
+        $page = $search($this->owner, $this->a, ['per_page' => 1, 'page' => 2])->json();
+        $this->assertCount(1, $page['data']);
+        $this->assertSame(3, $page['meta']['total']);
+
+        // `documents.view` only : the standard piece and the company document, NEVER the identity
+        // document — even when the term matches it exactly.
+        $viewer = $search($this->viewer, $this->a)->json();
+        $this->assertEqualsCanonicalizing(['diploma', 'kbis'], array_column($viewer['data'], 'type_code'));
+        $this->assertSame(0, $search($this->viewer, $this->a, ['type' => 'id_card'])->json('meta.total'));
+        $this->assertNotContains('id_card', array_column($search($this->viewer, $this->a, ['q' => 'Sans Compte'])->json('data'), 'type_code'));
+
+        // Tenant : B sees nothing of A ; a member of A cannot search B ; no document right → refused.
+        $this->assertSame(0, $search($this->ownerB, $this->b, ['q' => 'Sans'])->json('meta.total'));
+        $search($this->owner, $this->b)->assertStatus(403);
+        $nobody = User::factory()->create();
+        $role = CompanyRole::create(['company_id' => $this->a->id, 'key' => 'nodoc', 'name' => 'No doc', 'is_administrative' => false]);
+        $this->a->memberships()->create(['user_id' => $nobody->id, 'role' => 'user', 'company_role_id' => $role->id]);
+        $search($nobody, $this->a)->assertStatus(403);
+        $search($this->owner, $this->a, ['status' => 'anything'])->assertStatus(422);
+    }
+
+    public function test_adr778_search_download_links_are_the_guarded_routes(): void
+    {
+        $this->as($this->owner, $this->a)->postJson("/api/company/people/employee-{$this->employee->id}/documents/diploma", ['file' => $this->pdf('DL')])->assertOk();
+        $row = $this->as($this->owner, $this->a)->getJson('/api/company/documents/search?q=diploma')->json('data.0');
+
+        // The link is the existing download route : real bytes for who may, refused across tenants.
+        $bytes = $this->as($this->owner, $this->a)->get('/api'.$row['download'])->assertOk()->streamedContent();
+        $this->assertStringContainsString('CYCLE[DL]', $bytes);
+        $this->as($this->ownerB, $this->b)->get('/api'.$row['download'])->assertStatus(404);
+    }
 }

@@ -162,7 +162,7 @@ test('UX1 parcours exécutés depuis l\'accueil (propriétaire, registre d\'exé
     const row = page.locator('tr', { hasText: run.email('ux1') }).first()
     await expect(row, 'la demande de la personne est dans la file ouverte').toBeVisible({ timeout: 15000 })
     measures.acces_demande = await read()
-    expect(new URL(page.url()).search).toContain('status=submitted')
+    expect(new URL(page.url()).pathname, 'ADR-778 : la file à valider est dans « À traiter »').toBe('/company/documents/todo')
     await page.screenshot({ path: `${OUT}/journey-to-review.jpg`, type: 'jpeg', quality: 55 })
 
     // 4. Valider (suite du même parcours).

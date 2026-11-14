@@ -1,0 +1,31 @@
+{
+ "profile": {
+  "tag": "dispatcher",
+  "email": "admin@leezr.test",
+  "note": "gestionnaire documentaire"
+ },
+ "hasDocuments": true,
+ "views": [
+  "todo",
+  "company",
+  "people"
+ ],
+ "tools": [
+  "campaigns",
+  "compliance",
+  "settings"
+ ],
+ "newActions": [
+  "deposit",
+  "request",
+  "campaign"
+ ],
+ "search": {
+  "status": 200,
+  "total": 6,
+  "sources": [
+   "person"
+  ]
+ },
+ "network": []
+}

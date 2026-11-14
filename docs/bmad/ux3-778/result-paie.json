@@ -1,0 +1,12 @@
+{
+ "profile": {
+  "tag": "paie",
+  "email": "pay@leezr.test",
+  "note": "gestionnaire paie"
+ },
+ "hasDocuments": false,
+ "views": [],
+ "tools": [],
+ "newActions": [],
+ "network": []
+}

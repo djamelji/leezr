@@ -291,26 +291,13 @@ class PageLayoutMetaTest extends TestCase
         $docPage = base_path('resources/js/pages/company/documents/[tab].vue');
         $content = file_get_contents($docPage);
 
-        // Must declare tab permissions map
-        $this->assertStringContainsString(
-            'tabPermissions',
-            $content,
-            'documents/[tab].vue must declare tabPermissions map (ADR-418)',
-        );
-
-        // Must gate requests tab
-        $this->assertStringContainsString(
-            "requests: 'documents.manage'",
-            $content,
-            'documents/[tab].vue must gate requests tab with documents.manage (ADR-418)',
-        );
-
-        // Must gate settings tab
-        $this->assertStringContainsString(
-            "settings: 'documents.configure'",
-            $content,
-            'documents/[tab].vue must gate settings tab with documents.configure (ADR-418)',
-        );
+        // ADR-778 (UX3) : views replaced the tab map ; the invariant is unchanged — every view and
+        // tool is gated by its REAL permission, and the redirect only allows visible ones.
+        $this->assertStringContainsString("show: can('documents.configure')", $content, 'settings tool gated by documents.configure (ADR-418)');
+        $this->assertStringContainsString("show: can('documents.manage') }", $content, 'campaigns tool gated by documents.manage');
+        $this->assertStringContainsString('<DocumentsRequests v-if="can(\'documents.manage\')" />', $content, 'requests queue gated by documents.manage (ADR-418)');
+        $this->assertStringContainsString("show: can('documents.view') }", $content, 'company vault and compliance gated by documents.view');
+        $this->assertStringContainsString('const allowed = [...mainViews.value, ...toolViews.value].some(v => v.tab === target)', $content, 'a hidden view is never reachable by URL');
     }
 
     /**

@@ -21,10 +21,19 @@ const { formatFileSize } = useDocumentHelpers()
 
 const canManage = computed(() => auth.hasPermission('documents.manage'))
 
+// ADR-778 (UX3) : la file est réutilisée par « À traiter » (déjà filtrée, sans en-tête ni filtres) ;
+// un lien `?new=request` ouvre directement la demande.
+const props = defineProps({
+  presetStatus: { type: String, default: null },
+  compact: { type: Boolean, default: false },
+})
+const route = useRoute()
+
 // ─── Filters ────────────────────────────────────────────
 const searchQuery = ref('')
 // ADR-776 : un lien « À traiter » ouvre la file déjà filtrée (?status=submitted).
-const filterStatus = ref(['requested', 'submitted'].includes(useRoute().query.status) ? useRoute().query.status : null)
+const filterStatus = ref(props.presetStatus || (['requested', 'submitted'].includes(route.query.status) ? route.query.status : null))
+watch(() => route.query.status, v => { if (!props.presetStatus) filterStatus.value = ['requested', 'submitted'].includes(v) ? v : null })
 const filterDocType = ref(null)
 
 const statusFilterItems = computed(() => [
@@ -591,6 +600,16 @@ const openRequestDialog = async () => {
   isRequestDialogVisible.value = true
 }
 
+// Lien direct « Demander un document » (menu Nouveau, accueil) : le formulaire s'ouvre tout de suite.
+const router = useRouter()
+watch(() => route.query.new, v => {
+  if (v !== 'request' || props.compact || !canManage.value) return
+  openRequestDialog()
+  const { new: _, ...query } = route.query
+
+  router.replace({ query })
+}, { immediate: true })
+
 const submitRequest = async () => {
   isRequestLoading.value = true
   try {
@@ -618,7 +637,7 @@ const submitRequest = async () => {
     type="table"
   />
   <VCard v-else>
-    <VCardItem>
+    <VCardItem v-if="!compact">
       <template #prepend>
         <VAvatar
           color="warning"
@@ -648,7 +667,7 @@ const submitRequest = async () => {
     </VCardItem>
 
     <!-- Filters -->
-    <VCardText>
+    <VCardText v-if="!compact">
       <VRow>
         <VCol
           cols="12"
@@ -689,7 +708,7 @@ const submitRequest = async () => {
       </VRow>
     </VCardText>
 
-    <VDivider />
+    <VDivider v-if="!compact" />
 
     <!-- B1: Section "À traiter" (submitted documents) -->
     <template v-if="submittedRequests.length">

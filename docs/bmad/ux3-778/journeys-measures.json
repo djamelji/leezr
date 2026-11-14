@@ -1,0 +1,63 @@
+{
+ "deposer_entreprise": {
+  "clicks": 5,
+  "fields": 2,
+  "pages": 0
+ },
+ "deposer_collaborateur": {
+  "clicks": 5,
+  "fields": 2,
+  "pages": 0
+ },
+ "valider": {
+  "clicks": 1,
+  "fields": 0,
+  "pages": 0
+ },
+ "demander": {
+  "clicks": 3,
+  "fields": 0,
+  "pages": 0
+ },
+ "generer_contrat": {
+  "clicks": 3,
+  "fields": 0,
+  "pages": 0
+ },
+ "preparer_signature": {
+  "clicks": 2,
+  "fields": 0,
+  "pages": 0
+ },
+ "retrouver_telecharger": {
+  "clicks": 1,
+  "fields": 1,
+  "pages": 0
+ },
+ "suivre_expiration": {
+  "clicks": 2,
+  "fields": 0,
+  "pages": 1,
+  "via": "Outils → Conformité (aucune échéance en cours)"
+ },
+ "lancer_campagne": {
+  "clicks": 2,
+  "fields": 0,
+  "pages": 1
+ },
+ "consulter_bulletin": {
+  "clicks": 1,
+  "fields": 0,
+  "pages": 0
+ },
+ "company_document_removed": 200,
+ "teardown": {
+  "run_id": "rmwg088a3ilzchw",
+  "dry_run": false,
+  "deleted": [
+   "employee:1757"
+  ],
+  "skipped": []
+ },
+ "network": []
+}

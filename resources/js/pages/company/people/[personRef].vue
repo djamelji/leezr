@@ -27,11 +27,14 @@ import EmployeeAccessDialog from '@/pages/company/workforce/employees/_EmployeeA
 import GenerateContractDialog from '@/pages/company/workforce/employees/_GenerateContractDialog.vue'
 import MemberDocumentsWorkflowPanel from '@/views/pages/company-members/MemberDocumentsWorkflowPanel.vue'
 import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
+import DocumentDepositDialog from '@/company/views/DocumentDepositDialog.vue'
+import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizard.vue'
+import { $api } from '@/utils/api'
 
 // ADR-767 : même règle que l'API (`members.view` OU `workforce.view`).
 definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'workforce.view'] } })
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const store = usePersonStore()
@@ -144,15 +147,52 @@ const canDocuments = computed(() => has('documents') && can('documents.view'))
 const primaryAction = computed(() => ((store.can.edit_hr && store.employeeId) || store.can.edit_identity
   ? { id: 'edit', label: t('common.edit'), icon: 'tabler-edit', handler: editPerson } : null))
 
+// ── Actions DIRECTES (ADR-778 / UX3) : l'action ouvre son formulaire, la personne déjà renseignée. ──
+const depositOpen = ref(false)
+const signOpen = ref(false)
+const signDocumentId = ref(null)
+const noDocumentToSign = ref(false)
+const documentsPanel = ref(null)
+
+const addDocument = () => { depositOpen.value = true }
+const onDeposited = () => { openSection('documents', 'documents'); documentsPanel.value?.refresh?.() }
+
+// « Demander un document » : la section s'ouvre sur le choix de la pièce (aucune autre saisie).
+const requestDocument = async () => {
+  openSection('documents', 'documents')
+  for (let i = 0; i < 20 && !documentsPanel.value; i++) await new Promise(r => setTimeout(r, 100))
+  await new Promise(r => setTimeout(r, 400))
+  if (documentsPanel.value?.openRequest?.() === false) toast(t('people.actions.nothingToRequest'), 'info')
+}
+
+// « Faire signer » : le document le plus récent de la personne qui n'est ni signé ni en cours de
+// signature est présélectionné ; l'assistant garde sa confirmation. Sans document : on guide.
+const sign = async () => {
+  let candidate = null
+  try {
+    const docs = (await $api(`/workforce/documents/by-employee/${store.employeeId}`)).documents || []
+
+    candidate = docs.find(d => !['signed', 'pending', 'in_progress'].includes(d.signature_status)) || null
+  }
+  catch { candidate = null }
+  if (!candidate) { noDocumentToSign.value = true
+
+    return }
+  signDocumentId.value = candidate.id
+  signOpen.value = true
+}
+
+const canSign = computed(() => !!store.employeeId && store.can.view_signatures && can('workforce_signature.request') && can('workforce_documents.view'))
+
 const menuActions = computed(() => [
   canDocuments.value && can('documents.manage')
-    ? { id: 'add-document', label: t('people.actions.addDocument'), icon: 'tabler-file-upload', handler: () => openSection('documents', 'documents') } : null,
-  canDocuments.value && can('documents.manage') && store.userId
-    ? { id: 'request-document', label: t('people.actions.requestDocument'), icon: 'tabler-file-import', handler: () => openSection('documents', 'documents') } : null,
+    ? { id: 'add-document', label: t('people.actions.addDocument'), icon: 'tabler-file-upload', handler: addDocument } : null,
+  canDocuments.value && can('documents.manage')
+    ? { id: 'request-document', label: t('people.actions.requestDocument'), icon: 'tabler-file-import', handler: requestDocument } : null,
   store.can.generate_contract
     ? { id: 'generate-contract', label: t('generateContract.action'), icon: 'tabler-file-text', handler: () => { contractDialogOpen.value = true } } : null,
-  store.can.view_signatures && can('workforce_signature.request')
-    ? { id: 'sign', label: t('people.actions.sign'), icon: 'tabler-signature', handler: () => router.push({ name: 'company-workforce-signature' }) } : null,
+  canSign.value
+    ? { id: 'sign', label: t('people.actions.sign'), icon: 'tabler-signature', handler: sign } : null,
   store.can.manage_access && store.employeeId
     ? { id: 'manage-access', label: t('people.manageAccess'), icon: 'tabler-key', handler: () => { accessDialogOpen.value = true } } : null,
   store.can.create_hr_record
@@ -193,6 +233,16 @@ async function reload() {
   }
   // Ancien lien (`?tab=contract`, `?tab=payslips`…) ou rubrique indisponible : rubrique équivalente, sinon la première.
   if (requestedTab.value) { openSection(requestedTab.value); requestedTab.value = null }
+
+  // ADR-778 : lien direct vers une action (`?do=deposit|request|sign`) — fonctionne après rechargement ;
+  // l'action n'est exécutée que si elle figure dans le menu (capacités serveur), puis retirée de l'adresse.
+  const wanted = { deposit: 'add-document', request: 'request-document', sign: 'sign' }[route.query.do]
+  if (wanted) {
+    const { do: _, ...query } = route.query
+
+    router.replace({ query })
+    nextTick(() => menuActions.value.find(a => a.id === wanted)?.handler())
+  }
   if (!tabKeys.value.includes(currentTab.value)) currentTab.value = tabKeys.value[0] || 'overview'
   await loadEmployee()
 }
@@ -221,6 +271,14 @@ watch(currentTab, tab => {
 watch(() => route.query.tab, tab => {
   if (typeof tab === 'string' && tab !== currentTab.value && store.data) openSection(tab)
 })
+// Historique en libellés métier (ADR-778) ; un code inconnu reste lisible (« shift.updated » → « Shift updated »).
+const historyLabel = action => {
+  const key = `people.history.${String(action).replace(/\./g, '__')}`
+  if (te(key)) return t(key)
+  const words = String(action).replace(/[._]/g, ' ')
+
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
 const historyOpened = ref([])
 watch(historyOpened, v => { if (v.length && !store.history.length) store.loadHistory(personRef.value) })
 
@@ -457,11 +515,11 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                         size="x-small"
                       >
                         <div class="d-flex justify-space-between gap-2 flex-wrap">
-                          <span class="text-body-2 font-weight-medium">{{ e.action }}</span>
+                          <span class="text-body-2 font-weight-medium">{{ historyLabel(e.action) }}</span>
                           <span class="text-caption text-medium-emphasis">{{ new Date(e.created_at).toLocaleString('fr-FR') }}</span>
                         </div>
                         <div class="text-caption text-medium-emphasis">
-                          {{ e.target_type }} · {{ e.actor_type }}
+                          {{ te(`people.historyBy.${e.actor_type}`) ? t(`people.historyBy.${e.actor_type}`) : e.actor_type }}
                         </div>
                       </VTimelineItem>
                     </VTimeline>
@@ -574,6 +632,7 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
               </h6>
                   <MemberDocumentsWorkflowPanel
                     v-if="can('documents.view') && store.personRef"
+                    ref="documentsPanel"
                     :resource-base="`/company/people/${store.personRef}`"
                     :supports-requests="!!store.userId"
                     :can-edit="can('documents.manage')"
@@ -765,6 +824,49 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
         @done="onHrLinked"
       />
       <CreateDocumentTypeDrawer v-model:is-drawer-open="docTypeDrawerOpen" />
+      <DocumentDepositDialog
+        v-model="depositOpen"
+        :subject="store.personRef"
+        :subject-name="store.identity.display_name"
+        @deposited="onDeposited"
+      />
+      <SignatureWizard
+        v-if="canSign"
+        v-model:is-dialog-visible="signOpen"
+        :preselected-document-id="signDocumentId"
+        @created="openSection('documents', 'documents')"
+      />
+      <!-- Rien à faire signer : on guide vers la génération, on ne lance rien. -->
+      <VDialog
+        v-model="noDocumentToSign"
+        max-width="440"
+      >
+        <VCard
+          :title="t('people.actions.noDocumentToSignTitle')"
+          data-test="person-sign-guide"
+        >
+          <VCardText class="text-body-1">
+            {{ t('people.actions.noDocumentToSign') }}
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="text"
+              @click="noDocumentToSign = false"
+            >
+              {{ t('common.close') }}
+            </VBtn>
+            <VBtn
+              v-if="store.can.generate_contract"
+              color="primary"
+              data-test="person-sign-guide-generate"
+              @click="noDocumentToSign = false; contractDialogOpen = true"
+            >
+              {{ t('generateContract.action') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
     </template>
   </div>
 </template>

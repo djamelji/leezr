@@ -1,0 +1,12 @@
+{
+ "profile": {
+  "tag": "manager",
+  "email": "manager@leezr.test",
+  "note": "manager limité"
+ },
+ "hasDocuments": false,
+ "views": [],
+ "tools": [],
+ "newActions": [],
+ "network": []
+}
