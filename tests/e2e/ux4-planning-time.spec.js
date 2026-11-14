@@ -20,6 +20,9 @@ const watch = page => {
   let at = ''
   page.on('response', r => {
     const url = r.url().replace(/^https?:\/\/[^/]+/, '')
+    // ADR-784 : un 429 sur /api/login est réessayé par loginCompany (respect de Retry-After) : ce
+    // n'est pas une erreur du produit. Toute autre réponse >= 400 reste comptée. LOGIN_THROTTLE
+    if (url.startsWith('/api/login') && r.status() === 429) return
     if (url.startsWith('/api/') && r.status() >= 400) bad.push({ at, status: r.status(), url: url.slice(0, 110) })
   })
   page.on('pageerror', e => bad.push({ at, js: String(e.message).slice(0, 160) }))

@@ -28,6 +28,7 @@ const watch = page => {
     const url = r.url().replace(/^https?:\/\/[^/]+/, '')
     if (!url.startsWith('/api/')) return
     calls.push(url.split('?')[0])
+    if (r.status() === 429 && url.startsWith('/api/login')) return // ADR-784 : réessayé par loginCompany
     if (r.status() >= 400) bad.push({ at, status: r.status(), url: url.slice(0, 110) })
   })
   page.on('pageerror', e => bad.push({ at, js: String(e.message).slice(0, 160) }))

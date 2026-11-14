@@ -88,17 +88,23 @@ class ExportPayrollDsnUseCase
                 return $existing;
             }
 
-            // Rejected — delete old record so we can create a fresh one
-            // (unique constraint on company_id + payroll_run_id)
-            if ($existing->status === DsnDeclaration::STATUS_REJECTED) {
-                $existing->delete();
-                $existing = null;
-            }
         }
 
-        // Resolve company data
+        // Resolve company data — ADR-784 : employer identity checked BEFORE anything is written (no file,
+        // no declaration, no deletion of a previous one) ; the error lists the fields to complete.
         $company = Company::withoutGlobalScopes()->findOrFail($run->company_id);
         $companyData = DsnCompanyResolver::resolve($company);
+        $identityIssues = DsnCompanyResolver::identityIssues($companyData);
+        if ($identityIssues) {
+            throw new \App\Core\Workforce\Dsn\DsnEmployerIdentityException($identityIssues);
+        }
+
+        // Rejected — delete old record so we can create a fresh one
+        // (unique constraint on company_id + payroll_run_id)
+        if ($existing && $existing->status === DsnDeclaration::STATUS_REJECTED) {
+            $existing->delete();
+            $existing = null;
+        }
 
         // Resolve employee data (batch — avoids N+1)
         $employees = $lines->pluck('employee')->filter();

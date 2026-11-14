@@ -20,7 +20,10 @@ export async function loginCompany(page, email = 'owner@leezr.test', password = 
     if (!page.url().endsWith('/login')) return
     const status = resp ? resp.status() : 0
     if (status === 429 || status >= 500 || status === 0) {
-      await page.waitForTimeout(20000)
+      // ADR-784 : respecte la fenêtre annoncée par le serveur (Retry-After) au lieu d'une attente fixe ;
+      // la limitation de débit n'est jamais contournée.
+      const retryAfter = Number(resp?.headers()?.['retry-after'] || 0)
+      await page.waitForTimeout(Math.min(Math.max(retryAfter, 5), 70) * 1000 + 500)
       continue
     }
     throw new Error(`Company login failed for ${email} (login POST status ${status})`)

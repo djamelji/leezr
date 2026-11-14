@@ -28274,3 +28274,23 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Tests : 6 nouveaux ; 2 fixtures de tests existants complétées.
 
 **Verdict** : 🟢 GO DEV. Préproduction non commencée.
+
+---
+
+## ADR-784 — Stabilisation finale Company Experience 2.0 : intégrité, sécurité, non-régression
+
+**Date** : 2026-11-14 · **Base** : `b58ae6d1` · **Rapport** : `docs/bmad/ADR-784-STABILISATION.md`
+
+### Décisions
+
+1. **DSN sur l'identité canonique** : `DsnCompanyResolver` lit `CompanyLegalIdentity` (profil Company, colonnes en repli, rien d'inventé ; NAF, INSEE, effectif, IDCC restent sur leurs colonnes). Contrôle de présence et de format **avant toute écriture** : identité incomplète ou invalide → `DsnEmployerIdentityException`, 422 avec champs et lien profil, aucun fichier, aucune déclaration. Déclarations exportées/transmises inchangées.
+2. **Catalogue Modules** : montants contractés et abonnements payants réservés à `modules.manage` / `billing.manage` (défaut démontré : servis à tout membre).
+3. **Contrat** : refus d'identité déplacé dans `CompanyLegalIdentity::contractRefusal` (contrôleur ramené à un appel).
+4. **Recettes navigateur** : `loginCompany` respecte `Retry-After` ; le 429 de connexion réessayé n'est plus compté comme erreur produit. Limitation de débit inchangée.
+
+### Conséquences
+
+- Une DSN ne peut plus être produite sans SIRET, NAF et adresse valides de l'employeur ; le NAF n'ayant pas de saisie, c'est un blocage de préproduction déclaré.
+- Dette `ControllerSizeInvariantTest` documentée (préexistante, réduite, aggravée) ; seuils inchangés.
+
+**Verdict** : 🟢 GO DEV · 🟡 GO préparation préproduction sous réserve (NAF, bulletins officiels) · 🔴 NO-GO PROD.

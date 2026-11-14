@@ -36,9 +36,18 @@ class CompanyModuleController
             ->keyBy('module_key');
 
         $policy = \App\Core\Billing\PlatformBillingPolicy::instance();
+        // ADR-784 : every member reads the catalogue (the UI gates features on it), but contracted
+        // amounts and paid subscriptions are billing data — only for modules.manage / billing.manage.
+        $user = $request->user();
+        $billingView = $user->hasCompanyPermission($company, 'modules.manage') || $user->hasCompanyPermission($company, 'billing.manage');
+        $modules = ModuleCatalogReadModel::forCompany($company);
+        if (! $billingView) {
+            $modules = array_map(fn (array $m) => array_merge($m, ['contracted_amount_cents' => null, 'subscribed_interval' => null]), $modules);
+            $addonSubs = collect();
+        }
 
         return response()->json([
-            'modules' => ModuleCatalogReadModel::forCompany($company),
+            'modules' => $modules,
             'company_plan_key' => CompanyEntitlements::planKey($company),
             'addon_deactivation_timing' => $policy->addon_deactivation_timing ?? 'end_of_period',
             'addon_subscriptions' => $addonSubs->map(fn ($s) => [

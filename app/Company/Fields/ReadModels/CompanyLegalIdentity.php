@@ -80,4 +80,12 @@ final class CompanyLegalIdentity
     {
         return $v !== null && trim((string) $v) !== '';
     }
+
+    /** ADR-784 — actionable refusal body when a contract cannot be issued for this company, else null. */
+    public static function contractRefusal(int $companyId): ?array
+    {
+        $missing = self::missingForContract(self::for(Company::findOrFail($companyId)));
+
+        return $missing ? ['message' => __('contracts.employer_identity_incomplete'), 'code' => 'employer_identity_incomplete', 'missing' => $missing, 'fix' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']]] : null;
+    }
 }

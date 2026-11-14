@@ -23,7 +23,7 @@ const LEGACY = ['/company/roles', '/company/plan', '/company/workforce', '/compa
 const watch = page => {
   const bad = []
   let at = ''
-  page.on('response', r => { if (r.status() >= 400 && r.url().includes('/api/')) bad.push({ at, status: r.status(), url: r.url().replace(/^https?:\/\/[^/]+/, '').slice(0, 110) }) })
+  page.on('response', r => { if (r.status() === 429 && r.url().includes('/api/login')) return; /* ADR-784 : réessayé par loginCompany */ if (r.status() >= 400 && r.url().includes('/api/')) bad.push({ at, status: r.status(), url: r.url().replace(/^https?:\/\/[^/]+/, '').slice(0, 110) }) })
   page.on('pageerror', e => bad.push({ at, js: String(e.message).slice(0, 160) }))
   return { bad, mark: v => { at = v } }
 }

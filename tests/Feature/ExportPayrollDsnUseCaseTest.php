@@ -478,29 +478,92 @@ class ExportPayrollDsnUseCaseTest extends TestCase
     // Invalid payload blocked
     // ═══════════════════════════════════════════════════════════════
 
-    public function test_invalid_payload_saved_as_draft_with_errors(): void
+    public function test_missing_employer_identity_blocks_before_any_file_or_declaration(): void
     {
-        // Remove SIRET (makes validation fail)
+        // ADR-784 : an incomplete employer identity is no longer saved as a draft file — nothing is
+        // produced, the error names the fields (it used to persist an invalid draft).
         $this->company->siret = null;
         $this->company->saveQuietly();
 
-        $useCase = new ExportPayrollDsnUseCase();
-
         try {
-            $useCase->execute($this->run, $this->user->id);
-            $this->fail('Expected DomainException');
-        } catch (\DomainException $e) {
-            $this->assertStringContainsString('validation failed', $e->getMessage());
+            (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+            $this->fail('Expected DsnEmployerIdentityException');
+        } catch (\App\Core\Workforce\Dsn\DsnEmployerIdentityException $e) {
+            $this->assertSame('missing', $e->issues['siret'] ?? null);
         }
 
-        // Declaration should still be persisted as draft
-        $declaration = DsnDeclaration::withoutGlobalScopes()
-            ->where('payroll_run_id', $this->run->id)
-            ->first();
+        $this->assertNull(DsnDeclaration::withoutGlobalScopes()->where('payroll_run_id', $this->run->id)->first(), 'no declaration');
+    }
 
-        $this->assertNotNull($declaration);
-        $this->assertSame(DsnDeclaration::STATUS_DRAFT, $declaration->status);
-        $this->assertNotEmpty($declaration->validation_errors);
+    // ── ADR-784 : identité employeur canonique (profil Company, colonnes en repli) ──────────────────
+
+    private function profile(\App\Core\Models\Company $company, array $values): void
+    {
+        foreach ($values as $code => $value) {
+            $def = \App\Core\Fields\FieldDefinition::whereNull('company_id')->where('code', $code)->firstOrFail();
+            \App\Core\Fields\FieldValue::updateOrCreate(['field_definition_id' => $def->id, 'model_type' => 'company', 'model_id' => $company->id], ['value' => $value]);
+        }
+    }
+
+    public function test_profile_identity_is_written_in_the_dsn_file(): void
+    {
+        $this->profile($this->company, ['siret' => '44210000000003', 'company_address' => '8 rue du Profil', 'company_postal_code' => '69003', 'company_city' => 'Lyon']);
+
+        $declaration = (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+        $content = Storage::disk('local')->get($declaration->file_path);
+        $this->assertSame('44210000000003', $declaration->payload_snapshot['company']['siret']);
+        $this->assertStringContainsString('8 rue du Profil', $content);
+        $this->assertStringContainsString('69003', $content);
+        $this->assertStringContainsString("S21.G00.06.001,'00003'", $content, 'NIC from the profile SIRET');
+        $this->assertStringContainsString('Lyon', $content);
+        $this->assertStringNotContainsString('15 rue de la Paix', $content, 'legacy column not used when the profile is filled');
+    }
+
+    public function test_historical_columns_still_produce_a_valid_dsn(): void
+    {
+        $declaration = (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+        $this->assertSame('73282932000074', $declaration->payload_snapshot['company']['siret']);
+        $this->assertStringContainsString('Paris', Storage::disk('local')->get($declaration->file_path));
+    }
+
+    public function test_incomplete_identity_lists_fields_and_writes_nothing(): void
+    {
+        $this->company->forceFill(['address_street' => null, 'address_postal_code' => null, 'address_city' => null])->saveQuietly();
+        $before = count(Storage::disk('local')->allFiles());
+
+        try {
+            (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+            $this->fail('Expected DsnEmployerIdentityException');
+        } catch (\App\Core\Workforce\Dsn\DsnEmployerIdentityException $e) {
+            $this->assertSame(['address_street' => 'missing', 'address_postal_code' => 'missing', 'address_city' => 'missing'], $e->issues);
+        }
+        $this->assertSame($before, count(Storage::disk('local')->allFiles()), 'no file');
+        $this->assertNull(DsnDeclaration::withoutGlobalScopes()->where('payroll_run_id', $this->run->id)->first(), 'no declaration');
+    }
+
+    public function test_invalid_siret_and_naf_are_refused(): void
+    {
+        $this->profile($this->company, ['siret' => '12345678901234']); // fails Luhn
+        $this->company->forceFill(['naf_code' => 'XX'])->saveQuietly();
+
+        try {
+            (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+            $this->fail('Expected DsnEmployerIdentityException');
+        } catch (\App\Core\Workforce\Dsn\DsnEmployerIdentityException $e) {
+            $this->assertSame('invalid', $e->issues['siret']);
+            $this->assertSame('invalid', $e->issues['naf_code']);
+        }
+        $this->assertNull(DsnDeclaration::withoutGlobalScopes()->where('payroll_run_id', $this->run->id)->first());
+    }
+
+    public function test_another_company_profile_never_feeds_this_dsn(): void
+    {
+        $other = \App\Core\Models\Company::create(['name' => 'Other DSN', 'slug' => 'other-dsn-'.uniqid(), 'jobdomain_key' => $this->company->jobdomain_key, 'market_key' => 'FR']);
+        $this->profile($other, ['siret' => '44210000000003', 'company_city' => 'Nice']);
+
+        $declaration = (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+        $this->assertSame('73282932000074', $declaration->payload_snapshot['company']['siret']);
+        $this->assertStringNotContainsString('Nice', Storage::disk('local')->get($declaration->file_path));
     }
 
     // ═══════════════════════════════════════════════════════════════

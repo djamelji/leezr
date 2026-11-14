@@ -18,22 +18,47 @@ class DsnCompanyResolver
      */
     public static function resolve(Company $company): DsnCompanyData
     {
+        // ADR-784 — same legal identity as generated documents (ADR-783) : Company PROFILE first, legacy
+        // columns only as fallback, nothing invented. Only fields with the SAME legal meaning are taken
+        // from the profile (raison sociale, SIRET, postal address) ; NAF/APE, INSEE code and headcount
+        // have no profile equivalent and stay on their columns.
+        $id = \App\Company\Fields\ReadModels\CompanyLegalIdentity::for($company);
+        $siret = $id['siret'] !== null ? str_replace(' ', '', $id['siret']) : null;
+
         return new DsnCompanyData(
             companyId: $company->id,
-            name: $company->name,
-            siret: $company->siret,
-            siren: $company->siret ? substr($company->siret, 0, 9) : null,
-            nic: $company->siret ? substr($company->siret, 9, 5) : null,
+            name: $id['legal_name'],
+            siret: $siret,
+            siren: $siret ? substr($siret, 0, 9) : null,
+            nic: $siret ? substr($siret, 9, 5) : null,
             nafCode: $company->naf_code,
-            addressStreet: $company->address_street,
-            addressComplement: $company->address_complement,
-            addressPostalCode: $company->address_postal_code,
-            addressCity: $company->address_city,
+            addressStreet: $id['address'],
+            addressComplement: $id['complement'],
+            addressPostalCode: $id['postal_code'],
+            addressCity: $id['city'],
             addressInseeCode: $company->address_insee_code,
             addressCountryCode: $company->address_country_code ?? 'FR',
             averageHeadcount: $company->average_headcount,
             idcc: $company->defaultConventionCollective?->idcc,
         );
+    }
+
+    /**
+     * ADR-784 — blocking pre-check of the employer identity (presence + existing format validators).
+     *
+     * @return array<string, string> field => 'missing' | 'invalid' (empty = ready)
+     */
+    public static function identityIssues(DsnCompanyData $data): array
+    {
+        $issues = array_fill_keys($data->missingMandatoryFields(), 'missing');
+        if (! isset($issues['siret']) && ! self::validateSiret((string) $data->siret)) {
+            $issues['siret'] = 'invalid';
+        }
+        if (! isset($issues['naf_code']) && ! self::validateNafCode((string) $data->nafCode)) {
+            $issues['naf_code'] = 'invalid';
+        }
+
+        return $issues;
     }
 
     /**
