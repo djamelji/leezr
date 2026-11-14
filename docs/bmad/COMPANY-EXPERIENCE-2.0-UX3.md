@@ -200,7 +200,7 @@ Le démontage des recettes supprime désormais les pièces et demandes d'une fic
 
 ## 14. Défauts résiduels
 
-1. **Données de recette** : les documents générés par les recettes (contrats de test) restent en base après le démontage — ils sont immuables par conception et l'application n'offre pas de suppression. Sept documents orphelins du jour ont été identifiés ; leur suppression directe a été refusée par le garde-fou d'exécution et n'a pas été contournée. Décision attendue (section 15).
+1. **Données de recette** : les documents générés par les recettes (contrats de test) restent en base après le démontage — ils sont immuables par conception et l'application n'offre pas de suppression. Huit documents orphelins du jour sont présents en fin de lot (sept identifiés en cours de lot, un de plus après la dernière recette) ; leur suppression directe a été refusée par le garde-fou d'exécution et n'a pas été contournée. Décision attendue (section 15).
 2. Dans la file « à valider », une pièce d'une fiche sans compte s'affiche sans nom de personne.
 3. « Créer un type personnalisé » reste proposé dans le dossier d'une personne.
 4. Les campagnes nécessitant une intervention ne figurent pas dans « À traiter ».
