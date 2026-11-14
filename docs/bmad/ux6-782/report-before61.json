@@ -1,0 +1,22 @@
+{
+ "before61:hrtime:desktop:light": {
+  "overflow": false,
+  "height": 1418
+ },
+ "before61:hrcontract:desktop:light": {
+  "overflow": false,
+  "height": 976
+ },
+ "before61:hrsignature:desktop:light": {
+  "overflow": false,
+  "height": 998
+ },
+ "before61:doctypes:desktop:light": {
+  "overflow": false,
+  "height": 2475
+ },
+ "before61:leavetypes:desktop:light": {
+  "overflow": false,
+  "height": 900
+ }
+}

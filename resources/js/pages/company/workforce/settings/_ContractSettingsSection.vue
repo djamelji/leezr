@@ -38,7 +38,7 @@ const identityRows = computed(() => {
     { label: t('contractSettings.identity.siret'), value: e.siret },
     { label: t('contractSettings.identity.naf'), value: e.naf_code },
     { label: t('contractSettings.identity.address'), value: e.address },
-    { label: t('contractSettings.identity.city'), value: [e.city, e.country_code].filter(Boolean).join(' · ') },
+    { label: t('contractSettings.identity.city'), value: e.city ? [e.city, e.country_code].filter(Boolean).join(' · ') : '—' }, // ADR-782 : jamais un code pays seul sous « Ville »
   ].filter(r => r.value)
 })
 

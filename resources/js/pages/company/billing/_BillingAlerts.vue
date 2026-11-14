@@ -33,42 +33,40 @@ const { t } = useI18n()
     <VAlertTitle>
       {{ t('companyBilling.overview.paymentFailedTitle') }}
     </VAlertTitle>
-    <span>
+    <!-- ADR-782 (UX6.1) : texte puis action, sur une seule colonne (plus de colonne de droite déséquilibrée) -->
+    <div>
       {{ t('companyBilling.overview.paymentFailedDesc', { count: overview.invoices_overdue ?? 0 }) }}
-    </span>
-
-    <template #append>
-      <!-- ADR-623 (LOT 6f): online payment actions only when the provider can actually collect. -->
-      <div
-        v-if="overview.can_pay_online"
-        class="d-flex gap-2"
+    </div>
+    <!-- ADR-623 (LOT 6f): online payment actions only when the provider can actually collect. -->
+    <div
+      v-if="overview.can_pay_online"
+      class="d-flex flex-wrap gap-2 mt-3"
+    >
+      <VBtn
+        v-can="'billing.manage'"
+        variant="flat"
+        color="error"
+        size="small"
+        to="/company/billing/pay"
       >
-        <VBtn
-          v-can="'billing.manage'"
-          variant="tonal"
-          color="error"
-          size="small"
-          to="/company/billing/pay"
-        >
-          {{ t('companyBilling.overview.retryPayment') }}
-        </VBtn>
-        <VBtn
-          v-can="'billing.manage'"
-          variant="outlined"
-          color="error"
-          size="small"
-          :to="{ name: 'company-billing-tab', params: { tab: 'payment-methods' } }"
-        >
-          {{ t('companyBilling.overview.changePaymentMethod') }}
-        </VBtn>
-      </div>
-      <span
-        v-else
-        class="text-body-2"
+        {{ t('companyBilling.overview.retryPayment') }}
+      </VBtn>
+      <VBtn
+        v-can="'billing.manage'"
+        variant="outlined"
+        color="error"
+        size="small"
+        :to="{ name: 'company-billing-tab', params: { tab: 'payment-methods' } }"
       >
-        {{ t('companyBilling.overview.contactSupportToPay') }}
-      </span>
-    </template>
+        {{ t('companyBilling.overview.changePaymentMethod') }}
+      </VBtn>
+    </div>
+    <div
+      v-else
+      class="text-body-2 mt-2 font-weight-medium"
+    >
+      {{ t('companyBilling.overview.contactSupportToPay') }}
+    </div>
   </VAlert>
 
   <!-- ADR-614 (LOT 2): upcoming (not yet due) invoices — informational, NOT a payment problem. -->

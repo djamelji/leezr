@@ -237,6 +237,7 @@ const acceptSuggestion = suggestion => {
       <!-- ═══ Dashboard Grid ═══ -->
       <DashboardGrid
         v-if="hasDashboardWidgets"
+        :row-height="60"
         :layout="dashboardStore.layout"
         :widget-data="dashboardStore.widgetData"
         :widget-errors="dashboardStore.widgetErrors"

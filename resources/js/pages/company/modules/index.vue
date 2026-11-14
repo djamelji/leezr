@@ -135,6 +135,9 @@ const includedModules = computed(() =>
   moduleStore.modules.filter(m => m.display_state === 'included'),
 )
 
+// ADR-782 (UX6.1) — produits payants réellement souscrits (vérité Billing, ADR-621), lecture seule.
+const subscribedCount = computed(() => moduleStore.modules.filter(m => m.is_subscribed).length)
+
 const activeModules = computed(() =>
   moduleStore.modules.filter(m => m.display_state === 'active'),
 )
@@ -475,6 +478,11 @@ const doToggle = async (key, isCurrentlyEnabled) => {
               <AppStatusText
                 tone="info"
                 :text="t('companyModules.summaryIncluded', { n: includedModules.length })"
+              />
+              <AppStatusText
+                v-if="subscribedCount"
+                tone="success"
+                :text="t('companyModules.summarySubscribed', { n: subscribedCount })"
               />
               <AppStatusText
                 tone="warning"

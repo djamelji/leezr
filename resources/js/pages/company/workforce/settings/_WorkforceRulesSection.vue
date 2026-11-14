@@ -117,8 +117,9 @@ onMounted(load)
             >
               {{ t('hrSettings.sources.' + r.source, r.source) }}
             </VChip>
+            <!-- ADR-782 (UX6.1) : pas de seconde pastille identique à l'origine -->
             <VChip
-              v-if="r.status === 'to_complete'"
+              v-if="r.status === 'to_complete' && t('hrSettings.sources.' + r.source, r.source) !== t('hrSettings.toComplete')"
               color="warning"
               size="x-small"
               variant="tonal"

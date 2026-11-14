@@ -1,0 +1,122 @@
+{
+ "after61:home:desktop:light": {
+  "overflow": false,
+  "height": 1724
+ },
+ "after61:me:desktop:light": {
+  "overflow": false,
+  "height": 1726
+ },
+ "after61:billing:desktop:light": {
+  "overflow": false,
+  "height": 1287
+ },
+ "after61:documents:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after61:planning:desktop:light": {
+  "overflow": false,
+  "height": 1247
+ },
+ "after61:modules:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after61:hrsignature:desktop:light": {
+  "overflow": false,
+  "height": 1123
+ },
+ "after61:hrtime:desktop:light": {
+  "overflow": false,
+  "height": 1418
+ },
+ "after61:doctypes:desktop:light": {
+  "overflow": false,
+  "height": 2475
+ },
+ "after61:leavetypes:desktop:light": {
+  "overflow": false,
+  "height": 900
+ },
+ "after61:home:mobile:light": {
+  "overflow": false,
+  "height": 2244
+ },
+ "after61:me:mobile:light": {
+  "overflow": false,
+  "height": 2102
+ },
+ "after61:billing:mobile:light": {
+  "overflow": false,
+  "height": 2169
+ },
+ "after61:documents:mobile:light": {
+  "overflow": false,
+  "height": 1016
+ },
+ "after61:planning:mobile:light": {
+  "overflow": false,
+  "height": 844
+ },
+ "after61:modules:mobile:light": {
+  "overflow": false,
+  "height": 1318
+ },
+ "after61:hrsignature:mobile:light": {
+  "overflow": false,
+  "height": 1777
+ },
+ "after61:hrtime:mobile:light": {
+  "overflow": false,
+  "height": 1890
+ },
+ "after61:doctypes:mobile:light": {
+  "overflow": false,
+  "height": 3202
+ },
+ "after61:leavetypes:mobile:light": {
+  "overflow": false,
+  "height": 844
+ },
+ "after61:home:desktop:dark": {
+  "overflow": false,
+  "height": 1724
+ },
+ "after61:me:desktop:dark": {
+  "overflow": false,
+  "height": 1726
+ },
+ "after61:billing:desktop:dark": {
+  "overflow": false,
+  "height": 1287
+ },
+ "after61:modules:desktop:dark": {
+  "overflow": false,
+  "height": 900
+ },
+ "after61:hrsignature:desktop:dark": {
+  "overflow": false,
+  "height": 1123
+ },
+ "after61:home:tablet:dark": {
+  "overflow": false,
+  "height": 2202
+ },
+ "after61:me:tablet:dark": {
+  "overflow": false,
+  "height": 1904
+ },
+ "after61:billing:tablet:dark": {
+  "overflow": false,
+  "height": 1567
+ },
+ "after61:modules:tablet:dark": {
+  "overflow": false,
+  "height": 1180
+ },
+ "after61:hrsignature:tablet:dark": {
+  "overflow": false,
+  "height": 1441
+ }
+}

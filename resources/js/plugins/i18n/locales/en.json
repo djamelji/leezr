@@ -1816,7 +1816,15 @@
     "notifyEnabled": "Enable email notifications",
     "sendSignedCopy": "Send a signed copy to the employee",
     "signedCopyNotice": "Without removing access to the document where the law requires its delivery or availability.",
-    "saved": "Signature settings saved"
+    "saved": "Signature settings saved",
+    "sections": {
+      "mode": "Provider and mode",
+      "modeHint": "How documents are signed and with which legal value.",
+      "defaults": "Defaults",
+      "defaultsHint": "Applied to each new signature request; can be changed case by case.",
+      "notifications": "Notifications",
+      "notificationsHint": "What signers and the employee receive."
+    }
   },
   "signatureFormat": {
     "personal_digital": {
@@ -4038,7 +4046,8 @@
     "reactivateConfirm": "Reactivate",
     "summaryActive": "{n} active",
     "summaryIncluded": "{n} included",
-    "summaryAvailable": "{n} to discover"
+    "summaryAvailable": "{n} to discover",
+    "summarySubscribed": "{n} subscribed"
   },
   "contactSales": {
     "title": "Premium module",
@@ -9549,7 +9558,8 @@
       "documents": "Requested documents, obligations and templates.",
       "billing": "Your plan, payments and invoices.",
       "automation": "Automatic tasks and connected services."
-    }
+    },
+    "moreOptions": "More options"
   },
   "companyForm": {
     "pageHint": "Identity, contact details and legal information of your company.",

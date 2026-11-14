@@ -64,6 +64,12 @@ const save = async () => {
         {{ t('signatureSettings.devOnlyNotice') }}
       </VAlert>
 
+      <!-- ADR-782 (UX6.1) : trois sections lisibles ; aucun paramètre retiré, mêmes droits. -->
+      <AppFormSection
+        :title="t('signatureSettings.sections.mode')"
+        :description="t('signatureSettings.sections.modeHint')"
+        class="px-0"
+      >
       <VRow>
         <VCol cols="12">
           <AppSelect
@@ -87,6 +93,14 @@ const save = async () => {
             </div>
           </VAlert>
         </VCol>
+      </VRow>
+      </AppFormSection>
+      <AppFormSection
+        :title="t('signatureSettings.sections.defaults')"
+        :description="t('signatureSettings.sections.defaultsHint')"
+        class="px-0"
+      >
+      <VRow>
         <VCol cols="12" md="6">
           <AppSelect
             v-model="form.default_level"
@@ -122,8 +136,12 @@ const save = async () => {
           />
         </VCol>
       </VRow>
-
-      <VDivider class="my-4" />
+      </AppFormSection>
+      <AppFormSection
+        :title="t('signatureSettings.sections.notifications')"
+        :description="t('signatureSettings.sections.notificationsHint')"
+        class="px-0"
+      >
 
       <VSwitch
         v-model="form.notify_enabled"
@@ -140,6 +158,8 @@ const save = async () => {
         {{ t('signatureSettings.signedCopyNotice') }}
       </p>
 
+      </AppFormSection>
+      <div class="d-flex justify-end pt-2">
       <VBtn
         color="primary"
         :loading="saving"
@@ -148,6 +168,7 @@ const save = async () => {
       >
         {{ t('common.save') }}
       </VBtn>
+      </div>
     </template>
   </div>
 </template>

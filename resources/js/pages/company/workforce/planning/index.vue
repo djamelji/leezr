@@ -821,7 +821,8 @@ const covCellColor = cell => {
 }
 
 // Bandeau de couverture rétractable + synthèse compacte (état conservé en cookie).
-const coverageCollapsed = useCookie('planningCoverageCollapsed', { default: () => false })
+// ADR-782 (UX6.1) : grille moins dense par défaut — détail de couverture et palette repliés (synthèse visible ; choix mémorisé).
+const coverageCollapsed = useCookie('planningCoverageCollapsed', { default: () => true })
 const coverageSummary = computed(() => {
   let under = 0
   let over = 0
@@ -1064,7 +1065,7 @@ const confirmOverstaffing = async () => {
 // ══════════════════════════════════════════════════════════════
 
 // ── Palette de modèles ──
-const paletteOpen = useCookie('planningPaletteOpen', { default: () => true })
+const paletteOpen = useCookie('planningPaletteOpen', { default: () => false })
 const paletteSearch = ref('')
 const favoriteTemplates = useCookie('planningTemplateFavorites', { default: () => [] })
 const isFavorite = id => (favoriteTemplates.value || []).includes(id)
@@ -4454,29 +4455,10 @@ watch(activeTab, tab => {
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- Shift Create/Edit Drawer -->
-    <VNavigationDrawer class="wf-scroll-drawer"
+    <AppDrawer
       v-model="isShiftDrawerOpen"
-      temporary
-      location="end"
-      :width="drawerWidth"
+      :title="isShiftEditMode ? $t('planning.editShift') : $t('planning.newShift')"
     >
-      <div class="d-flex align-center pa-4">
-        <h5 class="text-h5 flex-grow-1">
-          {{ isShiftEditMode ? $t('planning.editShift') : $t('planning.newShift') }}
-        </h5>
-        <VBtn
-          icon
-          variant="text"
-          size="small"
-          @click="isShiftDrawerOpen = false"
-        >
-          <VIcon icon="tabler-x" />
-        </VBtn>
-      </div>
-
-      <VDivider />
-
-      <div class="pa-4">
         <VForm @submit.prevent="submitShift">
           <VRow>
             <VCol cols="12">
@@ -4572,7 +4554,7 @@ watch(activeTab, tab => {
               </VCol>
             </template>
             <VCol cols="12">
-              <div class="d-flex gap-3 justify-end">
+              <div class="app-drawer-actions">
                 <VBtn
                   variant="outlined"
                   @click="isShiftDrawerOpen = false"
@@ -4601,8 +4583,7 @@ watch(activeTab, tab => {
             </VCol>
           </VRow>
         </VForm>
-      </div>
-    </VNavigationDrawer>
+    </AppDrawer>
 
     <!-- Bulk Create Drawer -->
     <VNavigationDrawer class="wf-scroll-drawer"

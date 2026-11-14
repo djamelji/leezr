@@ -1,4 +1,5 @@
 <script setup>
+import { useDisplay } from 'vuetify'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useAuthStore } from '@/core/stores/auth'
@@ -11,6 +12,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import { formatDate } from '@/utils/datetime'
 
+const { smAndDown } = useDisplay() // ADR-782 (UX6.1)
 const { t } = useI18n()
 const store = useCompanyDocumentsStore()
 const membersStore = useMembersStore()
@@ -717,7 +719,47 @@ const submitRequest = async () => {
         <span class="text-body-1 font-weight-medium">{{ t('companyDocuments.requests.sectionToReview') }}</span>
         <VChip size="x-small" variant="tonal" color="warning">{{ submittedRequests.length }}</VChip>
       </div>
+      <!-- ADR-782 (UX6.1) : sur smartphone, des lignes lisibles (personne, pièce, état, actions) au lieu
+           d'un tableau à défilement horizontal. Mêmes actions, mêmes permissions. -->
+      <div
+        v-if="smAndDown"
+        class="docs-todo-list"
+        data-test="docs-todo-mobile"
+      >
+        <div
+          v-for="item in submittedRequests"
+          :key="item.id"
+          class="docs-todo-row"
+        >
+          <div class="d-flex align-center gap-3 min-w-0">
+            <VAvatar size="32" color="primary" variant="tonal">
+              <span class="text-body-2">{{ item.user?.first_name?.[0] }}{{ item.user?.last_name?.[0] }}</span>
+            </VAvatar>
+            <div class="min-w-0 flex-grow-1">
+              <div class="text-body-1 font-weight-medium text-truncate">{{ item.user?.first_name }} {{ item.user?.last_name }}</div>
+              <div class="text-body-2 text-medium-emphasis text-truncate">{{ t(`documents.type.${item.document_type?.code}`, item.document_type?.label) }} · {{ formatDate(item.requested_at) }}</div>
+            </div>
+          </div>
+          <div class="d-flex align-center justify-space-between mt-2">
+            <VChip size="small" :color="unifiedStatusColor(unifiedStatus(item))">
+              {{ unifiedStatusLabel(unifiedStatus(item)) }}
+            </VChip>
+            <div class="d-flex gap-1">
+              <VBtn v-if="item.upload && canManage" icon variant="text" size="small" color="primary" :aria-label="t('documents.preview')" @click="openViewer(item)">
+                <VIcon icon="tabler-eye" />
+              </VBtn>
+              <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="success" :aria-label="t('documents.approve')" @click="handleApprove(item)">
+                <VIcon icon="tabler-check" />
+              </VBtn>
+              <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="error" :aria-label="t('documents.reject')" @click="openRejectDialog(item)">
+                <VIcon icon="tabler-x" />
+              </VBtn>
+            </div>
+          </div>
+        </div>
+      </div>
       <VDataTable
+        v-else
         v-model="selectedItems"
         :headers="headers"
         :items="submittedRequests"
@@ -1188,3 +1230,8 @@ const submitRequest = async () => {
   <!-- Confirm dialog -->
   <ConfirmDialogComponent />
 </template>
+
+<style scoped>
+.docs-todo-row { padding: 12px 16px; }
+.docs-todo-row + .docs-todo-row { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
+</style>

@@ -282,7 +282,9 @@ const handleBatchSave = async () => {
             >
               {{ t('documents.customDocument') }}
             </VChip>
+            <!-- ADR-782 (UX6.1) : pastille seulement quand l'obligation est imposée (l'interrupteur dit le reste) -->
             <DocumentMandatoryChip
+              v-if="doc.mandatory"
               :mandatory="doc.mandatory"
               :required="doc.required_override"
               class="ms-2"
@@ -433,7 +435,9 @@ const handleBatchSave = async () => {
             >
               {{ t('documents.customDocument') }}
             </VChip>
+            <!-- ADR-782 (UX6.1) : pastille seulement quand l'obligation est imposée (l'interrupteur dit le reste) -->
             <DocumentMandatoryChip
+              v-if="doc.mandatory"
               :mandatory="doc.mandatory"
               :required="doc.required_override"
               class="ms-2"

@@ -5,6 +5,7 @@ import { resolveWidgetComponent } from './widgetComponentMap'
 import { resolvePresentationMode } from '@/core/surface-engine/presentationMode'
 
 const props = defineProps({
+  rowHeight: { type: Number, default: 80 }, // ADR-782 (UX6.1) : hauteur d'une rangée (px), par surface
   layout: { type: Array, required: true },
   widgetData: { type: Object, default: () => ({}) },
   widgetErrors: { type: Object, default: () => ({}) },
@@ -264,7 +265,7 @@ onUnmounted(() => {
   <div
     ref="gridRef"
     class="dashboard-grid"
-    :style="{ '--dashboard-cols': cols, '--dashboard-gap': cols <= 6 ? '10px' : '16px' }"
+    :style="{ '--dashboard-cols': cols, '--dashboard-gap': cols <= 6 ? '10px' : '16px', '--dashboard-row': `${rowHeight}px` }"
   >
     <div
       v-for="tile in displayLayout"
@@ -395,7 +396,7 @@ onUnmounted(() => {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(var(--dashboard-cols, 12), 1fr);
-  grid-auto-rows: 80px;
+  grid-auto-rows: var(--dashboard-row, 80px);
   gap: var(--dashboard-gap, 16px);
   min-height: 200px;
   width: 100%;

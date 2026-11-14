@@ -28246,4 +28246,8 @@ UX0 à UX5 ont simplifié les parcours, mais la qualité visuelle est inégale :
 - Aucun parcours rallongé ; aucune permission, aucun moteur modifiés. Le test UX0 de l'ordre des espaces inclut désormais `modules`.
 - Restent à traiter visuellement : Accueil (cartes d'indicateurs), Mon activité (cartes), Abonnement (alerte), Documents mobile (tableau), drawers et dialogues, écrans de réglage denses.
 
+### UX6.1 — finitions (`docs/bmad/COMPANY-EXPERIENCE-2.0-UX6.1.md`)
+
+`AppStatStrip` et `AppDrawer` rejoignent le socle. Accueil Company plus compact (option `rowHeight` de la grille, Platform inchangé) ; Mon activité en bande d'indicateurs ; alerte de paiement sur une colonne ; Documents mobile en lignes ; grille Semaine allégée par défaut ; tiroirs créneau, absence (responsable, salarié), type d'absence et lieu harmonisés ; Signature en sections ; doublons de pastilles retirés (temps de travail, types de documents) ; Modules : « souscrits » (lecture `is_subscribed`). Aucune modification serveur. Défaut de données signalé : l'identité employeur des contrats lit les colonnes d'adresse alors que le profil enregistre l'adresse en champs dynamiques.
+
 **Verdict** : 🟢 GO DEV (voir checkpoint). Préproduction non commencée.

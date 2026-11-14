@@ -12,6 +12,8 @@ const PAGES = {
   leave: '/company/workforce/leave', me: '/company/workforce/me', billing: '/company/billing/overview',
   profile: '/company/profile/overview', org: '/company/workforce/organization/departments', hr: '/company/workforce/settings/general',
   myspace: '/company/my-space/overview',
+  modules: '/company/modules', hrtime: '/company/workforce/settings/worktime', hrcontract: '/company/workforce/settings/contract',
+  hrsignature: '/company/workforce/settings/signature', doctypes: '/company/documents/settings', leavetypes: '/company/workforce/leave?tab=config',
 }
 const VP = { desktop: [1440, 900], tablet: [820, 1180], mobile: [390, 844] }
 const phase = process.env.UX6_PHASE || 'before'

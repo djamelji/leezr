@@ -506,6 +506,7 @@ onMounted(async () => {
 // Lazy-load tab data on first visit
 const calendarLoaded = ref(false)
 // ADR-779 (UX4) — plafond et report saisis en JOURS (l'API garde des centièmes exacts).
+const typeMoreOpen = ref(false)
 const maxBalanceDays = computed({
   get: () => hundredthsToDays(typeFormData.value.max_balance_hundredths),
   set: v => { typeFormData.value.max_balance_hundredths = daysToHundredths(v) },
@@ -1208,29 +1209,10 @@ watch(activeTab, tab => {
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- Create Leave Request Drawer -->
-    <VNavigationDrawer class="wf-scroll-drawer"
+    <AppDrawer
       v-model="isDrawerOpen"
-      temporary
-      location="end"
-      :width="Math.min(400, viewportWidth || 400)"
+      :title="$t('leaves.newRequest')"
     >
-      <div class="d-flex align-center pa-4">
-        <h5 class="text-h5 flex-grow-1">
-          {{ $t('leaves.newRequest') }}
-        </h5>
-        <VBtn
-          icon
-          variant="text"
-          size="small"
-          @click="isDrawerOpen = false"
-        >
-          <VIcon icon="tabler-x" />
-        </VBtn>
-      </div>
-
-      <VDivider />
-
-      <div class="pa-4">
         <VForm @submit.prevent="submitLeaveRequest">
           <VRow>
             <VCol cols="12">
@@ -1339,7 +1321,7 @@ watch(activeTab, tab => {
               />
             </VCol>
             <VCol cols="12">
-              <div class="d-flex gap-3 justify-end">
+              <div class="app-drawer-actions">
                 <VBtn
                   variant="outlined"
                   @click="isDrawerOpen = false"
@@ -1358,33 +1340,13 @@ watch(activeTab, tab => {
             </VCol>
           </VRow>
         </VForm>
-      </div>
-    </VNavigationDrawer>
+    </AppDrawer>
 
     <!-- Leave Type Create/Edit Drawer -->
-    <VNavigationDrawer class="wf-scroll-drawer"
+    <AppDrawer
       v-model="isTypeDrawerOpen"
-      temporary
-      location="end"
-      width="400"
+      :title="isEditMode ? $t('leaves.config.editType') : $t('leaves.config.newType')"
     >
-      <div class="d-flex align-center pa-4">
-        <h5 class="text-h5 flex-grow-1">
-          {{ isEditMode ? $t('leaves.config.editType') : $t('leaves.config.newType') }}
-        </h5>
-        <VBtn
-          icon
-          variant="text"
-          size="small"
-          @click="isTypeDrawerOpen = false"
-        >
-          <VIcon icon="tabler-x" />
-        </VBtn>
-      </div>
-
-      <VDivider />
-
-      <div class="pa-4">
         <VForm @submit.prevent="submitLeaveType">
           <VRow>
             <VCol cols="12">
@@ -1429,6 +1391,27 @@ watch(activeTab, tab => {
                 min="0"
               />
             </VCol>
+            <VCol cols="6">
+              <VSwitch
+                v-model="typeFormData.requires_approval"
+                :label="$t('leaves.config.fields.requiresApproval')"
+                color="primary"
+              />
+            </VCol>
+            <VCol cols="6">
+              <VSwitch
+                v-model="typeFormData.is_paid"
+                :label="$t('leaves.config.fields.isPaid')"
+                color="primary"
+              />
+            </VCol>
+            <!-- ADR-782 (UX6.1) : options rares repliées (rien n'est retiré) -->
+            <VCol cols="12" class="py-0">
+              <VBtn variant="text" size="small" class="px-0" :prepend-icon="typeMoreOpen ? 'tabler-chevron-up' : 'tabler-chevron-down'" data-test="leave-type-more" @click="typeMoreOpen = !typeMoreOpen">
+                {{ $t('settingsHub.moreOptions') }}
+              </VBtn>
+            </VCol>
+            <template v-if="typeMoreOpen">
             <VCol cols="12">
               <AppTextField
                 v-model.number="maxBalanceDays"
@@ -1453,20 +1436,6 @@ watch(activeTab, tab => {
                 min="0"
               />
             </VCol>
-            <VCol cols="6">
-              <VSwitch
-                v-model="typeFormData.requires_approval"
-                :label="$t('leaves.config.fields.requiresApproval')"
-                color="primary"
-              />
-            </VCol>
-            <VCol cols="6">
-              <VSwitch
-                v-model="typeFormData.is_paid"
-                :label="$t('leaves.config.fields.isPaid')"
-                color="primary"
-              />
-            </VCol>
             <VCol cols="12">
               <AppTextField
                 v-model.number="typeFormData.sort_order"
@@ -1475,8 +1444,9 @@ watch(activeTab, tab => {
                 min="0"
               />
             </VCol>
+            </template>
             <VCol cols="12">
-              <div class="d-flex gap-3 justify-end">
+              <div class="app-drawer-actions">
                 <VBtn
                   variant="outlined"
                   @click="isTypeDrawerOpen = false"
@@ -1494,8 +1464,7 @@ watch(activeTab, tab => {
             </VCol>
           </VRow>
         </VForm>
-      </div>
-    </VNavigationDrawer>
+    </AppDrawer>
 
     <!-- Confirm Dialog (approve/reject/cancel request) -->
     <VDialog

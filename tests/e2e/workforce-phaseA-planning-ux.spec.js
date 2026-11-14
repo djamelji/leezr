@@ -34,6 +34,11 @@ test('couverture : bandeau rétractable + boutons + visibles', async ({ page }) 
 
   const linesOpen = await page.locator('tr.coverage-row:not(.coverage-toggle)').count()
   expect(linesOpen).toBeGreaterThan(0)
+  // ADR-782 (UX6.1) : le détail est replié par défaut — on l'ouvre d'abord si besoin.
+  if (await page.locator('tr.coverage-row:not(.coverage-toggle):visible').count() === 0) {
+    await page.locator('[data-test="cov-collapse"]').click()
+    await page.waitForTimeout(300)
+  }
   // Rétracter → lignes par catégorie masquées (synthèse seule).
   await page.locator('[data-test="cov-collapse"]').click()
   await page.waitForTimeout(400)

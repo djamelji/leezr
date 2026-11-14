@@ -1815,7 +1815,15 @@
     "notifyEnabled": "Activer les notifications e-mail",
     "sendSignedCopy": "Envoyer une copie signée au collaborateur",
     "signedCopyNotice": "Sans supprimer l'accès au document lorsque la loi impose sa remise ou sa mise à disposition.",
-    "saved": "Paramètres de signature enregistrés"
+    "saved": "Paramètres de signature enregistrés",
+    "sections": {
+      "mode": "Prestataire et mode",
+      "modeHint": "Comment les documents sont signés et avec quelle valeur juridique.",
+      "defaults": "Valeurs par défaut",
+      "defaultsHint": "Appliquées à chaque nouvelle demande de signature ; modifiables au cas par cas.",
+      "notifications": "Notifications",
+      "notificationsHint": "Ce que reçoivent les signataires et le collaborateur."
+    }
   },
   "signatureFormat": {
     "personal_digital": {
@@ -4038,7 +4046,8 @@
     "reactivateConfirm": "Réactiver",
     "summaryActive": "{n} activé(s)",
     "summaryIncluded": "{n} inclus",
-    "summaryAvailable": "{n} à découvrir"
+    "summaryAvailable": "{n} à découvrir",
+    "summarySubscribed": "{n} souscrit(s)"
   },
   "contactSales": {
     "title": "Module premium",
@@ -9549,7 +9558,8 @@
       "documents": "Pièces demandées, obligations et modèles.",
       "billing": "Votre formule, vos paiements et vos factures.",
       "automation": "Tâches automatiques et services connectés."
-    }
+    },
+    "moreOptions": "Plus d'options"
   },
   "companyForm": {
     "pageHint": "Identité, coordonnées et informations légales de votre entreprise.",

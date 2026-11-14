@@ -195,6 +195,14 @@ const meBreakResumeLabel = computed(() => {
   return d.toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' })
 })
 
+// ADR-782 (UX6.1) — indicateurs du jour (mêmes données qu'avant, présentés en bande).
+const todayStats = computed(() => [
+  { key: 'status', label: t('workforceMe.todayStatus'), value: t(clockStatusConfig.value.labelKey), icon: clockStatusConfig.value.icon, tone: clockStatusConfig.value.color === 'secondary' ? 'muted' : clockStatusConfig.value.color },
+  { key: 'worked', label: t('workforceMe.hoursWorked'), value: formatMinutes(clockStore.workedMinutesToday), icon: 'tabler-clock' },
+  { key: 'break', label: t('workforceMe.breakTime'), value: formatMinutes(clockStore.breakMinutesToday), icon: 'tabler-coffee' },
+  { key: 'arrival', label: t('workforceMe.clockIn'), value: todayClock.value ? formatTime(todayClock.value.clock_in) : '--:--', icon: 'tabler-login' },
+])
+
 // ── Time formatting ─────────────────────────────────────────
 // ADR-779 : formatMinutes partagé (« 7 h 30 ») — importé de @/utils/workUnits.
 
@@ -364,123 +372,11 @@ function signatureChipProps(status) {
     <!-- Main content -->
     <template v-else>
       <!-- Card 1: Today's Status -->
-      <VRow class="card-grid card-grid-xs mb-6">
-        <VCol
-          cols="6"
-          sm="3"
-        >
-          <VCard>
-            <VCardText class="d-flex align-center gap-3">
-              <VAvatar
-                :color="clockStatusConfig.color"
-                variant="tonal"
-                rounded
-                size="44"
-              >
-                <VIcon
-                  :icon="clockStatusConfig.icon"
-                  size="26"
-                />
-              </VAvatar>
-              <div>
-                <div class="text-body-2 text-medium-emphasis">
-                  {{ t('workforceMe.todayStatus') }}
-                </div>
-                <div class="text-h6 font-weight-bold" :class="`text-${clockStatusConfig.color}`">
-                  {{ t(clockStatusConfig.labelKey) }}
-                </div>
-              </div>
-            </VCardText>
-          </VCard>
-        </VCol>
-
-        <VCol
-          cols="6"
-          sm="3"
-        >
-          <VCard>
-            <VCardText class="d-flex align-center gap-3">
-              <VAvatar
-                color="primary"
-                variant="tonal"
-                rounded
-                size="44"
-              >
-                <VIcon
-                  icon="tabler-clock-hour-4"
-                  size="26"
-                />
-              </VAvatar>
-              <div>
-                <div class="text-body-2 text-medium-emphasis">
-                  {{ t('workforceMe.hoursWorked') }}
-                </div>
-                <div class="text-h6 font-weight-bold">
-                  {{ formatMinutes(clockStore.workedMinutesToday) }}
-                </div>
-              </div>
-            </VCardText>
-          </VCard>
-        </VCol>
-
-        <VCol
-          cols="6"
-          sm="3"
-        >
-          <VCard>
-            <VCardText class="d-flex align-center gap-3">
-              <VAvatar
-                color="warning"
-                variant="tonal"
-                rounded
-                size="44"
-              >
-                <VIcon
-                  icon="tabler-coffee"
-                  size="26"
-                />
-              </VAvatar>
-              <div>
-                <div class="text-body-2 text-medium-emphasis">
-                  {{ t('workforceMe.breakTime') }}
-                </div>
-                <div class="text-h6 font-weight-bold">
-                  {{ formatMinutes(clockStore.breakMinutesToday) }}
-                </div>
-              </div>
-            </VCardText>
-          </VCard>
-        </VCol>
-
-        <VCol
-          cols="6"
-          sm="3"
-        >
-          <VCard>
-            <VCardText class="d-flex align-center gap-3">
-              <VAvatar
-                color="info"
-                variant="tonal"
-                rounded
-                size="44"
-              >
-                <VIcon
-                  icon="tabler-login"
-                  size="26"
-                />
-              </VAvatar>
-              <div>
-                <div class="text-body-2 text-medium-emphasis">
-                  {{ t('workforceMe.clockIn') }}
-                </div>
-                <div class="text-h6 font-weight-bold">
-                  {{ todayClock ? formatTime(todayClock.clock_in) : '--:--' }}
-                </div>
-              </div>
-            </VCardText>
-          </VCard>
-        </VCol>
-      </VRow>
+      <!-- ADR-782 (UX6.1) : une bande d'indicateurs au lieu de quatre cartes -->
+      <AppStatStrip
+        class="mb-6"
+        :items="todayStats"
+      />
 
       <!-- Break countdown panel (driven by the server-resolved break rules) -->
       <VRow v-if="clockStore.isOnBreak">
@@ -1011,17 +907,11 @@ function signatureChipProps(status) {
       </VRow>
     </template>
 
-    <!-- ANO-007: self-service leave request drawer -->
-    <VNavigationDrawer class="wf-scroll-drawer"
+    <!-- ANO-007: self-service leave request drawer — ADR-782 (UX6.1) : tiroir commun -->
+    <AppDrawer
       v-model="isLeaveDrawerOpen"
-      temporary
-      location="end"
-      :width="Math.min(420, viewportWidth || 420)"
+      :title="t('workforceMe.requestLeave')"
     >
-      <div class="pa-6">
-        <h5 class="text-h5 mb-4">
-          {{ t('workforceMe.requestLeave') }}
-        </h5>
         <VForm @submit.prevent="submitSelfLeave">
           <AppSelect
             v-model="leaveForm.leave_type_id"
@@ -1077,14 +967,7 @@ function signatureChipProps(status) {
             rows="2"
             class="mb-4"
           />
-          <div class="d-flex gap-2">
-            <VBtn
-              type="submit"
-              :loading="leaveSubmitting"
-              data-test="me-leave-submit"
-            >
-              {{ t('timeSpace.leave.send') }}
-            </VBtn>
+          <div class="app-drawer-actions">
             <VBtn
               variant="tonal"
               color="secondary"
@@ -1092,9 +975,15 @@ function signatureChipProps(status) {
             >
               {{ t('common.cancel') }}
             </VBtn>
+            <VBtn
+              type="submit"
+              :loading="leaveSubmitting"
+              data-test="me-leave-submit"
+            >
+              {{ t('timeSpace.leave.send') }}
+            </VBtn>
           </div>
         </VForm>
-      </div>
-    </VNavigationDrawer>
+    </AppDrawer>
   </div>
 </template>
