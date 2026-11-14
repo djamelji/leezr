@@ -31,13 +31,13 @@ class WorkforceNavHrGroupTest extends TestCase
         // Entreprise) — plus d'entrée workforce-employees dans le groupe RH.
         // ADR-766 (M7) : l'entrée « Documents » RH est consolidée dans l'espace Documents unifié (Core,
         // groupe Entreprise, onglet RH) — plus d'entrée workforce-documents dans le groupe RH.
-        'workforce-time' => 'workforce',
-        'workforce-leave' => 'workforce',
-        'workforce-payroll' => 'workforce',
-        'workforce-organization' => 'workforce',
-        'workforce-settings' => 'workforce',
+        'workforce-time' => 'time',
+        'workforce-leave' => 'time',
+        'workforce-payroll' => 'payroll',
+        'workforce-organization' => 'settings',
+        'workforce-settings' => 'settings',
         // « Mon espace » = self-service personnel, hors management RH.
-        'workforce-me' => 'account',
+        'workforce-me' => 'personal',
     ];
 
     protected function setUp(): void
@@ -65,19 +65,29 @@ class WorkforceNavHrGroupTest extends TestCase
         return collect($groups)->firstWhere('key', $key);
     }
 
+    /** ADR-775 : feuilles d'un espace d'intention (l'entrée d'espace porte ses items en sous-entrées). */
     private function itemKeys(array $groups, string $groupKey): array
     {
-        $g = $this->group($groups, $groupKey);
+        $keys = [];
+        foreach ($groups as $g) {
+            if (preg_replace('/_menu$/', '', $g['key']) !== $groupKey) {
+                continue;
+            }
+            foreach ($g['items'] as $item) {
+                $keys = array_merge($keys, $item['children'] ? array_column($item['children'], 'key') : [$item['key']]);
+            }
+        }
 
-        return $g ? array_column($g['items'], 'key') : [];
+        return $keys;
     }
 
-    /** Résout le groupe contenant un item donné (ou null). */
+    /** Résout l'espace contenant un item donné (ou null) — menu latéral ou menu de l'avatar. */
     private function groupOf(array $groups, string $itemKey): ?string
     {
         foreach ($groups as $g) {
-            if (in_array($itemKey, array_column($g['items'], 'key'), true)) {
-                return $g['key'];
+            $space = preg_replace('/_menu$/', '', $g['key']);
+            if (in_array($itemKey, $this->itemKeys($groups, $space), true)) {
+                return $space;
             }
         }
 
@@ -94,7 +104,9 @@ class WorkforceNavHrGroupTest extends TestCase
         }
 
         // Le titre de la section « Ressources humaines » est une clé i18n (pas une chaîne en dur).
-        $this->assertSame('nav.groups.workforce', $this->group($groups, 'workforce')['titleKey']);
+        // ADR-775 : l'espace « Planning & temps » est UNE entrée libellée par une clé i18n (pas une chaîne en dur).
+        $this->assertSame('nav.groups.time', $this->group($groups, 'time')['items'][0]['labelKey']);
+        $this->assertNull($this->group($groups, 'workforce'), 'plus de section « Ressources humaines » calquée sur le module');
 
         // Plus aucune entrée RH ne tombe dans le fallback historique `hr` ni dans les anciens groupes mono-item.
         foreach (['hr', 'hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings'] as $gk) {
@@ -110,10 +122,9 @@ class WorkforceNavHrGroupTest extends TestCase
         // L'ordre reflète le parcours d'activité : Temps → Planning → Congés → Paie → Organisation → Paramètres.
         // ADR-712 : item « Planning » dédié (sort 25) intercalé après « Temps de travail ».
         // ADR-766 : « Documents » RH n'est plus une entrée de nav (onglet de l'espace Documents unifié).
-        $this->assertSame(
-            ['workforce-time', 'workforce-planning', 'workforce-leave', 'workforce-payroll', 'workforce-organization', 'workforce-settings'],
-            $this->itemKeys($groups, 'workforce'),
-        );
+$this->assertSame(['workforce-planning', 'workforce-time', 'workforce-leave'], $this->itemKeys($groups, 'time'));
+        $this->assertSame(['workforce-payroll'], $this->itemKeys($groups, 'payroll'));
+        $this->assertSame(['workforce-organization', 'workforce-settings'], array_values(array_intersect($this->itemKeys($groups, 'settings'), ['workforce-organization', 'workforce-settings'])));
     }
 
     public function test_my_space_is_in_personal_account_group(): void
@@ -121,8 +132,8 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(self::WORKFORCE_MODULES);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        $this->assertSame('account', $this->groupOf($groups, 'workforce-me'), 'Mon espace = groupe personnel');
-        $this->assertNotContains('workforce-me', $this->itemKeys($groups, 'workforce'), 'Mon espace n\'est pas mêlé au RH management');
+        $this->assertSame('personal', $this->groupOf($groups, 'workforce-me'), 'Mon espace = groupe personnel');
+        $this->assertNotContains('workforce-me', array_merge($this->itemKeys($groups, 'time'), $this->itemKeys($groups, 'team'), $this->itemKeys($groups, 'settings')), 'Mon espace n\'est pas mêlé au management');
     }
 
     public function test_inactive_module_does_not_contribute(): void
@@ -131,7 +142,7 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = $this->companyWith(['workforce', 'workforce_leave']);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        $this->assertSame('workforce', $this->groupOf($groups, 'workforce-leave'));
+        $this->assertSame('time', $this->groupOf($groups, 'workforce-leave'));
         $this->assertNull($this->groupOf($groups, 'workforce-payroll'), 'module paie inactif → pas d\'entrée');
     }
 
@@ -146,8 +157,8 @@ class WorkforceNavHrGroupTest extends TestCase
         // (a) Gestion des absences (leave_request + leave_approve) : voit Congés + « Mon espace »,
         // PAS employés/temps/paie. leave_request SEUL ne suffit pas (vue management = view_all/approve).
         $g = NavBuilder::forCompany($company, ['workforce.leave_request', 'workforce.leave_approve'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-leave'));
-        $this->assertSame('account', $this->groupOf($g, 'workforce-me'), 'entrée self-service sans permission visible');
+        $this->assertSame('time', $this->groupOf($g, 'workforce-leave'));
+        $this->assertSame('personal', $this->groupOf($g, 'workforce-me'), 'entrée self-service sans permission visible');
         $this->assertNull($this->groupOf($g, 'workforce-employees'), 'employés nécessite workforce.view');
         $this->assertNull($this->groupOf($g, 'workforce-time'), 'temps nécessite une capacité temps/planning');
         $this->assertNull($this->groupOf($g, 'workforce-payroll'), 'paie nécessite une capacité paie');
@@ -160,7 +171,7 @@ class WorkforceNavHrGroupTest extends TestCase
         // PRÉVISIONNEL a sa propre entrée « Planning » (distincte de « Temps & présences » = pointage réel).
         // Il voit donc « Planning », PAS « Temps » (qui exige désormais timesheet_view), ni Paie ni Employés.
         $g = NavBuilder::forCompany($company, ['workforce.planning_view', 'workforce.planning_manage'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-planning'), 'planning_view → entrée Planning dédiée');
+        $this->assertSame('time', $this->groupOf($g, 'workforce-planning'), 'planning_view → entrée Planning dédiée');
         $this->assertNull($this->groupOf($g, 'workforce-time'), 'planning_view seul n’ouvre plus « Temps & présences »');
         $this->assertNull($this->groupOf($g, 'workforce-payroll'));
         $this->assertNull($this->groupOf($g, 'workforce-employees'));
@@ -172,20 +183,20 @@ class WorkforceNavHrGroupTest extends TestCase
 
         // (c) Gestionnaire paie sans members.manage : voit Paie, pas Employés ni Temps.
         $g = NavBuilder::forCompany($company, ['workforce.payroll_prepare'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-payroll'), 'paie satisfaite par payroll_prepare');
+        $this->assertSame('payroll', $this->groupOf($g, 'workforce-payroll'), 'paie satisfaite par payroll_prepare');
         $this->assertNull($this->groupOf($g, 'workforce-employees'));
         $this->assertNull($this->groupOf($g, 'workforce-time'));
 
         // (d) timesheet_view seul : voit Temps (capacité pointage lisible).
         $g = NavBuilder::forCompany($company, ['workforce.timesheet_view'], 'management');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-time'));
+        $this->assertSame('time', $this->groupOf($g, 'workforce-time'));
 
         // (e) workforce.view seul (profil consultation RH) : voit Organisation, Paramètres (et
         // « Collaborateurs » via le Core, hors scope de ce test) ; PAS Temps/Congés/Paie.
         $g = NavBuilder::forCompany($company, ['workforce.view'], 'management');
         $this->assertNull($this->groupOf($g, 'workforce-employees'), 'ADR-754 : entrée Employés retirée (→ Collaborateurs)');
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-organization'));
-        $this->assertSame('workforce', $this->groupOf($g, 'workforce-settings'));
+        $this->assertSame('settings', $this->groupOf($g, 'workforce-organization'));
+        $this->assertSame('settings', $this->groupOf($g, 'workforce-settings'));
         $this->assertNull($this->groupOf($g, 'workforce-time'));
         $this->assertNull($this->groupOf($g, 'workforce-leave'));
         $this->assertNull($this->groupOf($g, 'workforce-payroll'));
@@ -197,7 +208,7 @@ class WorkforceNavHrGroupTest extends TestCase
         $company = Company::create(['name' => 'No HR Co', 'slug' => 'nohr-'.uniqid(), 'plan_key' => 'starter', 'jobdomain_key' => 'logistique']);
         $groups = NavBuilder::forCompany($company, null, 'management');
 
-        foreach (['workforce', 'hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings', 'hr'] as $gk) {
+        foreach (['time', 'payroll', 'workforce', 'hr_team', 'hr_time', 'hr_absences', 'hr_payroll', 'hr_documents', 'hr_settings', 'hr'] as $gk) {
             $this->assertNull($this->group($groups, $gk), "groupe {$gk} absent si aucune entrée");
         }
     }
@@ -215,7 +226,7 @@ class WorkforceNavHrGroupTest extends TestCase
         ];
         foreach ($expectedRoutes as $itemKey => $route) {
             $g = $this->group($groups, self::EXPECTED_GROUP[$itemKey]);
-            $item = collect($g['items'])->firstWhere('key', $itemKey);
+            $item = collect($g['items'])->flatMap(fn ($i) => $i['children'] ?: [$i])->firstWhere('key', $itemKey);
             $this->assertNotNull($item, "{$itemKey} présent");
             $to = $item['to'];
             $this->assertSame($route, is_array($to) ? ($to['name'] ?? null) : $to);

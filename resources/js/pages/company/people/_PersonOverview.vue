@@ -13,7 +13,7 @@ defineProps({
 
 const emit = defineEmits(['go', 'generate-contract', 'manage-access'])
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const store = usePersonStore()
 const { can } = useCan()
 
@@ -155,7 +155,7 @@ const doneCount = computed(() => steps.value.filter(s => s.done).length)
               {{ t('employeeFile.tabs.contract') }}
             </div>
             <template v-if="contract">
-              <div>{{ t('employeeFile.contractType') }}: <strong>{{ contract.contract_type?.toUpperCase() }}</strong> ({{ contract.status }})</div>
+              <div>{{ t('employeeFile.contractType') }}: <strong>{{ contract.contract_type?.toUpperCase() }}</strong> ({{ te('workforce.statuses.contract.' + contract.status) ? t('workforce.statuses.contract.' + contract.status).toLowerCase() : contract.status }})</div>
               <div>{{ t('employeeFile.weeklyHours') }}: {{ contract.weekly_hours }} h</div>
               <div v-if="contract.convention">
                 {{ contract.convention }}
@@ -171,7 +171,7 @@ const doneCount = computed(() => steps.value.filter(s => s.done).length)
                   :currency="contract.compensation.currency || 'EUR'"
                   color="high-emphasis"
                 />
-                <span class="text-medium-emphasis">/ {{ contract.compensation.pay_frequency }}</span>
+                <span class="text-medium-emphasis">/ {{ te('employees.payFrequency.' + contract.compensation.pay_frequency) ? t('employees.payFrequency.' + contract.compensation.pay_frequency) : contract.compensation.pay_frequency }}</span>
               </div>
             </template>
             <div

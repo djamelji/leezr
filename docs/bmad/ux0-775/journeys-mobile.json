@@ -1,0 +1,190 @@
+{
+ "user": "owner@leezr.test",
+ "view": [
+  390,
+  844
+ ],
+ "vars": {
+  "accountless": "employee-1351",
+  "linked": "employee-2",
+  "memberOnly": "user-56",
+  "employeeId": 2
+ },
+ "journeys": [
+  {
+   "journey": "ux0",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/dashboard",
+     "ok": true,
+     "shot": "j-mobile-01-home.jpg",
+     "path": "/dashboard",
+     "overlay": null,
+     "title": "Bienvenue, Djamel",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Mon espace salarié",
+      "Ajouter une personne",
+      "Préparer le planning",
+      "Demander un document",
+      "Déposer un document",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Ajouter un widget",
+      "Passer au supérieur"
+     ],
+     "menu": [
+      "Documents manquantsNombre de documents requis non encore dép",
+      "Documents expirésNombre de documents dont la date de validit",
+      "Conformité par typeTaux de conformité des documents groupé p",
+      "Feuilles de temps à validerFeuilles de temps soumises en att",
+      "Congés à approuverDemandes de congé en attente d’approbation",
+      "Configuration initialeÉtapes de mise en route de votre entre",
+      "Expéditions du jourExpéditions planifiées pour aujourd'hui",
+      "En transitExpéditions actuellement en transit",
+      "En retardExpéditions en transit dépassant l'heure prévue",
+      "Chauffeurs actifsChauffeurs actuellement en livraison"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-navbar button:has(.tabler-menu-2), .layout-navbar .v-btn--icon >> nth=0",
+     "ok": true,
+     "shot": "j-mobile-02-menu-open.jpg",
+     "path": "/dashboard",
+     "overlay": null,
+     "title": "Bienvenue, Djamel",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Mon espace salarié",
+      "Ajouter une personne",
+      "Préparer le planning",
+      "Demander un document",
+      "Déposer un document",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Ajouter un widget",
+      "Passer au supérieur"
+     ],
+     "menu": [
+      "Documents manquantsNombre de documents requis non encore dép",
+      "Documents expirésNombre de documents dont la date de validit",
+      "Conformité par typeTaux de conformité des documents groupé p",
+      "Feuilles de temps à validerFeuilles de temps soumises en att",
+      "Congés à approuverDemandes de congé en attente d’approbation",
+      "Configuration initialeÉtapes de mise en route de votre entre",
+      "Expéditions du jourExpéditions planifiées pour aujourd'hui",
+      "En transitExpéditions actuellement en transit",
+      "En retardExpéditions en transit dépassant l'heure prévue",
+      "Chauffeurs actifsChauffeurs actuellement en livraison"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-vertical-nav li:has-text('Réglages') > div",
+     "ok": true,
+     "shot": "j-mobile-03-menu-settings.jpg",
+     "path": "/dashboard",
+     "overlay": null,
+     "title": "Bienvenue, Djamel",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Mon espace salarié",
+      "Ajouter une personne",
+      "Préparer le planning",
+      "Demander un document",
+      "Déposer un document",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Traiter",
+      "Ajouter un widget",
+      "Passer au supérieur"
+     ],
+     "menu": [
+      "Documents manquantsNombre de documents requis non encore dép",
+      "Documents expirésNombre de documents dont la date de validit",
+      "Conformité par typeTaux de conformité des documents groupé p",
+      "Feuilles de temps à validerFeuilles de temps soumises en att",
+      "Congés à approuverDemandes de congé en attente d’approbation",
+      "Configuration initialeÉtapes de mise en route de votre entre",
+      "Expéditions du jourExpéditions planifiées pour aujourd'hui",
+      "En transitExpéditions actuellement en transit",
+      "En retardExpéditions en transit dépassant l'heure prévue",
+      "Chauffeurs actifsChauffeurs actuellement en livraison"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-vertical-nav a:has-text('Entreprise')",
+     "ok": true,
+     "shot": "j-mobile-04-settings-company.jpg",
+     "path": "/company/profile/overview",
+     "overlay": null,
+     "title": "Paramètres de l'entreprise",
+     "tabs": [
+      "Vue d'ensemble"
+     ],
+     "fields": [
+      "Nom de l'entreprise[text-field]",
+      "Téléphone[text-field]",
+      "Rue[text-field]",
+      "Complément d'adresse[text-field]",
+      "Ville[text-field]",
+      "Code postal[text-field]",
+      "Région[text-field]",
+      "Pays[text-field]",
+      "Identique à l'adresse de l'entreprise[switch]",
+      "Rue[text-field]",
+      "Complément d'adresse[text-field]",
+      "Ville[text-field]",
+      "Code postal[text-field]",
+      "Région[text-field]",
+      "Email[text-field]",
+      "Pays[text-field]",
+      "SIRET *[text-field*]",
+      "N° TVA[text-field]",
+      "Raison sociale[text-field]",
+      "Forme juridique[text-field]"
+     ],
+     "buttons": [
+      "Vue d'ensemble",
+      "Enregistrer les modifications",
+      "Annuler"
+     ],
+     "menu": [
+      "Date d'embauche",
+      "Statut"
+     ],
+     "steps": [],
+     "alerts": [
+      "En fonction du secteur d'activité de votre entreprise, les informations suivantes doivent être renseignées pou"
+     ],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

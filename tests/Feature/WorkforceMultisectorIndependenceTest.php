@@ -121,9 +121,8 @@ class WorkforceMultisectorIndependenceTest extends TestCase
 
         $wfItems = function (Company $c) {
             $groups = NavBuilder::forCompany($c, null, 'management');
-            $g = collect($groups)->firstWhere('key', 'workforce');
-
-            return $g ? array_column($g['items'], 'key') : [];
+            // ADR-775 : les entrées Workforce vivent dans les espaces d'intention ; on compare les feuilles.
+            return array_values(array_filter(NavBuilder::leafKeys($groups), fn (string $k) => str_starts_with($k, 'workforce-')));
         };
 
         $itemsLogi = $wfItems($logi);

@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import { test } from '@playwright/test'
 import { apiRequest, loginCompany } from './helpers.js'
 
-const OUT = 'docs/bmad/ux-774'
+const OUT = process.env.AUDIT_OUT || 'docs/bmad/ux-774'
 const TAG = process.env.AUDIT_TAG || 'j'
 const USER = process.env.AUDIT_USER || 'owner@leezr.test'
 const VIEW = (process.env.AUDIT_VIEW || '1440x900').split('x').map(Number)

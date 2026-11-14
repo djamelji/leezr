@@ -20,7 +20,7 @@ class WorkforceModule implements ModuleDefinition
                 navItems: [
                     // W-HR-UX-7 : « Mon espace » (self-service du membre connecté) rejoint le groupe
                     // personnel « Compte » — séparé du RH management (ne pas mélanger Company/Employee).
-                    ['key' => 'workforce-me', 'title' => 'My Work', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-calendar-time', 'surface' => 'hr', 'group' => 'account', 'sort' => 5],
+                    ['key' => 'workforce-me', 'title' => 'My Work', 'to' => ['name' => 'company-workforce-me'], 'icon' => 'tabler-calendar-time', 'surface' => 'hr', 'group' => 'personal', 'sort' => 20, 'requires' => 'employment'],
                     // PRODUCT-UX-3 (P3-B) : l'accueil RH « À traiter » est consolidé dans l'accueil
                     // Company unique (/dashboard, section fixe en tête). Plus d'entrée de nav propre ;
                     // la route company-workforce redirige vers /dashboard (deep-link compat).
@@ -38,14 +38,17 @@ class WorkforceModule implements ModuleDefinition
                     // entrée vers ses collaborateurs. On restitue cet accès pour ces seuls profils
                     // (`operationalOnly` → jamais en double de l'entrée Core côté management) ; le
                     // périmètre de données reste décidé par WorkforceAccess (soi + rapports, ou RH).
-                    ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'workforce', 'sort' => 10],
-                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 20],
-                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 60],
+                    ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'team', 'sort' => 10],
+                    ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'time', 'sort' => 20],
+                    ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).
-                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 70],
+                    ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 30],
                 ],
                 routeNames: [],
+                actions: [ // ADR-775 — même intention « Ajouter une personne » pour qui gère les fiches sans inviter
+                    ['key' => 'team.add-employee', 'space' => 'team', 'icon' => 'tabler-user-plus', 'to' => ['name' => 'company-people', 'query' => ['action' => 'create']], 'permission' => 'workforce.manage', 'excludePermission' => 'members.invite', 'home' => true, 'primary' => true, 'sort' => 10],
+                ],
                 middlewareKey: 'workforce',
             ),
             permissions: [

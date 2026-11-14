@@ -129,7 +129,7 @@ class WorkforceAccessProfilesE21Test extends TestCase
     {
         $groups = NavBuilder::forCompany($this->company, $perms, 'management');
 
-        return collect($groups)->flatMap(fn ($g) => array_column($g['items'], 'key'))->all();
+        return NavBuilder::leafKeys($groups); // ADR-775 : feuilles des espaces d'intention
     }
 
     /** Assertion centrale : menu ET serveur cohérents avec les capacités, pour chaque espace. */

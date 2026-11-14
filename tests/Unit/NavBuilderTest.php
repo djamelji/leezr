@@ -597,8 +597,10 @@ class NavBuilderTest extends TestCase
         $groups = NavBuilder::forCompany($company, null, 'management');
         $groupKeys = collect($groups)->pluck('key')->all();
 
-        // Company scope should have company group (structure items)
-        $this->assertContains('company', $groupKeys, 'Structure items should be in company group');
+        // ADR-775 : structure items join the « Réglages » intent space ; business modules
+        // (surface `operations`) are derived into « Activité » ; nothing is left in the default bucket.
+        $this->assertContains('settings', $groupKeys, 'Structure items should be in the settings space');
+        $this->assertNotContains('company', $groupKeys, 'No item falls back to the default bucket');
     }
 
     public function test_group_derived_default_for_admin(): void

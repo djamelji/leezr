@@ -1,0 +1,100 @@
+{
+ "user": "bob@leezr.test",
+ "view": [
+  1440,
+  900
+ ],
+ "vars": {
+  "memberOnly": "user-2"
+ },
+ "journeys": [
+  {
+   "journey": "menu",
+   "steps": [
+    {
+     "do": "goto",
+     "arg": "/dashboard",
+     "ok": true,
+     "shot": "j-driver-01-home.jpg",
+     "path": "/home",
+     "overlay": null,
+     "title": "Bonjour, Bob",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Voir mon planning",
+      "Pointer l'arrivée"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-vertical-nav .nav-group:has-text('Réglages') .nav-group-label, .layout-vertical-nav li:has-text('Réglages') > div",
+     "ok": false,
+     "shot": "j-driver-02-settings-open.jpg",
+     "path": "/home",
+     "overlay": null,
+     "title": "Bonjour, Bob",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Voir mon planning",
+      "Pointer l'arrivée"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-vertical-nav li:has-text('Planning & temps') > div",
+     "ok": false,
+     "shot": "j-driver-03-time-open.jpg",
+     "path": "/home",
+     "overlay": null,
+     "title": "Bonjour, Bob",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Voir mon planning",
+      "Pointer l'arrivée"
+     ],
+     "menu": [],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    },
+    {
+     "do": "css",
+     "arg": ".layout-navbar .v-avatar",
+     "ok": true,
+     "shot": "j-driver-04-avatar.jpg",
+     "path": "/home",
+     "overlay": "overlay",
+     "title": "Bonjour, Bob",
+     "tabs": [],
+     "fields": [],
+     "buttons": [
+      "Logout"
+     ],
+     "menu": [
+      "Bob DupontDriver",
+      "Mon compte"
+     ],
+     "steps": [],
+     "alerts": [],
+     "hscroll": false,
+     "text": ""
+    }
+   ]
+  }
+ ],
+ "errors": []
+}

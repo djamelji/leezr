@@ -161,7 +161,7 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
     <!-- Loading -->
     <VSkeletonLoader
       v-if="pageLoading"
-      type="tabs, card, card"
+      type="heading, card, card"
     />
 
     <!-- Error -->

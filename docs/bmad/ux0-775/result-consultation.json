@@ -1,0 +1,78 @@
+{
+ "profile": {
+  "tag": "consultation",
+  "email": "consultation@leezr.test",
+  "note": "lecture seule"
+ },
+ "spaces": [
+  "home",
+  "team",
+  "settings"
+ ],
+ "entries": 3,
+ "leaves": 5,
+ "personalInMenu": [
+  "my-space",
+  "account-settings"
+ ],
+ "homeActions": [],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/dashboard"
+  },
+  {
+   "key": "workforce-people",
+   "space": "team",
+   "placement": "nav",
+   "path": "/company/people"
+  },
+  {
+   "key": "workforce-organization",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workforce/organization/departments"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/dashboard"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/403"
+  }
+ ],
+ "network": []
+}

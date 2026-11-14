@@ -1,0 +1,71 @@
+{
+ "profile": {
+  "tag": "paie",
+  "email": "pay@leezr.test",
+  "note": "gestionnaire paie"
+ },
+ "spaces": [
+  "home",
+  "payroll"
+ ],
+ "entries": 2,
+ "leaves": 4,
+ "personalInMenu": [
+  "my-space",
+  "account-settings"
+ ],
+ "homeActions": [],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/dashboard"
+  },
+  {
+   "key": "workforce-payroll",
+   "space": "payroll",
+   "placement": "nav",
+   "path": "/company/workforce/payroll"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/403"
+  }
+ ],
+ "network": []
+}

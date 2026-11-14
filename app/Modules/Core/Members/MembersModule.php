@@ -20,9 +20,12 @@ class MembersModule implements ModuleDefinition
                 navItems: [
                     // ADR-754 (P2) — entrée UNIQUE « Collaborateurs » (remplace Members + Employees),
                     // portée par le Core. Visible dès qu'une facette est autorisée (accès OU RH).
-                    ['key' => 'people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'anyPermission' => ['members.view', 'workforce.view', 'roles.view'], 'surface' => 'structure'],
+                    ['key' => 'people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'anyPermission' => ['members.view', 'workforce.view', 'roles.view'], 'surface' => 'structure', 'group' => 'team', 'sort' => 10],
                 ],
                 routeNames: ['company-people', 'company-members', 'company-members-id'],
+                actions: [ // ADR-775
+                    ['key' => 'team.add-person', 'space' => 'team', 'icon' => 'tabler-user-plus', 'to' => ['name' => 'company-people', 'query' => ['action' => 'invite']], 'permission' => 'members.invite', 'home' => true, 'primary' => true, 'sort' => 10],
+                ],
                 middlewareKey: 'core.members',
             ),
             permissions: [

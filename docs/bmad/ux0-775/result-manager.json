@@ -1,0 +1,105 @@
+{
+ "profile": {
+  "tag": "manager",
+  "email": "manager@leezr.test",
+  "note": "manager à permissions limitées"
+ },
+ "spaces": [
+  "home",
+  "team",
+  "time",
+  "settings"
+ ],
+ "entries": 4,
+ "leaves": 9,
+ "personalInMenu": [
+  "my-space",
+  "account-settings"
+ ],
+ "homeActions": [
+  "time.plan"
+ ],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/dashboard"
+  },
+  {
+   "key": "people",
+   "space": "team",
+   "placement": "nav",
+   "path": "/company/people"
+  },
+  {
+   "key": "workforce-planning",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/planning"
+  },
+  {
+   "key": "workforce-time",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/time"
+  },
+  {
+   "key": "workforce-leave",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/leave"
+  },
+  {
+   "key": "workforce-organization",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workforce/organization/departments"
+  },
+  {
+   "key": "workforce-settings",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workforce/settings/general"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/dashboard"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/workforce/settings/worktime"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/403"
+  }
+ ],
+ "network": []
+}

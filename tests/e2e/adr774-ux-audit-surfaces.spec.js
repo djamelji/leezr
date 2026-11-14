@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import { test } from '@playwright/test'
 import { apiRequest, loginCompany } from './helpers.js'
 
-const OUT = 'docs/bmad/ux-774'
+const OUT = process.env.AUDIT_OUT || 'docs/bmad/ux-774'
 const PROFILE = process.env.AUDIT_USER || 'owner@leezr.test'
 const TAG = process.env.AUDIT_TAG || 'owner'
 const EXTRA = (process.env.AUDIT_EXTRA || '').split(',').filter(Boolean)
@@ -14,7 +14,7 @@ const flatten = (items, group = null, depth = 0, out = []) => {
   for (const it of items || []) {
     const title = it.title || it.heading || it.key
     if (it.heading && !it.to) { flatten(it.children || [], title, depth, out); group = title; continue }
-    if (it.to || it.href) out.push({ group, depth, title, key: it.key, to: it.to })
+    if ((it.to && Object.keys(it.to).length) || it.href) out.push({ group, depth, title, key: it.key, to: it.to })
     if (it.children) flatten(it.children, group, depth + 1, out)
   }
   return out

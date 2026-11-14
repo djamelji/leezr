@@ -1,0 +1,26 @@
+{
+ "before": [
+  "home",
+  "team",
+  "time",
+  "documents",
+  "payroll",
+  "activity",
+  "settings"
+ ],
+ "after": [
+  "home",
+  "team",
+  "documents",
+  "activity",
+  "settings"
+ ],
+ "labels": [
+  "Accueil",
+  "Équipe",
+  "Documents",
+  "Expéditions",
+  "Réglages"
+ ],
+ "network": []
+}

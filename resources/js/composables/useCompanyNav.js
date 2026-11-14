@@ -39,13 +39,17 @@ function companyGroupsToNavItems(groups, auth) {
   const items = []
 
   for (const group of groups) {
+    // ADR-775 : groups placed in the avatar menu are not side-menu entries.
+    if (group.placement === 'menu') continue
+
     if (group.titleKey) {
       items.push({ heading: group.titleKey })
     }
 
     for (const item of group.items) {
       const navItem = {
-        title: `nav.company.${item.key}`,
+        // ADR-775 : an intent space labels its entry (`labelKey`) ; otherwise the item's own label.
+        title: item.labelKey || `nav.company.${item.key}`,
         to: item.to,
         icon: { icon: item.icon },
         permission: item.permission || null,
@@ -61,6 +65,7 @@ function companyGroupsToNavItems(groups, auth) {
 
       if (children.length > 0) {
         navItem.children = children
+        if (Array.isArray(navItem.to) || !navItem.to || !Object.keys(navItem.to).length) delete navItem.to
       }
 
       items.push(navItem)

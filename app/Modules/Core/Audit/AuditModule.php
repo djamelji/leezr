@@ -18,7 +18,7 @@ class AuditModule implements ModuleDefinition
             sortOrder: 26,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'audit', 'title' => 'Audit Log', 'to' => ['name' => 'company-audit'], 'icon' => 'tabler-file-search', 'permission' => 'audit.view', 'surface' => 'structure'],
+                    ['key' => 'audit', 'title' => 'Audit Log', 'to' => ['name' => 'company-audit'], 'icon' => 'tabler-file-search', 'permission' => 'audit.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 70],
                 ],
                 routeNames: ['company-audit'],
                 middlewareKey: 'core.audit',

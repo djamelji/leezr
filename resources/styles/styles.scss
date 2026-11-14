@@ -190,3 +190,7 @@
 // par défaut échoue sur blanc. On fonce uniquement en thème clair ; en dark l'amber
 // vif passe déjà. Identité sémantique (amber) préservée.
 .v-theme--light .widget-kpi.text-warning { color: #8a5a00 !important; }
+
+// ADR-775 (Company Experience 2.0 / UX0) — typographie : les libellés gardent leur casse d'origine.
+// La mise en capitales initiales du thème produisait « Ajouter Un Employé », « Vue D'ensemble ».
+.v-btn.v-btn, .v-tab.v-tab { text-transform: none; }

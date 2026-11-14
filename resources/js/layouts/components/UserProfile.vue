@@ -1,5 +1,6 @@
 <script setup>
 import { useAuthStore } from '@/core/stores/auth'
+import { useNavStore } from '@/core/stores/nav'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 
 const auth = useAuthStore()
@@ -11,19 +12,26 @@ const logout = async () => {
   window.location.href = '/login'
 }
 
-const userProfileList = [
-  { type: 'divider' },
-  {
+// ADR-775 : the personal entries come from the navigation (manifest-driven, placed in the avatar
+// menu by the server) — « Mon espace » for a manager, the account settings for everyone.
+const navStore = useNavStore()
+const { t } = useI18n()
+
+const userProfileList = computed(() => {
+  const personal = navStore.companyPersonalMenu.map(item => ({
     type: 'navItem',
-    icon: 'tabler-settings',
-    title: 'Settings',
-    to: {
-      name: 'account-settings-tab',
-      params: { tab: 'account' },
-    },
-  },
-  { type: 'divider' },
-]
+    key: item.key,
+    icon: item.icon,
+    title: t(item.labelKey || `nav.company.${item.key}`),
+    to: item.to,
+  }))
+
+  const items = personal.length
+    ? personal
+    : [{ type: 'navItem', key: 'account-settings', icon: 'tabler-settings', title: t('nav.company.account-settings'), to: { name: 'account-settings-tab', params: { tab: 'account' } } }]
+
+  return [{ type: 'divider', key: 'd1' }, ...items, { type: 'divider', key: 'd2' }]
+})
 </script>
 
 <template>
@@ -103,11 +111,12 @@ const userProfileList = [
           <PerfectScrollbar :options="{ wheelPropagation: false }">
             <template
               v-for="item in userProfileList"
-              :key="item.title"
+              :key="item.key"
             >
               <VListItem
                 v-if="item.type === 'navItem'"
                 :to="item.to"
+                :data-test="`avatar-menu-${item.key}`"
               >
                 <template #prepend>
                   <VIcon

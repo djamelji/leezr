@@ -1,0 +1,103 @@
+{
+ "profile": {
+  "tag": "dispatcher",
+  "email": "admin@leezr.test",
+  "note": "administratif, aussi salarié"
+ },
+ "spaces": [
+  "home",
+  "team",
+  "documents",
+  "activity",
+  "settings"
+ ],
+ "entries": 5,
+ "leaves": 8,
+ "personalInMenu": [
+  "my-space",
+  "workforce-me",
+  "account-settings"
+ ],
+ "homeActions": [
+  "team.add-person",
+  "documents.request",
+  "documents.deposit"
+ ],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/dashboard"
+  },
+  {
+   "key": "people",
+   "space": "team",
+   "placement": "nav",
+   "path": "/company/people"
+  },
+  {
+   "key": "documents",
+   "space": "documents",
+   "placement": "nav",
+   "path": "/company/documents/overview"
+  },
+  {
+   "key": "shipments",
+   "space": "activity",
+   "placement": "nav",
+   "path": "/company/shipments"
+  },
+  {
+   "key": "company-profile",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/profile/overview"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "workforce-me",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/workforce/me"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/members"
+  }
+ ],
+ "network": []
+}

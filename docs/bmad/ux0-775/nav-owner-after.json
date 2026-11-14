@@ -1,0 +1,394 @@
+{
+ "groups": [
+  {
+   "key": "home",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "dashboard"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "team",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "people",
+     "title": "Collaborators",
+     "to": {
+      "name": "company-people"
+     },
+     "icon": "tabler-users",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "time",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-time",
+     "title": "time",
+     "labelKey": "nav.groups.time",
+     "to": [],
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": [
+      {
+       "key": "workforce-planning",
+       "title": "Planning",
+       "to": {
+        "name": "company-workforce-planning"
+       },
+       "icon": "tabler-calendar-week",
+       "permission": "workforce.planning_view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-time",
+       "title": "Time Tracking",
+       "to": {
+        "name": "company-workforce-time"
+       },
+       "icon": "tabler-clock",
+       "permission": "workforce.timesheet_view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-leave",
+       "title": "Leave",
+       "to": {
+        "name": "company-workforce-leave"
+       },
+       "icon": "tabler-beach",
+       "permission": "workforce.leave_request",
+       "tags": [],
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "documents",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "documents",
+     "title": "Documents",
+     "to": {
+      "name": "company-documents-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-file-text",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "payroll",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "workforce-payroll",
+     "title": "Payroll",
+     "to": {
+      "name": "company-workforce-payroll"
+     },
+     "icon": "tabler-receipt",
+     "permission": "workforce.payroll_prepare",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "activity",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "shipments",
+     "title": "Shipments",
+     "to": {
+      "name": "company-shipments"
+     },
+     "icon": "tabler-truck",
+     "permission": "shipments.view",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "settings",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-settings",
+     "title": "settings",
+     "labelKey": "nav.groups.settings",
+     "to": [],
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [],
+     "children": [
+      {
+       "key": "company-profile",
+       "title": "Company Profile",
+       "to": {
+        "name": "company-profile-tab",
+        "params": {
+         "tab": "overview"
+        }
+       },
+       "icon": "tabler-building-community",
+       "permission": "settings.view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-organization",
+       "title": "Organization",
+       "to": {
+        "name": "company-workforce-organization-tab",
+        "params": {
+         "tab": "departments"
+        }
+       },
+       "icon": "tabler-hierarchy-2",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-settings",
+       "title": "HR Settings",
+       "to": {
+        "name": "company-workforce-settings-tab",
+        "params": {
+         "tab": "general"
+        }
+       },
+       "icon": "tabler-adjustments-cog",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workflows",
+       "title": "Workflows",
+       "to": {
+        "name": "company-workflows"
+       },
+       "icon": "tabler-automation",
+       "permission": "automations.view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "modules",
+       "title": "Modules",
+       "to": {
+        "name": "company-modules"
+       },
+       "icon": "tabler-puzzle",
+       "permission": "modules.manage",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "billing",
+       "title": "Billing",
+       "to": {
+        "name": "company-billing-tab",
+        "params": {
+         "tab": "overview"
+        }
+       },
+       "icon": "tabler-receipt",
+       "permission": "billing.manage",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "audit",
+       "title": "Audit Log",
+       "to": {
+        "name": "company-audit"
+       },
+       "icon": "tabler-file-search",
+       "permission": "audit.view",
+       "tags": [],
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "personal_menu",
+   "titleKey": "",
+   "placement": "menu",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [
+      "avatar"
+     ],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-support",
+   "label": "footer.support",
+   "to": {
+    "name": "company-support"
+   },
+   "href": null,
+   "icon": "tabler-message-circle-cog",
+   "sortOrder": 10
+  },
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ],
+ "actions": [
+  {
+   "key": "team.add-person",
+   "space": "team",
+   "icon": "tabler-user-plus",
+   "to": {
+    "name": "company-people",
+    "query": {
+     "action": "invite"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "team.generate-contract",
+   "space": "team",
+   "icon": "tabler-file-certificate",
+   "to": null,
+   "context": "person",
+   "home": false,
+   "primary": false
+  },
+  {
+   "key": "time.plan",
+   "space": "time",
+   "icon": "tabler-calendar-plus",
+   "to": {
+    "name": "company-workforce-planning"
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "documents.request",
+   "space": "documents",
+   "icon": "tabler-file-import",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "requests"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "documents.deposit",
+   "space": "documents",
+   "icon": "tabler-file-upload",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "vault"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": false
+  }
+ ]
+}

@@ -23,6 +23,7 @@ class DashboardModule implements ModuleDefinition
                         'title' => 'Dashboard',
                         'to' => ['name' => 'dashboard'],
                         'icon' => 'tabler-smart-home',
+                        'group' => 'home', 'sort' => 10,
                     ],
                 ],
                 routeNames: [], // ADR-149: dashboard always accessible, no module gate

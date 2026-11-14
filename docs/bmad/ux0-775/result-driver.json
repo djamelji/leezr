@@ -1,0 +1,79 @@
+{
+ "profile": {
+  "tag": "driver",
+  "email": "bob@leezr.test",
+  "note": "salarié sans gestion"
+ },
+ "spaces": [
+  "home",
+  "activity",
+  "personal"
+ ],
+ "entries": 4,
+ "leaves": 5,
+ "personalInMenu": [
+  "account-settings"
+ ],
+ "homeActions": [
+  "team.add-person"
+ ],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/home"
+  },
+  {
+   "key": "my-deliveries",
+   "space": "activity",
+   "placement": "nav",
+   "path": "/company/my-deliveries"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "nav",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "workforce-me",
+   "space": "personal",
+   "placement": "nav",
+   "path": "/company/workforce/me"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/403"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/403"
+  }
+ ],
+ "network": []
+}

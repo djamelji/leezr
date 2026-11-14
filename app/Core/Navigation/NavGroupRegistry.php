@@ -33,6 +33,11 @@ class NavGroupRegistry
             'management' => 900,   // default bucket for admin items without an explicit group
         ],
         'company' => [
+            // ADR-775 (Company Experience 2.0 / UX0) : navigation par INTENTION. Les modules
+            // contribuent à ces espaces (`group`) ; l'ordre et la présentation vivent ici.
+            'home' => 1, 'team' => 2, 'time' => 3, 'documents' => 4, 'payroll' => 5,
+            'activity' => 6, 'settings' => 8, 'personal' => 9,
+            // Groupes historiques : restent enregistrés (compat), vides donc élagués.
             'identity' => 10,
             'contact' => 20,
             'dispatch' => 30,
@@ -49,6 +54,39 @@ class NavGroupRegistry
             'company' => 900, // default bucket for company items without an explicit group
         ],
     ];
+
+    /**
+     * ADR-775 — INTENT SPACES of the company scope. A space is ONE main entry of the menu :
+     *   - one visible item  → that item is the entry (labelled by the space when `single` = 'space') ;
+     *   - several items     → one entry labelled by the space, the items become its sub-entries ;
+     *   - no item           → nothing (never an empty section).
+     * `personal` : the user's own space — a visible entry for people without management entries,
+     * the avatar menu for the others. `management` : the space counts as a management entry.
+     * Nothing here names a module, a role or a jobdomain : modules choose a space, RBAC filters.
+     */
+    private const COMPANY_SPACES = [
+        'home' => ['icon' => 'tabler-smart-home'],
+        'team' => ['icon' => 'tabler-users', 'management' => true],
+        // `time` is not a management marker : a plain employee may hold his own timesheet entry.
+        'time' => ['icon' => 'tabler-calendar-time'],
+        'documents' => ['icon' => 'tabler-files', 'management' => true],
+        'payroll' => ['icon' => 'tabler-receipt', 'management' => true],
+        'activity' => ['icon' => 'tabler-briefcase'],
+        'settings' => ['icon' => 'tabler-settings', 'management' => true, 'single' => 'space'],
+        'personal' => ['icon' => 'tabler-user-circle', 'personal' => true],
+    ];
+
+    /** @return array{icon: string, management?: bool, single?: string, personal?: bool}|null */
+    public static function space(string $groupKey): ?array
+    {
+        return self::COMPANY_SPACES[$groupKey] ?? null;
+    }
+
+    /** @return array<string> */
+    public static function spaceKeys(): array
+    {
+        return array_keys(self::COMPANY_SPACES);
+    }
 
     /**
      * Whether a group key is registered for the given scope.

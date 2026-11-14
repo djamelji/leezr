@@ -47,9 +47,92 @@ class NavBuilder
      * @param  string      $roleLevel    'management' | 'operational'
      * @return array  [{key, titleKey, items: [...]}]
      */
-    public static function forCompany(Company $company, ?array $permissions = null, string $roleLevel = 'operational'): array
+    /**
+     * @param  array<string, bool>|null  $facts  ADR-775 — personal facts about the requesting person
+     *         (e.g. ['employment' => true]). An entry declaring `requires` is offered only when its
+     *         fact holds : no « Mon activité » for someone who has no employee record. Null = facts
+     *         unknown (builders without a person) → nothing is filtered on them.
+     */
+    public static function forCompany(Company $company, ?array $permissions = null, string $roleLevel = 'operational', ?array $facts = null): array
     {
-        return static::build('company', $company, $permissions, $roleLevel);
+        return static::composeSpaces(static::build('company', $company, $permissions, $roleLevel, $facts));
+    }
+
+    /**
+     * ADR-775 — keys of every REACHABLE entry (leaves), whatever its space or placement. An intent
+     * space with several items is one entry with sub-entries : callers reasoning on « what can this
+     * user open » read the leaves.
+     *
+     * @return array<string>
+     */
+    public static function leafKeys(array $groups): array
+    {
+        $keys = [];
+        foreach ($groups as $group) {
+            foreach ($group['items'] as $item) {
+                $keys = array_merge($keys, empty($item['children']) ? [$item['key']] : array_column($item['children'], 'key'));
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * ADR-775 — presents the built groups as INTENT SPACES (rules in NavGroupRegistry). Pure
+     * presentation of items ALREADY filtered (module, plan, jobdomain, permissions, role level) :
+     * it never adds an item, never widens what the user can reach.
+     *
+     * Each group gains `placement` : 'nav' (side menu) or 'menu' (avatar menu).
+     */
+    private static function composeSpaces(array $groups): array
+    {
+        $hasManagement = false;
+        foreach ($groups as $group) {
+            if ((NavGroupRegistry::space($group['key'])['management'] ?? false) && ! empty($group['items'])) {
+                $hasManagement = true;
+            }
+        }
+
+        $out = [];
+        foreach ($groups as $group) {
+            $space = NavGroupRegistry::space($group['key']);
+            if ($space === null) {
+                $out[] = $group + ['placement' => 'nav']; // historical heading group, unchanged
+
+                continue;
+            }
+
+            if ($space['personal'] ?? false) {
+                // Items tagged `avatar` always live in the avatar menu ; the others follow the user :
+                // visible entries for a person without management entries, avatar menu otherwise.
+                $menu = array_values(array_filter($group['items'], fn (array $i) => $hasManagement || in_array('avatar', $i['tags'] ?? [], true)));
+                $nav = array_values(array_filter($group['items'], fn (array $i) => ! $hasManagement && ! in_array('avatar', $i['tags'] ?? [], true)));
+                if ($nav !== []) {
+                    $out[] = ['key' => $group['key'], 'titleKey' => '', 'placement' => 'nav', 'items' => $nav];
+                }
+                if ($menu !== []) {
+                    $out[] = ['key' => $group['key'].'_menu', 'titleKey' => '', 'placement' => 'menu', 'items' => $menu];
+                }
+
+                continue;
+            }
+
+            $items = $group['items'];
+            $labelKey = NavGroupRegistry::titleKey($group['key']);
+            if (count($items) > 1) {
+                $items = [[
+                    'key' => "space-{$group['key']}", 'title' => $group['key'], 'labelKey' => $labelKey,
+                    'to' => [], 'icon' => $space['icon'], 'permission' => null, 'tags' => [], 'children' => $items,
+                ]];
+            } elseif (($space['single'] ?? 'item') === 'space') {
+                $items[0]['labelKey'] = $labelKey;
+                $items[0]['icon'] = $space['icon'];
+            }
+
+            $out[] = ['key' => $group['key'], 'titleKey' => '', 'placement' => 'nav', 'items' => $items];
+        }
+
+        return $out;
     }
 
     /**
@@ -79,7 +162,7 @@ class NavBuilder
     /**
      * Core pipeline — same for both scopes.
      */
-    private static function build(string $scope, ?Company $company, ?array $permissions, ?string $roleLevel): array
+    private static function build(string $scope, ?Company $company, ?array $permissions, ?string $roleLevel, ?array $facts = null): array
     {
         // 1. Collect manifests → filter active + visible
         $manifests = collect(ModuleRegistry::forScope($scope === 'admin' ? 'admin' : 'company'))
@@ -170,6 +253,11 @@ class NavBuilder
 
             return ! isset($permSet[$item->excludePermission]);
         });
+
+        // 6b. Filter: personal facts (ADR-775) — only when the caller knows the person.
+        if ($facts !== null) {
+            $items = array_filter($items, fn (NavItem $item) => $item->requires === null || ($facts[$item->requires] ?? false) === true);
+        }
 
         // 7. Filter: surface/roleLevel (company only)
         if ($roleLevel !== null) {
@@ -326,9 +414,10 @@ class NavBuilder
             return 'management';
         }
 
-        // Company scope: derive from surface
+        // Company scope: derive from surface. ADR-775 : a business module (surface `operations`)
+        // joins the « Activité » space without declaring anything — whatever the jobdomain.
         if ($item->surface === 'operations') {
-            return 'operations';
+            return 'activity';
         }
 
         // ADR-635 (W-A) : les entrées RH (surface 'hr') rejoignent le groupe « Ressources humaines ».
@@ -444,6 +533,7 @@ class NavBuilder
             'to' => $node['to'],
             'icon' => $node['icon'],
             'permission' => $node['permission'],
+            'tags' => isset($node['_item']) ? ($node['_item']->tags ?? []) : [],
             'children' => $children,
         ];
     }

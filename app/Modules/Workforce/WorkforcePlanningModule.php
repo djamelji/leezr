@@ -29,11 +29,13 @@ class WorkforcePlanningModule implements ModuleDefinition
                         'icon' => 'tabler-calendar-week',
                         'permission' => 'workforce.planning_view',
                         'surface' => 'hr',
-                        'group' => 'workforce',
-                        'sort' => 25,
+                        'group' => 'time', 'sort' => 10,
                     ],
                 ],
                 routeNames: [],
+                actions: [ // ADR-775
+                    ['key' => 'time.plan', 'space' => 'time', 'icon' => 'tabler-calendar-plus', 'to' => ['name' => 'company-workforce-planning'], 'permission' => 'workforce.planning_manage', 'home' => true, 'primary' => true, 'sort' => 10],
+                ],
                 middlewareKey: 'workforce_planning',
             ),
             permissions: [

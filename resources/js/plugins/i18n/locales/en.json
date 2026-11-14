@@ -105,7 +105,15 @@
       "hr_payroll": "Payroll & filings",
       "hr_documents": "HR documents",
       "hr_settings": "HR settings",
-      "workforce": "Workforce"
+      "workforce": "Workforce",
+      "home": "Home",
+      "team": "Team",
+      "time": "Planning & time",
+      "documents": "Documents",
+      "payroll": "Payroll",
+      "activity": "Activity",
+      "settings": "Settings",
+      "personal": "My space"
     },
     "platform": {
       "dashboard": "Dashboard",
@@ -164,34 +172,34 @@
     },
     "company": {
       "dashboard": "Home",
-      "people": "Collaborators",
-      "workforce-people": "Collaborators",
+      "people": "Team",
+      "workforce-people": "Team",
       "members": "Members",
       "settings": "Settings",
       "company-roles": "Roles",
       "plan": "Plan",
-      "billing": "Billing",
+      "billing": "Subscription & invoices",
       "modules": "Modules",
       "audit": "Audit Log",
       "shipments": "Shipments",
       "my-deliveries": "My Deliveries",
-      "company-profile": "Company Profile",
-      "account-settings": "Account Settings",
+      "company-profile": "Company",
+      "account-settings": "My account",
       "support": "Support",
       "documentation": "Help Center",
       "documents": "Documents",
-      "workflows": "Workflows",
+      "workflows": "Automations",
       "workforce-me": "My work",
       "workforce-employees": "Employees",
-      "workforce-time": "Working time",
+      "workforce-time": "Time tracking",
       "workforce-leave": "Leave & absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Payroll & filings",
+      "workforce-payroll": "Payroll",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organization",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Settings",
+      "workforce-settings": "Human resources",
       "workforce-contract-templates": "Employment contracts",
       "workforce-signature": "Signatures",
       "workforce-home": "Home",
@@ -4489,7 +4497,7 @@
     }
   },
   "peopleList": {
-    "title": "Collaborators",
+    "title": "Team",
     "subtitle": "Everyone in your company — access and HR data according to your permissions.",
     "person": "Person",
     "account": "Account",
@@ -7202,7 +7210,7 @@
     }
   },
   "workforceMe": {
-    "title": "My Space",
+    "title": "My work",
     "welcome": "Hello, {name}",
     "refresh": "Refresh",
     "loadError": "Error loading your space",
@@ -9219,6 +9227,20 @@
       "sentOn": "Sent on {date}",
       "external": "signature handled by the provider, through the e-mail you received",
       "sign": "Sign"
+    }
+  },
+  "actions": {
+    "team": {
+      "add-person": "Add a person",
+      "add-employee": "Add a person",
+      "generate-contract": "Generate a contract"
+    },
+    "documents": {
+      "request": "Request a document",
+      "deposit": "Upload a document"
+    },
+    "time": {
+      "plan": "Prepare the schedule"
     }
   }
 }

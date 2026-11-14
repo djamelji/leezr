@@ -14,6 +14,8 @@ final class Capabilities
         public readonly array $headerWidgets = [],
         public readonly array $settingsPanels = [],
         public readonly array $footerLinks = [],
+        /** ADR-775 — contextual actions contributed to an intent space (see ActionBuilder). */
+        public readonly array $actions = [],
     ) {}
 
     public function toArray(): array
@@ -25,6 +27,7 @@ final class Capabilities
             'header_widgets' => $this->headerWidgets,
             'settings_panels' => $this->settingsPanels,
             'footer_links' => $this->footerLinks,
+            'actions' => $this->actions,
         ];
     }
 }

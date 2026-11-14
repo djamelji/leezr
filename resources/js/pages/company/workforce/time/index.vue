@@ -88,7 +88,13 @@ const entriesHeaders = computed(() => [
   { title: '', key: 'actions', sortable: false, width: 80 },
 ])
 
+// ADR-775 : la liste « toute l'entreprise » est réservée aux capacités « voir tout » du temps (même
+// règle que le serveur, WorkforceAccess::hasViewAll) ; sans elle on ne l'appelle pas — plus de 403
+// derrière une entrée de menu. Ciblée sur un collaborateur, le serveur applique le périmètre.
+const canViewAllTime = computed(() => can('workforce.timesheet_approve') || can('workforce.time_manage'))
+
 const fetchEntries = async () => {
+  if (!canViewAllTime.value && !entriesEmployeeFilter.value) return
   entriesLoading.value = true
   try {
     await store.fetchCompanyEntries({
@@ -479,7 +485,7 @@ onMounted(() => {
   fetchEntries()
   fetchTimesheets()
   fetchStats()
-  employeesStore.fetchEmployees({ perPage: 100 })
+  if (can('workforce.view')) employeesStore.fetchEmployees({ perPage: 100 })
 })
 </script>
 

@@ -332,11 +332,7 @@ class NavEndpointTest extends TestCase
         $groups = NavBuilder::forCompany($company, null, 'management');
         $navKeys = [];
 
-        foreach ($groups as $group) {
-            foreach ($group['items'] as $item) {
-                $navKeys[] = $item['key'];
-            }
-        }
+        $navKeys = NavBuilder::leafKeys($groups); // ADR-775 : feuilles des espaces d'intention
 
         // All active company module nav items should be present (ADR-373: operationalOnly removed)
         foreach (ModuleRegistry::forScope('company') as $key => $manifest) {

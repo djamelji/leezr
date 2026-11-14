@@ -95,7 +95,7 @@ const load = async () => {
 const applyKpi = kpi => { if (kpi.status !== undefined) { statusFilter.value = kpi.status; load() } }
 
 watchDebounced([date, department, employee, statusFilter], load, { debounce: 300 })
-onMounted(() => { employeesStore.fetchDepartments(); load() })
+onMounted(() => { if (can('workforce.view')) employeesStore.fetchDepartments(); load() }) // ADR-775 : pas d'appel refusé
 
 // ── Correction guidée ──
 const correctOpen = ref(false)
@@ -155,7 +155,7 @@ const submitCorrect = async () => {
             />
           </VCol>
           <VCol cols="12" sm="6" md="3">
-            <EmployeePicker v-model="employee" :label="t('leaves.columns.employee')" clearable density="compact" />
+            <EmployeePicker v-if="can('workforce.view')" v-model="employee" :label="t('leaves.columns.employee')" clearable density="compact" />
           </VCol>
           <VCol cols="12" sm="6" md="3">
             <AppSelect

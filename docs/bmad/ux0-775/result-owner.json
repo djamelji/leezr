@@ -1,0 +1,166 @@
+{
+ "profile": {
+  "tag": "owner",
+  "email": "owner@leezr.test",
+  "note": "propriétaire, aussi salarié"
+ },
+ "spaces": [
+  "home",
+  "team",
+  "time",
+  "documents",
+  "payroll",
+  "activity",
+  "settings"
+ ],
+ "entries": 7,
+ "leaves": 18,
+ "personalInMenu": [
+  "my-space",
+  "workforce-me",
+  "account-settings"
+ ],
+ "homeActions": [
+  "team.add-person",
+  "time.plan",
+  "documents.request",
+  "documents.deposit"
+ ],
+ "opened": [
+  {
+   "key": "dashboard",
+   "space": "home",
+   "placement": "nav",
+   "path": "/dashboard"
+  },
+  {
+   "key": "people",
+   "space": "team",
+   "placement": "nav",
+   "path": "/company/people"
+  },
+  {
+   "key": "workforce-planning",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/planning"
+  },
+  {
+   "key": "workforce-time",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/time"
+  },
+  {
+   "key": "workforce-leave",
+   "space": "time",
+   "placement": "nav",
+   "path": "/company/workforce/leave"
+  },
+  {
+   "key": "documents",
+   "space": "documents",
+   "placement": "nav",
+   "path": "/company/documents/overview"
+  },
+  {
+   "key": "workforce-payroll",
+   "space": "payroll",
+   "placement": "nav",
+   "path": "/company/workforce/payroll"
+  },
+  {
+   "key": "shipments",
+   "space": "activity",
+   "placement": "nav",
+   "path": "/company/shipments"
+  },
+  {
+   "key": "company-profile",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/profile/overview"
+  },
+  {
+   "key": "workforce-organization",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workforce/organization/departments"
+  },
+  {
+   "key": "workforce-settings",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workforce/settings/general"
+  },
+  {
+   "key": "workflows",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/workflows"
+  },
+  {
+   "key": "modules",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/modules"
+  },
+  {
+   "key": "billing",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/billing/overview"
+  },
+  {
+   "key": "audit",
+   "space": "settings",
+   "placement": "nav",
+   "path": "/company/audit"
+  },
+  {
+   "key": "my-space",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/my-space/overview"
+  },
+  {
+   "key": "workforce-me",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/company/workforce/me"
+  },
+  {
+   "key": "account-settings",
+   "space": "personal",
+   "placement": "menu",
+   "path": "/account-settings/account"
+  }
+ ],
+ "legacy": [
+  {
+   "from": "/company/roles",
+   "to": "/company/people"
+  },
+  {
+   "from": "/company/plan",
+   "to": "/company/billing/plan"
+  },
+  {
+   "from": "/company/workforce",
+   "to": "/dashboard"
+  },
+  {
+   "from": "/company/workforce/documents",
+   "to": "/company/documents/hr"
+  },
+  {
+   "from": "/company/workforce/configuration",
+   "to": "/company/workforce/settings/worktime"
+  },
+  {
+   "from": "/company/members",
+   "to": "/company/members"
+  }
+ ],
+ "network": []
+}

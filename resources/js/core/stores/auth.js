@@ -203,6 +203,9 @@ export const useAuthStore = defineStore('auth', {
     },
 
     switchCompany(companyId) {
+      // ADR-775 : the runtime cache (navigation, modules…) belongs to the company being left — it
+      // must not survive the switch (the previous company's menu was shown for up to 5 minutes).
+      cacheClear()
       this._persistCompanyId(companyId)
       // ADR-435: Apply market before reload/broadcast
       this._syncMarket()

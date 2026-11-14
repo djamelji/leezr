@@ -28007,3 +28007,35 @@ Règle retenue : seul un contrat en vigueur (actif ou suspendu) se termine. Avec
 **Orientation proposée (non validée)** : menu par intentions (Accueil, Équipe, Planning & temps, Documents, Paie, Activité, Réglages), les modules apportant des capacités à ces espaces via `ModuleManifest` et `NavGroupRegistry`, sans jobdomain en dur ; fiche à 5 onglets ; Documents en 4 vues ; un seul parcours d'ajout d'une personne. Premier lot recommandé : UX0 (navigation et principes transversaux).
 
 **Conséquences** : aucun code applicatif modifié, aucune migration, aucune donnée créée. Aucune implémentation avant GO explicite. Non exécutés et déclarés comme tels : première connexion, soumission des formulaires, import de bulletins, signature et approbation de bout en bout.
+
+---
+
+## ADR-775 — Company Experience 2.0 / UX0 : navigation par intention et actions contextuelles
+
+**Date** : 2026-11-14 · **Base** : `33d432f0` · **Détail** : `docs/bmad/COMPANY-EXPERIENCE-2.0-UX0.md`
+
+### Contexte
+
+L'audit ADR-774 est validé. Le menu Company reflétait les modules (18 entrées pour un propriétaire, accueil en 11ᵉ position) ; un raccourci d'accueil menait à un 403 ; l'espace personnel existait en plusieurs variantes.
+
+### Décisions
+
+1. **Espaces d'intention** (`NavGroupRegistry::COMPANY_SPACES`) : `home`, `team`, `time`, `documents`, `payroll`, `activity`, `settings`, `personal`, dans cet ordre. Les manifestes rattachent leurs entrées à un espace (`group`). `NavBuilder::composeSpaces()` présente : un espace = une entrée ; plusieurs items = sous-entrées d'un seul niveau ; espace vide = absent ; plus d'intertitres. La composition ne fait que présenter des items déjà filtrés : elle n'ajoute ni ne retire aucun accès.
+2. **Activité** : un module de surface `operations` rejoint cet espace sans rien déclarer ; aucun jobdomain ni rôle n'est nommé dans le Core de navigation.
+3. **Espace personnel** : entrées visibles pour une personne sans entrée de gestion, menu de l'avatar sinon (`placement` servi par l'API). Entrée `requires` : fait personnel exigé (« Mon activité » ⇒ fiche salarié active, source `PersonalSpaceReadModel`).
+4. **Actions contextuelles** : `Capabilities::$actions`, filtrées par `ActionBuilder` (module actif + RBAC), servies par `/api/nav`, consommées par `useSpaceActions` / `useHomeActions`. L'accueil n'affiche plus de raccourci codé en dur.
+5. **Entrées alignées sur l'usage réel** : « Paramètres RH » suit la garde de sa page (surface `structure`) ; la page Pointage n'appelle plus ce que le serveur refuse.
+6. **Corrections transversales** : langue de l'interface transmise à l'API (`X-Locale`), casse naturelle des boutons, cache de navigation vidé au changement d'entreprise et restauré en entier, erreur JS de Documents.
+
+### Conséquences
+
+- Entrées principales : propriétaire 18 → 7, Dispatcher 8 → 5, RH 11 → 5, manager 10 → 4, paie 5 → 2, consultation 7 → 3, Driver 5 → 4, salarié 5 → 4.
+- Aucune route modifiée ; anciennes redirections vérifiées. Aucune permission élargie ; aucune garde modifiée.
+- `NavBuilder::forCompany()` rend des groupes avec `placement` ; les consommateurs qui raisonnent sur « ce que l'utilisateur peut ouvrir » lisent `NavBuilder::leafKeys()`.
+- Aucune migration. Billing et paie métier intacts.
+
+### Validation
+
+`Ux0IntentNavigationTest` (8 tests) ; 23 fichiers de tests de navigation adaptés ; recette navigateur `ux0-intent-navigation.spec.js` 9/9 (8 profils réels, entreprise sans Workforce, changement d'entreprise, aucun refus réseau) ; scripts ADR-774 rejoués ; mobile et sombre capturés ; suite complète et build : voir le checkpoint.
+
+**Verdict** : 🟢 GO DEV. UX1 non commencé.

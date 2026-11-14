@@ -65,9 +65,12 @@ class NavController
         }
 
         return response()->json([
-            'groups' => NavBuilder::forCompany($company, $permissions, $roleLevel),
+            // ADR-775 : personal facts (same source as « Mon espace ») — entries needing an employee
+            // record are not offered to someone who has none.
+            'groups' => NavBuilder::forCompany($company, $permissions, $roleLevel, \App\Modules\Core\Members\ReadModels\PersonalSpaceReadModel::get($company, $user)['capabilities']),
             'header_widgets' => HeaderWidgetBuilder::forCompany($company, $permissions),
             'footer_links' => FooterLinkBuilder::forCompany($company, $permissions),
+            'actions' => \App\Core\Navigation\ActionBuilder::forCompany($company, $permissions), // ADR-775
         ]);
     }
 }

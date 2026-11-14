@@ -1,51 +1,18 @@
 <script setup>
-import { useAuthStore } from '@/core/stores/auth'
+// ADR-775 : the home page offers the everyday actions CONTRIBUTED by the active modules and
+// ALLOWED to this user (server-filtered) — never a hard-coded shortcut that could end on a 403.
+import { useHomeActions } from '@/composables/useSpaceActions'
 
 const { t } = useI18n()
-const auth = useAuthStore()
-
-const actions = computed(() => {
-  const items = [
-    {
-      key: 'profile',
-      icon: 'tabler-building',
-      label: t('dashboard.quickActions.profile'),
-      to: '/company/profile/overview',
-      color: 'primary',
-    },
-    {
-      key: 'members',
-      icon: 'tabler-users-plus',
-      label: t('dashboard.quickActions.members'),
-      to: '/company/people?action=invite', // ADR-768 : invitation EN PLACE dans Collaborateurs
-      color: 'info',
-    },
-    {
-      key: 'documents',
-      icon: 'tabler-file-check',
-      label: t('dashboard.quickActions.documents'),
-      to: { name: 'company-documents-tab', params: { tab: 'overview' } },
-      color: 'success',
-    },
-    {
-      key: 'billing',
-      icon: 'tabler-wallet',
-      label: t('dashboard.quickActions.billing'),
-      to: { name: 'company-billing-tab', params: { tab: 'overview' } },
-      color: 'warning',
-    },
-  ]
-
-  // Only show billing for owners/admins
-  if (!auth.isAdministrative)
-    return items.filter(i => i.key !== 'billing')
-
-  return items
-})
+const { actions } = useHomeActions()
 </script>
 
 <template>
-  <VCard class="mb-6">
+  <VCard
+    v-if="actions.length"
+    class="mb-6"
+    data-test="home-actions"
+  >
     <VCardText>
       <div class="d-flex align-center gap-2 mb-3">
         <VIcon
@@ -60,8 +27,9 @@ const actions = computed(() => {
           v-for="action in actions"
           :key="action.key"
           :to="action.to"
-          :color="action.color"
+          color="primary"
           variant="tonal"
+          :data-test="`home-action-${action.key}`"
           size="small"
         >
           <VIcon
@@ -69,7 +37,7 @@ const actions = computed(() => {
             :icon="action.icon"
             size="18"
           />
-          {{ action.label }}
+          {{ t(action.label) }}
         </VBtn>
       </div>
     </VCardText>

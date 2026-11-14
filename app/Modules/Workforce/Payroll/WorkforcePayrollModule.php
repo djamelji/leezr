@@ -24,7 +24,7 @@ class WorkforcePayrollModule implements ModuleDefinition
                     // E2 : l'espace « Paie & déclarations » se charge via l'index /workforce/payroll, gardé par
                     // workforce.payroll_prepare. Les capacités validate/export opèrent sur un run listé par
                     // l'index → toujours empaquetées avec payroll_prepare (pas de menu mort).
-                    ['key' => 'workforce-payroll', 'title' => 'Payroll', 'to' => ['name' => 'company-workforce-payroll'], 'icon' => 'tabler-receipt', 'permission' => 'workforce.payroll_prepare', 'surface' => 'hr', 'group' => 'workforce', 'sort' => 50],
+                    ['key' => 'workforce-payroll', 'title' => 'Payroll', 'to' => ['name' => 'company-workforce-payroll'], 'icon' => 'tabler-receipt', 'permission' => 'workforce.payroll_prepare', 'surface' => 'hr', 'group' => 'payroll', 'sort' => 10],
                 ],
                 routeNames: [],
                 middlewareKey: 'workforce_payroll',

@@ -28,6 +28,8 @@ final class NavItem
         public readonly ?array $tags = null,
         public readonly int $sort = 0,
         public readonly ?string $excludePermission = null,
+        /** ADR-775 — personal FACT the entry needs (e.g. `employment`) ; see NavBuilder::forCompany(). */
+        public readonly ?string $requires = null,
     ) {}
 
     public static function fromManifestArray(array $data, int $moduleSortOrder = 0): self
@@ -48,6 +50,7 @@ final class NavItem
             tags: $data['tags'] ?? null,
             sort: $data['sort'] ?? $moduleSortOrder,
             excludePermission: $data['excludePermission'] ?? null,
+            requires: $data['requires'] ?? null,
         );
     }
 

@@ -18,7 +18,7 @@ class WorkflowsModule implements ModuleDefinition
             sortOrder: 18,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'workflows', 'title' => 'Workflows', 'to' => ['name' => 'company-workflows'], 'icon' => 'tabler-automation', 'permission' => 'automations.view', 'surface' => 'structure'],
+                    ['key' => 'workflows', 'title' => 'Workflows', 'to' => ['name' => 'company-workflows'], 'icon' => 'tabler-automation', 'permission' => 'automations.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 40],
                 ],
                 routeNames: ['company-workflows', 'company-workflows-id'],
                 middlewareKey: 'core.workflows',

@@ -1,4 +1,5 @@
 import { ofetch } from 'ofetch'
+import { getI18n } from '@/plugins/i18n'
 import { useAppToast } from '@/composables/useAppToast'
 import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 import { safeRedirect } from '@/utils/safeRedirect'
@@ -37,7 +38,9 @@ export const $api = ofetch.create({
       }
     }
 
-    const locale = useCookie('language').value
+    // ADR-775 : the ACTIVE interface language (the previous lookup read a cookie name that is never
+    // written, so the server always answered in English — field labels, catalogues).
+    const locale = getI18n().global.locale.value
     if (locale) {
       options.headers = options.headers || {}
       if (options.headers instanceof Headers) {

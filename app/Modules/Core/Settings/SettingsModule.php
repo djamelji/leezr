@@ -18,11 +18,11 @@ class SettingsModule implements ModuleDefinition
             sortOrder: 20,
             capabilities: new Capabilities(
                 navItems: [
-                    ['key' => 'company-profile', 'title' => 'Company Profile', 'to' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-building-community', 'permission' => 'settings.view', 'surface' => 'structure'],
+                    ['key' => 'company-profile', 'title' => 'Company Profile', 'to' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-building-community', 'permission' => 'settings.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 10],
                     // ADR-769 (M7 LOT 3) — « Mon espace » : self-service Core (documents, bulletins, signatures,
                     // profil), présent pour TOUT membre, avec ou sans Workforce, quel que soit son rôle.
-                    ['key' => 'my-space', 'title' => 'My Space', 'to' => ['name' => 'company-my-space-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-user-circle', 'group' => 'account', 'sort' => 1],
-                    ['key' => 'account-settings', 'title' => 'Account Settings', 'to' => ['name' => 'account-settings-tab', 'params' => ['tab' => 'account']], 'icon' => 'tabler-settings', 'group' => 'account', 'sort' => 900],
+                    ['key' => 'my-space', 'title' => 'My Space', 'to' => ['name' => 'company-my-space-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-user-circle', 'group' => 'personal', 'sort' => 10],
+                    ['key' => 'account-settings', 'title' => 'Account Settings', 'to' => ['name' => 'account-settings-tab', 'params' => ['tab' => 'account']], 'icon' => 'tabler-settings', 'group' => 'personal', 'sort' => 900, 'tags' => ['avatar']],
                 ],
                 routeNames: ['company-profile-tab'],
                 middlewareKey: 'core.settings',

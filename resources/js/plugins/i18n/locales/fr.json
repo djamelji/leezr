@@ -105,7 +105,15 @@
       "hr_payroll": "Paie & déclarations",
       "hr_documents": "Documents RH",
       "hr_settings": "Paramètres RH",
-      "workforce": "Ressources humaines"
+      "workforce": "Ressources humaines",
+      "home": "Accueil",
+      "team": "Équipe",
+      "time": "Planning & temps",
+      "documents": "Documents",
+      "payroll": "Paie",
+      "activity": "Activité",
+      "settings": "Réglages",
+      "personal": "Mon espace"
     },
     "platform": {
       "dashboard": "Tableau de bord",
@@ -164,34 +172,34 @@
     },
     "company": {
       "dashboard": "Accueil",
-      "people": "Collaborateurs",
-      "workforce-people": "Collaborateurs",
+      "people": "Équipe",
+      "workforce-people": "Équipe",
       "members": "Membres",
       "settings": "Paramètres",
       "company-roles": "Rôles",
       "plan": "Abonnement",
-      "billing": "Facturation",
+      "billing": "Abonnement & factures",
       "modules": "Modules",
       "audit": "Journal d'audit",
       "shipments": "Expéditions",
       "my-deliveries": "Mes livraisons",
-      "company-profile": "Profil entreprise",
-      "account-settings": "Paramètres du compte",
+      "company-profile": "Entreprise",
+      "account-settings": "Mon compte",
       "support": "Support",
       "documentation": "Centre d'aide",
       "documents": "Documents",
-      "workflows": "Workflows",
+      "workflows": "Automatisations",
       "workforce-me": "Mon activité",
       "workforce-employees": "Collaborateurs",
-      "workforce-time": "Temps de travail",
+      "workforce-time": "Pointage",
       "workforce-leave": "Congés & absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Paie & déclarations",
+      "workforce-payroll": "Paie",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Organisation",
       "workforce-configuration": "Configuration",
-      "workforce-settings": "Paramètres",
+      "workforce-settings": "Ressources humaines",
       "workforce-contract-templates": "Contrats de travail",
       "workforce-signature": "Signatures",
       "workforce-home": "Accueil",
@@ -4489,7 +4497,7 @@
     }
   },
   "peopleList": {
-    "title": "Collaborateurs",
+    "title": "Équipe",
     "subtitle": "Toutes les personnes de votre entreprise — accès et données RH selon vos permissions.",
     "person": "Personne",
     "account": "Compte",
@@ -7202,7 +7210,7 @@
     }
   },
   "workforceMe": {
-    "title": "Mon espace",
+    "title": "Mon activité",
     "welcome": "Bonjour, {name}",
     "refresh": "Actualiser",
     "loadError": "Erreur lors du chargement de votre espace",
@@ -9219,6 +9227,20 @@
       "sentOn": "Envoyé le {date}",
       "external": "signature gérée par le prestataire, via l'e-mail reçu",
       "sign": "Signer"
+    }
+  },
+  "actions": {
+    "team": {
+      "add-person": "Ajouter une personne",
+      "add-employee": "Ajouter une personne",
+      "generate-contract": "Générer un contrat"
+    },
+    "documents": {
+      "request": "Demander un document",
+      "deposit": "Déposer un document"
+    },
+    "time": {
+      "plan": "Préparer le planning"
     }
   }
 }

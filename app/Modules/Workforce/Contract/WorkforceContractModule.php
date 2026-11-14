@@ -29,6 +29,9 @@ class WorkforceContractModule implements ModuleDefinition
                 // (deep-link + onglet). Permission workforce_contract.view inchangée.
                 navItems: [],
                 routeNames: [],
+                actions: [ // ADR-775 — action de CONTEXTE (une personne) : l'hôte (fiche) l'ouvre en place
+                    ['key' => 'team.generate-contract', 'space' => 'team', 'context' => 'person', 'icon' => 'tabler-file-certificate', 'to' => null, 'permission' => 'workforce.contracts', 'sort' => 30],
+                ],
                 middlewareKey: 'workforce_contract',
             ),
             permissions: [
