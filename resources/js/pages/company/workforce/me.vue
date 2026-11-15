@@ -5,12 +5,17 @@ import { $api } from '@/utils/api'
 import { useDisplay } from 'vuetify'
 import { daysToHundredths, formatDays, formatMinutes } from '@/utils/workUnits'
 import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
+import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 
 definePage({ meta: { module: 'workforce' } })
 
 const { t, locale } = useI18n()
 const { width: viewportWidth } = useDisplay()
 const router = useRouter()
+// ADR-786 : la carte « Mes bulletins » liste déjà MES bulletins. Le raccourci vers la paie COLLECTIVE
+// n'est proposé qu'à qui peut l'ouvrir (même règle que la page : module + workforce.payroll_prepare).
+const { can, moduleActive } = useCompanyPermissionContext()
+const canOpenPayroll = computed(() => moduleActive('workforce_payroll') && can('workforce.payroll_prepare'))
 const clockStore = useWorkforceClockStore()
 const { toast } = useAppToast()
 
@@ -26,7 +31,8 @@ const shiftsLoading = ref(false)
 onMounted(async () => {
   try {
     await clockStore.fetchProfile()
-    await Promise.all([fetchDocuments(), fetchShifts()])
+    // ADR-786 : sans fiche salarié, il n'y a ni documents ni créneaux personnels — pas d'appel (404 évités).
+    if (employee.value) await Promise.all([fetchDocuments(), fetchShifts()])
   }
   catch {
     toast(t('workforceMe.loadError'), 'error')
@@ -703,12 +709,13 @@ function signatureChipProps(status) {
               </VTable>
             </VCardText>
 
-            <VCardActions>
+            <VCardActions v-if="canOpenPayroll">
               <VSpacer />
               <VBtn
                 variant="tonal"
                 color="primary"
                 prepend-icon="tabler-receipt"
+                data-test="me-open-payroll"
                 @click="router.push({ name: 'company-workforce-payroll' })"
               >
                 {{ t('workforceMe.viewPayroll') }}
@@ -815,7 +822,8 @@ function signatureChipProps(status) {
                 variant="tonal"
                 color="secondary"
                 prepend-icon="tabler-folder"
-                @click="router.push({ name: 'company-workforce-documents' })"
+                data-test="me-all-documents"
+                @click="router.push({ name: 'company-my-space-tab', params: { tab: 'documents' } })"
               >
                 {{ t('workforceMe.viewAllDocuments') }}
               </VBtn>

@@ -1,0 +1,45 @@
+{
+  "user": "salarie@leezr.test",
+  "nav": [
+    "Accueil",
+    "Temps & pointages",
+    "Mon espace",
+    "Mon activité"
+  ],
+  "pages": [
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/workforce/time",
+      "title": "Planning & temps",
+      "actions": [
+        "Temps & pointages",
+        "Mon activité",
+        "Aujourd'hui",
+        "Présences",
+        "Feuilles de temps",
+        "Annuler",
+        "Créer",
+        "Générer"
+      ]
+    },
+    {
+      "path": "/company/modules",
+      "errors": [],
+      "final": "/company/modules",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/billing/overview",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    }
+  ]
+}

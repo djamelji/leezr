@@ -1,0 +1,162 @@
+{
+  "user": "bob@leezr.test",
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/home",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Actualiser",
+        "Demander un congé",
+        "Voir la paie",
+        "Voir tous mes documents",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/overview",
+      "errors": [],
+      "final": "/company/my-space/overview",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": []
+    },
+    {
+      "path": "/company/my-space/documents",
+      "errors": [],
+      "final": "/company/my-space/documents",
+      "title": "Mon espace",
+      "actions": []
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/people",
+      "title": "Équipe",
+      "actions": [
+        "Ajouter une personne",
+        "Personnes",
+        "Annuler",
+        "Ajouter et inviter"
+      ]
+    },
+    {
+      "path": "/company/people/user-2",
+      "errors": [],
+      "final": "/company/people/user-2",
+      "title": "Alice Martin",
+      "actions": [
+        "Équipe",
+        "Actions",
+        "Vue d'ensemble",
+        "Informations & emploi",
+        "Documents & contrats",
+        "Accès & autorisations",
+        "Paramètres avancés",
+        "Créer",
+        "Annuler"
+      ]
+    },
+    {
+      "path": "/company/documents/people",
+      "errors": [],
+      "final": "/company/documents/people",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/planning",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/leaves",
+      "errors": [],
+      "final": "/company/workforce/leaves",
+      "title": "Page introuvable",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": []
+    },
+    {
+      "path": "/company/settings",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/modules",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": []
+    },
+    {
+      "path": "/company/billing/overview",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": []
+    }
+  ]
+}

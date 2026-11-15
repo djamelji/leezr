@@ -1,0 +1,52 @@
+{
+  "user": "owner@leezr.test",
+  "nav": [
+    "Accueil",
+    "Équipe",
+    "Planning & temps",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Documents",
+    "Paie",
+    "Expéditions",
+    "Modules",
+    "Réglages"
+  ],
+  "pages": [
+    {
+      "path": "/company/workforce/organization/departments",
+      "errors": [],
+      "final": "/company/workforce/organization/departments",
+      "title": "Organisation",
+      "actions": [
+        "Assistant de configuration",
+        "Enregistrer le profil",
+        "Prévisualiser le modèle",
+        "Départements",
+        "Postes",
+        "Lieux",
+        "Ajouter un département",
+        "Annuler",
+        "Créer"
+      ]
+    },
+    {
+      "path": "/company/settings",
+      "errors": [],
+      "final": "/company/settings",
+      "title": "Réglages",
+      "actions": [
+        "Entreprise",
+        "Organisation",
+        "Accès & sécurité",
+        "Travail & RH",
+        "Documents",
+        "Abonnement",
+        "Automatisations",
+        "Avancé",
+        "Afficher les réglages avancés (1)"
+      ]
+    }
+  ]
+}

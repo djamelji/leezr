@@ -1,0 +1,34 @@
+{
+  "user": "bob@leezr.test",
+  "nav": [
+    "Accueil",
+    "Mes livraisons",
+    "Mon espace",
+    "Mon activité"
+  ],
+  "pages": [
+    {
+      "path": "/home",
+      "errors": [],
+      "final": "/home",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Actualiser",
+        "Demander un congé",
+        "Voir tous mes documents",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    }
+  ]
+}

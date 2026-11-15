@@ -138,6 +138,20 @@ class WorkforceAccess
     }
 
     /** Les ids des collaborateurs visibles par l'utilisateur dans un domaine (soi + rapports directs). */
+    /**
+     * ADR-786 — restreint une collection (modèles ou tableaux portant `employee_id`) au périmètre du
+     * domaine : tout si « voir tout », sinon soi + rapports directs. Même règle que le cockpit.
+     */
+    public static function scopeRows(Request $request, string $domain, $rows)
+    {
+        if (static::hasViewAll($request, $domain)) {
+            return $rows;
+        }
+        $ids = array_map('intval', static::visibleEmployeeIds($request, $domain));
+
+        return collect($rows)->filter(fn ($r) => in_array((int) data_get($r, 'employee_id'), $ids, true))->values();
+    }
+
     public static function visibleEmployeeIds(Request $request, string $domain): array
     {
         $self = static::requesterEmployee($request);

@@ -402,7 +402,8 @@ const savePassword = async () => {
     </template>
 
     <!-- ═══ Permissions effectives ═══ -->
-    <template v-if="hasMembership && can.view_access">
+    <!-- ADR-786 : `effective_permissions` n'est fourni qu'aux titulaires de roles.view (null sinon). -->
+    <template v-if="hasMembership && can.view_access && account.effective_permissions !== null && account.effective_permissions !== undefined">
       <VDivider class="mb-4" />
       <div class="text-overline mb-2">
         {{ t('people.access.effectivePermissions') }}

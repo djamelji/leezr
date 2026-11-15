@@ -1,0 +1,25 @@
+{
+  "user": "consultation@leezr.test",
+  "nav": [
+    "Accueil",
+    "Équipe",
+    "Réglages"
+  ],
+  "pages": [
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/workforce/employees",
+      "title": "Collaborateurs 0",
+      "actions": [
+        "Filtres",
+        "1\nFichier",
+        "2\nCorrespondance",
+        "3\nPrévisualisation",
+        "4\nRésultat",
+        "Télécharger le modèle",
+        "Suivant"
+      ]
+    }
+  ]
+}

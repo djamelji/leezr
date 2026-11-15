@@ -1,0 +1,30 @@
+{
+  "user": "manager@leezr.test",
+  "nav": [
+    "Accueil",
+    "Équipe",
+    "Planning & temps",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Réglages"
+  ],
+  "pages": [
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Préférences",
+        "Actualiser",
+        "Planning",
+        "Temps & pointages",
+        "Absences",
+        "Mon activité",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    }
+  ]
+}

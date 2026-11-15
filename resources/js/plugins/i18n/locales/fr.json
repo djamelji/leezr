@@ -5858,7 +5858,8 @@
       "rejected": "Refusé",
       "valid": "Valide",
       "expiring_soon": "Expire bientôt",
-      "expired": "Expiré"
+      "expired": "Expiré",
+      "restricted": "Accès réservé"
     },
     "replaceFile": "Remplacer le fichier",
     "moreActions": "Plus d'actions"

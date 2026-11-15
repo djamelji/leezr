@@ -1,0 +1,23 @@
+{
+  "user": "consultation@leezr.test",
+  "nav": [
+    "Accueil",
+    "Équipe",
+    "Réglages"
+  ],
+  "pages": [
+    {
+      "path": "/company/workforce/organization/departments",
+      "errors": [],
+      "final": "/company/workforce/organization/departments",
+      "title": "Organisation",
+      "actions": [
+        "Prévisualiser le modèle",
+        "Départements",
+        "Postes",
+        "Annuler",
+        "Créer"
+      ]
+    }
+  ]
+}

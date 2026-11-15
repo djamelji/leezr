@@ -1,0 +1,166 @@
+{
+  "user": "admin@leezr.test",
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/dashboard",
+      "title": "Bienvenue, Alice",
+      "actions": [
+        "Mon activité",
+        "Ajouter une personne",
+        "Demander un document",
+        "Déposer un document",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Commencer la journée",
+        "Actualiser",
+        "Demander un congé",
+        "Voir tous mes documents",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/overview",
+      "errors": [],
+      "final": "/company/my-space/overview",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": []
+    },
+    {
+      "path": "/company/my-space/documents",
+      "errors": [],
+      "final": "/company/my-space/documents",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures",
+        "Téléverser",
+        "Télécharger"
+      ]
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/people",
+      "title": "Équipe",
+      "actions": [
+        "Outils",
+        "Ajouter une personne",
+        "Personnes",
+        "Annuler",
+        "Ajouter et inviter"
+      ]
+    },
+    {
+      "path": "/company/people/user-2",
+      "errors": [],
+      "final": "/company/people/user-2",
+      "title": "Alice Martin",
+      "actions": [
+        "Équipe",
+        "Modifier",
+        "Actions",
+        "Vue d'ensemble",
+        "Informations & emploi",
+        "Documents & contrats",
+        "Accès & autorisations",
+        "Paramètres avancés",
+        "Créer",
+        "Annuler"
+      ]
+    },
+    {
+      "path": "/company/documents/people",
+      "errors": [],
+      "final": "/company/documents/people",
+      "title": "Documents",
+      "actions": [
+        "Nouveau",
+        "Outils",
+        "Paramètres avancés",
+        "Créer",
+        "Annuler"
+      ]
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue, Alice",
+      "actions": [
+        "Mon activité",
+        "Ajouter une personne",
+        "Demander un document",
+        "Déposer un document",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue, Alice",
+      "actions": [
+        "Mon activité",
+        "Ajouter une personne",
+        "Demander un document",
+        "Déposer un document",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/planning",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue, Alice",
+      "actions": [
+        "Ajouter une personne",
+        "Demander un document",
+        "Déposer un document",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/leaves",
+      "errors": [],
+      "final": "/company/workforce/leaves",
+      "title": "Page introuvable",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue, Alice",
+      "actions": [
+        "Ajouter une personne",
+        "Demander un document",
+        "Déposer un document",
+        "Personnaliser"
+      ]
+    }
+  ]
+}

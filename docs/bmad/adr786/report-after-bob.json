@@ -1,0 +1,68 @@
+{
+  "user": "bob@leezr.test",
+  "nav": [
+    "Accueil",
+    "Mes livraisons",
+    "Mon espace",
+    "Mon activité"
+  ],
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/home",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Actualiser",
+        "Demander un congé",
+        "Voir tous mes documents",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/people",
+      "title": "Équipe",
+      "actions": [
+        "Ajouter une personne",
+        "Personnes",
+        "Annuler",
+        "Ajouter et inviter"
+      ]
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bonjour, Bob",
+      "actions": [
+        "Voir mon planning",
+        "Pointer l'arrivée"
+      ]
+    }
+  ]
+}

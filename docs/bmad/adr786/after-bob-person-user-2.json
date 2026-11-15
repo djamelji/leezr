@@ -1,0 +1,13 @@
+{
+  "user": "bob@leezr.test",
+  "ref": "user-2",
+  "tabs": {
+    "Vue d'ensemble": "ACCÈS & AUTORISATIONS\nCompte connecté\nDispatcher\nadmin@leezr.test",
+    "Informations & emploi": "0 sur 12 champs obligatoires renseignés\nPrénom\nNom\nE-mail\nRôle\nInformations générales\nIdentity\nIntitulé de poste *\nDate de naissance\nNationalité\nContact\nTéléphone *\nAdresse postale\nContact d'urgence (nom) *\nContact d'urgence (tél.) *\nAdresse personnelle\nCode postal personnel\nVille personnelle\nPays personnel\nRH & Administratif\nHr\nDate d'embauche *\nType de contrat *\nStatut *\nN° de sécurité sociale (NIR) *\nIBAN *\nSexe\nCommune de naissance\nDépartement de naissance\nPays de naissance\nSpécifique au poste\nDispatch\nZone géographique *\nPlanning horaires *\nMode de travail *",
+    "Documents & contrats": "DOCUMENTS\tOBLIGATOIRE\tSTATUT\t\nCarte d'identité\nMax 10 MB · PDF, JPG, JPEG, PNG\n\t\nObligatoire\n\t\nAccès réservé\n\t\n\nRIB / Coordonnées bancaires\nMax 5 MB · PDF, JPG, JPEG, PNG\n\t\nOptionnel\n\t\nAccès réservé\n\t\n\nContrat de travail\nMax 10 MB · PDF\n\t\nOptionnel\n\t\nÀ fournir\n\t\nTélécharger",
+    "Accès & autorisations": "Compte connecté\nLe compte est actif et s'est déjà connecté.\nRÔLE ATTRIBUÉ\nDispatcher"
+  },
+  "menu": [
+    "Gérer l'accès"
+  ]
+}

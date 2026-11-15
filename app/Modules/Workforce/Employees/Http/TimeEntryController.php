@@ -94,11 +94,12 @@ class TimeEntryController extends Controller
             'to' => 'required|date|after_or_equal:from',
         ]);
 
-        return response()->json(TimeEntryReadModel::detectAnomalies(
+        // ADR-786 : même périmètre que le cockpit (voir tout, sinon soi + rapports directs).
+        return response()->json(WorkforceAccess::scopeRows($request, 'time', TimeEntryReadModel::detectAnomalies(
             companyId: $companyId,
             from: $request->query('from'),
             to: $request->query('to'),
-        ));
+        )));
     }
 
     /** W-G5 — scope temps : vue globale si « voir tout » (timesheet_approve/time_manage) ; sinon soi + rapports. */
@@ -145,9 +146,8 @@ class TimeEntryController extends Controller
 
     public function active(Request $request): JsonResponse
     {
-        return response()->json(
-            TimeEntryReadModel::activeForCompany($request->attributes->get('company_id'))
-        );
+        // ADR-786 : les pointages en cours d'autrui ne sont visibles qu'avec « voir tout » ou en manager direct.
+        return response()->json(WorkforceAccess::scopeRows($request, 'time', TimeEntryReadModel::activeForCompany($request->attributes->get('company_id'))));
     }
 
     public function clockIn(Request $request): JsonResponse

@@ -281,6 +281,7 @@ watch(activeTab, v => {
       <div class="d-flex align-center justify-space-between flex-wrap gap-2">
         <span>{{ $t('workforceDocuments.payslipMovedHint') }}</span>
         <VBtn
+          v-if="can('workforce.payroll_prepare')"
           size="small"
           variant="tonal"
           append-icon="tabler-arrow-right"

@@ -1,0 +1,187 @@
+{
+  "user": "salarie@leezr.test",
+  "nav": [
+    "Accueil",
+    "Temps & pointages",
+    "Mon espace",
+    "Mon activité"
+  ],
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/dashboard",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Commencer la journée",
+        "Actualiser",
+        "Temps & pointages",
+        "Mon activité",
+        "Demander un congé",
+        "Voir tous mes documents",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/overview",
+      "errors": [],
+      "final": "/company/my-space/overview",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/documents",
+      "errors": [],
+      "final": "/company/my-space/documents",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures",
+        "Téléverser",
+        "Télécharger"
+      ]
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/people/user-2",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/documents/people",
+      "errors": [],
+      "final": "/company/documents/people",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/workforce/planning",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/workforce/leaves",
+      "errors": [],
+      "final": "/company/workforce/leaves",
+      "title": "Page introuvable",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/workforce/time",
+      "title": "Planning & temps",
+      "actions": [
+        "Temps & pointages",
+        "Mon activité",
+        "Aujourd'hui",
+        "Présences",
+        "Feuilles de temps",
+        "Annuler",
+        "Créer",
+        "Générer"
+      ]
+    },
+    {
+      "path": "/company/settings",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/modules",
+      "errors": [],
+      "final": "/company/modules",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/billing/overview",
+      "errors": [],
+      "final": "/company/billing/overview",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    },
+    {
+      "path": "/company/my-deliveries",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Mon activité"
+      ]
+    }
+  ]
+}

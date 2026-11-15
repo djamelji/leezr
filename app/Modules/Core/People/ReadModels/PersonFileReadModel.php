@@ -110,7 +110,7 @@ class PersonFileReadModel
         $identity = self::identity($user, $employee, $can['view_hr'], $can['view_access']);
 
         // ── Accès & autorisations ──
-        $account = self::account($company, $user, $membership, $employee, $can['view_access']);
+        $account = self::account($company, $user, $membership, $employee, $can['view_access'], $actor->hasCompanyPermission($company, 'roles.view'));
 
         // ── Emploi (réutilise EmployeeFileReadModel — gated module ET facette RH `workforce.view`) ──
         $employment = ($employee && $hasWorkforce && $can['view_hr'])
@@ -208,7 +208,7 @@ class PersonFileReadModel
         ];
     }
 
-    private static function account(Company $company, ?User $user, ?Membership $membership, ?Employee $employee, bool $canViewAccess): array
+    private static function account(Company $company, ?User $user, ?Membership $membership, ?Employee $employee, bool $canViewAccess, bool $canViewRoles = false): array
     {
         $state = 'none';
         if ($user && $membership) {
@@ -245,7 +245,9 @@ class PersonFileReadModel
             'is_owner' => (bool) $membership?->isOwner(),
             'is_admin' => (bool) $membership?->isAdmin(),
             'role' => $role ? ['id' => $role->id, 'name' => $role->name, 'is_administrative' => (bool) $role->is_administrative] : null,
-            'effective_permissions' => $role ? $role->permissions->pluck('key')->values()->all() : null,
+            // ADR-786 : la liste des permissions d'autrui relève de la configuration des rôles (roles.view),
+            // pas de l'annuaire (members.view, accordé aux rôles de terrain) — minimisation des données.
+            'effective_permissions' => $role && $canViewRoles ? $role->permissions->pluck('key')->values()->all() : null,
             'has_account' => (bool) $user,
             // E-mail employé = cible de l'invitation quand la fiche RH n'a pas encore de compte.
             'grant_email' => $employee && ! $user ? $employee->email : null,

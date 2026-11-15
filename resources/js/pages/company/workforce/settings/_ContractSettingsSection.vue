@@ -47,6 +47,8 @@ const identityRows = computed(() => {
 })
 
 const go = p => router.push(p)
+// ADR-786 : le profil s'ouvre avec settings.view et se modifie avec settings.manage (mêmes règles que la route et l'API).
+// L'ancienne condition testait `settings.company_management`, un nom de bundle et pas une permission.
 </script>
 
 <template>
@@ -87,6 +89,7 @@ const go = p => router.push(p)
             size="small"
             variant="text"
             color="warning"
+            v-if="can('settings.view')"
             class="ms-1"
             :to="{ name: 'company-profile-tab', params: { tab: 'overview' }, query: { missing: missingCodes, back: route.fullPath } }"
           >
@@ -121,8 +124,9 @@ const go = p => router.push(p)
           variant="tonal"
           size="small"
           prepend-icon="tabler-pencil"
+          v-if="can('settings.view')"
           class="mt-4"
-          :disabled="!can('settings.company_management')"
+          :disabled="!can('settings.manage')"
           @click="go('/company/profile/overview')"
         >
           {{ t('contractSettings.identity.edit') }}

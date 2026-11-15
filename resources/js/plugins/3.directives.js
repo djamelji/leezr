@@ -35,10 +35,12 @@ function updateVisibility(el, binding) {
     hasAccess = auth.hasPermission(value)
   }
 
+  // ADR-786 : `!important`, sinon une classe utilitaire Vuetify (`d-flex`, `d-inline-flex`… déclarées
+  // `display: … !important`) l'emporte et l'élément reste visible malgré l'absence de permission.
   if (!hasAccess) {
-    el.style.display = 'none'
+    el.style.setProperty('display', 'none', 'important')
   }
   else {
-    el.style.display = ''
+    el.style.removeProperty('display')
   }
 }

@@ -28314,3 +28314,25 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Aucune migration, aucun moteur, aucun changement de calcul de paie, de Billing ou de permissions (édition = `settings.manage`, inchangé).
 - Le modèle de bulletin officiel n'affiche pas l'adresse de l'employeur (non modifié) ; aucune conformité légale n'est revendiquée ; la DSN reste un export simulé.
 - Tests : `Adr785LegalIdentityTest` (14), `ExportPayrollDsnUseCaseTest` (+3), `OfficialPayslipUseCaseTest` (+3, stockage factice), `FieldDefinitionTest` (46 définitions), recette navigateur `tests/e2e/adr785-legal-identity.spec.js`.
+
+---
+
+## ADR-786 — Audit RBAC Company : visibilité = autorisation, périmètre des données, préparation préproduction
+
+**Date** : 2026-11-15 · **Base** : `9b7d1420` · DEV uniquement · Rapport : `docs/bmad/ADR-786-RBAC-AUDIT.md`
+
+**Contexte** : un livreur (« Bobo » = `bob@leezr.test`, rôle Driver, company 1) voyait « Voir la paie ». Audit des quatre couches séparément : permissions attribuées, visibilité UI, autorisation HTTP, données renvoyées ; 9 profils réels, variantes (sans fiche, sans compte, multi-société, module inactif).
+
+**Constats** : « Voir la paie » menait à la paie COLLECTIVE (refusée en 403 par le serveur — défaut de visibilité, pas de fuite) ; ses bulletins personnels restent accessibles. Une fuite réelle : pointages en cours et anomalies de toute l'entreprise renvoyés à un salarié (`timesheet_view`). Directive `v-can` inopérante sur les éléments `d-flex`. Feature flags en erreur 500 et hors société active. Clés de permissions d'un collègue exposées via la facette accès (`members.view`). Aucune fuite multi-tenant.
+
+**Décision** :
+- `WorkforceAccess::scopeRows()` : `time-entries/active` et `/anomalies` suivent le périmètre temps (voir tout, sinon soi + rapports directs), comme le cockpit.
+- `effective_permissions` d'autrui seulement avec `roles.view` ; `members.view` reste l'annuaire.
+- `v-can` masque avec `!important` ; feature flags lus pour la société active.
+- UI alignée sur les gardes serveur : paie collective, registre RH, profil entreprise, Réglages (hub = entrées déjà filtrées, sans exigence de rôle administratif), Mon activité sans fiche salarié, libellé « Accès réservé ».
+- **Rôles existants non modifiés.** Le rôle Driver hérité garde `members.invite` (écart signalé par `permissions:reconcile`) ; le préréglage Driver garde `members.view` et `documents.view`. Ajustement proposé, à décider explicitement (retrait via Réglages › Rôles ; bundle « annuaire » limité pour les rôles terrain).
+
+**Conséquences** :
+- Tests : `Adr786RbacAuditTest` 11/11 (4 échouent sur le code précédent), cockpit 30/30, E2E `adr786-rbac-recette` 4/4 ; suite complète 4348 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` (inchangés, `TimeEntryController` maintenu à 309 lignes) ; build propre.
+- Préproduction (lecture seule, staging non vérifié) : `.env.example` incomplet (~30 clés), `APP_DEBUG=false` obligatoire (les 403/404 exposent des détails en debug), 13 migrations, workers sur 4 files, planificateur, sauvegarde/restauration non documentée.
+- **Verdict** : 🟢 GO DEV · 🟡 GO préparation préproduction sous réserve (décision rôle Driver, sauvegardes, env, workers/planificateur) · 🔴 NO-GO PROD.

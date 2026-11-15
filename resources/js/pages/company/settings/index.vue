@@ -10,7 +10,10 @@ import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionC
 import { $api } from '@/utils/api'
 import { useDisplay } from 'vuetify'
 
-definePage({ meta: { surface: 'structure' } })
+// ADR-786 : le hub ne présente QUE les entrées déjà filtrées par le serveur (module, plan, rôle,
+// permissions) ; chaque cible garde sa propre garde. Exiger ici un rôle administratif contredisait le
+// menu (ex. « Consultation » voyait « Réglages › Organisation » puis tombait sur un 403).
+definePage({ meta: {} })
 
 const { t, te } = useI18n()
 const nav = useNavStore()
@@ -139,6 +142,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <div
       v-else
       class="settings-layout"
+      :class="{ 'settings-layout--single': navItems.length <= 1 }"
     >
       <!-- Rubriques : colonne à gauche (desktop), barre défilante (mobile) -->
       <nav
@@ -238,6 +242,8 @@ onBeforeUnmount(() => observer?.disconnect())
 .settings-page { max-inline-size: 1024px; }
 .settings-search { inline-size: 300px; max-inline-size: 100%; }
 .settings-layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 32px; align-items: start; }
+/* ADR-786 : une seule rubrique → pas de colonne de navigation ; le contenu occupe toute la largeur. */
+.settings-layout--single { grid-template-columns: minmax(0, 1fr); }
 .settings-nav { position: sticky; inset-block-start: 88px; display: flex; flex-direction: column; gap: 2px; }
 .settings-nav__item {
   display: flex; align-items: center; gap: 10px; inline-size: 100%;

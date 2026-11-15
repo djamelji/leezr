@@ -1,0 +1,179 @@
+{
+  "user": "manager@leezr.test",
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/dashboard",
+      "title": "Bienvenue,",
+      "actions": [
+        "Préparer le planning",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [
+        "404 GET /api/workforce/me/documents",
+        "404 GET /api/workforce/me/shifts"
+      ],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Préférences",
+        "Actualiser",
+        "Planning",
+        "Temps & pointages",
+        "Absences",
+        "Mon activité",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/overview",
+      "errors": [],
+      "final": "/company/my-space/overview",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/documents",
+      "errors": [],
+      "final": "/company/my-space/documents",
+      "title": "Mon espace",
+      "actions": []
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/people",
+      "title": "Équipe",
+      "actions": [
+        "Personnes"
+      ]
+    },
+    {
+      "path": "/company/people/user-2",
+      "errors": [
+        "404 GET /api/company/people/user-2"
+      ],
+      "final": "/company/people/user-2",
+      "title": "Une erreur est survenue. Veuillez réessayer.",
+      "actions": [
+        "Équipe",
+        "Réessayer"
+      ]
+    },
+    {
+      "path": "/company/documents/people",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Préparer le planning",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": [
+        "Préparer le planning",
+        "Personnaliser"
+      ]
+    },
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/workforce/employees",
+      "title": "Collaborateurs 0",
+      "actions": [
+        "Filtres",
+        "1\nFichier",
+        "2\nCorrespondance",
+        "3\nPrévisualisation",
+        "4\nRésultat",
+        "Télécharger le modèle",
+        "Suivant"
+      ]
+    },
+    {
+      "path": "/company/workforce/planning",
+      "errors": [],
+      "final": "/company/workforce/planning",
+      "title": "Planning & temps",
+      "actions": [
+        "Préférences",
+        "Création en lot",
+        "Nouveau créneau",
+        "Planning",
+        "Temps & pointages",
+        "Absences",
+        "Semaine",
+        "Jour",
+        "Postes",
+        "Mois",
+        "Modèles",
+        "Préparer ma semaine",
+        "Aujourd'hui",
+        "Filtres",
+        "Plus d'options (modèle, note)",
+        "Annuler",
+        "Créer",
+        "Composition — activités & pauses",
+        "Ajouter",
+        "Nouvelle semaine type",
+        "Capturer la semaine",
+        "Prévisualiser",
+        "Créer le remplacement",
+        "Récurrent",
+        "Ponctuel"
+      ]
+    },
+    {
+      "path": "/company/workforce/leaves",
+      "errors": [],
+      "final": "/company/workforce/leaves",
+      "title": "Page introuvable",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/workforce/time",
+      "title": "Planning & temps",
+      "actions": [
+        "Préférences",
+        "Planning",
+        "Temps & pointages",
+        "Absences",
+        "Aujourd'hui",
+        "Présences",
+        "Feuilles de temps",
+        "Annuler",
+        "Créer",
+        "Générer"
+      ]
+    }
+  ]
+}

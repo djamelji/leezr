@@ -1,0 +1,165 @@
+{
+  "user": "consultation@leezr.test",
+  "nav": [
+    "Accueil",
+    "Équipe",
+    "Réglages"
+  ],
+  "pages": [
+    {
+      "path": "/dashboard",
+      "errors": [],
+      "final": "/dashboard",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/me",
+      "errors": [],
+      "final": "/company/workforce/me",
+      "title": "Planning & temps",
+      "actions": [
+        "Actualiser",
+        "Annuler",
+        "Envoyer la demande"
+      ]
+    },
+    {
+      "path": "/company/my-space/overview",
+      "errors": [],
+      "final": "/company/my-space/overview",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/payslips",
+      "errors": [],
+      "final": "/company/my-space/payslips",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures"
+      ]
+    },
+    {
+      "path": "/company/my-space/documents",
+      "errors": [],
+      "final": "/company/my-space/documents",
+      "title": "Mon espace",
+      "actions": [
+        "Aperçu",
+        "Mes documents",
+        "Mes bulletins",
+        "Mes signatures",
+        "Téléverser",
+        "Télécharger"
+      ]
+    },
+    {
+      "path": "/company/people",
+      "errors": [],
+      "final": "/company/people",
+      "title": "Équipe",
+      "actions": [
+        "Personnes"
+      ]
+    },
+    {
+      "path": "/company/people/user-2",
+      "errors": [
+        "404 GET /api/company/people/user-2"
+      ],
+      "final": "/company/people/user-2",
+      "title": "Une erreur est survenue. Veuillez réessayer.",
+      "actions": [
+        "Équipe",
+        "Réessayer"
+      ]
+    },
+    {
+      "path": "/company/documents/people",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/payroll",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/employees",
+      "errors": [],
+      "final": "/company/workforce/employees",
+      "title": "Collaborateurs 0",
+      "actions": [
+        "Filtres",
+        "1\nFichier",
+        "2\nCorrespondance",
+        "3\nPrévisualisation",
+        "4\nRésultat",
+        "Télécharger le modèle",
+        "Suivant"
+      ]
+    },
+    {
+      "path": "/company/workforce/planning",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/leaves",
+      "errors": [],
+      "final": "/company/workforce/leaves",
+      "title": "Page introuvable",
+      "actions": []
+    },
+    {
+      "path": "/company/workforce/time",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/settings",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/modules",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/billing/overview",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    },
+    {
+      "path": "/company/my-deliveries",
+      "errors": [],
+      "final": "/company/403",
+      "title": "Bienvenue,",
+      "actions": []
+    }
+  ]
+}
