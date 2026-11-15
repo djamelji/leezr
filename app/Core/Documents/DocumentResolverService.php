@@ -18,28 +18,26 @@ use App\Core\Models\User;
  */
 class DocumentResolverService
 {
-    public static function resolve(
-        ?User $user,
-        int $companyId,
-        ?string $roleKey = null,
-        ?string $marketKey = null,
-        ?string $scope = null,
-    ): array {
-        // Q1: All document types (system + company custom, excluding archived)
+    /**
+     * ADR-790 (L0) — THE requirement decision for a role in a company, shared by every view
+     * (fiche, dossier, self-service, conformité, tableau de bord). Same rules as before, in one place :
+     *   required = mandatory (catalogue : modules actifs, étiquettes ∩ étiquettes requises du rôle)
+     *              OR required_override (activation Company),
+     *   then the role `doc_config` overlay (visible / required / order ; a mandatory document can never
+     *   be hidden nor made optional).
+     * No role (person without account, membership without role) → activation rules only.
+     *
+     * @return array<int, array{type: DocumentType, activation: DocumentTypeActivation, required: bool, mandatory: bool, visible: bool, order: int}>
+     */
+    public static function requirementMap(int $companyId, ?string $roleKey = null, ?string $marketKey = null, ?string $scope = null): array
+    {
         $query = DocumentType::where(function ($q) use ($companyId) {
-            $q->where('is_system', true)
-                ->orWhere('company_id', $companyId);
+            $q->where('is_system', true)->orWhere('company_id', $companyId);
         })->whereNull('archived_at');
         if ($scope !== null) {
             $query->where('scope', $scope);
         }
         $types = $query->get()->keyBy('id');
-
-        if ($types->isEmpty()) {
-            return [];
-        }
-
-        // Filter by market
         if ($marketKey) {
             $types = $types->filter(function ($type) use ($marketKey) {
                 $markets = $type->validation_rules['applicable_markets'] ?? null;
@@ -47,53 +45,75 @@ class DocumentResolverService
                 return $markets === null || in_array($marketKey, $markets);
             });
         }
-
-        // Q2: Activations for this company
+        if ($types->isEmpty()) {
+            return [];
+        }
         $activations = DocumentTypeActivation::whereIn('document_type_id', $types->keys())
-            ->where('company_id', $companyId)
-            ->where('enabled', true)
-            ->get()
-            ->keyBy('document_type_id');
-
+            ->where('company_id', $companyId)->where('enabled', true)->get()->keyBy('document_type_id');
         if ($activations->isEmpty()) {
             return [];
         }
 
-        // Q3: Existing uploads for this user (skipped for company scope or null user)
+        $context = DocumentMandatoryContext::load($companyId);
+        $role = $roleKey !== null ? CompanyRole::where('company_id', $companyId)->where('key', $roleKey)->first() : null;
+        $configByCode = $role?->doc_config !== null && $role !== null ? collect($role->doc_config)->keyBy('code') : collect();
+
+        $map = [];
+        foreach ($activations as $typeId => $activation) {
+            $type = $types->get($typeId);
+            if (! $type) {
+                continue;
+            }
+            $mandatory = DocumentMandatoryContext::isMandatory($type, $context, $role?->required_tags);
+            $required = $mandatory || $activation->required_override;
+            $visible = true;
+            $order = $activation->order;
+            if ($config = $configByCode->get($type->code)) {
+                $order = $config['order'] ?? $order;
+                if ($mandatory) {
+                    $required = true; // garde absolue : un document obligatoire reste visible et exigé
+                } elseif (($config['visible'] ?? true) === false) {
+                    $visible = false;
+                } else {
+                    $required = $config['required'] ?? $required;
+                }
+            }
+            $map[$typeId] = ['type' => $type, 'activation' => $activation, 'required' => (bool) $required, 'mandatory' => $mandatory, 'visible' => $visible, 'order' => (int) $order];
+        }
+
+        return $map;
+    }
+
+    public static function resolve(
+        ?User $user,
+        int $companyId,
+        ?string $roleKey = null,
+        ?string $marketKey = null,
+        ?string $scope = null,
+    ): array {
+        // ADR-790 : décision d'exigence partagée (requirementMap) ; ici, seulement la présentation.
+        $map = static::requirementMap($companyId, $user !== null ? $roleKey : null, $marketKey, $scope);
+        if ($map === []) {
+            return [];
+        }
+
+        // Existing uploads for this user (skipped for company scope or null user)
         if ($user !== null && $scope !== DocumentType::SCOPE_COMPANY) {
             $uploads = MemberDocument::where('company_id', $companyId)
                 ->where('user_id', $user->id)
-                ->whereIn('document_type_id', $activations->keys())
+                ->whereIn('document_type_id', array_keys($map))
                 ->get()
                 ->keyBy('document_type_id');
         } else {
             $uploads = collect();
         }
 
-        // Mandatory context (cached per request)
-        $mandatoryContext = DocumentMandatoryContext::load($companyId);
-
-        // ADR-170: Load role for tag-based mandatory resolution (optional query, skipped when no user)
-        $role = null;
-        $roleRequiredTags = null;
-        if ($user !== null && $roleKey !== null) {
-            $role = CompanyRole::where('company_id', $companyId)
-                ->where('key', $roleKey)
-                ->first();
-            $roleRequiredTags = $role?->required_tags;
-        }
-
         $result = [];
-
-        foreach ($activations as $typeId => $activation) {
-            $type = $types->get($typeId);
-            if (!$type) {
-                continue;
+        foreach ($map as $typeId => $entry) {
+            if (! $entry['visible']) {
+                continue; // masqué par la configuration du rôle (jamais un document obligatoire)
             }
-
-            $mandatory = DocumentMandatoryContext::isMandatory($type, $mandatoryContext, $roleRequiredTags);
-            $required = $mandatory || $activation->required_override;
-
+            $type = $entry['type'];
             $upload = $uploads->get($typeId);
             $rules = $type->validation_rules ?? [];
 
@@ -115,59 +135,18 @@ class DocumentResolverService
                 'code' => $type->code,
                 'label' => $type->label,
                 'scope' => $type->scope,
-                'required' => $required,
-                'mandatory' => $mandatory,
+                'required' => $entry['required'],
+                'mandatory' => $entry['mandatory'],
                 'requires_expiration' => (bool) $type->requires_expiration,
                 'max_file_size_mb' => $rules['max_file_size_mb'] ?? 10,
                 'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
-                'order' => $activation->order,
+                'order' => $entry['order'],
                 'upload' => $uploadData,
                 'lifecycle_status' => DocumentLifecycleService::computeStatus($uploadData),
             ];
         }
 
-        // Sort by order
         usort($result, fn ($a, $b) => $a['order'] <=> $b['order']);
-
-        // ADR-170 Phase 3: Apply role-based doc_config overlay (same pattern as FieldResolverService)
-        // doc_config is an OVERRIDE LAYER, not a whitelist:
-        //   - docs NOT in doc_config remain visible with defaults
-        //   - docs IN doc_config get their visible/required/order overrides
-        //   - MANDATORY GUARD: mandatory documents CANNOT be hidden or made optional
-        if (isset($role) && $role !== null && $role->doc_config !== null) {
-            $configByCode = collect($role->doc_config)->keyBy('code');
-
-            $result = collect($result)
-                ->map(function ($doc) use ($configByCode) {
-                    $config = $configByCode->get($doc['code']);
-                    if (!$config) {
-                        // Doc NOT in config — keep visible with defaults
-                        return $doc;
-                    }
-
-                    // ── MANDATORY GUARD (absolute — no exception) ──
-                    if ($doc['mandatory']) {
-                        // Mandatory document: ignore visibility override, force visible + required
-                        $doc['required'] = true;
-                        $doc['order'] = $config['order'] ?? $doc['order'];
-
-                        return $doc; // skip the null return — always visible
-                    }
-
-                    // Non-mandatory: apply overrides normally
-                    if (($config['visible'] ?? true) === false) {
-                        return null; // Hidden by role config (non-mandatory only)
-                    }
-                    $doc['required'] = $config['required'] ?? $doc['required'];
-                    $doc['order'] = $config['order'] ?? $doc['order'];
-
-                    return $doc;
-                })
-                ->filter()
-                ->sortBy('order')
-                ->values()
-                ->toArray();
-        }
 
         return $result;
     }

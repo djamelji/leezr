@@ -28394,3 +28394,15 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Proposition** : JobDomain = contexte métier et références de presets ; presets par familles (RBAC, Organisation, Exigences, Workforce) avec un cycle commun ; modules déclarant leurs contributions ; une table `requirements` unique (champs et documents) avec applicabilité par poste, niveaux (`recommended`, `default`, `configurable_required`, `imperative`), provenance et historique ; un résolveur effectif unique ; valeurs du dossier RH sur `Employee` ; dossier candidat généré depuis la configuration effective. Transition en 8 lots (L0 → L7), sans migration destructive ni réapplication silencieuse.
 
 **Décision attendue** : validation des responsabilités cibles et GO sur le lot L0 (cohérence de la conformité).
+
+---
+
+## ADR-790 — L0 : une seule décision d'exigence documentaire pour toutes les vues
+
+**Date** : 2026-11-15 · **Base** : `d853f83e` · DEV · Rapport : `docs/bmad/ADR-790-L0-COMPLIANCE-CONSISTENCY.md`
+
+**Contexte** : la fiche d'une personne (`DocumentResolverService`, règles du rôle) et la conformité de l'entreprise (`DocumentComplianceReadModel`, liste commune sans rôle) calculaient différemment les pièces exigées.
+
+**Décision** : extraction sans changement de règle de `DocumentResolverService::requirementMap` ; `resolve()` et la conformité (`slotsFor`, par personne avec le rôle de son adhésion) l'utilisent. Tableau de bord et accueil suivent la conformité. Aucun poste déduit d'un rôle ; salarié sans compte = règles Company seules.
+
+**Conséquences** : DEV société 1 : écarts fiche ↔ conformité 16 → 0, exigences 118 → 126 (+12 certificats médicaux des livreurs, −4 permis masqués). Aucune donnée, règle, permission ni migration modifiée. Tests : `Adr790ComplianceConsistencyTest` 8/8 (détecte l'ancienne divergence), 774 tests liés, suite 4383 réussis + 3 échecs historiques. L1 non commencé.

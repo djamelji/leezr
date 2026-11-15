@@ -33,57 +33,51 @@ class DocumentComplianceReadModel
 
     public static function forCompany(Company $company): array
     {
+        $slots = self::slotsFor($company);
+
+        return $slots === [] ? self::emptyResult() : self::aggregate($slots);
+    }
+
+    /**
+     * ADR-790 (L0) — raw compliance slots (one per required document and subject), computed with the
+     * SAME decision as the person views : DocumentResolverService::requirementMap, per person, with
+     * THAT person's role (membership) ; a person without account has no role → Company rules only.
+     * The role is never turned into a job : it only carries the rules that already applied to it.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function slotsFor(Company $company): array
+    {
         $companyId = $company->id;
         $marketKey = $company->market_key;
 
-        $types = DocumentType::where(function ($q) use ($companyId) {
-            $q->where('is_system', true)->orWhere('company_id', $companyId);
-        })->whereNull('archived_at')->get()->keyBy('id');
+        // Décision partagée, mémoïsée par rôle pour ce calcul (quelques rôles, pas une requête par personne).
+        $maps = [];
+        $mapFor = function (?string $roleKey) use (&$maps, $companyId, $marketKey) {
+            return $maps[$roleKey ?? ''] ??= \App\Core\Documents\DocumentResolverService::requirementMap($companyId, $roleKey, $marketKey);
+        };
 
-        if ($types->isEmpty()) {
-            return self::emptyResult();
+        $base = $mapFor(null);
+        if ($base === []) {
+            return [];
         }
+        $types = collect($base)->map(fn ($e) => $e['type']);
+        $required = fn (array $map, int $typeId) => isset($map[$typeId]) && $map[$typeId]['visible'] && $map[$typeId]['required'];
 
-        if ($marketKey) {
-            $types = $types->filter(function ($type) use ($marketKey) {
-                $markets = $type->validation_rules['applicable_markets'] ?? null;
+        $companyTypeIds = collect($base)->filter(fn ($e, $id) => $e['type']->scope === DocumentType::SCOPE_COMPANY && $required($base, $id))->keys();
 
-                return $markets === null || in_array($marketKey, $markets);
-            });
+        // Population (dédupliquée par sujet) et ensemble des types qu'au moins une personne doit fournir.
+        $population = \App\Core\Documents\Services\PersonPopulationResolver::forCompany($company);
+        $requiredByPerson = [];
+        foreach ($population as $i => $person) {
+            $map = $mapFor($person['role_key'] ?? null);
+            $requiredByPerson[$i] = collect($map)->filter(fn ($e, $id) => $e['type']->scope === DocumentType::SCOPE_COMPANY_USER && $required($map, $id))->keys()->all();
         }
+        $userTypeIds = collect($requiredByPerson)->flatten()->unique()->values();
 
-        $activations = DocumentTypeActivation::whereIn('document_type_id', $types->keys())
-            ->where('company_id', $companyId)
-            ->where('enabled', true)
-            ->get()
-            ->keyBy('document_type_id');
-
-        if ($activations->isEmpty()) {
-            return self::emptyResult();
+        if ($companyTypeIds->isEmpty() && $userTypeIds->isEmpty()) {
+            return [];
         }
-
-        $context = DocumentMandatoryContext::load($companyId);
-
-        $requiredTypeIds = $activations->filter(function ($activation) use ($types, $context) {
-            $type = $types->get($activation->document_type_id);
-            if (! $type) {
-                return false;
-            }
-            $mandatory = DocumentMandatoryContext::isMandatory($type, $context);
-
-            return $mandatory || $activation->required_override;
-        })->keys();
-
-        if ($requiredTypeIds->isEmpty()) {
-            return self::emptyResult();
-        }
-
-        $companyTypeIds = $requiredTypeIds->filter(
-            fn ($id) => $types->get($id)?->scope === DocumentType::SCOPE_COMPANY,
-        );
-        $userTypeIds = $requiredTypeIds->filter(
-            fn ($id) => $types->get($id)?->scope === DocumentType::SCOPE_COMPANY_USER,
-        );
 
         // ── Company-scope slots (pas de workflow de validation → not_required) ──
         $companyDocs = CompanyDocument::where('company_id', $companyId)
@@ -108,8 +102,6 @@ class DocumentComplianceReadModel
 
         // ── User-scope slots : population DÉDUPLIQUÉE par SUJET (ADR-761 P0) ──
         // Compte les Employees (avec OU sans compte) + les Users sans Employee, une seule fois.
-        $population = \App\Core\Documents\Services\PersonPopulationResolver::forCompany($company);
-
         if ($population->isNotEmpty() && $userTypeIds->isNotEmpty()) {
             // Uploads + demandes indexés par SUJET (couvre user ET employee ; fallback user_id
             // pour les lignes legacy sans colonnes sujet).
@@ -129,11 +121,11 @@ class DocumentComplianceReadModel
                 ->get()
                 ->keyBy($subjectKey);
 
-            foreach ($population as $person) {
+            foreach ($population as $i => $person) {
                 /** @var \App\Core\Documents\DocumentSubject $subject */
                 $subject = $person['subject'];
 
-                foreach ($userTypeIds as $typeId) {
+                foreach ($requiredByPerson[$i] as $typeId) { // ADR-790 : SES exigences, pas celles de la Company entière
                     $type = $types->get($typeId);
                     $k = $subject->type.':'.$subject->id.':'.$typeId;
                     $doc = $docsBySubject->get($k);
@@ -150,7 +142,7 @@ class DocumentComplianceReadModel
             }
         }
 
-        return self::aggregate($allSlots);
+        return $allSlots;
     }
 
     private static function slot(int $typeId, $type, string $scope, ?string $roleKey, ?string $roleName, ?int $userId, array $state): array
