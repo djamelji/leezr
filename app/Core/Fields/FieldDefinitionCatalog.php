@@ -24,6 +24,17 @@ class FieldDefinitionCatalog
                 'validation_rules' => ['required' => true, 'max' => 14, 'applicable_markets' => ['FR']],
                 'default_order' => 10,
             ],
+            // ADR-785 — code APE/NAF de l'entreprise (INSEE). Requis par la DSN et les bulletins officiels ;
+            // format 4 chiffres + 1 lettre, le point est toléré (62.01Z). Jamais déduit du JobDomain.
+            [
+                'code' => 'naf_code',
+                'scope' => FieldDefinition::SCOPE_COMPANY,
+                'label' => 'APE / NAF code',
+                'translations' => ['en' => 'APE / NAF code', 'fr' => 'Code APE (NAF)'],
+                'type' => FieldDefinition::TYPE_STRING,
+                'validation_rules' => ['max' => 6, 'pattern' => '/^\\d{2}\\.?\\d{2}[A-Za-z]$/', 'applicable_markets' => ['FR']],
+                'default_order' => 12,
+            ],
             [
                 'code' => 'vat_number',
                 'scope' => FieldDefinition::SCOPE_COMPANY,

@@ -20,8 +20,8 @@ class DsnCompanyResolver
     {
         // ADR-784 — same legal identity as generated documents (ADR-783) : Company PROFILE first, legacy
         // columns only as fallback, nothing invented. Only fields with the SAME legal meaning are taken
-        // from the profile (raison sociale, SIRET, postal address) ; NAF/APE, INSEE code and headcount
-        // have no profile equivalent and stay on their columns.
+        // from the profile (raison sociale, SIRET, NAF/APE since ADR-785, postal address) ; INSEE code,
+        // headcount and IDCC have no profile equivalent and stay on their columns.
         $id = \App\Company\Fields\ReadModels\CompanyLegalIdentity::for($company);
         $siret = $id['siret'] !== null ? str_replace(' ', '', $id['siret']) : null;
 
@@ -31,7 +31,7 @@ class DsnCompanyResolver
             siret: $siret,
             siren: $siret ? substr($siret, 0, 9) : null,
             nic: $siret ? substr($siret, 9, 5) : null,
-            nafCode: $company->naf_code,
+            nafCode: $id['naf_code'], // ADR-785 : profil Company (colonne en repli)
             addressStreet: $id['address'],
             addressComplement: $id['complement'],
             addressPostalCode: $id['postal_code'],

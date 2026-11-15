@@ -120,12 +120,19 @@ function formatDate(dateStr) {
 const isDrawerOpen = ref(false)
 const exportPayrollRunId = ref(null)
 const exportLoading = ref(false)
+// ADR-785 : identité employeur incomplète → message en ligne + lien vers les champs du profil (aucun fichier créé).
+const identityError = ref(null)
+const route = useRoute()
+const fixLink = computed(() => identityError.value?.fix
+  ? { ...identityError.value.fix, query: { ...(identityError.value.fix.query || {}), back: route.fullPath } }
+  : null)
 
 const submitExport = async () => {
   if (!exportPayrollRunId.value)
     return
 
   exportLoading.value = true
+  identityError.value = null
   try {
     const declaration = await store.exportDsn(exportPayrollRunId.value)
 
@@ -134,7 +141,12 @@ const submitExport = async () => {
     exportPayrollRunId.value = null
     router.push({ name: 'company-workforce-dsn-id', params: { id: declaration.id } })
   } catch (e) {
-    toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error')
+    const body = e?.data || e?.response?._data || {}
+    if (body.code === 'dsn_employer_identity') {
+      identityError.value = body
+      isDrawerOpen.value = false
+    }
+    else toast(body.message || e.message, 'error')
   } finally {
     exportLoading.value = false
   }
@@ -170,6 +182,26 @@ function goToDeclaration(id) {
         {{ $t('dsn.exportDsn') }}
       </VBtn>
     </div>
+
+    <VAlert
+      v-if="identityError"
+      type="warning"
+      variant="tonal"
+      class="mb-6"
+      data-test="dsn-identity-incomplete"
+    >
+      {{ $t('dsn.identityIncomplete') }}
+      <div class="mt-2">
+        <VBtn
+          size="small"
+          variant="flat"
+          color="warning"
+          :to="fixLink"
+        >
+          {{ $t('generateContract.completeProfile') }}
+        </VBtn>
+      </div>
+    </VAlert>
 
     <!-- Honest gateway capability banner (zero ambiguity on transmission) -->
     <VAlert

@@ -22,6 +22,22 @@ const isResetDialogVisible = ref(false)
 
 const canEdit = computed(() => auth.hasPermission('settings.manage'))
 
+// ADR-785 — arrivée depuis un document bloqué (contrat, DSN, bulletin) : `?missing=code,code`.
+// Les champs encore vides sont signalés ; les erreurs serveur s'affichent sous leur champ.
+const route = useRoute()
+const missingCodes = computed(() => String(route.query.missing || '').split(',').map(c => c.trim()).filter(Boolean))
+const serverErrors = ref({})
+const fieldErrors = computed(() => {
+  const out = { ...serverErrors.value }
+  for (const code of missingCodes.value) {
+    if (isEmpty(dynamicForm.value?.[code]) && !out[code]) out[code] = [t('companyForm.toComplete')]
+  }
+
+  return out
+})
+const isEmpty = v => v === null || v === undefined || String(v).trim() === ''
+const missingLabels = computed(() => missingCodes.value.filter(c => isEmpty(dynamicForm.value?.[c])).map(c => fieldByCode(c)?.label).filter(Boolean))
+
 const dynamicFields = computed(() => settingsStore.company?.dynamic_fields || [])
 
 const jobdomainMandatoryFields = computed(() =>
@@ -129,6 +145,7 @@ const handleSave = async () => {
       payload.dynamic_fields = { ...dynamicForm.value }
     }
 
+    serverErrors.value = {}
     await settingsStore.updateCompany(payload)
     await auth.fetchMyCompanies()
 
@@ -136,6 +153,14 @@ const handleSave = async () => {
     toast(t('companySettings.settingsUpdated'), 'success')
   }
   catch (error) {
+    // ADR-785 : « dynamic_fields.naf_code » → message sous le champ concerné.
+    const errs = error?.data?.errors || error?.response?._data?.errors || {}
+    // Messages traduits côté interface (le serveur répond dans la langue de l'application).
+    serverErrors.value = Object.fromEntries(Object.keys(errs).map(k => {
+      const code = k.replace(/^dynamic_fields\./, '')
+
+      return [code, [code === 'naf_code' ? t('companyForm.nafFormat') : t('companyForm.invalidValue')]]
+    }))
     toast(error?.data?.message || t('companySettings.failedToUpdate'), 'error')
   }
   finally {
@@ -165,6 +190,17 @@ const confirmReset = () => {
     v-model="isFormValid"
     @submit.prevent="handleSave"
   >
+    <!-- ADR-785 : informations demandées par un document bloqué -->
+    <VAlert
+      v-if="missingLabels.length"
+      type="warning"
+      variant="tonal"
+      class="mb-4"
+      data-test="profile-missing"
+    >
+      {{ t('companyForm.missingIntro') }} <strong>{{ missingLabels.join(', ') }}</strong>.
+    </VAlert>
+
     <!-- ADR-782 (UX6) : une surface, des sections (intitulé à gauche, champs à droite). -->
     <AppSurface>
     <!-- ─── General Info ────────────────────────────── -->
@@ -216,6 +252,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="dynamicForm.company_address"
+              :error-messages="fieldErrors.company_address || []"
               :label="fieldLabel('company_address')"
               :placeholder="t('companySettings.placeholder.street')"
               :disabled="!canEdit"
@@ -227,6 +264,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="dynamicForm.company_complement"
+              :error-messages="fieldErrors.company_complement || []"
               :label="fieldLabel('company_complement')"
               :placeholder="t('companySettings.placeholder.complement')"
               :disabled="!canEdit"
@@ -239,6 +277,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="dynamicForm.company_city"
+              :error-messages="fieldErrors.company_city || []"
               :label="fieldLabel('company_city')"
               :placeholder="t('companySettings.placeholder.city')"
               :disabled="!canEdit"
@@ -251,6 +290,7 @@ const confirmReset = () => {
           >
             <AppTextField
               v-model="dynamicForm.company_postal_code"
+              :error-messages="fieldErrors.company_postal_code || []"
               :label="fieldLabel('company_postal_code')"
               :placeholder="t('companySettings.placeholder.postalCode')"
               :disabled="!canEdit"
@@ -392,6 +432,7 @@ const confirmReset = () => {
         <VRow>
           <DynamicFormRenderer
             v-model="dynamicForm"
+            :errors="fieldErrors"
             :fields="remainingFields"
             :disabled="!canEdit"
           />

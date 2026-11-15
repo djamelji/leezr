@@ -8996,7 +8996,8 @@
       "production": "Transmission réelle activée (production).",
       "simulatedSuffix": "(simulation)"
     },
-    "submittedSimulated": "Déclaration enregistrée en SIMULATION — aucune transmission réelle aux organismes."
+    "submittedSimulated": "Déclaration enregistrée en SIMULATION — aucune transmission réelle aux organismes.",
+    "identityIncomplete": "Des informations légales de l'entreprise manquent ou sont invalides (SIRET, code APE/NAF, adresse). Complétez le profil pour préparer la DSN ; aucune déclaration n'a été créée."
   },
   "workforceClock": {
     "title": "Pointage",
@@ -9190,7 +9191,8 @@
     "generate": "Générer",
     "generated": "Contrat généré et archivé dans le dossier.",
     "missing": "Variables manquantes : {vars}",
-    "completeProfile": "Compléter le profil de l'entreprise"
+    "completeProfile": "Compléter le profil de l'entreprise",
+    "identityIncomplete": "L'adresse de l'entreprise est incomplète dans son profil. Complétez-la pour générer le contrat."
   },
   "contractVars": {
     "employee": "Collaborateur",
@@ -9571,7 +9573,11 @@
     "identityHint": "Le nom affiché dans Leezr et sur vos documents.",
     "addressHint": "Adresse du siège, utilisée sur les documents générés.",
     "billingHint": "Adresse figurant sur vos factures Leezr.",
-    "adminHint": "Informations légales demandées pour votre activité."
+    "adminHint": "Informations légales demandées pour votre activité.",
+    "toComplete": "À compléter",
+    "missingIntro": "Pour générer vos documents et déclarations, complétez :",
+    "nafFormat": "Code APE (NAF) attendu : 4 chiffres et 1 lettre, par exemple 6201Z ou 62.01Z.",
+    "invalidValue": "Valeur non valide, vérifiez ce champ."
   },
   "moduleCatalog": {
     "core_settings": {

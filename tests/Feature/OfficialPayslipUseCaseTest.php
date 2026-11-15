@@ -230,6 +230,53 @@ class OfficialPayslipUseCaseTest extends TestCase
         app(GenerateOfficialPayslipsUseCase::class)->execute($this->run, $this->user->id);
     }
 
+    // --- ADR-785 : employer identity read from the Company profile (columns = fallback) ---
+
+    private function profileValues(array $values): void
+    {
+        \App\Core\Fields\FieldDefinitionCatalog::sync();
+        foreach ($values as $code => $value) {
+            $def = \App\Core\Fields\FieldDefinition::whereNull('company_id')->where('code', $code)->firstOrFail();
+            \App\Core\Fields\FieldValue::updateOrCreate(['field_definition_id' => $def->id, 'model_type' => 'company', 'model_id' => $this->company->id], ['value' => $value]);
+        }
+    }
+
+    /** @test */
+    public function adr785_profile_siret_and_naf_feed_the_official_payslip()
+    {
+        \Illuminate\Support\Facades\Storage::fake(config('documents.generated_disk', 'local'));
+        $this->computeAndValidate();
+        $this->company->forceFill(['siret' => null, 'naf_code' => null])->saveQuietly();
+        $this->profileValues(['siret' => '73282932000074', 'naf_code' => '49.41A']);
+
+        $docs = app(GenerateOfficialPayslipsUseCase::class)->execute($this->run, $this->user->id);
+        $this->assertEquals('73282932000074', $docs[0]->generation_snapshot['company.siret']);
+        $this->assertEquals('4941A', $docs[0]->generation_snapshot['company.naf_code']);
+    }
+
+    /** @test */
+    public function adr785_profile_wins_over_historical_columns()
+    {
+        \Illuminate\Support\Facades\Storage::fake(config('documents.generated_disk', 'local'));
+        $this->computeAndValidate();
+        $this->profileValues(['naf_code' => '7010Z']);
+
+        $docs = app(GenerateOfficialPayslipsUseCase::class)->execute($this->run, $this->user->id);
+        $this->assertEquals('7010Z', $docs[0]->generation_snapshot['company.naf_code']);
+        $this->assertEquals('12345678901234', $docs[0]->generation_snapshot['company.siret'], 'column fallback when the profile is empty');
+    }
+
+    /** @test */
+    public function adr785_profile_naf_lifts_the_guard_when_the_column_is_empty()
+    {
+        \Illuminate\Support\Facades\Storage::fake(config('documents.generated_disk', 'local'));
+        $this->computeAndValidate();
+        $this->company->forceFill(['naf_code' => null])->saveQuietly();
+        $this->profileValues(['naf_code' => '6201Z']);
+
+        $this->assertCount(1, app(GenerateOfficialPayslipsUseCase::class)->execute($this->run, $this->user->id));
+    }
+
     // --- T5: Guard — blocks with blocking anomalies ---
 
     /** @test */

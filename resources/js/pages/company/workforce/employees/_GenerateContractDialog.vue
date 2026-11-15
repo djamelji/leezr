@@ -24,6 +24,11 @@ const previewing = ref(false)
 const generating = ref(false)
 // ADR-783 (UX6.2) : identité employeur incomplète → message en ligne + lien vers le profil (rien n'est émis).
 const identityError = ref(null)
+const route = useRoute()
+// ADR-785 : le lien profil garde la liste des champs (`missing`) et permet de revenir ici (`back`).
+const fixLink = computed(() => identityError.value?.fix
+  ? { ...identityError.value.fix, query: { ...(identityError.value.fix.query || {}), back: route.fullPath } }
+  : null)
 
 const templateItems = computed(() => templates.value
   .filter(t => t.status === 'published')
@@ -97,13 +102,13 @@ const runGenerate = async () => {
       class="mb-4"
       data-test="contract-identity-incomplete"
     >
-      {{ identityError.message }}
+      {{ t('generateContract.identityIncomplete') }}
       <div class="mt-2">
         <VBtn
           size="small"
           variant="flat"
           color="warning"
-          :to="identityError.fix"
+          :to="fixLink"
           @click="isOpen = false"
         >
           {{ t('generateContract.completeProfile') }}

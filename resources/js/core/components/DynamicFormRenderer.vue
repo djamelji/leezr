@@ -22,6 +22,11 @@ const props = defineProps({
     type: String,
     default: '+33',
   },
+  // ADR-785 : messages par champ (code → texte), ex. champs à compléter ou erreurs serveur.
+  errors: {
+    type: Object,
+    default: () => ({}),
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -135,6 +140,7 @@ const groupedFields = computed(() => {
             v-if="isPhone(field)"
             :model-value="getPhoneDisplay(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :placeholder="formatPhoneDisplay('612345678')"
             :prefix="dialCode"
             :disabled="disabled"
@@ -147,6 +153,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'string'"
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :placeholder="field.label"
             :disabled="disabled"
             :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -158,6 +165,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'number'"
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :placeholder="field.label"
             type="number"
             :disabled="disabled"
@@ -170,6 +178,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'boolean'"
             :model-value="!!getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :disabled="disabled"
             @update:model-value="updateField(field.code, $event)"
           />
@@ -179,6 +188,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'date'"
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :placeholder="field.label"
             :disabled="disabled"
             :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -190,6 +200,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'select'"
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :items="field.options || []"
             :placeholder="`Select ${field.label}`"
             :disabled="disabled"
@@ -202,6 +213,7 @@ const groupedFields = computed(() => {
             v-else-if="field.type === 'json'"
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
             :placeholder="field.label"
             :disabled="disabled"
             rows="3"
@@ -227,6 +239,7 @@ const groupedFields = computed(() => {
           v-if="isPhone(field)"
           :model-value="getPhoneDisplay(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :placeholder="formatPhoneDisplay('612345678')"
           :prefix="dialCode"
           :disabled="disabled"
@@ -239,6 +252,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'string'"
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :placeholder="field.label"
           :disabled="disabled"
           :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -250,6 +264,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'number'"
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :placeholder="field.label"
           type="number"
           :disabled="disabled"
@@ -262,6 +277,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'boolean'"
           :model-value="!!getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :disabled="disabled"
           @update:model-value="updateField(field.code, $event)"
         />
@@ -271,6 +287,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'date'"
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :placeholder="field.label"
           :disabled="disabled"
           :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -282,6 +299,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'select'"
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :items="field.options || []"
           :placeholder="`Select ${field.label}`"
           :disabled="disabled"
@@ -294,6 +312,7 @@ const groupedFields = computed(() => {
           v-else-if="field.type === 'json'"
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
+            :error-messages="errors?.[field.code] || []"
           :placeholder="field.label"
           :disabled="disabled"
           rows="3"

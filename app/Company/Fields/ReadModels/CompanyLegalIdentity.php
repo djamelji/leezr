@@ -17,7 +17,7 @@ use App\Core\Models\Company;
 final class CompanyLegalIdentity
 {
     /** Profile field codes read by this model. */
-    private const FIELDS = ['legal_name', 'legal_form', 'siret', 'vat_number', 'company_address', 'company_complement', 'company_postal_code', 'company_city'];
+    private const FIELDS = ['legal_name', 'legal_form', 'siret', 'naf_code', 'vat_number', 'company_address', 'company_complement', 'company_postal_code', 'company_city'];
 
     /** Items a contract cannot do without (header / employer clause). */
     public const REQUIRED_FOR_CONTRACT = ['address', 'postal_code', 'city'];
@@ -46,7 +46,8 @@ final class CompanyLegalIdentity
             'legal_name' => $pick('legal_name') ?? (string) $company->name,
             'legal_form' => self::filled($company->legalStatus?->name ?? null) ? $company->legalStatus->name : $pick('legal_form'),
             'siret' => $pick('siret', $company->siret),
-            'naf_code' => self::filled($company->naf_code) ? $company->naf_code : null,
+            // ADR-785 : NAF du profil (normalisé « 6201Z »), colonne historique en repli.
+            'naf_code' => self::normalizeNaf($pick('naf_code', $company->naf_code)),
             'vat_number' => $pick('vat_number'),
             'address' => $pick('company_address', $company->address_street),
             'complement' => $pick('company_complement', $company->address_complement),
@@ -76,6 +77,12 @@ final class CompanyLegalIdentity
         return array_values(array_filter(self::REQUIRED_FOR_CONTRACT, fn ($k) => ! self::filled($identity[$k] ?? null)));
     }
 
+    /** « 62.01z » → « 6201Z » ; null reste null (rien d'inventé). */
+    public static function normalizeNaf(?string $naf): ?string
+    {
+        return $naf === null ? null : strtoupper(str_replace(['.', ' '], '', trim($naf)));
+    }
+
     private static function filled($v): bool
     {
         return $v !== null && trim((string) $v) !== '';
@@ -86,6 +93,21 @@ final class CompanyLegalIdentity
     {
         $missing = self::missingForContract(self::for(Company::findOrFail($companyId)));
 
-        return $missing ? ['message' => __('contracts.employer_identity_incomplete'), 'code' => 'employer_identity_incomplete', 'missing' => $missing, 'fix' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']]] : null;
+        return $missing ? ['message' => __('contracts.employer_identity_incomplete'), 'code' => 'employer_identity_incomplete', 'missing' => $missing, 'fix' => self::profileLink($missing)] : null;
+    }
+
+    /** ADR-785 — identity/DSN keys → profile field codes, so the profile can highlight what to fill. */
+    private const PROFILE_CODES = [
+        'address' => 'company_address', 'postal_code' => 'company_postal_code', 'city' => 'company_city',
+        'address_street' => 'company_address', 'address_postal_code' => 'company_postal_code', 'address_city' => 'company_city',
+        'siret' => 'siret', 'naf_code' => 'naf_code',
+    ];
+
+    /** Route to the Company profile with the fields to complete (`?missing=code,code`). */
+    public static function profileLink(array $keys): array
+    {
+        $codes = array_values(array_unique(array_filter(array_map(fn ($k) => self::PROFILE_CODES[$k] ?? null, $keys))));
+
+        return ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview'], 'query' => ['missing' => implode(',', $codes)]];
     }
 }

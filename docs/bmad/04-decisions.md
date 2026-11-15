@@ -28294,3 +28294,23 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Dette `ControllerSizeInvariantTest` documentée (préexistante, réduite, aggravée) ; seuils inchangés.
 
 **Verdict** : 🟢 GO DEV · 🟡 GO préparation préproduction sous réserve (NAF, bulletins officiels) · 🔴 NO-GO PROD.
+
+---
+
+## ADR-785 — Identité légale Company : saisie unique du code APE/NAF, cohérence contrat · DSN · bulletins
+
+**Date** : 2026-11-15 · **Base** : `16d4389a` · DEV uniquement · Rapport : `docs/bmad/ADR-785-IDENTITE-LEGALE.md`
+
+**Contexte** : ADR-784 a rendu la DSN bloquante sans NAF valide, mais le NAF n'était saisissable nulle part (colonne historique `companies.naf_code` uniquement). Les bulletins officiels lisaient SIRET/NAF dans les colonnes historiques, pas dans le profil.
+
+**Décision** :
+- Le code APE/NAF devient un **champ du profil Company** (`naf_code`, catalogue de champs dynamiques, marché FR, format contrôlé `^\d{2}\.?\d{2}[A-Za-z]$`, ordre 12), activé comme les autres champs d'identité légale (`JobdomainRegistry::CORE_BILLING_FIELDS`). Validation serveur via `FieldValidationService` : une règle `pattern` n'est une regex que si elle commence par `/` (les valeurs nommées `email`/`phone` restent des indications d'affichage).
+- `CompanyLegalIdentity` reste **la seule lecture** : profil d'abord, colonne historique en repli, rien d'inventé, NAF normalisé (`62.01z` → `6201Z`). Jamais déduit du JobDomain.
+- Consommateurs alignés : DSN (`DsnCompanyResolver` → NAF de l'identité), garde des bulletins officiels (SIRET/NAF de l'identité), contrats et documents (déjà via `DocumentVariableResolver`). Contrôles ADR-784 inchangés.
+- Refus actionnables : contrat et DSN renvoient `fix` = lien vers le profil avec `?missing=code,…` ; l'interface ajoute `back` pour revenir au parcours. Le profil signale les champs encore vides, met en évidence les champs concernés, affiche les erreurs sous le champ dans la langue de l'interface.
+- Entreprises existantes : commande explicite et idempotente `company:complete-legal-identity [--dry-run] [--company=]` — active le champ NAF (sauf champ désactivé par l'entreprise), recopie les valeurs historiques **valides** dans les champs **vides** du profil uniquement ; ne supprime ni n'écrase rien. Exécutée en DEV : NAF activé, aucune valeur recopiée (aucune colonne historique valide non reprise).
+
+**Conséquences** :
+- Aucune migration, aucun moteur, aucun changement de calcul de paie, de Billing ou de permissions (édition = `settings.manage`, inchangé).
+- Le modèle de bulletin officiel n'affiche pas l'adresse de l'employeur (non modifié) ; aucune conformité légale n'est revendiquée ; la DSN reste un export simulé.
+- Tests : `Adr785LegalIdentityTest` (14), `ExportPayrollDsnUseCaseTest` (+3), `OfficialPayslipUseCaseTest` (+3, stockage factice), `FieldDefinitionTest` (46 définitions), recette navigateur `tests/e2e/adr785-legal-identity.spec.js`.

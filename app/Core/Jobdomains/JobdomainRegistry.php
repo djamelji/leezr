@@ -17,6 +17,7 @@ class JobdomainRegistry
      */
     public const CORE_BILLING_FIELDS = [
         ['code' => 'siret', 'order' => 0],
+        ['code' => 'naf_code', 'order' => 2], // ADR-785 : identité légale (DSN, bulletins officiels)
         ['code' => 'vat_number', 'order' => 1],
         ['code' => 'legal_name', 'order' => 3],
         ['code' => 'billing_address', 'order' => 4],

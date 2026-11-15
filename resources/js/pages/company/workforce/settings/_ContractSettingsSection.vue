@@ -12,6 +12,10 @@ const props = defineProps({
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
+// ADR-785 : clés manquantes → codes des champs du profil, pour les signaler à l'arrivée.
+const PROFILE_CODES = { address: 'company_address', postal_code: 'company_postal_code', city: 'company_city', siret: 'siret', naf_code: 'naf_code' }
+const missingCodes = computed(() => (props.employerIdentity?.missing || []).map(k => PROFILE_CODES[k]).filter(Boolean).join(','))
 const { can } = useCan()
 const store = useContractStore()
 
@@ -84,7 +88,7 @@ const go = p => router.push(p)
             variant="text"
             color="warning"
             class="ms-1"
-            :to="{ name: 'company-profile-tab', params: { tab: 'overview' } }"
+            :to="{ name: 'company-profile-tab', params: { tab: 'overview' }, query: { missing: missingCodes, back: route.fullPath } }"
           >
             {{ t('generateContract.completeProfile') }}
           </VBtn>

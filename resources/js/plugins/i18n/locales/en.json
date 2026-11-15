@@ -8996,7 +8996,8 @@
       "production": "Real transmission enabled (production).",
       "simulatedSuffix": "(simulated)"
     },
-    "submittedSimulated": "Declaration recorded in SIMULATION — no real transmission to authorities."
+    "submittedSimulated": "Declaration recorded in SIMULATION — no real transmission to authorities.",
+    "identityIncomplete": "Some legal company information is missing or invalid (SIRET, APE/NAF code, address). Complete the profile to prepare the DSN; no declaration was created."
   },
   "workforceClock": {
     "title": "Clock",
@@ -9190,7 +9191,8 @@
     "generate": "Generate",
     "generated": "Contract generated and archived in the file.",
     "missing": "Missing variables: {vars}",
-    "completeProfile": "Complete the company profile"
+    "completeProfile": "Complete the company profile",
+    "identityIncomplete": "The company address is incomplete in its profile. Complete it to generate the contract."
   },
   "contractVars": {
     "employee": "Employee",
@@ -9571,7 +9573,11 @@
     "identityHint": "The name shown in Leezr and on your documents.",
     "addressHint": "Head office address, used on generated documents.",
     "billingHint": "Address printed on your Leezr invoices.",
-    "adminHint": "Legal information required for your activity."
+    "adminHint": "Legal information required for your activity.",
+    "toComplete": "To complete",
+    "missingIntro": "To generate your documents and declarations, complete:",
+    "nafFormat": "APE (NAF) code expected: 4 digits and 1 letter, for example 6201Z or 62.01Z.",
+    "invalidValue": "Invalid value, please check this field."
   },
   "moduleCatalog": {
     "core_settings": {

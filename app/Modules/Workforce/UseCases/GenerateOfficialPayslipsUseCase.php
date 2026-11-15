@@ -41,12 +41,14 @@ class GenerateOfficialPayslipsUseCase
             throw new \DomainException('Module workforce_documents is not enabled.');
         }
 
-        // Guard 4: Company must have siret + naf_code
+        // Guard 4: Company must have siret + naf_code — ADR-785 : lus dans l'identité légale canonique
+        // (profil Company, colonnes historiques en repli), comme les contrats et la DSN.
         $company = Company::findOrFail($run->company_id);
-        if (empty($company->siret)) {
+        $identity = \App\Company\Fields\ReadModels\CompanyLegalIdentity::for($company);
+        if (empty($identity['siret'])) {
             throw new \DomainException('Cannot generate official payslips: Company SIRET is missing.');
         }
-        if (empty($company->naf_code)) {
+        if (empty($identity['naf_code'])) {
             throw new \DomainException('Cannot generate official payslips: Company NAF code is missing.');
         }
 

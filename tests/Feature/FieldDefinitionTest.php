@@ -47,7 +47,7 @@ class FieldDefinitionTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure(['field_definitions'])
-            ->assertJsonCount(45, 'field_definitions');
+            ->assertJsonCount(46, 'field_definitions'); // ADR-785 : + naf_code
     }
 
     public function test_can_filter_field_definitions_by_scope(): void

@@ -104,11 +104,8 @@ class DsnDeclarationController extends Controller
         try {
             $declaration = app(ExportPayrollDsnUseCase::class)->execute($run, $actorId);
         } catch (\App\Core\Workforce\Dsn\DsnEmployerIdentityException $e) { // ADR-784
-            // The profile holds SIRET + postal address ; NAF/APE has no entry form yet (honest message).
-            $inProfile = array_intersect_key($e->issues, array_flip(['siret', 'address_street', 'address_postal_code', 'address_city']));
-            $message = __('dsn.employer_identity_incomplete').(isset($e->issues['naf_code']) ? ' '.__('dsn.naf_not_editable') : '');
-
-            return response()->json(['message' => $message, 'code' => 'dsn_employer_identity', 'issues' => $e->issues, 'fix' => $inProfile ? ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']] : null], 422);
+            // ADR-785 : every field at stake (SIRET, NAF, address) is now completed in the Company profile.
+            return response()->json(['message' => __('dsn.employer_identity_incomplete'), 'code' => 'dsn_employer_identity', 'issues' => $e->issues, 'fix' => \App\Company\Fields\ReadModels\CompanyLegalIdentity::profileLink(array_keys($e->issues))], 422);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

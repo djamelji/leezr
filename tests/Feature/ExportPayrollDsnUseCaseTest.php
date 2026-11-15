@@ -556,6 +556,36 @@ class ExportPayrollDsnUseCaseTest extends TestCase
         $this->assertNull(DsnDeclaration::withoutGlobalScopes()->where('payroll_run_id', $this->run->id)->first());
     }
 
+    /** ADR-785 — the NAF entered in the profile feeds the DSN, even without any historical column. */
+    public function test_naf_from_profile_is_used_when_the_column_is_empty(): void
+    {
+        $this->company->forceFill(['naf_code' => null])->saveQuietly();
+        $this->profile($this->company, ['naf_code' => '49.41a']);
+
+        $declaration = (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+        $this->assertSame('4941A', $declaration->payload_snapshot['company']['naf_code']);
+        $this->assertStringContainsString('4941A', Storage::disk('local')->get($declaration->file_path));
+    }
+
+    public function test_profile_naf_wins_over_the_historical_column(): void
+    {
+        $this->profile($this->company, ['naf_code' => '4941A']);
+        $declaration = (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+        $this->assertSame('4941A', $declaration->payload_snapshot['company']['naf_code']);
+    }
+
+    public function test_missing_naf_everywhere_blocks_the_export(): void
+    {
+        $this->company->forceFill(['naf_code' => null])->saveQuietly();
+        try {
+            (new ExportPayrollDsnUseCase())->execute($this->run, $this->user->id);
+            $this->fail('Expected DsnEmployerIdentityException');
+        } catch (\App\Core\Workforce\Dsn\DsnEmployerIdentityException $e) {
+            $this->assertSame('missing', $e->issues['naf_code']);
+        }
+        $this->assertNull(DsnDeclaration::withoutGlobalScopes()->where('payroll_run_id', $this->run->id)->first());
+    }
+
     public function test_another_company_profile_never_feeds_this_dsn(): void
     {
         $other = \App\Core\Models\Company::create(['name' => 'Other DSN', 'slug' => 'other-dsn-'.uniqid(), 'jobdomain_key' => $this->company->jobdomain_key, 'market_key' => 'FR']);

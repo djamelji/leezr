@@ -152,6 +152,14 @@ class FieldValidationService
         if ($min = $definition->validation_rules['min'] ?? null) {
             $rules[] = "min:{$min}";
         }
+
+        // ADR-785 : format contrôlé côté serveur quand la définition le déclare (ex. code APE/NAF).
+        // Seuls les motifs délimités par « / » sont des expressions régulières ; « email », « phone »… restent
+        // des indications de rendu (DynamicFormRenderer) et ne deviennent jamais une règle.
+        $pattern = $definition->validation_rules['pattern'] ?? null;
+        if (is_string($pattern) && strlen($pattern) > 2 && $pattern[0] === '/') {
+            $rules[] = "regex:{$pattern}";
+        }
     }
 
     private static function addSelectRules(array &$rules, FieldDefinition $definition): void
