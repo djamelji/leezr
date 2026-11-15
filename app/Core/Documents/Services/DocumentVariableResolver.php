@@ -44,7 +44,7 @@ class DocumentVariableResolver
         };
 
         // Dynamic FieldValues for the subject
-        $fields = self::resolveFieldValues($subject);
+        $fields = self::resolveFieldValues($subject, $company);
 
         return array_merge($base, $specific, $fields);
     }
@@ -615,19 +615,26 @@ class DocumentVariableResolver
 
     // --- FieldValues (dynamic) ---
 
-    private static function resolveFieldValues(Model $subject): array
+    /**
+     * ADR-795.1 — `field.*` variables = CANONICAL values of the subject's employee in THIS company
+     * (HR record, account values disclosed to the company). The former lookup used the class name as
+     * morph type and never matched anything. New generations only : existing documents are never
+     * re-rendered.
+     */
+    private static function resolveFieldValues(Model $subject, Company $company): array
     {
-        $values = FieldValue::where('model_type', get_class($subject))
-            ->where('model_id', $subject->getKey())
-            ->with('definition')
-            ->get();
-
+        $employee = $subject instanceof \App\Core\Workforce\Employee
+            ? $subject
+            : (isset($subject->employee_id) ? \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('id', $subject->employee_id)->get()->first() : null);
+        if (! $employee || (int) $employee->company_id !== (int) $company->id) {
+            return [];
+        }
+        $store = new \App\Core\Fields\EmployeeFieldStore($company);
+        $codes = $store->definitions()->pluck('code')->all();
         $result = [];
-        foreach ($values as $fv) {
-            $code = $fv->definition?->code;
-            if ($code) {
-                $val = $fv->value;
-                $result["field.{$code}"] = is_array($val) ? json_encode($val) : (string) ($val ?? '');
+        foreach ($store->rawValues([$employee], $codes)[$employee->id] ?? [] as $code => $val) {
+            if ($val !== null) {
+                $result["field.{$code}"] = is_array($val) ? json_encode($val) : (string) $val;
             }
         }
 

@@ -48,6 +48,7 @@ class CompanyUserProfileReadModel
             locale: FieldResolverService::requestLocale(),
         );
 
+        $resolved = self::canonical($resolved, $user, $company, $canReadSensitive);
         $required = array_filter($resolved, fn ($f) => $f['required']);
         $filled = array_filter($required, fn ($f) => $f['value'] !== null && $f['value'] !== '');
 
@@ -68,6 +69,32 @@ class CompanyUserProfileReadModel
                 'complete' => count($required) === 0 || count($filled) === count($required),
             ],
         ];
+    }
+
+    /**
+     * ADR-795.1 — the values shown are the CANONICAL ones (same resolution as the person file) :
+     * employment data from this company's HR record (legacy account value flagged), personal data from
+     * the account only if disclosed to this company (the person always sees their own).
+     */
+    private static function canonical(array $resolved, User $user, Company $company, bool $canReadSensitive): array
+    {
+        $self = (int) auth()->id() === (int) $user->id;
+        $cells = (new \App\Core\Fields\EmployeeFieldStore($company))->cellsFor(null, $user, $self ? $user : null);
+
+        return array_map(function ($f) use ($cells, $canReadSensitive) {
+            $cell = $cells[$f['code']] ?? null;
+            if (! $cell) {
+                return $f;
+            }
+            $value = $cell['value'];
+            if (! empty($f['sensitive']) && ! $canReadSensitive && $value !== null) {
+                $str = (string) $value;
+                $value = mb_strlen($str) <= 4 ? '****' : str_repeat('*', mb_strlen($str) - 4).mb_substr($str, -4);
+                $f['masked'] = true;
+            }
+
+            return array_merge($f, ['value' => $value, 'source' => $cell['source'], 'status' => $cell['status'], 'not_disclosed' => $cell['not_disclosed'], 'owner' => $cell['owner']]);
+        }, $resolved);
     }
 
     /**
@@ -131,6 +158,13 @@ class CompanyUserProfileReadModel
             ->get()
             ->groupBy('model_id');
 
+        // ADR-795.1 (Q6) : données d'emploi lues sur la fiche RH de CETTE société quand elle les porte.
+        $employeeByUser = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->whereIn('user_id', $userIds)->pluck('id', 'user_id');
+        $employeeValues = $employeeByUser->isEmpty() ? collect() : FieldValue::where('model_type', 'employee')->whereIn('model_id', $employeeByUser->values())
+            ->whereIn('field_definition_id', $activeDefIds)->get()->groupBy('model_id');
+        $membershipValues = FieldValue::where('model_type', 'membership')->whereIn('model_id', $memberships->pluck('id'))
+            ->whereIn('field_definition_id', $activeDefIds)->get()->groupBy('model_id');
+
         // Now compute completeness for each membership in memory (0 queries)
         $result = [];
 
@@ -184,7 +218,11 @@ class CompanyUserProfileReadModel
 
                 $requiredCount++;
 
-                $value = $userValues->get($defId)?->value;
+                $value = \App\Core\Fields\FieldOwnership::of($definition) === \App\Core\Fields\FieldOwnership::EMPLOYMENT
+                    ? ($employeeValues->get($employeeByUser[$userId] ?? 0, collect())->firstWhere('field_definition_id', $defId)?->value
+                        ?? $membershipValues->get($membership->id, collect())->firstWhere('field_definition_id', $defId)?->value
+                        ?? $userValues->get($defId)?->value)
+                    : $userValues->get($defId)?->value;
                 if ($value !== null && $value !== '') {
                     $filledCount++;
                 }

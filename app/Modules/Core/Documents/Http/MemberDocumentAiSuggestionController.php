@@ -72,14 +72,11 @@ class MemberDocumentAiSuggestionController extends Controller
             return response()->json(['message' => 'No matching suggestions found.'], 422);
         }
 
-        // Write the values to the member's profile using FieldWriteService
-        FieldWriteService::upsert(
-            $user,
-            $dynamicFields,
-            FieldDefinition::SCOPE_COMPANY_USER,
-            $company->id,
-            $company->market_key,
+        // ADR-795.1 : même écrivain canonique que les écrans (propriété, sensible, contrat établi, historique).
+        $written = (new \App\Core\Fields\PersonFieldWriter(new \App\Core\Fields\EmployeeFieldStore($company)))->write(
+            null, $user, $dynamicFields, $request->user(), \App\Core\Fields\PersonFieldWriter::CONTEXT_SUGGESTION,
         );
+        $appliedFields = array_values(array_filter($appliedFields, fn ($f) => ! in_array($f['field'], $written['ignored'], true)));
 
         return response()->json([
             'message' => 'Suggestions applied.',

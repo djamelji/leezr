@@ -8,7 +8,6 @@ use App\Company\Http\Requests\UpdateProfileRequest;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Fields\FieldDefinition;
-use App\Core\Fields\FieldWriteService;
 use App\Core\Workforce\ContractualIdentityLock;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
@@ -37,24 +36,20 @@ class UserProfileController extends Controller
 
         // ADR-787 : after an established contract, identity / HR fields are read-only for the person
         // (server-side, field by field) ; refused BEFORE any write.
-        if ($violations = ContractualIdentityLock::violations($request->user(), $validated)) {
+        // Nom (compte) : verrou ADR-787 inchangé ; champs dynamiques : écrivain canonique (ADR-795.1),
+        // qui applique le même verrou sur la valeur CANONIQUE (fiche RH ou compte) et refuse les données RH.
+        if ($violations = ContractualIdentityLock::violations($request->user(), array_diff_key($validated, ['dynamic_fields' => true]))) {
             throw ValidationException::withMessages($violations);
         }
-        $changedCodes = $this->changedFieldCodes($request->user(), $validated['dynamic_fields'] ?? []);
 
+        $changedCodes = [];
         $before = $request->user()->only('first_name', 'last_name', 'email');
-        $request->user()->update(array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email'])));
-
-        if (isset($validated['dynamic_fields'])) {
-            // ADR-169: write all categories, not just base
-            FieldWriteService::upsert(
-                $request->user(),
-                $validated['dynamic_fields'],
-                FieldDefinition::SCOPE_COMPANY_USER,
-                $company->id,
-                $company->market_key,
-            );
+        if (isset($validated['dynamic_fields'])) { // en premier : un refus n'applique rien
+            $changedCodes = (new \App\Core\Fields\PersonFieldWriter(new \App\Core\Fields\EmployeeFieldStore($company)))->write(
+                null, $request->user(), $validated['dynamic_fields'], $request->user(), \App\Core\Fields\PersonFieldWriter::CONTEXT_SELF,
+            )['changed'];
         }
+        $request->user()->update(array_intersect_key($validated, array_flip(['first_name', 'last_name', 'email'])));
 
         app(AuditLogger::class)->logCompany(
             $company->id, AuditAction::USER_PROFILE_UPDATED, 'user', (string) $request->user()->id,
@@ -106,18 +101,5 @@ class UserProfileController extends Controller
         return response()->json([
             'user' => $request->user()->fresh(),
         ]);
-    }
-
-    /** ADR-787 — codes of the dynamic fields whose value actually changes (audit trail). */
-    private function changedFieldCodes($user, array $fields): array
-    {
-        if (! $fields) {
-            return [];
-        }
-        $current = \App\Core\Fields\FieldValue::where('model_type', 'user')->where('model_id', $user->id)
-            ->whereHas('definition', fn ($q) => $q->whereIn('code', array_keys($fields)))
-            ->with('definition:id,code')->get()->pluck('value', 'definition.code');
-
-        return array_values(array_filter(array_keys($fields), fn ($c) => ContractualIdentityLock::norm($fields[$c]) !== ContractualIdentityLock::norm($current[$c] ?? null)));
     }
 }

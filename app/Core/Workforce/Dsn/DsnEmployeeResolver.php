@@ -10,9 +10,8 @@ use Illuminate\Support\Collection;
 /**
  * Resolves DSN identity data for employees.
  *
- * Reads raw (unmasked) field values directly from the Fields EAV system.
- * This bypasses FieldResolverService masking because DSN declarations
- * require complete, unmasked data (NIR, address, etc.).
+ * Reads raw (unmasked) canonical values through EmployeeFieldStore::rawValues (ADR-795.1) — internal
+ * producer, never an API : DSN declarations require complete, unmasked data (NIR, address, etc.).
  *
  * Pure read-only — ZERO DB writes.
  */
@@ -36,46 +35,37 @@ class DsnEmployeeResolver
     /**
      * Resolve DSN data for a single employee.
      *
-     * @return DsnEmployeeData
-     * @throws \DomainException if employee has no linked user
+     * ADR-795.1 — values come from the CANONICAL resolution of the employee's company
+     * (EmployeeFieldStore::rawValues) : HR record for an employee WITHOUT account, account values only if
+     * disclosed to this company. A missing value stays missing (DsnEmployeeData::missingMandatoryFields
+     * then blocks explicitly) — nothing is invented, the DSN stays a simulation.
      */
     public static function resolve(Employee $employee): DsnEmployeeData
     {
-        if (! $employee->user_id) {
-            throw new \DomainException(
-                "Employee #{$employee->id} ({$employee->employee_number}) has no linked user — cannot resolve DSN fields."
-            );
-        }
-
-        $fieldValues = self::loadFieldValues([$employee->user_id]);
-        $values = $fieldValues[$employee->user_id] ?? [];
-
-        return self::buildData($employee, $values);
+        return self::resolveBatch(collect([$employee]))[$employee->id];
     }
 
     /**
-     * Resolve DSN data for multiple employees (batch — avoids N+1).
+     * Resolve DSN data for multiple employees (batch — constant queries per company).
      *
      * @param Collection|Employee[] $employees
      * @return array<int, DsnEmployeeData> keyed by employee_id
      */
     public static function resolveBatch(Collection $employees): array
     {
-        $userIds = $employees->pluck('user_id')->filter()->unique()->values()->all();
-
-        if (empty($userIds)) {
-            return [];
-        }
-
-        $fieldValues = self::loadFieldValues($userIds);
-
         $result = [];
-        foreach ($employees as $employee) {
-            if (! $employee->user_id) {
-                continue; // Skip employees without user — they'll fail validation later
+        foreach ($employees->groupBy('company_id') as $companyId => $group) {
+            $company = \App\Core\Models\Company::find($companyId);
+            if (! $company) {
+                continue;
             }
-            $values = $fieldValues[$employee->user_id] ?? [];
-            $result[$employee->id] = self::buildData($employee, $values);
+            $values = (new \App\Core\Fields\EmployeeFieldStore($company))->rawValues($group, self::DSN_FIELD_CODES);
+            foreach ($group as $employee) {
+                $result[$employee->id] = self::buildData($employee, array_map(
+                    fn ($v) => is_array($v) ? ($v['value'] ?? $v[0] ?? null) : $v, // FieldValue.value est casté en tableau
+                    $values[$employee->id] ?? [],
+                ));
+            }
         }
 
         return $result;
@@ -122,48 +112,6 @@ class DsnEmployeeResolver
         $expectedKey = 97 - (intval($baseForCalc) % 97);
 
         return intval($key) === $expectedKey;
-    }
-
-    /**
-     * Load raw field values for given user IDs.
-     * Returns array keyed by user_id => [code => value].
-     *
-     * @param int[] $userIds
-     * @return array<int, array<string, mixed>>
-     */
-    private static function loadFieldValues(array $userIds): array
-    {
-        // Get platform field definition IDs for DSN codes
-        $definitionIds = FieldDefinition::whereNull('company_id')
-            ->where('scope', FieldDefinition::SCOPE_COMPANY_USER)
-            ->whereIn('code', self::DSN_FIELD_CODES)
-            ->pluck('id', 'code'); // [code => id]
-
-        if ($definitionIds->isEmpty()) {
-            return [];
-        }
-
-        // Load all field values for these users+definitions in ONE query
-        $values = FieldValue::where('model_type', 'App\\Core\\Models\\User')
-            ->whereIn('model_id', $userIds)
-            ->whereIn('field_definition_id', $definitionIds->values())
-            ->get();
-
-        // Reverse map: definition_id => code
-        $idToCode = $definitionIds->flip();
-
-        // Group by user_id => [code => value]
-        $result = [];
-        foreach ($values as $fv) {
-            $code = $idToCode[$fv->field_definition_id] ?? null;
-            if ($code) {
-                // FieldValue.value is cast to array — extract scalar
-                $rawValue = is_array($fv->value) ? ($fv->value['value'] ?? $fv->value[0] ?? null) : $fv->value;
-                $result[$fv->model_id][$code] = $rawValue;
-            }
-        }
-
-        return $result;
     }
 
     private static function buildData(Employee $employee, array $fieldValues): DsnEmployeeData

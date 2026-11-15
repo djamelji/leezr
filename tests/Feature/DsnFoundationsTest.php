@@ -248,7 +248,9 @@ class DsnFoundationsTest extends TestCase
         $this->assertContains('personal_address_street', $missing);
     }
 
-    public function test_employee_resolver_throws_when_no_user(): void
+    // ADR-795.1 : un salarié SANS compte n'est plus rejeté — ses valeurs viennent de sa fiche RH ; sans
+    // valeur, la DSN le signale explicitement comme incomplet (jamais de génération trompeuse).
+    public function test_employee_resolver_reports_missing_fields_when_no_user(): void
     {
         $noUserEmployee = Employee::withoutGlobalScopes()->create([
             'company_id' => $this->company->id,
@@ -261,9 +263,9 @@ class DsnFoundationsTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('has no linked user');
-        DsnEmployeeResolver::resolve($noUserEmployee);
+        $data = DsnEmployeeResolver::resolve($noUserEmployee);
+        $this->assertFalse($data->isDsnReady());
+        $this->assertContains('nir', $data->missingMandatoryFields());
     }
 
     public function test_employee_resolver_batch_resolves_multiple(): void
@@ -299,7 +301,9 @@ class DsnFoundationsTest extends TestCase
         $this->assertSame('M', $results[$employee2->id]->gender);
     }
 
-    public function test_employee_resolver_batch_skips_employees_without_user(): void
+    // ADR-795.1 : le lot n'ignore plus silencieusement un salarié sans compte (il était absent de la
+    // déclaration sans erreur) — il est résolu depuis sa fiche RH et bloqué s'il est incomplet.
+    public function test_employee_resolver_batch_includes_employees_without_user(): void
     {
         $noUserEmployee = Employee::withoutGlobalScopes()->create([
             'company_id' => $this->company->id,
@@ -315,9 +319,9 @@ class DsnFoundationsTest extends TestCase
         $employees = collect([$this->employee, $noUserEmployee]);
         $results = DsnEmployeeResolver::resolveBatch($employees);
 
-        $this->assertCount(1, $results);
+        $this->assertCount(2, $results);
         $this->assertArrayHasKey($this->employee->id, $results);
-        $this->assertArrayNotHasKey($noUserEmployee->id, $results);
+        $this->assertFalse($results[$noUserEmployee->id]->isDsnReady(), 'incomplet → bloquant, jamais omis');
     }
 
     public function test_employee_data_gender_code_conversion(): void

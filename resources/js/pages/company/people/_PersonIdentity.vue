@@ -59,13 +59,23 @@ const load = async () => {
 
 watch(() => props.membershipId, load, { immediate: true })
 
-const onSave = async payload => {
+// ADR-795.1 : une donnée protégée par un contrat établi exige une confirmation explicite ; le serveur
+// reste seul juge (droit RH + état du contrat), cette boîte ne fait que transmettre l'intention.
+const pendingPayload = ref(null)
+const onSave = async (payload, confirmContractual = false) => {
   try {
-    apply(await membersStore.updateMemberProfile(props.membershipId, payload))
+    apply(await membersStore.updateMemberProfile(props.membershipId, confirmContractual ? { ...payload, confirm_contractual: true } : payload))
+    pendingPayload.value = null
     toast(t('members.profileUpdated'), 'success')
     emit('updated')
   }
   catch (error) {
+    if (!confirmContractual && error?.data?.errors?.confirm_contractual) {
+      pendingPayload.value = payload
+
+      return
+    }
+    pendingPayload.value = null
     toast(error?.data?.message || t('members.failedToUpdateProfile'), 'error')
   }
 }
@@ -166,5 +176,30 @@ const onRoleChange = async roleId => {
         prepend-icon="tabler-id"
       />
     </VList>
+    <AppDialog
+      :model-value="!!pendingPayload"
+      :title="t('employeeFields.confirmTitle')"
+      :max-width="520"
+      @update:model-value="v => { if (!v) pendingPayload = null }"
+    >
+      <p class="mb-0">
+        {{ t('employeeFields.confirmText') }}
+      </p>
+      <template #actions>
+        <VBtn
+          variant="text"
+          @click="pendingPayload = null"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          data-test="person-identity-confirm-contractual"
+          @click="onSave(pendingPayload, true)"
+        >
+          {{ t('employeeFields.confirmBtn') }}
+        </VBtn>
+      </template>
+    </AppDialog>
   </div>
 </template>

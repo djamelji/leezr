@@ -246,6 +246,8 @@ class CompanyMemberProfileTest extends TestCase
         // ADR-767 : la route est désormais gated `members.view` → coût CONSTANT du contrôle de
         // permission (membership + rôle + permissions) ajouté au budget ; toujours aucun N+1.
         // ADR-787 : +1 requête CONSTANTE — le lecteur gère-t-il les membres ? (annuaire ≠ dossier RH).
-        $this->assertLessThanOrEqual(21, $queryCount, "ReadModel generated {$queryCount} queries — check for N+1");
+        // ADR-795.1 : +6 requêtes CONSTANTES — résolution canonique (fiche RH de la société, valeurs fiche et
+        // compte, registre de divulgation, appartenances) ; toujours aucun N+1.
+        $this->assertLessThanOrEqual(27, $queryCount, "ReadModel generated {$queryCount} queries — check for N+1");
     }
 }

@@ -9,7 +9,6 @@ use App\Company\Security\GlobalIdentityPolicy;
 use App\Company\Security\MemberQuota;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
-use App\Core\Fields\FieldWriteService;
 use App\Core\Models\Membership;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
@@ -140,14 +139,13 @@ class MembershipController extends Controller
             \App\Core\Workforce\Services\LinkedIdentityService::userToEmployee($company->id, $membership->user);
         }
 
-        // ─── Bloc B — Dynamic fields (FieldWriteService) ──────
+        // ─── Bloc B — Dynamic fields : écrivain canonique (ADR-795.1) ──────
+        // Emploi → fiche RH de CETTE société ; personnel → compte (communiqué à cette société) ; sensible
+        // illisible ignoré ; contrat établi → droit RH + confirmation explicite (contrôlés serveur).
         if (isset($validated['dynamic_fields'])) {
-            FieldWriteService::upsert(
-                $membership->user,
-                $validated['dynamic_fields'],
-                FieldDefinition::SCOPE_COMPANY_USER,
-                $company->id,
-                $company->market_key,
+            (new \App\Core\Fields\PersonFieldWriter(new \App\Core\Fields\EmployeeFieldStore($company)))->write(
+                null, $membership->user, $validated['dynamic_fields'], $request->user(),
+                \App\Core\Fields\PersonFieldWriter::CONTEXT_MEMBERS, $request->boolean('confirm_contractual'),
             );
         }
 
