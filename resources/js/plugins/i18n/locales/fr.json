@@ -9833,5 +9833,22 @@
         "skipped": "Sans changement"
       }
     }
+  },
+  "employeeFields": {
+    "title": "Informations complémentaires",
+    "hintNoAccount": "Renseignées par l'entreprise pour ce salarié, même sans compte Leezr.",
+    "hintAccount": "Les informations personnelles viennent du compte de la personne ; les informations propres à votre entreprise se renseignent ici.",
+    "none": "Aucune information complémentaire activée pour votre entreprise.",
+    "saved": "Informations enregistrées",
+    "error": "Enregistrement impossible",
+    "masked": "Information sensible masquée",
+    "empty": "Non renseigné",
+    "legacy": "Valeur reprise du compte, à confirmer",
+    "toReconcile": "Valeur saisie avant la création du compte, à rapprocher",
+    "fromAccount": "Gérée depuis le compte de la personne",
+    "reviewNotice": "{n} information(s) à vérifier avant d'être considérée(s) comme définitive(s).",
+    "confirmTitle": "Modifier une information contractuelle",
+    "confirmText": "Ce salarié a un contrat établi. Les informations modifiées ne changent pas le contrat déjà généré ou signé ; la modification est tracée.",
+    "confirmBtn": "Confirmer la modification"
   }
 }

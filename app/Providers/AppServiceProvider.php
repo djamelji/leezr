@@ -89,6 +89,8 @@ class AppServiceProvider extends ServiceProvider
             'user' => User::class,
             'company' => Company::class,
             'platform_user' => PlatformUser::class,
+            // ADR-795 (L5) : valeurs dynamiques RH portées par la fiche salarié (isolée par société)
+            'employee' => \App\Core\Workforce\Employee::class,
             // ADR-757 (DMS M1): owners polymorphes des versions documentaires
             'member_document' => \App\Core\Documents\MemberDocument::class,
             'company_document' => \App\Core\Documents\CompanyDocument::class,

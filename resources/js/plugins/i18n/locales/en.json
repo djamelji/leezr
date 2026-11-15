@@ -9833,5 +9833,22 @@
         "skipped": "No change"
       }
     }
+  },
+  "employeeFields": {
+    "title": "Additional information",
+    "hintNoAccount": "Filled in by the company for this employee, even without a Leezr account.",
+    "hintAccount": "Personal information comes from the person's account; information specific to your company is filled in here.",
+    "none": "No additional information enabled for your company.",
+    "saved": "Information saved",
+    "error": "Could not save",
+    "masked": "Sensitive information hidden",
+    "empty": "Not provided",
+    "legacy": "Value taken from the account, to be confirmed",
+    "toReconcile": "Value entered before the account was created, to be reconciled",
+    "fromAccount": "Managed from the person's account",
+    "reviewNotice": "{n} piece(s) of information to check before being considered final.",
+    "confirmTitle": "Change contractual information",
+    "confirmText": "This employee has an established contract. Changed information does not alter the contract already generated or signed; the change is logged.",
+    "confirmBtn": "Confirm the change"
   }
 }

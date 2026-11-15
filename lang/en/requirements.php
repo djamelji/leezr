@@ -7,4 +7,6 @@ return [
     'unknown_definition' => 'Information or document not found in your catalogue.',
     'unknown_position' => 'Position not found in your company.',
     'forbidden_section' => 'You cannot change this part.',
+    'module_not_active' => "This module is not active for your company: its proposals cannot be adopted.",
+    'unknown_proposal' => "Unknown proposal.",
 ];

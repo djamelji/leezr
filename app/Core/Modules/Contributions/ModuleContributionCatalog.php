@@ -2,6 +2,7 @@
 
 namespace App\Core\Modules\Contributions;
 
+use App\Core\Documents\DocumentConfidentiality;
 use App\Core\Documents\DocumentType;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Modules\ModuleManifest;
@@ -158,6 +159,13 @@ final class ModuleContributionCatalog
         }
         if (! $def) {
             return ['collision', 'unknown_definition', null, null];
+        }
+        // ADR-795 : l'accès est décidé par la politique EFFECTIVE du DMS (DocumentAccessPolicy), jamais par une
+        // déclaration. Un niveau plus strict que celui que le DMS appliquerait à ce code est refusé : le type
+        // n'est pas créé (sinon il serait lisible avec les droits « standard » malgré la promesse du manifeste).
+        $declared = $def['confidentiality'] ?? null;
+        if ($declared === DocumentConfidentiality::HIGHLY_CONFIDENTIAL && DocumentConfidentiality::forTypeCode($code) !== DocumentConfidentiality::HIGHLY_CONFIDENTIAL) {
+            return ['collision', 'confidentiality_not_enforced', null, null];
         }
         $homonym = DocumentType::get(['code', 'label'])->first(fn ($t) => mb_strtolower($t->label) === mb_strtolower($def['label']));
         $created = DocumentType::create([

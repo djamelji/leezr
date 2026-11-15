@@ -17,6 +17,7 @@ import PersonAccess from './_PersonAccess.vue'
 import PersonPayslips from './_PersonPayslips.vue'
 import PersonHrLinkDialog from './_PersonHrLinkDialog.vue'
 import EmployeeProfile from '@/pages/company/workforce/employees/_EmployeeProfile.vue'
+import EmployeeFields from '@/pages/company/workforce/employees/_EmployeeFields.vue'
 import EmployeeContract from '@/pages/company/workforce/employees/_EmployeeContract.vue'
 import EmployeePlanningSection from '@/pages/company/workforce/employees/_EmployeePlanningSection.vue'
 import EmployeeTimeSection from '@/pages/company/workforce/employees/_EmployeeTimeSection.vue'
@@ -584,6 +585,12 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                   <VSkeletonLoader
                     v-else
                     type="article"
+                  />
+                  <!-- ADR-795 : informations complémentaires, avec ou sans compte -->
+                  <EmployeeFields
+                    v-if="store.employeeId"
+                    :employee-id="store.employeeId"
+                    :can-edit="!!store.can.edit_hr"
                   />
                 </section>
               </template>

@@ -654,6 +654,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('employees/{id}/file', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'file']);
     Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware([$perm('workforce.view'), $employeeScope]);
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
+    // ADR-795 (L5) : champs dynamiques de la fiche salarié, avec ou sans compte (facette RH)
+    Route::get('employees/{id}/fields', [\App\Modules\Workforce\Employees\Http\EmployeeFieldController::class, 'show'])->whereNumber('id')->middleware([$perm('workforce.view'), $employeeScope]);
+    Route::put('employees/{id}/fields', [\App\Modules\Workforce\Employees\Http\EmployeeFieldController::class, 'update'])->whereNumber('id')->middleware($perm('workforce.manage'));
     Route::post('employees/{id}/terminate', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'terminate'])->middleware($perm('workforce.manage'));
     // W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche (réutilise l'invitation Members, gated members.invite).
     // ADR-771 : l'état d'accès (e-mail du compte, statut, rôle, motif de suspension) est une donnée de
