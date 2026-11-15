@@ -43,6 +43,8 @@ class WorkforceModule implements ModuleDefinition
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20, 'settings' => ['section' => 'organization', 'level' => 'essential']],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »
                     // dans la navigation ; la route configuration reste valide (redirige vers le hub — deep-links).
+                    // ADR-792 (L2) : informations & documents demandés par poste — mode parallèle.
+                    ['key' => 'workforce-requirements', 'title' => 'Requested information & documents', 'to' => ['name' => 'company-workforce-requirements'], 'icon' => 'tabler-checklist', 'anyPermission' => ['settings.manage', 'documents.configure'], 'surface' => 'structure', 'group' => 'settings', 'sort' => 25, 'settings' => ['section' => 'work', 'level' => 'essential']],
                     ['key' => 'workforce-settings', 'title' => 'HR Settings', 'to' => ['name' => 'company-workforce-settings-tab', 'params' => ['tab' => 'general']], 'icon' => 'tabler-adjustments-cog', 'permission' => 'workforce.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 30, 'settings' => ['section' => 'work', 'level' => 'regular']],
                 ],
                 routeNames: [],

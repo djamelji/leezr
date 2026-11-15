@@ -538,6 +538,16 @@ Route::middleware('company.access:use-module,core.workflows')->group(function ()
     });
 });
 
+// ── ADR-792 (L2) : informations & documents demandés par poste — MODE PARALLÈLE (registre L1 uniquement) ──
+Route::prefix('workforce/requirements')->middleware(['company.access:use-module,workforce', 'company.access:use-any-permission,settings.manage|documents.configure'])->group(function () {
+    $c = \App\Modules\Workforce\Requirements\Http\RequirementConfigController::class;
+    Route::get('/', [$c, 'index']);
+    Route::get('/catalog', [$c, 'catalog']);
+    Route::get('/legacy', [$c, 'legacy']);
+    Route::post('/preview', [$c, 'preview']);
+    Route::post('/', [$c, 'save']);
+});
+
 // ── Workforce Self-Service (P0 security: auto-resolve employee from auth) ──
 // Module-gated but no specific permission — any company member with an active employee record can access
 Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')->group(function () {

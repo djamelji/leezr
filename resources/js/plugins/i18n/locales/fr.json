@@ -210,7 +210,8 @@
       "settings-documents": "Types de documents",
       "settings-templates": "Modèles de documents",
       "settings-signature": "Signature électronique",
-      "settings-leave-types": "Types d'absence"
+      "settings-leave-types": "Types d'absence",
+      "workforce-requirements": "Informations & documents demandés"
     }
   },
   "roles": {
@@ -9577,7 +9578,8 @@
       "billing": "Formule, consommation, moyens de paiement et factures.",
       "workflows": "Tâches et notifications déclenchées automatiquement.",
       "settings-signature": "Prestataire et options de la signature électronique.",
-      "modules": "Activer ou retirer des fonctionnalités."
+      "modules": "Activer ou retirer des fonctionnalités.",
+      "workforce-requirements": "Par poste : informations et pièces attendues (en préparation)."
     },
     "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau.",
     "advancedShort": "Avancé",
@@ -9706,5 +9708,73 @@
       "name": "Analyses logistiques",
       "description": "Indicateurs et rapports de performance logistique."
     }
+  },
+  "requirementsCfg": {
+    "title": "Informations & documents demandés",
+    "subtitle": "Ce que vous attendez de vos collaborateurs, selon leur poste.",
+    "parallelNotice": "Configuration en préparation : elle est enregistrée mais n'a pas encore d'effet sur les fiches, les demandes de documents, la conformité ni les rappels. Les règles actuelles restent appliquées.",
+    "position": "Poste",
+    "everyone": "Tous les collaborateurs",
+    "peopleCount": "{n} collaborateur(s), dont {a} sans compte",
+    "fields": "Informations",
+    "documents": "Documents",
+    "fieldsHint": "Informations à renseigner dans la fiche.",
+    "documentsHint": "Pièces à fournir.",
+    "empty": "Rien de demandé pour l'instant.",
+    "addField": "Rechercher une information…",
+    "addDocument": "Rechercher un document…",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "state": {
+      "required": "Obligatoire",
+      "optional": "Facultatif",
+      "recommended": "Recommandé",
+      "waived": "Retiré par vous",
+      "removed": "À retirer"
+    },
+    "pending": "{state} (non enregistré)",
+    "pendingCount": "{n} modification(s) non enregistrée(s)",
+    "origin": {
+      "new": "Ajout en cours",
+      "company": "Votre entreprise · {where}",
+      "allPositions": "tous les postes",
+      "thisPosition": "ce poste",
+      "preset": "Proposé par la configuration initiale Leezr",
+      "module": "Apporté par le module {name}",
+      "platform": "Règle Leezr",
+      "market": "Règle du pays",
+      "jobdomain": "Recommandé pour votre activité"
+    },
+    "justification": "imposé par : {ref}",
+    "previewBtn": "Prévisualiser",
+    "previewTitle": "Aperçu des modifications",
+    "previewSubtitle": "{n} collaborateur(s) concerné(s), dont {a} sans compte",
+    "previewParallel": "Une fois enregistrées, ces exigences restent en préparation : aucune demande ni rappel ne sera envoyé.",
+    "diff": {
+      "added": "Ajoutées",
+      "modified": "Modifiées",
+      "removed": "Retirées",
+      "none": "Aucun changement."
+    },
+    "saveBtn": "Enregistrer",
+    "saved": "Exigences enregistrées (en préparation).",
+    "error": "Enregistrement impossible.",
+    "legacyTitle": "Reprise de l'existant",
+    "legacyHint": "Règles définies aujourd'hui par rôle d'accès, et poste correspondant d'après les fiches. Rien n'est converti automatiquement.",
+    "legacyShow": "Afficher la correspondance",
+    "legacyHide": "Masquer la correspondance",
+    "legacyRule": {
+      "required": "exigé pour ce rôle",
+      "hidden": "masqué pour ce rôle"
+    },
+    "legacyPeople": "{n} personne(s), {p} avec un poste",
+    "legacyCategory": {
+      "certain": "Déjà reprise",
+      "proposed": "Correspondance proposée",
+      "ambiguous": "Ambiguë",
+      "conflict": "Conflit",
+      "needs_decision": "Décision nécessaire"
+    },
+    "unsaved": "non enregistré"
   }
 }

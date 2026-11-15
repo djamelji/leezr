@@ -28416,3 +28416,13 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Décision** : table additive `requirements` (champs et documents, deux clés étrangères explicites, invariants applicatifs : cible unique, impératif seulement avec autorité vérifiée et jamais depuis JobDomain / preset / Company) ; `EffectiveRequirementResolver` parallèle (applicabilité par poste, service, contrat, marché, modules — jamais le rôle RBAC ; règles R1-R7 ; provenance complète) ; `RequirementParityComparator` et commande `requirements:compare` en lecture seule sur une projection en mémoire de l'historique.
 
 **Conséquences** : aucun comportement visible modifié, aucun consommateur opérationnel ; registre vide en DEV. Rapport DEV : 0 bug de résolution ; société 1 : 156 concordances, 288 écarts classés (131 configuration manquante, 144 ambigus dont un module `logistics_fleet` marqué actif sans raison d'activation, 9 attendus, 4 arbitrages). Résolveur en requêtes constantes (≤ 10 pour 303 salariés). Tests 13/13 (18 scénarios), suite 4396 réussis + 3 échecs historiques. L2 non commencé.
+
+---
+
+## ADR-792 — L2 : exigences par poste configurées par la Company (mode parallèle)
+
+**Date** : 2026-11-15 · **Base** : `42193f08` · DEV · Rapport : `docs/bmad/ADR-792-L2-REQUIREMENTS-BY-POSITION.md`
+
+**Décision** : page Company « Informations & documents demandés » (Réglages › Travail & RH) : par poste (`JobRole`) ou pour tous, informations et documents demandés, provenance en clair, état obligatoire / facultatif, retrait (désactivation ou dispense tracée, impératif refusé), aperçu calculé par le résolveur L1 (même code d'écriture en transaction annulée), enregistrement explicite et historisé. Écriture : `settings.manage` pour les informations, `documents.configure` pour les documents. Reprise de l'existant en lecture seule, déduite des postes réels des personnes. Aucune migration.
+
+**Conséquences** : mode parallèle strict (moteur ADR-790 inchangé, testé) ; aucun poste attribué ni déduit ; registre DEV vide après recette. Tests 10/10 (20 scénarios), E2E 6/6, suite 4406 réussis + 3 échecs historiques, build propre. L3 non commencé.

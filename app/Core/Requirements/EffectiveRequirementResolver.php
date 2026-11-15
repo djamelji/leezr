@@ -103,6 +103,13 @@ final class EffectiveRequirementResolver
         return $out;
     }
 
+    /** ADR-792 — a position seen as a subject (configuration preview) : no person, no account. */
+    public static function subjectForJobRole(?\App\Core\Workforce\JobRole $job): array
+    {
+        return ['subject' => $job ? 'job_role:'.$job->id : 'everyone', 'employee_id' => null, 'user_id' => null,
+            'job_role_id' => $job?->id, 'job_role_key' => $job?->preset_item_key, 'department_id' => null, 'contract_type' => null];
+    }
+
     public static function subjectFromEmployee(Employee $e, ?string $contractType): array
     {
         return [
@@ -244,6 +251,7 @@ final class EffectiveRequirementResolver
             'id' => $r->id, 'source' => $r->source, 'source_ref' => $r->source_ref, 'source_version' => $r->source_version,
             'effect' => $r->effect ?? Requirement::EFFECT_REQUIRE, 'level' => $r->level, 'status' => $status,
             'customized' => $r->customized_at !== null, 'legal_reference' => $r->legal_reference, 'reason' => $r->reason,
+            'applicability' => $r->applicability ?? [], 'verified_at' => $r->verified_at?->toDateString(),
         ];
     }
 }
