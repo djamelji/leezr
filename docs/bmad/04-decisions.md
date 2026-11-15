@@ -28382,3 +28382,15 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - **Verdict** : 🟢 GO DEV · 🟡 préparation préproduction sous réserve du GO sur les rôles Driver et les matricules · 🔴 NO-GO PROD.
 
 **Application (2026-11-15, GO explicite, DEV local)** : simulations identiques puis `roles:revoke-permission driver members.invite --apply`, `… documents.view --apply`, `employees:assign-missing-numbers`. Résultat : 7 rôles Driver modifiés (seules ces 2 permissions), 12 adhésions héritées ; 22 matricules `EMP-000024`→`EMP-000045`, 0 matricule existant changé, séquence à `EMP-000046` ; audit 14 + 22 entrées. Livreur : invitation et supervision documentaire 403, espace personnel intact (API et navigateur). Tests ciblés 86/86, E2E 11/11. Détail : rapport §8.
+
+---
+
+## ADR-789 — Audit d'architecture produit : JobDomains, Presets, Modules, Champs, Documents (proposé)
+
+**Date** : 2026-11-15 · **Base** : `382981ad` · **Statut : proposé, audit uniquement** · Dossier : `docs/bmad/ADR-789-PRODUCT-ARCHITECTURE-AUDIT.md`
+
+**Constats** : le JobDomain est un preset monolithique (modules, champs, documents avec obligation, archétypes, rôles RBAC complets avec configuration de champs et documents, presets Workforce) appliqué une fois sans version ; les exigences d'une personne dépendent de son **rôle RBAC** alors que le **poste** (`JobRole`) existe ; une obligation documentaire peut venir de 5 sources ; la fiche et la conformité utilisent deux résolveurs qui divergent ; un salarié sans compte ne peut porter aucun champ dynamique (valeurs sur `User`) ; les modules activent leurs champs obligatoires mais pas leurs documents, sans déclaration dans le manifeste. Le preset d'organisation (versionné, aperçu, application sélective, provenance) est le modèle à généraliser.
+
+**Proposition** : JobDomain = contexte métier et références de presets ; presets par familles (RBAC, Organisation, Exigences, Workforce) avec un cycle commun ; modules déclarant leurs contributions ; une table `requirements` unique (champs et documents) avec applicabilité par poste, niveaux (`recommended`, `default`, `configurable_required`, `imperative`), provenance et historique ; un résolveur effectif unique ; valeurs du dossier RH sur `Employee` ; dossier candidat généré depuis la configuration effective. Transition en 8 lots (L0 → L7), sans migration destructive ni réapplication silencieuse.
+
+**Décision attendue** : validation des responsabilités cibles et GO sur le lot L0 (cohérence de la conformité).
