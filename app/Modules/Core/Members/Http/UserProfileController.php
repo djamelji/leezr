@@ -26,7 +26,26 @@ class UserProfileController extends Controller
         // ADR-169: show all categories (not just base) — aligned with member detail
         return response()->json(CompanyUserProfileReadModel::get(
             $request->user(), $company, $roleKey,
-        ) + ['profile_lock' => ContractualIdentityLock::describe($request->user())]); // ADR-787
+        ) + ['profile_lock' => ContractualIdentityLock::describe($request->user()), // ADR-787
+            'undisclosed_codes' => (new \App\Core\Fields\PersonDisclosureService($company, $request->user()))->undisclosed()]); // ADR-796
+    }
+
+    /** ADR-796 — the person shares existing account values with THIS company (explicit, traced). */
+    public function shareFields(Request $request): JsonResponse
+    {
+        $data = $request->validate(['codes' => 'required|array|min:1|max:50', 'codes.*' => 'string|max:100']);
+        $shared = (new \App\Core\Fields\PersonDisclosureService($request->attributes->get('company'), $request->user()))->share($data['codes']);
+
+        return response()->json(['shared' => $shared]);
+    }
+
+    /** ADR-796 — the person asks this company to stop using a value ; recorded for HR review only. */
+    public function requestWithdrawal(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => 'required|string|max:100', 'reason' => 'nullable|string|max:200']);
+        (new \App\Core\Fields\PersonDisclosureService($request->attributes->get('company'), $request->user()))->requestWithdrawal($data['code'], $data['reason'] ?? null);
+
+        return response()->json(['recorded' => true]);
     }
 
     public function update(UpdateProfileRequest $request): JsonResponse

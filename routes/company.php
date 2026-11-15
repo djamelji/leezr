@@ -273,6 +273,8 @@ Route::middleware('company.access:use-module,core.members')->group(function () {
     Route::get('/profile/space', [\App\Modules\Core\Members\Http\PersonalSpaceController::class, 'show']);
     Route::get('/profile', [UserProfileController::class, 'show']);
     Route::put('/profile', [UserProfileController::class, 'update']);
+    Route::post('/profile/disclosures', [UserProfileController::class, 'shareFields'])->middleware('throttle:20,1'); // ADR-796
+    Route::post('/profile/disclosures/withdrawal', [UserProfileController::class, 'requestWithdrawal'])->middleware('throttle:10,1');
     Route::put('/profile/password', [UserProfileController::class, 'updatePassword']);
     Route::post('/profile/avatar', [UserProfileController::class, 'updateAvatar']);
 });
@@ -654,6 +656,18 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('employees/{id}/file', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'file']);
     Route::get('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'show'])->middleware([$perm('workforce.view'), $employeeScope]);
     Route::put('employees/{id}', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'update'])->middleware($perm('workforce.manage'));
+    // ADR-796 (L6) : dossiers d'intégration (RH) — workforce.manage ; préfixe distinct de l'assistant `onboarding` existant
+    $onb = \App\Modules\Workforce\Onboarding\Http\OnboardingController::class;
+    Route::get('onboarding-files', [$onb, 'index'])->middleware($perm('workforce.manage'));
+    Route::get('onboarding-files/proposal', [$onb, 'proposal'])->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files', [$onb, 'store'])->middleware([$perm('workforce.manage'), 'throttle:30,1']);
+    Route::get('onboarding-files/{id}', [$onb, 'show'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::put('onboarding-files/{id}/items', [$onb, 'revise'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/link', [$onb, 'link'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']);
+    Route::post('onboarding-files/{id}/revoke', [$onb, 'revoke'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/request-changes', [$onb, 'requestChanges'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/validate', [$onb, 'validateFile'])->whereNumber('id')->middleware($perm('workforce.manage'));
+
     // ADR-795 (L5) : champs dynamiques de la fiche salarié, avec ou sans compte (facette RH)
     Route::get('employees/{id}/fields', [\App\Modules\Workforce\Employees\Http\EmployeeFieldController::class, 'show'])->whereNumber('id')->middleware([$perm('workforce.view'), $employeeScope]);
     Route::put('employees/{id}/fields', [\App\Modules\Workforce\Employees\Http\EmployeeFieldController::class, 'update'])->whereNumber('id')->middleware($perm('workforce.manage'));

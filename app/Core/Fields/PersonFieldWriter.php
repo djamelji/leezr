@@ -37,13 +37,22 @@ final class PersonFieldWriter
     public const CONTEXT_MEMBERS = 'members';
     public const CONTEXT_SELF = 'self';
     public const CONTEXT_SUGGESTION = 'suggestion';
+    /** ADR-796 : HR validates values PROVIDED BY THE PERSON in an onboarding file (person data → account if any). */
+    public const CONTEXT_ONBOARDING = 'onboarding';
+
+    /** Default purpose recorded in the disclosure registry (never a legal basis : that one is DECLARED). */
+    private const PURPOSES = ['self' => 'self_service', 'members' => 'hr_record', 'hr' => 'hr_record', 'suggestion' => 'document_extraction', 'onboarding' => 'onboarding'];
 
     public function __construct(private EmployeeFieldStore $store) {}
 
     /**
      * @return array{changed: list<string>, ignored: list<string>}
      */
-    public function write(?Employee $employee, ?User $user, array $input, ?User $actor, string $context, bool $confirmContractual = false): array
+    /**
+     * @param  array{purpose?: string, legal_basis?: ?string, notice_version?: ?string, invitation_id?: ?int}  $collection
+     *         traceability of the collection (ADR-796 prérequis C) — the legal basis is only what the company DECLARED
+     */
+    public function write(?Employee $employee, ?User $user, array $input, ?User $actor, string $context, bool $confirmContractual = false, array $collection = []): array
     {
         $company = $this->store->company();
         if ($employee) {
@@ -72,7 +81,7 @@ final class PersonFieldWriter
         $canSensitive = $actor && ($actor->hasCompanyPermission($company, 'workforce.sensitive_read') || $actor->hasCompanyPermission($company, 'members.sensitive_read'));
         $isHr = $actor && $actor->hasCompanyPermission($company, 'workforce.manage');
 
-        return DB::transaction(function () use ($employee, $user, $input, $byCode, $actor, $context, $confirmContractual, $canSensitive, $isHr, $company, $prefix) {
+        return DB::transaction(function () use ($employee, $user, $input, $byCode, $actor, $context, $confirmContractual, $canSensitive, $isHr, $company, $prefix, $collection) {
             // Verrou EN PREMIER (avant toute lecture) : écritures concurrentes sur la même personne sérialisées.
             $user
                 ? User::query()->where('id', $user->id)->lockForUpdate()->first()
@@ -103,13 +112,16 @@ final class PersonFieldWriter
                 if (ContractualIdentityLock::norm($cell['value']) === ContractualIdentityLock::norm($value)) {
                     continue; // identique à ce qui est affiché (y compris une valeur historique) : aucune écriture implicite
                 }
-                if ($cell['not_disclosed']) {
+                if ($cell['not_disclosed'] && $context !== self::CONTEXT_ONBOARDING) { // en intégration, c'est la personne qui fournit la valeur
                     $errors["{$prefix}.{$code}"] = __('fields.not_disclosed'); // jamais écraser une donnée personnelle non communiquée
 
                     continue;
                 }
                 $person = $cell['owner'] === FieldOwnership::PERSON;
                 $toAccount = $person && $user !== null;
+                if ($context === self::CONTEXT_ONBOARDING && ! $isHr) {
+                    abort(403); // seule une personne habilitée RH valide un dossier d'intégration
+                }
                 if ($toAccount && $context === self::CONTEXT_HR) {
                     $errors["{$prefix}.{$code}"] = __('fields.managed_by_account'); // identité du compte : depuis le compte (L5)
 
@@ -156,7 +168,9 @@ final class PersonFieldWriter
                 FieldValue::updateOrCreate(['field_definition_id' => $def->id, 'model_type' => $type, 'model_id' => $id], ['value' => $value]);
                 if ($toAccount) {
                     DB::table('person_field_disclosures')->insertOrIgnore(['user_id' => $user->id, 'field_definition_id' => $def->id,
-                        'company_id' => $company->id, 'source' => $context, 'created_at' => now(), 'updated_at' => now()]);
+                        'company_id' => $company->id, 'source' => $context, 'purpose' => $collection['purpose'] ?? self::PURPOSES[$context] ?? null,
+                        'legal_basis' => $collection['legal_basis'] ?? null, 'notice_version' => $collection['notice_version'] ?? null,
+                        'onboarding_invitation_id' => $collection['invitation_id'] ?? null, 'created_at' => now(), 'updated_at' => now()]);
                 }
                 $this->history($def, $type, $id, $previous, $value, $actor, $context);
                 $changed[] = $code;

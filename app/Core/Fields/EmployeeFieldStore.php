@@ -187,9 +187,9 @@ final class EmployeeFieldStore
                 ->groupBy('user_id')->map(fn ($rows) => $rows->pluck('company_id')->unique()->count())->all();
         }
 
-        // Membre sans fiche RH : ses données d'emploi vivent sur son appartenance à CETTE société.
-        $withoutRecord = $userIds->diff($employees->pluck('user_id')->filter()->map(fn ($id) => (int) $id))->values();
-        $memberships = $withoutRecord->isEmpty() ? collect() : \App\Core\Models\Membership::where('company_id', $this->company->id)->whereIn('user_id', $withoutRecord)->pluck('id', 'user_id');
+        // Données d'emploi portées par l'appartenance à CETTE société (membre sans fiche RH, ou en attente de
+        // reprise après création de la fiche — ADR-796 prérequis A : jamais invisibles).
+        $memberships = $userIds->isEmpty() ? collect() : \App\Core\Models\Membership::where('company_id', $this->company->id)->whereIn('user_id', $userIds)->pluck('id', 'user_id');
         $membershipValues = $memberships->isEmpty() ? collect() : FieldValue::where('model_type', 'membership')->whereIn('model_id', $memberships->values())->whereIn('field_definition_id', $defIds)->get()
             ->keyBy(fn ($v) => $memberships->search($v->model_id).':'.$v->field_definition_id);
 
@@ -220,10 +220,11 @@ final class EmployeeFieldStore
             return ['value' => $row?->value, 'source' => $row === null ? null : ($row === $acc ? 'account' : 'employee'),
                 'status' => $review ? self::STATUS_NEEDS_REVIEW : $this->statusOf($def, $row), 'not_disclosed' => false, 'editable' => false];
         }
-        $mem = (! $e && $userId) ? ($ctx['membership'][$userId.':'.$def->id] ?? null) : null;
+        $mem = $userId ? ($ctx['membership'][$userId.':'.$def->id] ?? null) : null;
         $editable = $e !== null || ($userId && isset($ctx['memberships'][$userId]));
-        if ($owner === FieldOwnership::EMPLOYMENT && $filled($mem)) {
-            return ['value' => $mem->value, 'source' => 'membership', 'status' => $this->statusOf($def, $mem), 'not_disclosed' => false, 'editable' => $editable];
+        if ($owner === FieldOwnership::EMPLOYMENT && ! $filled($own) && $filled($mem)) {
+            // Avec fiche RH : valeur de l'appartenance encore à reprendre (MembershipFieldTransfer) → à vérifier.
+            return ['value' => $mem->value, 'source' => 'membership', 'status' => $e ? self::STATUS_NEEDS_REVIEW : $this->statusOf($def, $mem), 'not_disclosed' => false, 'editable' => $editable];
         }
         if ($owner === FieldOwnership::EMPLOYMENT && ! $filled($own) && $filled($acc)) {
             return ['value' => $acc->value, 'source' => 'legacy_account', 'status' => self::STATUS_NEEDS_REVIEW, 'not_disclosed' => false, 'editable' => $editable];
@@ -237,7 +238,7 @@ final class EmployeeFieldStore
     {
         $rows = $ctx['disclosures'][$userId.':'.$defId] ?? collect();
         if ($rows->isNotEmpty()) {
-            return $rows->contains(fn ($d) => (int) $d->company_id === (int) $this->company->id);
+            return $rows->contains(fn ($d) => (int) $d->company_id === (int) $this->company->id); // une demande de retrait est tracée, jamais interprétée ici
         }
 
         return ($ctx['companyCount'][$userId] ?? 0) <= 1;

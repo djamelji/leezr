@@ -28466,3 +28466,34 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Décision** : un écrivain unique, `PersonFieldWriter`, pour tous les écrans (fiche RH, gestion des membres, profil personnel, suggestions IA), avec validation, droits, verrou, historique et contrôle contractuel identiques ; une résolution unique (`EmployeeFieldStore`) pour tous les lecteurs (fiche RH, profil membre et complétude, profil personnel, DSN, variables de documents). Données RH : fiche RH de la société (`workforce.manage`) ou, pour un membre sans fiche RH, son appartenance (`members.manage`) ; jamais le compte. Données personnelles : compte, avec registre de divulgation par société (`person_field_disclosures`) ; un autre employeur ne lit ni n'écrase une donnée qui ne lui a pas été communiquée ; une valeur ancienne d'une personne à plusieurs employeurs est masquée. Sensible illisible : ignoré, jamais réécrit. Contrat établi : la personne est toujours refusée ; sinon droit RH + confirmation explicite, jugés par le serveur. DSN et variables de documents : lecture canonique (l'ancien `model_type` en nom de classe ne trouvait rien) ; salarié sans compte inclus, champ manquant bloquant.
 
 **Conséquences** : aucune migration de données (une table additive), aucune bascule, aucun changement de calcul de paie, de Billing ni de contrat ; DSN toujours simulée. Tests 8/8 (20 scénarios), tests liés verts, E2E 1/1, suite 4444 réussis + 3 échecs historiques, build propre. Deux tests DSN qui figeaient l'ancien comportement ont été mis à jour, et le plafond de requêtes du profil membre est passé de 21 à 27 (constant). L6 non commencé.
+
+## ADR-796 — L6 : dossier d'intégration autonome (recrue sans compte)
+
+**Date** : 2026-11-15 · **Base** : `1f707904` · DEV · Rapport : `docs/bmad/ADR-796-L6-ONBOARDING-FILE.md`
+
+**Décision** :
+- **Prérequis ADR-795.1 résolus avant toute route publique** :
+  - reprise appartenance → fiche RH (`MembershipFieldTransfer`) : déterministe, idempotente, sans écrasement, conflits signalés, historique, champs protégés respectés ; la valeur reste visible tant qu'elle n'est pas reprise ;
+  - partage explicite, par la personne, des anciennes valeurs ambiguës ;
+  - registre de divulgation enrichi : finalité, base juridique **déclarée** (jamais déduite), version de l'information fournie, invitation, demande de retrait tracée sans application automatique.
+- **Parcours RH** dans Équipe (`workforce.manage`, routes `onboarding-files`) :
+  - fiche RH réutilisée, ou fiche préparatoire `inactive` sans compte, droit ni contrat, une seule par personne ;
+  - préparation en lecture des trois sources (ADR-790, L1 pour le poste, propositions L4 non adoptées et jamais pré-cochées), divergences signalées ;
+  - photographie versionnée propre à CE dossier, avec révision explicite ;
+  - lien à jeton haché, affiché une seule fois.
+- **Portail public** :
+  - jeton dans le fragment, échangé une fois contre un cookie de session `HttpOnly`/`Strict` limité au chemin ;
+  - CSRF conservé, `no-store`, `no-referrer`, limites par action, réponse uniforme, module Workforce vérifié ;
+  - code à usage unique sur un canal distinct pour les données et pièces sensibles ;
+  - champs limités à la photographie, mis en attente ;
+  - dépôts par le service DMS unique (extrait de la fiche personne), une demande par type, toujours « à vérifier ».
+- **Validation RH** : décision par valeur, écriture par `PersonFieldWriter` (contexte `onboarding`), contrat établi confirmé explicitement, divulgation tracée.
+- **Conservation** : configurable par dossier, purge des valeurs en attente auditée (`onboarding:retention`, simulation par défaut), jamais à l'expiration.
+
+**Conséquences** :
+- Aucun nouveau droit, compte ou contrat ; aucune obligation opérationnelle modifiée ; aucun changement Billing ou paie.
+- Migration additive.
+- Défauts corrigés pendant le lot : collision avec l'assistant `onboarding` existant (clé de traduction restaurée, routes renommées), en-têtes `ofetch`, pré-sélection de propositions non adoptées.
+- Tests : 8 (prérequis et parcours), tests liés verts, recette navigateur 1/1 (RH → recrue mobile sans session Company → soumission → validation RH, clair et sombre, lien masqué) ; suite 4452 réussis + 3 échecs historiques ; build propre.
+- Conditions avant usage réel : validation juridique par marché, envoi maîtrisé, antivirus, planification de la conservation, revue de sécurité externe.
+- L7 non commencé.

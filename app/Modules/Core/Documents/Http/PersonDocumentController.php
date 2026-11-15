@@ -56,7 +56,7 @@ class PersonDocumentController extends Controller
         );
     }
 
-    public function upload(Request $request, string $personRef, string $documentCode, DocumentProcessingPipeline $pipeline): JsonResponse
+    public function upload(Request $request, string $personRef, string $documentCode): JsonResponse
     {
         $company = $request->attributes->get('company');
         [$subject, $user] = $this->resolve($company, $personRef);
@@ -68,75 +68,14 @@ class PersonDocumentController extends Controller
         DocumentTypeActivation::where('company_id', $company->id)
             ->where('document_type_id', $type->id)->where('enabled', true)->firstOrFail();
 
-        $rules = $type->validation_rules ?? [];
-        $maxSize = ($rules['max_file_size_mb'] ?? 10) * 1024;
-        $accepted = $rules['accepted_types'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
         $expiresRule = $type->requires_expiration ? ['required', 'date', 'after:today'] : ['nullable', 'date', 'after:today'];
         // ADR-777 : `file` (appels existants) ou `files[]` (panneau de la fiche) — mêmes règles par fichier.
-        $fileRule = ['file', "max:{$maxSize}", 'mimes:'.implode(',', $accepted)];
+        $fileRule = \App\Core\Documents\Services\SubjectDocumentUploadService::fileRules($type);
         $request->validate(['file' => ['required_without:files', ...$fileRule], 'files' => ['required_without:file', 'array', 'min:1'], 'files.*' => $fileRule, 'expires_at' => $expiresRule]);
         $files = $request->hasFile('file') ? [$request->file('file')] : array_values($request->file('files'));
-        $file = $files[0];
-        $processed = $pipeline->process($files, $documentCode);
-        try {
-            if ($processed->passthrough) {
-                $path = $file->store("documents/{$company->id}/subject", 'local');
-                $fileName = $file->getClientOriginalName();
-                $fileSize = $file->getSize();
-                $mimeType = $file->getMimeType();
-                $ocrText = null;
-            } else {
-                // ADR-770 : chemin UNIQUE. Avec `putFileAs($processed->fileName)` tous les collaborateurs sans
-                // compte d'une entreprise partageaient `documents/{company}/subject/{code}.pdf` : le dépôt
-                // de l'un ÉCRASAIT la pièce de l'autre (et toute version précédente).
-                $path = Storage::disk('local')->putFile("documents/{$company->id}/subject", new \Illuminate\Http\File($processed->pdfPath));
-                $fileName = $processed->fileName;
-                $fileSize = $processed->fileSize;
-                $mimeType = $processed->mimeType;
-                $ocrText = $processed->ocrText;
-            }
-        } finally {
-            $pipeline->cleanup();
-        }
-
-        $integrity = app(DocumentIntegrityService::class);
-        $versioning = app(DocumentVersioningService::class);
-        $newHash = $integrity->hashOf($path);
-
-        // Clé d'unicité par SUJET (supporte user_id null pour l'employé sans compte).
-        $keys = [
-            'company_id' => $company->id,
-            'document_subject_type' => $subject->type,
-            'document_subject_id' => $subject->id,
-            'document_type_id' => $type->id,
-        ];
-        $existing = MemberDocument::where($keys)->first();
-
-        if ($existing && $existing->file_path && $versioning->isDuplicate($existing, $newHash)) {
-            Storage::disk('local')->delete($path);
-            $document = $existing;
-        } else {
-            if ($existing && $existing->file_path) {
-                $versioning->snapshotCurrent($existing, DocumentVersion::SOURCE_UPLOAD, $request->user()->id);
-            }
-            $document = MemberDocument::updateOrCreate($keys, [
-                'user_id' => $user?->id,
-                'file_path' => $path,
-                'file_name' => $fileName,
-                'file_size_bytes' => $fileSize,
-                'mime_type' => $mimeType,
-                'uploaded_by' => $request->user()->id,
-                'expires_at' => $request->input('expires_at'),
-                'ocr_text' => $ocrText,
-                'ai_status' => 'pending',
-                'file_sha256' => $newHash,
-                'published_state' => DocumentComplianceStateService::P_PUBLISHED,
-            ]);
-        }
-
-        // ADR-759 (M2): soumission via le moteur de demandes (sujet-keyed, supporte l'employé sans
-        // compte). Enregistre l'événement + relie la demande au dépôt.
-        app(DocumentRequestService::class)->markSubmitted($company->id, $subject, $type, $request->user());
+        // ADR-796 : dépôt extrait dans un service unique (fiche RH + portail d'intégration), comportement inchangé.
+        $document = app(\App\Core\Documents\Services\SubjectDocumentUploadService::class)
+            ->store($company, $subject, $user, $type, $files, $request->input('expires_at'), $request->user()->id, $request->user());
 
         return response()->json([
             'message' => 'Document uploaded.',

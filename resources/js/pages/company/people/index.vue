@@ -8,6 +8,7 @@ import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 import PersonAddDrawer from './_PersonAddDrawer.vue'
+import OnboardingPanel from './_OnboardingPanel.vue'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -153,6 +154,9 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         {{ t('people.add.title') }}
       </VBtn>
     </div>
+
+    <!-- ADR-796 : intégrations en cours (RH) — même page Équipe, aucun nouveau menu -->
+    <OnboardingPanel v-if="tab === 'people' && can('workforce.manage')" />
 
     <VCard flat border>
       <VTabs v-model="tab" class="border-b">

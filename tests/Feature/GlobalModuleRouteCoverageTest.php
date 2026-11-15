@@ -36,6 +36,16 @@ class GlobalModuleRouteCoverageTest extends TestCase
         'api/public/signature/{token}/prepare',
         'api/public/signature/{token}/sign',
         'api/public/signature/{token}/decline',
+        // ADR-796 (L6) : portail du dossier d'intégration — jeton du lien échangé contre une session ;
+        // le module Workforce de la société du dossier est vérifié par le service à chaque appel.
+        'api/public/onboarding/session',
+        'api/public/onboarding',
+        'api/public/onboarding/values',
+        'api/public/onboarding/documents/{code}',
+        'api/public/onboarding/code',
+        'api/public/onboarding/verify',
+        'api/public/onboarding/submit',
+        'api/public/onboarding/close',
     ];
 
     public function test_all_module_routes_have_activation_middleware(): void

@@ -95,6 +95,20 @@ Route::prefix('public/signature')->middleware('throttle:30,1')->group(function (
     Route::post('/{token}/decline', [\App\Modules\Workforce\Signature\Http\SignerController::class, 'decline'])->middleware('throttle:10,1');
 });
 
+// ADR-796 (L6) — portail PUBLIC du dossier d'intégration : le jeton du lien (fragment d'URL) n'est envoyé
+// qu'une fois, dans le CORPS de la requête, puis échangé contre un cookie HttpOnly limité à ce chemin.
+Route::prefix('public/onboarding')->middleware([\App\Modules\Workforce\Onboarding\Http\OnboardingPublicHeaders::class, 'throttle:60,1,onb'])->group(function () {
+    $c = \App\Modules\Workforce\Onboarding\Http\OnboardingPortalController::class;
+    Route::post('/session', [$c, 'open'])->middleware('throttle:10,1,onb-open');
+    Route::get('/', [$c, 'show']);
+    Route::put('/values', [$c, 'save'])->middleware('throttle:30,1,onb-save');
+    Route::post('/documents/{code}', [$c, 'upload'])->where('code', '[a-z0-9_]{1,60}')->middleware('throttle:20,1,onb-upload');
+    Route::post('/code', [$c, 'sendCode'])->middleware('throttle:3,10,onb-code');
+    Route::post('/verify', [$c, 'verify'])->middleware('throttle:10,10,onb-verify');
+    Route::post('/submit', [$c, 'submit'])->middleware('throttle:10,1,onb-submit');
+    Route::post('/close', [$c, 'close']);
+});
+
 // Runtime error reporting — public (no auth, frontend → backend)
 Route::post('/runtime-error', RuntimeErrorController::class)->middleware('throttle:10,1');
 

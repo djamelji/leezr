@@ -16,7 +16,10 @@ class SecurityHeadersMiddleware
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 
         // Control referrer information
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        // ADR-796 : une route peut imposer plus strict (portail d'intégration : no-referrer) — jamais assoupli ici.
+        if (! $response->headers->has('Referrer-Policy')) {
+            $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        }
 
         // Restrict browser features
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');

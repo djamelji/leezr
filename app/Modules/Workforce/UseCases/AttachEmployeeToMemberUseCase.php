@@ -46,6 +46,8 @@ class AttachEmployeeToMemberUseCase
             managerId: $data['manager_id'] ?? null,
         ));
 
+        // ADR-796 (prérequis A) : les données propres à la société portées par l'appartenance sont reprises.
+        \App\Core\Fields\MembershipFieldTransfer::apply($company, $employee, $actor);
         $this->log($company, $employee, $actor, 'employee.created_for_member');
 
         return $employee;
@@ -62,6 +64,7 @@ class AttachEmployeeToMemberUseCase
         $employee->user_id = $user->id;
         $employee->save();
         \App\Core\Documents\Services\PersonDocumentContinuity::adopt($company, $user); // ADR-769 : les pièces de la fiche suivent la personne
+        \App\Core\Fields\MembershipFieldTransfer::apply($company, $employee, $actor); // ADR-796 (prérequis A)
         $this->log($company, $employee, $actor, 'employee.account_linked');
 
         return $employee;
