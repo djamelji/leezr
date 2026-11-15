@@ -28406,3 +28406,13 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Décision** : extraction sans changement de règle de `DocumentResolverService::requirementMap` ; `resolve()` et la conformité (`slotsFor`, par personne avec le rôle de son adhésion) l'utilisent. Tableau de bord et accueil suivent la conformité. Aucun poste déduit d'un rôle ; salarié sans compte = règles Company seules.
 
 **Conséquences** : DEV société 1 : écarts fiche ↔ conformité 16 → 0, exigences 118 → 126 (+12 certificats médicaux des livreurs, −4 permis masqués). Aucune donnée, règle, permission ni migration modifiée. Tests : `Adr790ComplianceConsistencyTest` 8/8 (détecte l'ancienne divergence), 774 tests liés, suite 4383 réussis + 3 échecs historiques. L1 non commencé.
+
+---
+
+## ADR-791 — L1 : registre des exigences et résolution parallèle traçable
+
+**Date** : 2026-11-15 · **Base** : `cfd1d669` · DEV · Rapport : `docs/bmad/ADR-791-L1-REQUIREMENT-REGISTRY.md`
+
+**Décision** : table additive `requirements` (champs et documents, deux clés étrangères explicites, invariants applicatifs : cible unique, impératif seulement avec autorité vérifiée et jamais depuis JobDomain / preset / Company) ; `EffectiveRequirementResolver` parallèle (applicabilité par poste, service, contrat, marché, modules — jamais le rôle RBAC ; règles R1-R7 ; provenance complète) ; `RequirementParityComparator` et commande `requirements:compare` en lecture seule sur une projection en mémoire de l'historique.
+
+**Conséquences** : aucun comportement visible modifié, aucun consommateur opérationnel ; registre vide en DEV. Rapport DEV : 0 bug de résolution ; société 1 : 156 concordances, 288 écarts classés (131 configuration manquante, 144 ambigus dont un module `logistics_fleet` marqué actif sans raison d'activation, 9 attendus, 4 arbitrages). Résolveur en requêtes constantes (≤ 10 pour 303 salariés). Tests 13/13 (18 scénarios), suite 4396 réussis + 3 échecs historiques. L2 non commencé.
