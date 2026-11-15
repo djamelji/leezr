@@ -29,7 +29,7 @@ class WorkforcePresetImportService
 {
     private function presets(Company $company): array
     {
-        return $company->jobdomain->workforce_presets ?? [];
+        return $this->explicitPresets ?? ($company->jobdomain->workforce_presets ?? []);
     }
 
     private function provKey(array $item): ?string
@@ -52,6 +52,17 @@ class WorkforcePresetImportService
     }
 
     /** Preview READ-ONLY : classe chaque item (new / existing / customized / conflict). N'écrit RIEN. */
+    /** ADR-793 : contenu explicite (preset Planning versionné) ; sinon, presets du JobDomain (historique). */
+    private ?array $explicitPresets = null;
+
+    public function withPresets(?array $presets): static
+    {
+        $clone = clone $this;
+        $clone->explicitPresets = $presets;
+
+        return $clone;
+    }
+
     public function preview(Company $company): array
     {
         $presets = $this->presets($company);

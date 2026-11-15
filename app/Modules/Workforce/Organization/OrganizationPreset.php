@@ -2,6 +2,7 @@
 
 namespace App\Modules\Workforce\Organization;
 
+use App\Core\Presets\VersionedPresetLifecycle;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -10,6 +11,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class OrganizationPreset extends Model
 {
+    use VersionedPresetLifecycle; // ADR-793 : même cycle de version que les autres familles (immuable une fois publié)
+
+    public function contentAttributes(): array
+    {
+        return ['structure', 'label', 'jobdomain_key', 'market_key', 'org_profile_key', 'description'];
+    }
+
     protected $fillable = [
         'key', 'family_key', 'label', 'jobdomain_key', 'market_key', 'org_profile_key',
         'version', 'status', 'structure', 'description', 'created_by', 'updated_by', 'published_at',

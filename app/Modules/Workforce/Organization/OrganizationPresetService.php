@@ -89,13 +89,14 @@ class OrganizationPresetService
         ];
     }
 
-    public static function apply(Company $company, ?int $appliedBy = null): array
+    public static function apply(Company $company, ?int $appliedBy = null, ?OrganizationPreset $explicit = null): array
     {
-        return DB::transaction(function () use ($company, $appliedBy) {
+        // ADR-793 : version explicite (preset versionné) ; sinon, comportement historique (preset résolu).
+        return DB::transaction(function () use ($company, $appliedBy, $explicit) {
             // Verrou anti-concurrence : sérialise deux applications simultanées sur la même Company.
             Company::withoutGlobalScopes()->where('id', $company->id)->lockForUpdate()->first();
 
-            $preset = OrganizationPresetResolver::resolveFor($company);
+            $preset = $explicit ?? OrganizationPresetResolver::resolveFor($company);
             if (! $preset) {
                 return ['has_preset' => false, 'created' => [], 'skipped' => [], 'conflicts' => []];
             }

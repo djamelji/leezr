@@ -587,6 +587,19 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Market Overlays
         // ADR-636 (W-E) — administration minimale des presets organisationnels (gardée manage_jobdomains)
+        // ADR-793 (L3) — presets versionnés (RBAC, Exigences, Planning) + diff / aperçu / application explicite (4 familles)
+        $pp = \App\Modules\Platform\Presets\Http\PlatformPresetController::class;
+        Route::get('/presets', [$pp, 'index']);
+        Route::post('/presets', [$pp, 'store']);
+        Route::put('/presets/{id}', [$pp, 'update'])->whereNumber('id');
+        Route::post('/presets/{id}/archive', [$pp, 'archive'])->whereNumber('id');
+        Route::post('/presets/{id}/new-version', [$pp, 'newVersion'])->whereNumber('id');
+        Route::post('/presets/{kind}/{id}/publish', [$pp, 'publish'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization'])->whereNumber('id');
+        Route::get('/presets/{kind}/{from}/diff/{to}', [$pp, 'diff'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
+        Route::get('/presets/{kind}/{id}/companies/{companyId}/preview', [$pp, 'preview'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
+        Route::post('/presets/{kind}/{id}/companies/{companyId}/apply', [$pp, 'apply'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
+        Route::get('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'recommendations']);
+        Route::put('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'setRecommendations']);
         Route::get('/organization-presets/meta', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'meta']); // W-E2 référentiels
         Route::get('/organization-presets', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'index']);
         Route::get('/organization-presets/{id}', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'show']);
