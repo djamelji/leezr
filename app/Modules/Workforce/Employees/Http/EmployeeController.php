@@ -298,13 +298,13 @@ class EmployeeController extends Controller
             'last_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|nullable|email|max:255',
             'phone' => 'sometimes|nullable|string|max:50',
-            'employee_number' => 'sometimes|nullable|string|max:50',
+            'employee_number' => ['sometimes', 'nullable', 'string', 'max:50', \Illuminate\Validation\Rule::unique('workforce_employees', 'employee_number')->where('company_id', $companyId)->ignore($employee->id)], // ADR-787
             'department_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
             'job_role_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
             'manager_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)],
         ]);
 
-        $employee->update($validated);
+        \App\Core\Workforce\EmployeeNumbering::updateTracked($employee, $validated); // ADR-787 : historique du numéro
 
         // ADR-752 : si le collaborateur est RELIÉ à un compte, propager le nom vers le User pour
         // éviter la divergence d'identité (nom RH ≠ nom du compte). Email de login non touché.

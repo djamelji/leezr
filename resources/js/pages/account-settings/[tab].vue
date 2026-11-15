@@ -1,6 +1,5 @@
 <script setup>
 import AccountSettingsAccount from '@/views/pages/account-settings/AccountSettingsAccount.vue'
-import AccountSettingsPreferences from '@/views/pages/account-settings/AccountSettingsPreferences.vue'
 import AccountSettingsSecurity from '@/views/pages/account-settings/AccountSettingsSecurity.vue'
 
 const { t } = useI18n()
@@ -18,6 +17,11 @@ const activeTab = computed({
 if (route.params.tab === 'documents')
   router.replace({ name: 'company-my-space-tab', params: { tab: 'documents' } })
 
+// ADR-787 : « Préférences » ne contenait que le thème et la langue, déjà réglables depuis la barre du
+// haut (mêmes préférences enregistrées). L'onglet disparaît ; les anciens liens ouvrent le compte.
+if (route.params.tab === 'preferences')
+  router.replace({ name: 'account-settings-tab', params: { tab: 'account' } })
+
 const tabs = computed(() => {
   const items = [
     {
@@ -29,11 +33,6 @@ const tabs = computed(() => {
       title: t('accountSettings.security'),
       icon: 'tabler-lock',
       tab: 'security',
-    },
-    {
-      title: t('accountSettings.preferences'),
-      icon: 'tabler-settings',
-      tab: 'preferences',
     },
   ]
 
@@ -77,9 +76,6 @@ definePage({ meta: { navActiveLink: 'account-settings-tab' } })
         <AccountSettingsSecurity />
       </VWindowItem>
 
-      <VWindowItem value="preferences">
-        <AccountSettingsPreferences />
-      </VWindowItem>
     </VWindow>
   </div>
 </template>

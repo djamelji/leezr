@@ -28336,3 +28336,28 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Tests : `Adr786RbacAuditTest` 11/11 (4 échouent sur le code précédent), cockpit 30/30, E2E `adr786-rbac-recette` 4/4 ; suite complète 4348 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` (inchangés, `TimeEntryController` maintenu à 309 lignes) ; build propre.
 - Préproduction (lecture seule, staging non vérifié) : `.env.example` incomplet (~30 clés), `APP_DEBUG=false` obligatoire (les 403/404 exposent des détails en debug), 13 migrations, workers sur 4 files, planificateur, sauvegarde/restauration non documentée.
 - **Verdict** : 🟢 GO DEV · 🟡 GO préparation préproduction sous réserve (décision rôle Driver, sauvegardes, env, workers/planificateur) · 🔴 NO-GO PROD.
+
+---
+
+## ADR-787 — Employee Experience 2.0 : aide contextualisée, mes heures, profil verrouillé par le contrat, matricules automatiques
+
+**Date** : 2026-11-15 · **Base** : `1d204a96` · DEV uniquement · Rapport : `docs/bmad/ADR-787-EMPLOYEE-EXPERIENCE.md`
+
+**Contexte** : en livreur (Bob), Leezr montrait de l'aide d'administration (servie à tout connecté), aucune vue de ses heures, un profil modifiable malgré un contrat actif, aucun matricule automatique, une page Préférences en double et une page Mon activité déséquilibrée ; la fiche d'un collègue exposait ses données privées à tout détenteur de `members.view`.
+
+**Décision** :
+- **Centre d'aide** : règles d'accès optionnelles (`required_permissions` une parmi, `required_modules` toutes) sur sujets et articles, évaluées côté serveur dans la société active vérifiée (liste, sujet, article, recherche, retours) ; sujet « Mon espace salarié » ; raccourcis et support proposés seulement s'ils sont accessibles (`HelpCenterAccess`, migration additive).
+- **Mes heures** : `GET /workforce/me/hours` (propriété seule) lit les pointages terminés, les feuilles de temps soumises / validées, la semaine de la Company et la période de paie couvrant aujourd'hui, sinon « Ce mois » ; pas de second moteur, jamais présentées comme payées.
+- **Profil** : après un contrat établi (`active`, `suspended`, `terminated`), identité et dossier RH en lecture seule pour la personne, contrôlé champ par champ côté serveur ; coordonnées et compte restent modifiables ; changements tracés. Valeurs stockées par utilisateur ⇒ verrou commun à ses sociétés (documenté).
+- **Annuaire ≠ dossier RH** : sans `members.manage`, la fiche d'un collègue ne renvoie que poste et téléphone (ADR-754 : `members.view` = facette accès sans données RH).
+- **Matricules** : séquence par société (`company_sequences`, verrou de ligne, `INSERT IGNORE` à la première utilisation, reprise sur interblocage), `EMP-000001`, jamais réutilisés, fiches existantes non renumérotées ; modification RH unique et historisée.
+- **Préférences** : onglet retiré (thème et langue dans la barre du haut), ancienne URL redirigée.
+- **Mon activité** : recomposée avec les composants ADR-782 (bande « Mes heures », deux colonnes activité | dossier, surfaces neutres).
+- **Driver** : `members.invite` présent dans 7 rôles (12 membres, aucune invitation jamais envoyée) ; commande ciblée `roles:revoke-permission` préparée (simulation par défaut), **non appliquée**.
+- **Portail candidat** : proposition d'architecture seulement (rapport §8).
+
+**Conséquences** :
+- 2 migrations additives exécutées en DEV local uniquement. `CompanyMemberProfileTest` : budget de requêtes 20 → 21 (+1 requête constante du contrôle annuaire/dossier, aucun N+1).
+- Tests : `Adr787EmployeeExperienceTest` 20/20 ; concurrence MySQL réelle 75/75 numéros distincts (base jetable supprimée) ; E2E `adr787-recette` 5/5 ; suite complète 4368 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` (inchangés) ; build propre.
+- Effet de bord corrigé : préférence de thème de Bob remise à `system` après une capture.
+- **Verdict** : 🟢 GO DEV · 🟡 préparation préproduction sous réserve (décision Driver, matricules des fiches existantes, réserves ADR-786) · 🔴 NO-GO PROD.

@@ -18,12 +18,16 @@ class DocumentationTopic extends Model
         'icon',
         'group_id',
         'audience',
+        'required_permissions',
+        'required_modules',
         'sort_order',
         'is_published',
         'created_by_platform_user_id',
     ];
 
     protected $casts = [
+        'required_permissions' => 'array',
+        'required_modules' => 'array',
         'is_published' => 'boolean',
         'sort_order' => 'integer',
     ];

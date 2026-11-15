@@ -13,7 +13,7 @@ definePage({
 })
 
 const { t } = useI18n()
-const { data, searchResults, hasSupportModule, loading, fetchLanding, search } = useHelpCenter()
+const { data, searchResults, hasSupportModule, loading, fetchLanding, search, canContactSupport } = useHelpCenter()
 const searchQuery = ref('')
 const showResults = ref(false)
 
@@ -34,8 +34,20 @@ function onSearch(val) {
   }, 300)
 }
 
+// ADR-787 — un raccourci n'est proposé que si le serveur sert l'article (sujet ET article visibles
+// pour cet utilisateur, dans cette société) : jamais de lien vers une aide refusée.
+const visibleArticles = computed(() => {
+  const set = new Set()
+  const topics = [...(data.value?.groups || []).flatMap(g => g.published_topics || []), ...(data.value?.ungrouped_topics || [])]
+  for (const tp of topics) for (const a of tp.top_articles || []) set.add(`${tp.slug}/${a.slug}`)
+
+  return set
+})
+const reachable = items => items.filter(i => visibleArticles.value.has(`${i.topicSlug}/${i.articleSlug}`))
+
 // ── Quick Actions by audience ──
-const quickActions = computed(() => {
+const quickActions = computed(() => reachable(rawQuickActions.value).slice(0, 4))
+const rawQuickActions = computed(() => {
   const audience = data.value?.audience
   if (audience === 'platform') {
     return [
@@ -51,6 +63,11 @@ const quickActions = computed(() => {
       { icon: 'tabler-file-upload', label: t('helpCenter.actions.sendDocument'), topicSlug: 'documents', articleSlug: 'telecharger-gerer-document', color: 'success' },
       { icon: 'tabler-receipt', label: t('helpCenter.actions.understandInvoice'), topicSlug: 'facturation', articleSlug: 'comprendre-votre-facture', color: 'info' },
       { icon: 'tabler-puzzle', label: t('helpCenter.actions.activateModule'), topicSlug: 'modules', articleSlug: 'activer-un-module', color: 'warning' },
+      // Espace salarié (ADR-787)
+      { icon: 'tabler-clock', label: t('helpCenter.actions.myHours'), topicSlug: 'mon-espace-salarie', articleSlug: 'pointer-mes-heures', color: 'primary' },
+      { icon: 'tabler-beach', label: t('helpCenter.actions.requestLeave'), topicSlug: 'mon-espace-salarie', articleSlug: 'demander-une-absence', color: 'success' },
+      { icon: 'tabler-receipt', label: t('helpCenter.actions.myPayslips'), topicSlug: 'mon-espace-salarie', articleSlug: 'mes-documents-et-bulletins', color: 'info' },
+      { icon: 'tabler-user-circle', label: t('helpCenter.actions.myAccount'), topicSlug: 'mon-espace-salarie', articleSlug: 'mon-compte-et-mes-coordonnees', color: 'warning' },
     ]
   }
   // public
@@ -63,7 +80,8 @@ const quickActions = computed(() => {
 })
 
 // ── Common Problems by audience ──
-const commonProblems = computed(() => {
+const commonProblems = computed(() => reachable(rawProblems.value))
+const rawProblems = computed(() => {
   const audience = data.value?.audience
   if (audience === 'platform') {
     return [
@@ -81,6 +99,8 @@ const commonProblems = computed(() => {
       { icon: 'tabler-file-off', label: t('helpCenter.problems.documentWontSend'), topicSlug: 'documents', articleSlug: 'telecharger-gerer-document' },
       { icon: 'tabler-mail-off', label: t('helpCenter.problems.memberNoInvite'), topicSlug: 'membres', articleSlug: 'inviter-nouveau-membre' },
       { icon: 'tabler-puzzle-off', label: t('helpCenter.problems.moduleNotWorking'), topicSlug: 'modules', articleSlug: 'activer-un-module' },
+      { icon: 'tabler-clock-off', label: t('helpCenter.problems.clockLeftOpen'), topicSlug: 'mon-espace-salarie', articleSlug: 'pointer-mes-heures' },
+      { icon: 'tabler-lock', label: t('helpCenter.problems.profileLocked'), topicSlug: 'mon-espace-salarie', articleSlug: 'mon-compte-et-mes-coordonnees' },
     ]
   }
 
@@ -249,7 +269,7 @@ onMounted(fetchLanding)
 
       <!-- Still need help? -->
       <div class="help-center-section bg-surface">
-        <HelpCenterFooter />
+        <HelpCenterFooter :can-contact-support="canContactSupport" />
       </div>
     </div>
 

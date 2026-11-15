@@ -15,7 +15,7 @@ definePage({
 
 const { t } = useI18n()
 const route = useRoute()
-const { article, loading, fetchArticle, submitFeedback } = useHelpCenter()
+const { article, loading, fetchArticle, submitFeedback, canContactSupport } = useHelpCenter()
 const { isAuthenticated } = useReturnNavigation()
 
 onMounted(() => fetchArticle(route.params.topicSlug, route.params.articleSlug))
@@ -240,7 +240,11 @@ onMounted(() => {
               border
               class="mt-4"
             >
-              <VCardText class="d-flex align-center justify-space-between flex-wrap gap-3">
+              <!-- ADR-787 : proposé seulement si le support est réellement accessible -->
+              <VCardText
+                v-if="!isAuthenticated || canContactSupport"
+                class="d-flex align-center justify-space-between flex-wrap gap-3"
+              >
                 <div>
                   <p class="text-body-1 font-weight-medium mb-0">
                     {{ $t('documentation.notResolved') }}

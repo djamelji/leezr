@@ -34,6 +34,9 @@ class HelpCenterSeeder extends Seeder
             $this->seedAudience($audience, $data);
         }
 
+        // ADR-787 : espace salarié + règles d'accès par défaut (même source que la migration).
+        \App\Core\Documentation\HelpCenterAccess::applyDefaults();
+
         $totalTopics = DocumentationTopic::count();
         $totalArticles = DocumentationArticle::count();
         $this->command?->info("Help Center seeded: {$totalTopics} topics, {$totalArticles} articles.");

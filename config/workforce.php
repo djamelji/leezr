@@ -2,6 +2,9 @@
 
 return [
 
+    // ADR-787 — numéros de collaborateur automatiques (« EMP-000001 »), modifiables par les RH.
+    'employee_number' => ['prefix' => env('WORKFORCE_EMPLOYEE_NUMBER_PREFIX', 'EMP-'), 'pad' => 6],
+
     'dsn' => [
         // Gateway driver: 'null', 'file' (future: 'net-entreprises')
         'gateway' => env('DSN_GATEWAY_DRIVER', 'null'),

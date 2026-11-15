@@ -27,6 +27,15 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // ADR-787 : champs en lecture seule pour CET utilisateur (ex. verrouillés par le contrat) + explication.
+  readonlyCodes: {
+    type: Array,
+    default: () => [],
+  },
+  readonlyHint: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -141,6 +150,9 @@ const groupedFields = computed(() => {
             :model-value="getPhoneDisplay(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :placeholder="formatPhoneDisplay('612345678')"
             :prefix="dialCode"
             :disabled="disabled"
@@ -154,6 +166,9 @@ const groupedFields = computed(() => {
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :placeholder="field.label"
             :disabled="disabled"
             :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -166,6 +181,9 @@ const groupedFields = computed(() => {
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :placeholder="field.label"
             type="number"
             :disabled="disabled"
@@ -179,6 +197,9 @@ const groupedFields = computed(() => {
             :model-value="!!getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :disabled="disabled"
             @update:model-value="updateField(field.code, $event)"
           />
@@ -189,6 +210,9 @@ const groupedFields = computed(() => {
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :placeholder="field.label"
             :disabled="disabled"
             :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -201,6 +225,9 @@ const groupedFields = computed(() => {
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :items="field.options || []"
             :placeholder="`Select ${field.label}`"
             :disabled="disabled"
@@ -214,6 +241,9 @@ const groupedFields = computed(() => {
             :model-value="getFieldValue(field.code)"
             :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
             :placeholder="field.label"
             :disabled="disabled"
             rows="3"
@@ -240,6 +270,9 @@ const groupedFields = computed(() => {
           :model-value="getPhoneDisplay(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :placeholder="formatPhoneDisplay('612345678')"
           :prefix="dialCode"
           :disabled="disabled"
@@ -253,6 +286,9 @@ const groupedFields = computed(() => {
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :placeholder="field.label"
           :disabled="disabled"
           :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -265,6 +301,9 @@ const groupedFields = computed(() => {
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :placeholder="field.label"
           type="number"
           :disabled="disabled"
@@ -278,6 +317,9 @@ const groupedFields = computed(() => {
           :model-value="!!getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :disabled="disabled"
           @update:model-value="updateField(field.code, $event)"
         />
@@ -288,6 +330,9 @@ const groupedFields = computed(() => {
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :placeholder="field.label"
           :disabled="disabled"
           :append-inner-icon="field.mandatory ? 'tabler-alert-circle' : undefined"
@@ -300,6 +345,9 @@ const groupedFields = computed(() => {
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :items="field.options || []"
           :placeholder="`Select ${field.label}`"
           :disabled="disabled"
@@ -313,6 +361,9 @@ const groupedFields = computed(() => {
           :model-value="getFieldValue(field.code)"
           :label="fieldLabel(field)"
             :error-messages="errors?.[field.code] || []"
+          :readonly="readonlyCodes.includes(field.code)"
+          :hint="readonlyCodes.includes(field.code) ? readonlyHint : undefined"
+          :persistent-hint="readonlyCodes.includes(field.code)"
           :placeholder="field.label"
           :disabled="disabled"
           rows="3"

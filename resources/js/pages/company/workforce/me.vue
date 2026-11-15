@@ -26,13 +26,15 @@ const documentsLoading = ref(false)
 const clockActionLoading = ref(false)
 const shifts = ref([])
 const shiftsLoading = ref(false)
+// ADR-787 : MES heures (semaine, période de paie ou mois, à valider, validées) — lues côté serveur.
+const hours = ref(null)
 
 // ── Data fetching ───────────────────────────────────────────
 onMounted(async () => {
   try {
     await clockStore.fetchProfile()
     // ADR-786 : sans fiche salarié, il n'y a ni documents ni créneaux personnels — pas d'appel (404 évités).
-    if (employee.value) await Promise.all([fetchDocuments(), fetchShifts()])
+    if (employee.value) await Promise.all([fetchDocuments(), fetchShifts(), fetchHours()])
   }
   catch {
     toast(t('workforceMe.loadError'), 'error')
@@ -56,6 +58,11 @@ async function fetchShifts() {
   finally {
     shiftsLoading.value = false
   }
+}
+
+async function fetchHours() {
+  try { hours.value = await $api('/workforce/me/hours') }
+  catch { hours.value = null } // pas de valeur trompeuse : la bande ne s'affiche pas
 }
 
 async function fetchDocuments() {
@@ -218,6 +225,31 @@ const todayStats = computed(() => [
   { key: 'break', label: t('workforceMe.breakTime'), value: formatMinutes(clockStore.breakMinutesToday), icon: 'tabler-coffee' },
   { key: 'arrival', label: t('workforceMe.clockIn'), value: todayClock.value ? formatTime(todayClock.value.clock_in) : '--:--', icon: 'tabler-login' },
 ])
+
+// ADR-787 — bande « Mes heures ». La période vient de la paie quand un cycle couvre aujourd'hui,
+// sinon elle est explicitement « Ce mois ». Jamais présentées comme des heures payées.
+const shortDate = d => new Date(`${d}T12:00:00`).toLocaleDateString(locale.value, { day: 'numeric', month: 'short' })
+const hoursStats = computed(() => {
+  const h = hours.value
+  if (!h) return []
+  const periodLabel = h.period.kind === 'payroll' ? t('workforceMe.hours.payrollPeriod') : t('workforceMe.hours.thisMonth')
+
+  return [
+    { key: 'hours-week', label: t('workforceMe.hours.week'), value: formatMinutes(h.week.worked_minutes), icon: 'tabler-calendar-week' },
+    { key: 'hours-period', label: periodLabel, value: formatMinutes(h.period.worked_minutes), icon: 'tabler-calendar-month' },
+    { key: 'hours-pending', label: t('workforceMe.hours.pending'), value: formatMinutes(h.period.pending_minutes), icon: 'tabler-hourglass', tone: h.period.pending_minutes ? 'warning' : 'muted' },
+    { key: 'hours-validated', label: t('workforceMe.hours.validated'), value: formatMinutes(h.period.validated_minutes), icon: 'tabler-circle-check', tone: h.period.validated_minutes ? 'success' : 'muted' },
+  ]
+})
+const hoursCaption = computed(() => {
+  const h = hours.value
+  if (!h) return ''
+
+  return t('workforceMe.hours.caption', {
+    weekFrom: shortDate(h.week.from), weekTo: shortDate(h.week.to),
+    periodFrom: shortDate(h.period.from), periodTo: shortDate(h.period.to),
+  })
+})
 
 // ── Time formatting ─────────────────────────────────────────
 // ADR-779 : formatMinutes partagé (« 7 h 30 ») — importé de @/utils/workUnits.
@@ -471,366 +503,248 @@ function signatureChipProps(status) {
         </VCol>
       </VRow>
 
-      <!-- My planning (published upcoming shifts, read-only) — W-HR-UX-4 §6 -->
-      <VRow>
-        <VCol cols="12">
-          <VCard data-test="me-planning">
-            <VCardItem>
-              <template #prepend>
-                <VAvatar color="primary" variant="tonal" rounded size="40">
-                  <VIcon icon="tabler-calendar-event" />
-                </VAvatar>
-              </template>
-              <VCardTitle>{{ t('workforceMe.myPlanning') }}</VCardTitle>
-            </VCardItem>
-            <VCardText v-if="shiftsLoading" class="text-center py-4">
-              <VProgressCircular indeterminate color="primary" size="28" />
-            </VCardText>
-            <VCardText v-else-if="!shifts.length">
-              <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ t('workforceMe.noShifts') }}
-              </p>
-            </VCardText>
-            <VList v-else density="compact">
-              <VListItem
-                v-for="s in shifts"
-                :key="s.id"
-                :title="shiftDay(s)"
-                :subtitle="shiftRange(s)"
-              >
-                <template #prepend>
-                  <VIcon icon="tabler-clock-hour-4" size="20" color="primary" class="me-2" />
-                </template>
-                <template #append>
-                  <VChip size="small" color="success" variant="tonal">
-                    {{ t('workforceMe.shiftPublished') }}
-                  </VChip>
-                </template>
-              </VListItem>
-            </VList>
-          </VCard>
-        </VCol>
-      </VRow>
+      <!-- ADR-787 — Mes heures : bande d'indicateurs + explication honnête -->
+      <section
+        v-if="hoursStats.length"
+        class="me-section"
+        data-test="me-hours"
+      >
+        <div class="me-section__head">
+          <h6 class="me-section__title">
+            {{ t('workforceMe.hours.title') }}
+          </h6>
+          <span class="me-section__meta">{{ hoursCaption }}</span>
+        </div>
+        <AppStatStrip :items="hoursStats" />
+        <p class="me-note">
+          {{ hours?.in_progress ? t('workforceMe.hours.inProgressNote') : t('workforceMe.hours.note') }}
+        </p>
+      </section>
 
-      <VRow>
-        <!-- Card 2: My Contract -->
-        <VCol
-          cols="12"
-          md="6"
-        >
-          <VCard>
-            <VCardItem>
-              <template #prepend>
-                <VAvatar
-                  color="info"
-                  variant="tonal"
-                  rounded
-                  size="40"
-                >
-                  <VIcon icon="tabler-file-text" />
-                </VAvatar>
-              </template>
-              <VCardTitle>{{ t('workforceMe.myContract') }}</VCardTitle>
-            </VCardItem>
-
-            <VCardText v-if="!currentContract">
-              <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ t('workforceMe.noContract') }}
-              </p>
-            </VCardText>
-
-            <VCardText v-else>
-              <!-- ADR-783 (UX6.2) : grille libellé / valeur compacte (au lieu de six lignes à icône) -->
-              <dl class="me-facts">
-                <div
-                  v-for="f in contractFacts"
-                  :key="f.label"
-                  class="me-facts__item"
-                >
-                  <dt>{{ f.label }}</dt>
-                  <dd>{{ f.value || '—' }}</dd>
+      <!-- ADR-787 — composition en deux colonnes : activité (planning, documents) | dossier (congés, contrat) -->
+      <div class="me-grid">
+        <div class="me-col">
+          <!-- Mon planning (créneaux publiés, lecture seule) — W-HR-UX-4 §6 -->
+          <AppSurface
+            class="me-block"
+            data-test="me-planning"
+          >
+            <div class="me-block__head">
+              <h6 class="me-block__title">
+                {{ t('workforceMe.myPlanning') }}
+              </h6>
+            </div>
+            <div
+              v-if="shiftsLoading"
+              class="me-block__body"
+            >
+              <VProgressLinear
+                indeterminate
+                color="primary"
+              />
+            </div>
+            <p
+              v-else-if="!shifts.length"
+              class="me-empty"
+            >
+              {{ t('workforceMe.noShifts') }}
+            </p>
+            <div
+              v-for="sh in shifts"
+              v-else
+              :key="sh.id"
+              class="me-row"
+            >
+              <VIcon
+                icon="tabler-clock-hour-4"
+                size="18"
+                class="me-row__icon"
+              />
+              <div class="me-row__main">
+                <div class="me-row__title">
+                  {{ shiftDay(sh) }}
                 </div>
-              </dl>
-            </VCardText>
-          </VCard>
-        </VCol>
+                <div class="me-row__sub">
+                  {{ shiftRange(sh) }}
+                </div>
+              </div>
+              <AppStatusText
+                tone="success"
+                :text="t('workforceMe.shiftPublished')"
+              />
+            </div>
+          </AppSurface>
 
-        <!-- Card 3: Leave Balances -->
-        <VCol
-          cols="12"
-          md="6"
-        >
-          <VCard>
-            <VCardItem>
-              <template #prepend>
-                <VAvatar
-                  color="success"
-                  variant="tonal"
-                  rounded
-                  size="40"
+          <!-- Mes documents : bulletins + documents générés, une seule surface -->
+          <AppSurface class="me-block">
+            <div class="me-block__head">
+              <h6 class="me-block__title">
+                {{ t('workforceMe.hours.documentsTitle') }}
+              </h6>
+              <div class="d-flex gap-2">
+                <VBtn
+                  v-if="canOpenPayroll"
+                  variant="text"
+                  size="small"
+                  data-test="me-open-payroll"
+                  @click="router.push({ name: 'company-workforce-payroll' })"
                 >
-                  <VIcon icon="tabler-beach" />
-                </VAvatar>
-              </template>
-              <VCardTitle>{{ t('workforceMe.leaveBalances') }}</VCardTitle>
-            </VCardItem>
-
-            <VCardText v-if="!leaveBalances.length">
-              <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ t('workforceMe.noLeaveBalances') }}
-              </p>
-            </VCardText>
-
-            <VCardText v-else>
-              <VTable density="compact">
-                <thead>
-                  <tr>
-                    <th>{{ t('workforceMe.leaveType') }}</th>
-                    <th class="text-end">
-                      {{ t('workforceMe.leaveAvailable') }}
-                    </th>
-                    <th class="text-end">
-                      {{ t('workforceMe.leaveConsumed') }}
-                    </th>
-                    <th class="text-end">
-                      {{ t('workforceMe.leaveAccrued') }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="balance in leaveBalances"
-                    :key="balance.leave_type_id"
-                  >
-                    <td>
-                      <span class="font-weight-medium">{{ balance.leave_type_name }}</span>
-                    </td>
-                    <td class="text-end">
-                      <VChip
-                        :color="balance.available > 0 ? 'success' : 'error'"
-                        size="small"
-                        label
-                      >
-                        {{ t('workforceMe.daysUnit', { count: toDays(balance.available) }) }}
-                      </VChip>
-                    </td>
-                    <td class="text-end text-medium-emphasis">
-                      {{ t('workforceMe.daysUnit', { count: toDays(balance.consumed) }) }}
-                    </td>
-                    <td class="text-end text-medium-emphasis">
-                      {{ t('workforceMe.daysUnit', { count: toDays(balance.accrued) }) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </VCardText>
-
-            <VCardActions>
-              <VSpacer />
+                  {{ t('workforceMe.viewPayroll') }}
+                </VBtn>
+                <VBtn
+                  variant="text"
+                  size="small"
+                  append-icon="tabler-chevron-right"
+                  data-test="me-all-documents"
+                  :aria-label="t('workforceMe.viewAllDocuments')"
+                  @click="router.push({ name: 'company-my-space-tab', params: { tab: 'documents' } })"
+                >
+                  {{ t('workforceMe.hours.seeAll') }}
+                </VBtn>
+              </div>
+            </div>
+            <div
+              v-if="documentsLoading"
+              class="me-block__body"
+            >
+              <VProgressLinear
+                indeterminate
+                color="primary"
+              />
+            </div>
+            <p
+              v-else-if="!documents.length"
+              class="me-empty"
+            >
+              {{ t('workforceMe.hours.noDocuments') }}
+            </p>
+            <div
+              v-for="doc in documents"
+              v-else
+              :key="doc.id"
+              class="me-row"
+            >
+              <VIcon
+                :icon="doc.template?.code?.startsWith('payslip_') ? 'tabler-receipt' : 'tabler-file-text'"
+                size="18"
+                class="me-row__icon"
+              />
+              <div class="me-row__main">
+                <div class="me-row__title">
+                  {{ doc.template?.name || doc.subject_type }}
+                </div>
+                <div class="me-row__sub">
+                  {{ formatDate(doc.generated_at) }}<template v-if="doc.template?.code?.startsWith('payslip_')">
+                    · {{ doc.template?.code?.includes('official') ? t('workforceMe.payslipOfficial') : t('workforceMe.payslipDraft') }}
+                  </template>
+                </div>
+              </div>
+              <!-- ADR-782 : « Version signée » dit déjà l'état ; une seule mention sinon -->
+              <AppStatusText
+                v-if="doc.signature_status && doc.signature_status !== 'signed' && doc.signature_status !== 'none'"
+                :tone="signatureChipProps(doc.signature_status).color === 'success' ? 'success' : 'warning'"
+                :text="signatureChipProps(doc.signature_status).text"
+                class="d-none d-sm-flex"
+              />
+              <!-- ADR-771 : la personne télécharge SON document (original, et version signée une fois finalisée) -->
               <VBtn
+                v-if="doc.signature_status === 'signed'"
+                size="small"
                 variant="tonal"
                 color="success"
+                data-test="me-document-signed"
+                @click="downloadOwnDocument(doc, true)"
+              >
+                {{ t('workforceMe.downloadSigned') }}
+              </VBtn>
+              <IconBtn
+                size="small"
+                :aria-label="t('workforceMe.downloadMine')"
+                :title="t('workforceMe.downloadMine')"
+                data-test="me-document-download"
+                @click="downloadOwnDocument(doc, false)"
+              >
+                <VIcon icon="tabler-download" />
+              </IconBtn>
+            </div>
+          </AppSurface>
+        </div>
+
+        <div class="me-col">
+          <!-- Mes congés : une ligne par type, l'action dans l'en-tête -->
+          <AppSurface class="me-block">
+            <div class="me-block__head">
+              <h6 class="me-block__title">
+                {{ t('workforceMe.leaveBalances') }}
+              </h6>
+              <VBtn
+                variant="text"
+                size="small"
                 prepend-icon="tabler-plus"
                 data-test="me-request-leave"
                 @click="openLeaveDrawer"
               >
                 {{ t('workforceMe.requestLeave') }}
               </VBtn>
-            </VCardActions>
-          </VCard>
-        </VCol>
-      </VRow>
-
-      <!-- Card: Mes bulletins de paie -->
-      <VRow class="mt-2">
-        <VCol cols="12">
-          <VCard>
-            <VCardItem>
-              <template #prepend>
-                <VAvatar
-                  color="primary"
-                  variant="tonal"
-                  rounded
-                  size="40"
-                >
-                  <VIcon icon="tabler-receipt" />
-                </VAvatar>
-              </template>
-              <VCardTitle>{{ t('workforceMe.myPayslips') }}</VCardTitle>
-            </VCardItem>
-
-            <VCardText v-if="!payslipDocs.length">
-              <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ t('workforceMe.noPayslips') }}
-              </p>
-            </VCardText>
-
-            <VCardText v-else class="px-0">
-              <VTable density="compact">
-                <thead>
-                  <tr>
-                    <th>{{ t('workforceMe.payslipPeriod') }}</th>
-                    <th>{{ t('workforceMe.payslipType') }}</th>
-                    <th>{{ t('workforceMe.payslipGeneratedAt') }}</th>
-                    <th>{{ t('workforceMe.payslipSignatureStatus') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="doc in payslipDocs"
-                    :key="doc.id"
-                  >
-                    <td class="font-weight-medium">
-                      {{ doc.template?.name || doc.subject_type }}
-                    </td>
-                    <td>
-                      <VChip
-                        :color="doc.template?.code?.includes('official') ? 'success' : 'warning'"
-                        size="small"
-                        label
-                      >
-                        {{ doc.template?.code?.includes('official') ? t('workforceMe.payslipOfficial') : t('workforceMe.payslipDraft') }}
-                      </VChip>
-                    </td>
-                    <td class="text-medium-emphasis">
-                      {{ formatDate(doc.generated_at) }}
-                    </td>
-                    <td>
-                      <VChip
-                        :color="signatureChipProps(doc.signature_status).color"
-                        size="x-small"
-                        label
-                      >
-                        {{ signatureChipProps(doc.signature_status).text }}
-                      </VChip>
-                    </td>
-                  </tr>
-                </tbody>
-              </VTable>
-            </VCardText>
-
-            <VCardActions v-if="canOpenPayroll">
-              <VSpacer />
-              <VBtn
-                variant="tonal"
-                color="primary"
-                prepend-icon="tabler-receipt"
-                data-test="me-open-payroll"
-                @click="router.push({ name: 'company-workforce-payroll' })"
-              >
-                {{ t('workforceMe.viewPayroll') }}
-              </VBtn>
-            </VCardActions>
-          </VCard>
-        </VCol>
-      </VRow>
-
-      <!-- Card 4: Recent Documents -->
-      <VRow class="mt-2">
-        <VCol cols="12">
-          <VCard>
-            <VCardItem>
-              <template #prepend>
-                <VAvatar
-                  color="secondary"
-                  variant="tonal"
-                  rounded
-                  size="40"
-                >
-                  <VIcon icon="tabler-file-certificate" />
-                </VAvatar>
-              </template>
-              <VCardTitle>{{ t('workforceMe.recentDocuments') }}</VCardTitle>
-            </VCardItem>
-
-            <VCardText v-if="documentsLoading">
-              <div class="d-flex justify-center py-4">
-                <VProgressCircular
-                  indeterminate
-                  color="primary"
-                  size="32"
-                />
+            </div>
+            <p
+              v-if="!leaveBalances.length"
+              class="me-empty"
+            >
+              {{ t('workforceMe.noLeaveBalances') }}
+            </p>
+            <div
+              v-for="balance in leaveBalances"
+              v-else
+              :key="balance.leave_type_id"
+              class="me-row"
+            >
+              <div class="me-row__main">
+                <div class="me-row__title">
+                  {{ balance.leave_type_name }}
+                </div>
+                <div class="me-row__sub">
+                  {{ t('workforceMe.hours.leaveDetail', { consumed: t('workforceMe.daysUnit', { count: toDays(balance.consumed) }), accrued: t('workforceMe.daysUnit', { count: toDays(balance.accrued) }) }) }}
+                </div>
               </div>
-            </VCardText>
-
-            <VCardText v-else-if="!documents.length">
-              <p class="text-body-2 text-medium-emphasis mb-0">
-                {{ t('workforceMe.noDocuments') }}
-              </p>
-            </VCardText>
-
-            <VCardText v-else class="px-0">
-              <VList density="compact">
-                <VListItem
-                  v-for="doc in documents"
-                  :key="doc.id"
-                >
-                  <template #prepend>
-                    <VIcon
-                      icon="tabler-file-text"
-                      size="20"
-                      color="primary"
-                      class="me-2"
-                    />
-                  </template>
-                  <VListItemTitle class="text-body-1 font-weight-medium">
-                    {{ doc.template?.name || doc.subject_type }}
-                  </VListItemTitle>
-                  <VListItemSubtitle class="text-body-2 text-medium-emphasis">
-                    {{ formatDate(doc.generated_at) }}
-                  </VListItemSubtitle>
-                  <template #append>
-                    <!-- ADR-782 : « Version signée » dit déjà l'état ; une seule pastille sinon -->
-                    <VChip
-                      v-if="doc.signature_status !== 'signed'"
-                      :color="signatureChipProps(doc.signature_status).color"
-                      size="x-small"
-                      label
-                      class="me-2"
-                    >
-                      {{ signatureChipProps(doc.signature_status).text }}
-                    </VChip>
-                    <!-- ADR-771 : la personne télécharge SON document (original, et version signée une fois finalisée) -->
-                    <VBtn
-                      v-if="doc.signature_status === 'signed'"
-                      size="small"
-                      variant="tonal"
-                      color="success"
-                      class="me-1"
-                      data-test="me-document-signed"
-                      @click="downloadOwnDocument(doc, true)"
-                    >
-                      {{ t('workforceMe.downloadSigned') }}
-                    </VBtn>
-                    <IconBtn
-                      size="small"
-                      :aria-label="t('workforceMe.downloadMine')"
-                      :title="t('workforceMe.downloadMine')"
-                      data-test="me-document-download"
-                      @click="downloadOwnDocument(doc, false)"
-                    >
-                      <VIcon icon="tabler-download" />
-                    </IconBtn>
-                  </template>
-                </VListItem>
-              </VList>
-            </VCardText>
-
-            <VCardActions>
-              <VSpacer />
-              <VBtn
-                variant="tonal"
-                color="secondary"
-                prepend-icon="tabler-folder"
-                data-test="me-all-documents"
-                @click="router.push({ name: 'company-my-space-tab', params: { tab: 'documents' } })"
+              <div
+                class="me-row__value"
+                :class="balance.available > 0 ? 'text-success' : 'text-error'"
               >
-                {{ t('workforceMe.viewAllDocuments') }}
-              </VBtn>
-            </VCardActions>
-          </VCard>
-        </VCol>
-      </VRow>
+                {{ t('workforceMe.daysUnit', { count: toDays(balance.available) }) }}
+              </div>
+            </div>
+          </AppSurface>
+
+          <!-- Mon contrat : faits en une colonne (libellé / valeur) -->
+          <AppSurface class="me-block">
+            <div class="me-block__head">
+              <h6 class="me-block__title">
+                {{ t('workforceMe.myContract') }}
+              </h6>
+            </div>
+            <p
+              v-if="!currentContract"
+              class="me-empty"
+            >
+              {{ t('workforceMe.noContract') }}
+            </p>
+            <dl
+              v-else
+              class="me-facts-list"
+            >
+              <div
+                v-for="f in contractFacts"
+                :key="f.label"
+                class="me-facts-list__item"
+              >
+                <dt>{{ f.label }}</dt>
+                <dd>{{ f.value || '—' }}</dd>
+              </div>
+            </dl>
+          </AppSurface>
+        </div>
+      </div>
     </template>
 
     <!-- ANO-007: self-service leave request drawer — ADR-782 (UX6.1) : tiroir commun -->
@@ -915,8 +829,40 @@ function signatureChipProps(status) {
 </template>
 
 <style scoped>
-.me-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 0; }
-.me-facts__item dt { font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
-.me-facts__item dd { margin: 2px 0 0; font-size: 0.9375rem; font-weight: 500; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
-@media (max-width: 599px) { .me-facts { grid-template-columns: minmax(0, 1fr); gap: 12px; } }
+/* ADR-787 — Mon activité : sections sobres sur surfaces neutres (ADR-782), deux colonnes équilibrées
+   par le contenu (activité | dossier), aucune hauteur forcée. Variables du thème : clair et sombre. */
+.me-section { margin-block-end: 24px; }
+.me-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-block-end: 10px; }
+.me-section__title, .me-block__title { margin: 0; font-size: 0.9375rem; font-weight: 600; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
+.me-section__meta { font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.me-note { margin: 8px 2px 0; font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+
+.me-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+.me-col { display: grid; gap: 24px; min-inline-size: 0; }
+.me-block__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-block-size: 52px; padding: 8px 12px 8px 20px; border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
+.me-block__body { padding: 16px 20px; }
+.me-empty { margin: 0; padding: 16px 20px; font-size: 0.875rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+
+.me-row { display: flex; align-items: center; gap: 12px; min-block-size: 56px; padding: 8px 12px 8px 20px; }
+.me-row + .me-row { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
+.me-row__icon { flex: none; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.me-row__main { flex: 1; min-inline-size: 0; }
+.me-row__title { font-size: 0.9375rem; font-weight: 500; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-row__sub { font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.me-row__value { flex: none; padding-inline-end: 8px; font-size: 1rem; font-weight: 600; }
+
+.me-facts-list { margin: 0; padding: 4px 0; }
+.me-facts-list__item { display: flex; justify-content: space-between; gap: 16px; padding: 10px 20px; }
+.me-facts-list__item + .me-facts-list__item { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
+.me-facts-list__item dt { font-size: 0.875rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.me-facts-list__item dd { margin: 0; font-size: 0.875rem; font-weight: 500; text-align: end; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
+
+@media (max-width: 959px) {
+  .me-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .me-col { gap: 16px; }
+}
+@media (max-width: 599px) {
+  .me-block__head, .me-row { padding-inline-start: 16px; }
+  .me-facts-list__item, .me-empty { padding-inline: 16px; }
+}
 </style>

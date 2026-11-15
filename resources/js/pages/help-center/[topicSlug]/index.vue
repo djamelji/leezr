@@ -11,7 +11,7 @@ definePage({
 })
 
 const route = useRoute()
-const { topic, loading, fetchTopic } = useHelpCenter()
+const { topic, loading, fetchTopic, canContactSupport } = useHelpCenter()
 
 onMounted(() => fetchTopic(route.params.topicSlug))
 
@@ -140,7 +140,7 @@ function articleRoute(article) {
       </div>
     </VContainer>
 
-    <HelpCenterFooter />
+    <HelpCenterFooter :can-contact-support="canContactSupport" />
   </div>
 </template>
 

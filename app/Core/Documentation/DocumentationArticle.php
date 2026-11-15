@@ -18,12 +18,16 @@ class DocumentationArticle extends Model
         'content',
         'excerpt',
         'audience',
+        'required_permissions',
+        'required_modules',
         'is_published',
         'sort_order',
         'created_by_platform_user_id',
     ];
 
     protected $casts = [
+        'required_permissions' => 'array',
+        'required_modules' => 'array',
         'is_published' => 'boolean',
         'sort_order' => 'integer',
     ];

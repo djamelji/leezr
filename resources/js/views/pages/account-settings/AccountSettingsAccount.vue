@@ -15,6 +15,11 @@ const form = ref({
 const dynamicFields = ref([])
 const dynamicForm = ref({})
 const profileCompleteness = ref({ filled: 0, total: 0, complete: true })
+// ADR-787 : après l'établissement d'un contrat, identité et dossier RH en lecture seule (règle serveur).
+const profileLock = ref({ locked: false, fields: [] })
+const lockedCodes = computed(() => profileLock.value.locked ? profileLock.value.fields : [])
+const isLocked = code => lockedCodes.value.includes(code)
+const fieldErrors = ref({})
 
 // ADR-169: group fields by category (aligned with MemberProfileForm)
 const categories = ['base', 'hr', 'domain']
@@ -50,6 +55,7 @@ onMounted(async () => {
     avatarPreview.value = data.base_fields?.avatar || null
     dynamicFields.value = data.dynamic_fields || []
     profileCompleteness.value = data.profile_completeness || { filled: 0, total: 0, complete: true }
+    profileLock.value = data.profile_lock || { locked: false, fields: [] }
 
     // Build dynamic form from resolved fields (keyed by code)
     const df = {}
@@ -67,6 +73,7 @@ const handleSave = async () => {
   isLoading.value = true
   successMessage.value = ''
   errorMessage.value = ''
+  fieldErrors.value = {}
 
   try {
     const data = await $api('/profile', {
@@ -91,7 +98,12 @@ const handleSave = async () => {
     dynamicForm.value = df
   }
   catch (error) {
-    errorMessage.value = error?.data?.message || t('accountSettings.failedToUpdate')
+    // ADR-787 : un champ verrouillé refusé par le serveur → message sous le champ, dans la langue de l'interface.
+    const errs = error?.data?.errors || {}
+    fieldErrors.value = Object.fromEntries(Object.keys(errs).map(k => [k.replace(/^dynamic_fields\./, ''), [isLocked(k.replace(/^dynamic_fields\./, '')) ? t('accountSettings.lockedByContract') : errs[k][0]]]))
+    errorMessage.value = Object.keys(errs).some(k => isLocked(k.replace(/^dynamic_fields\./, '')))
+      ? t('accountSettings.lockedByContractSave')
+      : (error?.data?.message || t('accountSettings.failedToUpdate'))
   }
   finally {
     isLoading.value = false
@@ -203,6 +215,16 @@ const resetForm = () => {
           </VAlert>
 
           <VAlert
+            v-if="profileLock.locked && !profileLoading"
+            type="info"
+            variant="tonal"
+            class="mb-4"
+            data-test="profile-contract-lock"
+          >
+            {{ t('accountSettings.lockedIntro') }}
+          </VAlert>
+
+          <VAlert
             v-if="successMessage"
             type="success"
             class="mb-4"
@@ -233,6 +255,10 @@ const resetForm = () => {
               >
                 <AppTextField
                   v-model="form.first_name"
+                  :readonly="isLocked('first_name')"
+                  :hint="isLocked('first_name') ? t('accountSettings.lockedByContract') : undefined"
+                  :persistent-hint="isLocked('first_name')"
+                  :error-messages="fieldErrors.first_name || []"
                   :label="t('members.firstName')"
                   placeholder="John"
                 />
@@ -244,6 +270,10 @@ const resetForm = () => {
               >
                 <AppTextField
                   v-model="form.last_name"
+                  :readonly="isLocked('last_name')"
+                  :hint="isLocked('last_name') ? t('accountSettings.lockedByContract') : undefined"
+                  :persistent-hint="isLocked('last_name')"
+                  :error-messages="fieldErrors.last_name || []"
                   :label="t('members.lastName')"
                   placeholder="Doe"
                 />
@@ -279,6 +309,9 @@ const resetForm = () => {
                   <DynamicFormRenderer
                     v-model="dynamicForm"
                     :fields="fieldsByCategory[cat]"
+                    :errors="fieldErrors"
+                    :readonly-codes="lockedCodes"
+                    :readonly-hint="t('accountSettings.lockedByContract')"
                   />
                 </template>
               </template>

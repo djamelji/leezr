@@ -5054,7 +5054,10 @@
     "themeLight": "Clair",
     "themeDark": "Sombre",
     "themeSystem": "Système",
-    "documents": "Documents"
+    "documents": "Documents",
+    "lockedIntro": "Votre contrat est établi : votre identité et votre dossier RH ne se modifient plus ici. Vous pouvez toujours mettre à jour vos coordonnées (téléphone, adresse, contacts d'urgence). Pour toute autre correction, adressez-vous à votre entreprise.",
+    "lockedByContract": "Figure à votre contrat — à demander à votre entreprise",
+    "lockedByContractSave": "Certaines informations figurent à votre contrat et ne peuvent pas être modifiées ici. Rien n'a été enregistré."
   },
   "audience": {
     "confirmingSubscription": "Confirmation de votre inscription...",
@@ -6256,7 +6259,11 @@
       "discoverLeezr": "Découvrir Leezr",
       "isItForMe": "Est-ce pour moi ?",
       "howItWorks": "Comment ça marche",
-      "freeTrial": "Essayer gratuitement"
+      "freeTrial": "Essayer gratuitement",
+      "myHours": "Suivre mes heures",
+      "requestLeave": "Demander une absence",
+      "myPayslips": "Mes bulletins",
+      "myAccount": "Mon compte"
     },
     "commonProblems": "Problèmes fréquents",
     "problems": {
@@ -6269,7 +6276,9 @@
       "dontUnderstandInvoice": "Je ne comprends pas ma facture",
       "documentWontSend": "Mon document ne s'envoie pas",
       "memberNoInvite": "Un membre ne reçoit pas d'invitation",
-      "moduleNotWorking": "Un module ne fonctionne pas"
+      "moduleNotWorking": "Un module ne fonctionne pas",
+      "clockLeftOpen": "Mon pointage est resté ouvert",
+      "profileLocked": "Je ne peux pas modifier mon profil"
     }
   },
   "session": {
@@ -7495,7 +7504,22 @@
     "noShifts": "Aucun créneau publié à venir. Votre planning apparaîtra ici dès que votre responsable l'aura publié.",
     "shiftPublished": "Publié",
     "downloadMine": "Télécharger",
-    "downloadSigned": "Version signée"
+    "downloadSigned": "Version signée",
+    "hours": {
+      "title": "Mes heures",
+      "week": "Cette semaine",
+      "payrollPeriod": "Période de paie",
+      "thisMonth": "Ce mois",
+      "pending": "À valider",
+      "validated": "Validées",
+      "caption": "Semaine du {weekFrom} au {weekTo} · période du {periodFrom} au {periodTo}",
+      "note": "Heures pointées, pauses déduites. Les heures validées par votre entreprise ne sont pas encore des heures payées.",
+      "inProgressNote": "Un pointage est en cours : il sera compté une fois terminé. Les heures validées ne sont pas encore des heures payées.",
+      "documentsTitle": "Mes documents et bulletins",
+      "noDocuments": "Aucun document pour le moment.",
+      "leaveDetail": "Pris {consumed} · acquis {accrued}",
+      "seeAll": "Tout voir"
+    }
   },
   "employees": {
     "title": "Collaborateurs",
@@ -7526,7 +7550,8 @@
       "terminationDate": "Date de sortie",
       "department": "Département",
       "jobRole": "Poste",
-      "manager": "Responsable"
+      "manager": "Responsable",
+      "employeeNumberAuto": "Généré automatiquement si vide (EMP-000001)"
     },
     "tabs": {
       "profile": "Profil",

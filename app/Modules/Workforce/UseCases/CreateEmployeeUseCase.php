@@ -13,7 +13,8 @@ class CreateEmployeeUseCase
         $employee = Employee::create([
             'company_id' => $data->companyId,
             'user_id' => $data->userId,
-            'employee_number' => $data->employeeNumber,
+            // ADR-787 : numéro automatique quand aucun n'est fourni (séquence par Company, sûre en concurrence).
+            'employee_number' => filled($data->employeeNumber) ? trim($data->employeeNumber) : \App\Core\Workforce\EmployeeNumbering::next($data->companyId),
             'first_name' => $data->firstName,
             'last_name' => $data->lastName,
             'email' => $data->email,

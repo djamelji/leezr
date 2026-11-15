@@ -5054,7 +5054,10 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
-    "documents": "Documents"
+    "documents": "Documents",
+    "lockedIntro": "Your contract is established: your identity and HR record can no longer be changed here. You can still update your contact details (phone, address, emergency contacts). For anything else, contact your company.",
+    "lockedByContract": "Part of your contract — ask your company",
+    "lockedByContractSave": "Some information is part of your contract and cannot be changed here. Nothing was saved."
   },
   "audience": {
     "confirmingSubscription": "Confirming your subscription...",
@@ -6256,7 +6259,11 @@
       "discoverLeezr": "Discover Leezr",
       "isItForMe": "Is it for me?",
       "howItWorks": "How it works",
-      "freeTrial": "Try for free"
+      "freeTrial": "Try for free",
+      "myHours": "Track my hours",
+      "requestLeave": "Request time off",
+      "myPayslips": "My payslips",
+      "myAccount": "My account"
     },
     "commonProblems": "Common problems",
     "problems": {
@@ -6269,7 +6276,9 @@
       "dontUnderstandInvoice": "I don't understand my invoice",
       "documentWontSend": "My document won't send",
       "memberNoInvite": "A member didn't receive the invitation",
-      "moduleNotWorking": "A module isn't working"
+      "moduleNotWorking": "A module isn't working",
+      "clockLeftOpen": "My clock-in was left open",
+      "profileLocked": "I can't edit my profile"
     }
   },
   "session": {
@@ -7495,7 +7504,22 @@
     "noShifts": "No upcoming published shift. Your schedule will appear here once your manager publishes it.",
     "shiftPublished": "Published",
     "downloadMine": "Download",
-    "downloadSigned": "Signed version"
+    "downloadSigned": "Signed version",
+    "hours": {
+      "title": "My hours",
+      "week": "This week",
+      "payrollPeriod": "Pay period",
+      "thisMonth": "This month",
+      "pending": "To approve",
+      "validated": "Approved",
+      "caption": "Week of {weekFrom} to {weekTo} · period {periodFrom} to {periodTo}",
+      "note": "Clocked hours, breaks deducted. Hours approved by your company are not yet paid hours.",
+      "inProgressNote": "A clock-in is in progress: it will be counted once finished. Approved hours are not yet paid hours.",
+      "documentsTitle": "My documents and payslips",
+      "noDocuments": "No documents yet.",
+      "leaveDetail": "Taken {consumed} · accrued {accrued}",
+      "seeAll": "See all"
+    }
   },
   "employees": {
     "title": "Employees",
@@ -7526,7 +7550,8 @@
       "terminationDate": "Termination Date",
       "department": "Department",
       "jobRole": "Job Role",
-      "manager": "Manager"
+      "manager": "Manager",
+      "employeeNumberAuto": "Generated automatically if empty (EMP-000001)"
     },
     "tabs": {
       "profile": "Profile",

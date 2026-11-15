@@ -43,7 +43,7 @@ class MembershipController extends Controller
 
         $roleKey = $membership->companyRole?->key;
         $canReadSensitive = $request->user()->hasCompanyPermission($company, 'members.sensitive_read');
-        $profile = CompanyUserProfileReadModel::get($membership->user, $company, $roleKey, $canReadSensitive);
+        $profile = CompanyUserProfileReadModel::get($membership->user, $company, $roleKey, $canReadSensitive, viewer: $request->user()); // ADR-787 : annuaire ≠ dossier RH
 
         return response()->json([
             'member' => [
@@ -75,7 +75,7 @@ class MembershipController extends Controller
             locale: FieldResolverService::requestLocale(),
         );
 
-        return response()->json(['dynamic_fields' => $fields]);
+        return response()->json(['dynamic_fields' => CompanyUserProfileReadModel::forViewer($fields, $request->user(), $company)]); // ADR-787
     }
 
     public function store(StoreMemberRequest $request): JsonResponse

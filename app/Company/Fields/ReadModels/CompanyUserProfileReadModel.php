@@ -14,7 +14,28 @@ use Illuminate\Support\Collection;
 
 class CompanyUserProfileReadModel
 {
-    public static function get(User $user, Company $company, ?string $roleKey = null, bool $canReadSensitive = true, ?string $category = null): array
+    /**
+     * ADR-787 — what a DIRECTORY reader (members.view without members.manage) sees of a colleague :
+     * professional details only. Birth data, private addresses, emergency contacts, HR and licence
+     * fields belong to the HR record (ADR-754 : members.view is the access facet, without HR data).
+     */
+    public const DIRECTORY_FIELDS = ['job_title', 'phone'];
+
+    public static function forViewer(array $resolved, User $viewer, Company $company): array
+    {
+        // One query, same rule as User::hasCompanyPermission : owner, or active membership whose role
+        // grants members.manage.
+        $manages = \App\Core\Models\Membership::where('user_id', $viewer->id)->where('company_id', $company->id)
+            ->where(fn ($q) => $q->where('role', 'owner')->orWhere(fn ($q2) => $q2->whereNull('suspended_at')
+                ->whereHas('companyRole.permissions', fn ($p) => $p->where('key', 'members.manage'))))
+            ->exists();
+
+        return $manages
+            ? $resolved
+            : array_values(array_filter($resolved, fn ($f) => in_array($f['code'], self::DIRECTORY_FIELDS, true)));
+    }
+
+    public static function get(User $user, Company $company, ?string $roleKey = null, bool $canReadSensitive = true, ?string $category = null, ?User $viewer = null): array
     {
         $resolved = FieldResolverService::resolve(
             model: $user,
@@ -40,7 +61,7 @@ class CompanyUserProfileReadModel
                 'avatar' => $user->avatar,
                 'status' => $user->status,
             ],
-            'dynamic_fields' => $resolved,
+            'dynamic_fields' => $viewer ? self::forViewer($resolved, $viewer, $company) : $resolved,
             'profile_completeness' => [
                 'filled' => count($filled),
                 'total' => count($required),

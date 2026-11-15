@@ -7,6 +7,7 @@ use App\Core\Documentation\DocumentationFeedback;
 use App\Core\Documentation\DocumentationGroup;
 use App\Core\Documentation\DocumentationSearchLog;
 use App\Core\Documentation\DocumentationTopic;
+use App\Core\Documentation\HelpCenterAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,9 +26,10 @@ class HelpCenterController
         return 'public';
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $audience = $this->detectAudience();
+        $access = HelpCenterAccess::fromRequest($request, $audience); // ADR-787
 
         $groups = DocumentationGroup::query()
             ->published()
@@ -38,17 +40,17 @@ class HelpCenterController
                     ->with(['publishedArticles' => function ($q2) use ($audience) {
                         $q2->forAudience($audience)
                             ->orderBy('sort_order')
-                            ->select(['id', 'topic_id', 'title', 'slug']);
+                            ->select(['id', 'topic_id', 'title', 'slug', 'required_permissions', 'required_modules']);
                     }])
-                    ->select(['id', 'uuid', 'title', 'slug', 'description', 'icon', 'group_id']);
+                    ->select(['id', 'uuid', 'title', 'slug', 'description', 'icon', 'group_id', 'required_permissions', 'required_modules']);
             }])
             ->orderBy('sort_order')
             ->get(['id', 'uuid', 'title', 'slug', 'icon']);
 
-        // Transform: set articles_count + top_articles from loaded relation
-        $groups->each(function ($group) {
-            $group->publishedTopics->each(function ($topic) {
-                $all = $topic->publishedArticles;
+        $groups->each(function ($group) use ($access) {
+            $group->setRelation('publishedTopics', $group->publishedTopics->filter(fn ($t) => $access->allows($t))->values());
+            $group->publishedTopics->each(function ($topic) use ($access) {
+                $all = $this->visibleArticles($access, $topic, $topic->publishedArticles);
                 $topic->setAttribute('articles_count', $all->count());
                 $topic->setAttribute('top_articles', $all->take(5)->values());
                 $topic->unsetRelation('publishedArticles');
@@ -62,26 +64,37 @@ class HelpCenterController
             ->with(['publishedArticles' => function ($q) use ($audience) {
                 $q->forAudience($audience)
                     ->orderBy('sort_order')
-                    ->select(['id', 'topic_id', 'title', 'slug']);
+                    ->select(['id', 'topic_id', 'title', 'slug', 'required_permissions', 'required_modules']);
             }])
             ->orderBy('sort_order')
-            ->get(['id', 'uuid', 'title', 'slug', 'description', 'icon']);
+            ->get(['id', 'uuid', 'title', 'slug', 'description', 'icon', 'required_permissions', 'required_modules']);
 
-        $ungroupedTopics->each(function ($topic) {
-            $all = $topic->publishedArticles;
+        $ungroupedTopics = $ungroupedTopics->filter(fn ($t) => $access->allows($t))->values();
+        $ungroupedTopics->each(function ($topic) use ($access) {
+            $all = $this->visibleArticles($access, $topic, $topic->publishedArticles);
             $topic->setAttribute('articles_count', $all->count());
             $topic->setAttribute('top_articles', $all->take(5)->values());
             $topic->unsetRelation('publishedArticles');
         });
 
         return response()->json([
-            'groups' => $groups,
+            'groups' => $groups->filter(fn ($g) => $g->publishedTopics->isNotEmpty())->values(),
             'ungrouped_topics' => $ungroupedTopics,
             'audience' => $audience,
+            'can_contact_support' => $access->canContactSupport(),
         ]);
     }
 
-    public function topic(string $slug): JsonResponse
+    /** ADR-787 — articles of a topic the requester may read ; rule fields never leave the server. */
+    private function visibleArticles(HelpCenterAccess $access, $topic, $articles)
+    {
+        $topic->makeHidden(['required_permissions', 'required_modules']);
+
+        return $articles->filter(fn ($a) => $access->allows($topic, $a))
+            ->each(fn ($a) => $a->makeHidden(['required_permissions', 'required_modules']))->values();
+    }
+
+    public function topic(Request $request, string $slug): JsonResponse
     {
         $audience = $this->detectAudience();
 
@@ -90,16 +103,18 @@ class HelpCenterController
             ->forAudience($audience)
             ->where('slug', $slug)
             ->firstOrFail();
+        $access = HelpCenterAccess::fromRequest($request, $audience);
+        abort_unless($access->allows($topic), 404); // ADR-787 : jamais par URL directe
 
-        $articles = $topic->articles()
+        $articles = $this->visibleArticles($access, $topic, $topic->articles()
             ->published()
             ->forAudience($audience)
             ->orderBy('sort_order')
-            ->get(['id', 'uuid', 'title', 'slug', 'excerpt']);
+            ->get(['id', 'uuid', 'title', 'slug', 'excerpt', 'required_permissions', 'required_modules']));
 
         return response()->json([
             'topic' => $topic->only(['id', 'uuid', 'title', 'slug', 'description', 'icon']),
-            'articles' => $articles,
+            'articles' => $articles, 'can_contact_support' => $access->canContactSupport(),
         ]);
     }
 
@@ -118,11 +133,13 @@ class HelpCenterController
             ->forAudience($audience)
             ->where('slug', $articleSlug)
             ->firstOrFail();
+        $access = HelpCenterAccess::fromRequest($request, $audience);
+        abort_unless($access->allows($topic, $article), 404); // ADR-787
+        $article->makeHidden(['required_permissions', 'required_modules']);
 
         $helpfulCount = $article->feedbacks()->where('helpful', true)->count();
         $notHelpfulCount = $article->feedbacks()->where('helpful', false)->count();
 
-        // User's own feedback (if authenticated)
         $userFeedback = null;
         $user = Auth::guard('web')->user() ?? Auth::guard('platform')->user();
         if ($user) {
@@ -133,12 +150,12 @@ class HelpCenterController
                 ->first(['helpful', 'comment']);
         }
 
-        $siblings = $topic->articles()
+        $siblings = $this->visibleArticles($access, $topic, $topic->articles()
             ->published()
             ->forAudience($audience)
             ->where('id', '!=', $article->id)
             ->orderBy('sort_order')
-            ->get(['id', 'title', 'slug']);
+            ->get(['id', 'title', 'slug', 'required_permissions', 'required_modules']));
 
         return response()->json([
             'topic' => $topic->only(['id', 'title', 'slug', 'icon']),
@@ -148,7 +165,7 @@ class HelpCenterController
                 'not_helpful_count' => $notHelpfulCount,
                 'user_feedback' => $userFeedback,
             ],
-            'siblings' => $siblings,
+            'siblings' => $siblings, 'can_contact_support' => $access->canContactSupport(),
         ]);
     }
 
@@ -169,9 +186,12 @@ class HelpCenterController
                     ->orWhere('excerpt', 'like', "%{$q}%")
                     ->orWhere('content', 'like', "%{$q}%");
             })
-            ->with('topic:id,title,slug,icon')
-            ->limit(20)
-            ->get(['id', 'uuid', 'topic_id', 'title', 'slug', 'excerpt']);
+            ->with('topic:id,title,slug,icon,required_permissions,required_modules')
+            ->limit(100)
+            ->get(['id', 'uuid', 'topic_id', 'title', 'slug', 'excerpt', 'required_permissions', 'required_modules']);
+        $access = HelpCenterAccess::fromRequest($request, $audience); // ADR-787 : la recherche suit les mêmes règles
+        $articles = $articles->filter(fn ($a) => $a->topic && $access->allows($a->topic, $a))->take(20)
+            ->each(fn ($a) => $a->makeHidden(['required_permissions', 'required_modules'])->topic->makeHidden(['required_permissions', 'required_modules']))->values();
 
         // Log the search
         $user = Auth::guard('web')->user() ?? Auth::guard('platform')->user();
@@ -185,7 +205,7 @@ class HelpCenterController
 
         return response()->json([
             'results' => $articles,
-            'has_support_module' => true,
+            'has_support_module' => $audience === 'public' || $access->canContactSupport(),
         ]);
     }
 
@@ -203,6 +223,7 @@ class HelpCenterController
             ->published()
             ->forAudience($audience)
             ->findOrFail($id);
+        abort_unless($article->topic && HelpCenterAccess::fromRequest($request, $audience)->allows($article->topic, $article), 404);
 
         $validated = $request->validate([
             'helpful' => 'required|boolean',

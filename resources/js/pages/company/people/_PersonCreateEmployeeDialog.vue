@@ -91,6 +91,8 @@ const submit = async () => {
           <AppTextField
             v-model="form.employee_number"
             :label="t('employees.fields.employeeNumber')"
+                        :placeholder="t('employees.fields.employeeNumberAuto')"
+                        persistent-placeholder
             :error-messages="errors.employee_number"
           />
         </VCol>
