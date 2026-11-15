@@ -9743,7 +9743,10 @@
       "module": "Apporté par le module {name}",
       "platform": "Règle Leezr",
       "market": "Règle du pays",
-      "jobdomain": "Recommandé pour votre activité"
+      "jobdomain": "Recommandé pour votre activité",
+      "verified": "Obligation légale vérifiée",
+      "customizedFrom": "Personnalisée par votre entreprise · {where} (proposée par {name})",
+      "presetName": "la configuration initiale Leezr"
     },
     "justification": "imposé par : {ref}",
     "previewBtn": "Prévisualiser",
@@ -9775,6 +9778,60 @@
       "conflict": "Conflit",
       "needs_decision": "Décision nécessaire"
     },
-    "unsaved": "non enregistré"
+    "unsaved": "non enregistré",
+    "modules": {
+      "title": "Proposé par le module {name}",
+      "brings": "Le module {name} apporte :",
+      "unknownDefinition": "Définition indisponible",
+      "noMatchingPosition": "aucun poste correspondant",
+      "sensitive": "donnée sensible",
+      "update": "actuellement {now}, nouvelle proposition : {next}",
+      "declinedBefore": "déjà écartée",
+      "adopt": "Adopter",
+      "decline": "Écarter",
+      "keep": "Garder ma version",
+      "replace": "Prendre la nouvelle",
+      "update_btn": "Mettre à jour",
+      "previewTitle": "Propositions du module {name}",
+      "state": {
+        "active": "Module actif : choisissez les propositions à adopter. Rien n'est obligatoire sans votre accord.",
+        "available": "Module disponible mais non activé : propositions consultables, adoption possible après activation.",
+        "deactivated": "Module désactivé : les exigences qui dépendent de lui sont suspendues, rien n'est supprimé.",
+        "suspended": "Module suspendu (abonnement) : aucune nouvelle exigence, rien n'est supprimé.",
+        "not_authorized": "Module non inclus dans votre offre.",
+        "platform_disabled": "Module indisponible pour le moment.",
+        "ambiguous": "Activation à confirmer : aucune exigence ne sera ajoutée tant que l'état du module n'est pas clarifié."
+      },
+      "level": {
+        "recommended": "Facultatif",
+        "default": "Obligatoire configurable",
+        "configurable_required": "Obligatoire configurable",
+        "imperative": "Obligation légale"
+      },
+      "status": {
+        "new": "Nouveau",
+        "already_available": "Déjà disponible",
+        "already_configured": "Déjà configuré",
+        "optional": "Facultatif proposé",
+        "proposed_required": "Obligatoire proposé",
+        "conflict": "En conflit avec vos réglages",
+        "not_applicable": "Non applicable",
+        "requires_confirmation": "Nouvelle version à confirmer",
+        "customized_update": "Vous l'avez personnalisé · nouvelle version"
+      },
+      "impact": {
+        "suspended": "Suspendue",
+        "kept_other_source": "Maintenue (demandée par un autre module)",
+        "kept_company_decision": "Maintenue (votre personnalisation)"
+      },
+      "diff": {
+        "adopted": "Adoptées",
+        "updated": "Mises à jour",
+        "replaced": "Remplacées par la nouvelle version",
+        "kept": "Votre version conservée",
+        "declined": "Écartées",
+        "skipped": "Sans changement"
+      }
+    }
   }
 }

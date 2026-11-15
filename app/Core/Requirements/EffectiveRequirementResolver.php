@@ -23,7 +23,8 @@ use Illuminate\Support\Collection;
  *
  * Priority rules (deterministic) :
  *  R1  only ACTIVE rows in their effective window count ; a module row counts only if the module is
- *      active for the company ; a preset row without company is a TEMPLATE (counts only once copied) ;
+ *      active for the company ; a preset row without company, or a module PROPOSAL (is_template), is a
+ *      TEMPLATE (counts only once copied) ;
  *      a JobDomain / market row only for the company's JobDomain / market.
  *  R2  applicability must match the subject (absent dimension = applies to everyone).
  *  R3  the strongest level wins (recommended < default < configurable_required < imperative) ;
@@ -66,10 +67,12 @@ final class EffectiveRequirementResolver
             $all = collect($rows)->filter(fn (Requirement $r) => $r->company_id === null || (int) $r->company_id === (int) $company->id)->values();
         }
 
-        // Preset rows without company are templates : they never apply by themselves (R1).
-        $templates = $all->filter(fn (Requirement $r) => $r->company_id === null && $r->source === 'preset');
+        // Preset rows without company and module PROPOSALS (is_template, ADR-794) are templates : they
+        // never apply by themselves (R1) ; only a company copy (adoption) counts.
+        $isTemplate = fn (Requirement $r) => $r->company_id === null && ($r->source === 'preset' || $r->is_template);
+        $templates = $all->filter($isTemplate);
 
-        return new self($company, $all->reject(fn (Requirement $r) => $r->company_id === null && $r->source === 'preset')->values(), $templates);
+        return new self($company, $all->reject($isTemplate)->values(), $templates);
     }
 
     /**
@@ -252,6 +255,7 @@ final class EffectiveRequirementResolver
             'effect' => $r->effect ?? Requirement::EFFECT_REQUIRE, 'level' => $r->level, 'status' => $status,
             'customized' => $r->customized_at !== null, 'legal_reference' => $r->legal_reference, 'reason' => $r->reason,
             'applicability' => $r->applicability ?? [], 'verified_at' => $r->verified_at?->toDateString(),
+            'derived_from_id' => $r->derived_from_id,
         ];
     }
 }

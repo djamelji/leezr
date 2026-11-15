@@ -9743,7 +9743,10 @@
       "module": "Provided by the {name} module",
       "platform": "Leezr rule",
       "market": "Country rule",
-      "jobdomain": "Recommended for your activity"
+      "jobdomain": "Recommended for your activity",
+      "verified": "Verified legal obligation",
+      "customizedFrom": "Customised by your company · {where} (proposed by {name})",
+      "presetName": "the initial Leezr setup"
     },
     "justification": "imposed by: {ref}",
     "previewBtn": "Preview",
@@ -9775,6 +9778,60 @@
       "conflict": "Conflict",
       "needs_decision": "Decision needed"
     },
-    "unsaved": "not saved"
+    "unsaved": "not saved",
+    "modules": {
+      "title": "Proposed by the {name} module",
+      "brings": "The {name} module brings:",
+      "unknownDefinition": "Definition unavailable",
+      "noMatchingPosition": "no matching position",
+      "sensitive": "sensitive data",
+      "update": "currently {now}, new proposal: {next}",
+      "declinedBefore": "declined before",
+      "adopt": "Adopt",
+      "decline": "Dismiss",
+      "keep": "Keep my version",
+      "replace": "Take the new one",
+      "update_btn": "Update",
+      "previewTitle": "Proposals of the {name} module",
+      "state": {
+        "active": "Active module: choose the proposals to adopt. Nothing becomes required without your consent.",
+        "available": "Module available but not activated: proposals can be read, adoption after activation.",
+        "deactivated": "Module deactivated: requirements depending on it are suspended, nothing is deleted.",
+        "suspended": "Module suspended (subscription): no new requirement, nothing is deleted.",
+        "not_authorized": "Module not included in your plan.",
+        "platform_disabled": "Module currently unavailable.",
+        "ambiguous": "Activation to be confirmed: no requirement will be added until the module state is clarified."
+      },
+      "level": {
+        "recommended": "Optional",
+        "default": "Configurable required",
+        "configurable_required": "Configurable required",
+        "imperative": "Legal obligation"
+      },
+      "status": {
+        "new": "New",
+        "already_available": "Already available",
+        "already_configured": "Already configured",
+        "optional": "Optional proposal",
+        "proposed_required": "Required proposal",
+        "conflict": "Conflicts with your settings",
+        "not_applicable": "Not applicable",
+        "requires_confirmation": "New version to confirm",
+        "customized_update": "You customised it · new version"
+      },
+      "impact": {
+        "suspended": "Suspended",
+        "kept_other_source": "Kept (requested by another module)",
+        "kept_company_decision": "Kept (your customisation)"
+      },
+      "diff": {
+        "adopted": "Adopted",
+        "updated": "Updated",
+        "replaced": "Replaced by the new version",
+        "kept": "Your version kept",
+        "declined": "Dismissed",
+        "skipped": "No change"
+      }
+    }
   }
 }

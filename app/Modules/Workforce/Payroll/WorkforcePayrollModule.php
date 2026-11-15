@@ -46,6 +46,21 @@ class WorkforcePayrollModule implements ModuleDefinition
             scope: 'company',
             type: 'addon',
             requires: ['workforce', 'workforce_leave'],
+            // ADR-794 (L4) — contributions PROPOSÉES : mêmes définitions canoniques que Workforce (iban, rib),
+            // provenance distincte ; jamais d'obligation sans adoption explicite de l'entreprise.
+            contributions: [
+                'version' => 1,
+                'fields' => [['ref' => 'iban'], ['ref' => 'social_security_number']],
+                'documents' => [['ref' => 'rib'], ['ref' => 'social_security']],
+                'requirements' => [
+                    ['target' => 'field:iban', 'level' => 'configurable_required', 'stage' => 'onboarding',
+                        'reason' => ['fr' => 'Nécessaire au virement du salaire.', 'en' => 'Needed to pay the salary.']],
+                    ['target' => 'field:social_security_number', 'level' => 'configurable_required', 'stage' => 'onboarding',
+                        'reason' => ['fr' => 'Nécessaire aux déclarations sociales.', 'en' => 'Needed for social declarations.']],
+                    ['target' => 'document:rib', 'level' => 'configurable_required', 'stage' => 'onboarding',
+                        'reason' => ['fr' => 'Justifie les coordonnées bancaires du salaire.', 'en' => 'Proves the salary bank details.']],
+                ],
+            ],
         );
     }
 }

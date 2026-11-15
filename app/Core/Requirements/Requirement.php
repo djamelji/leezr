@@ -35,13 +35,14 @@ class Requirement extends Model
 
     protected $fillable = [
         'company_id', 'target_kind', 'field_definition_id', 'document_type_id', 'effect', 'level', 'applicability', 'stage',
-        'source', 'source_ref', 'source_version', 'derived_from_id', 'legal_reference', 'verified_at', 'status',
+        'source', 'source_ref', 'source_version', 'derived_from_id', 'is_template', 'legal_reference', 'verified_at', 'status',
         'effective_from', 'effective_until', 'customized_at', 'reason', 'created_by',
     ];
 
     protected $casts = [
         'applicability' => 'array',
         'source_version' => 'integer',
+        'is_template' => 'boolean',
         'verified_at' => 'datetime',
         'effective_from' => 'datetime',
         'effective_until' => 'datetime',
@@ -65,6 +66,9 @@ class Requirement extends Model
         }
         if (! in_array($this->source, self::SOURCES, true)) {
             throw new \DomainException("Unknown requirement source « {$this->source} ».");
+        }
+        if ($this->is_template && ($this->company_id !== null || ! in_array($this->source, ['module', 'preset'], true))) {
+            throw new \DomainException('A template (proposal) has no company and comes from a module or a preset.');
         }
         if ($this->source === 'company' && $this->company_id === null) {
             throw new \DomainException('A company requirement belongs to a company.');

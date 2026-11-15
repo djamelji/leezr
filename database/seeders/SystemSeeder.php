@@ -51,6 +51,9 @@ class SystemSeeder extends Seeder
         // ─── Field definitions catalog ─────────────────────────
         FieldDefinitionCatalog::sync();
 
+        // ─── Module contributions (ADR-794) — catalogue + PROPOSALS only, never imposed ──
+        \App\Core\Modules\Contributions\ModuleContributionCatalog::sync();
+
         // ─── Market catalog (ADR-104) ──────────────────────
         MarketRegistry::sync();
 

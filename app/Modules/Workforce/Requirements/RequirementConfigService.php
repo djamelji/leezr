@@ -32,6 +32,9 @@ final class RequirementConfigService
     /** UI state → registry level */
     public const STATES = ['required' => RequirementLevel::CONFIGURABLE_REQUIRED, 'optional' => RequirementLevel::RECOMMENDED];
 
+    /** @var array<int, Requirement> templates a company row derives from (provenance, ADR-794) */
+    private array $derived = [];
+
     public function __construct(private Company $company, private ?User $actor = null) {}
 
     // ── Lecture ─────────────────────────────────────────────────────────────
@@ -75,6 +78,8 @@ final class RequirementConfigService
         $job = $this->jobRoleOf($scope);
         $resolved = EffectiveRequirementResolver::forCompany($this->company, $rows)->resolveFor(EffectiveRequirementResolver::subjectForJobRole($job));
         $labels = $this->labels();
+        $derivedIds = collect($resolved)->flatMap(fn ($r) => array_column($r['contributions'], 'derived_from_id'))->filter()->unique()->all();
+        $this->derived = $derivedIds === [] ? [] : Requirement::whereIn('id', $derivedIds)->get()->keyBy('id')->all();
         $out = ['fields' => [], 'documents' => []];
         foreach ($resolved as $key => $r) {
             if (! isset($labels[$key])) {
@@ -146,6 +151,9 @@ final class RequirementConfigService
         $companyRows = Requirement::where('company_id', $this->company->id)->where('source', 'company')
             ->where('status', Requirement::STATUS_ACTIVE)->lockForUpdate()->get()
             ->filter(fn (Requirement $r) => $this->scopeKeyOf($r) === $scope);
+        // ADR-794 : copies ADOPTÉES (module, preset) du même périmètre — la Company peut les personnaliser ou les retirer.
+        $copies = Requirement::where('company_id', $this->company->id)->whereIn('source', ['module', 'preset'])->where('status', Requirement::STATUS_ACTIVE)
+            ->lockForUpdate()->get()->filter(fn (Requirement $r) => $this->scopeKeyOf($r) === $scope && ($r->effect ?? 'require') === 'require');
 
         foreach ($items as $item) {
             [$kind, $targetColumn, $targetId] = $this->target($item['kind'] ?? '', $item['code'] ?? '');
@@ -156,10 +164,15 @@ final class RequirementConfigService
             $label = ['kind' => $kind, 'code' => $item['code']];
             $existing = $companyRows->first(fn (Requirement $r) => $r->{$targetColumn} === $targetId && ($r->effect ?? 'require') === 'require');
             $waiver = $companyRows->first(fn (Requirement $r) => $r->{$targetColumn} === $targetId && $r->effect === 'waive');
+            $copy = $copies->first(fn (Requirement $r) => $r->{$targetColumn} === $targetId);
 
             if ($state === 'removed') {
                 if ($existing) {
                     $this->close($existing, Requirement::STATUS_INACTIVE, 'removed');
+                }
+                if ($copy) {
+                    $this->close($copy, Requirement::STATUS_INACTIVE, 'removed_by_company'); // adoption retirée (historique conservé)
+                    $existing ??= $copy;
                 }
                 // Encore exigé par une autre source (module, preset, Platform, tous les postes) → dispense tracée.
                 $still = $this->resolvedFor($scope, $kind, $targetId);
@@ -180,8 +193,16 @@ final class RequirementConfigService
             if ($waiver) {
                 $this->close($waiver, Requirement::STATUS_INACTIVE, 'waiver_lifted');
             }
-            if ($existing && $existing->level === $level) {
+            if (($existing ?? $copy) && ($existing ?? $copy)->level === $level) {
                 $changes['unchanged'][] = $label; // idempotent
+
+                continue;
+            }
+            if (! $existing && $copy) {
+                // Personnalisation d'une proposition adoptée : la valeur de l'entreprise prévaut, l'origine est gardée.
+                $this->close($copy, Requirement::STATUS_SUPERSEDED, 'customized_by_company');
+                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, $copy);
+                $changes['modified'][] = $label + ['from' => $copy->level, 'to' => $level];
 
                 continue;
             }
@@ -352,6 +373,10 @@ final class RequirementConfigService
 
         $module = $c['source'] === 'module' ? (\App\Core\Modules\ModuleRegistry::definitions()[$c['source_ref']] ?? null)?->name : null;
 
-        return ['kind' => $c['source'], 'scope' => $jobIds === [] ? 'all' : 'position', 'module' => $module, 'version' => $c['source_version'] ?? null, 'customized' => $c['customized'] ?? false];
+        $template = isset($c['derived_from_id']) ? ($this->derived[$c['derived_from_id']] ?? null) : null;
+        $proposedBy = $template ? ['kind' => $template->source, 'module' => $template->source === 'module' ? (\App\Core\Modules\ModuleRegistry::definitions()[$template->source_ref] ?? null)?->name : null] : null;
+
+        return ['kind' => $c['source'], 'scope' => $jobIds === [] ? 'all' : 'position', 'module' => $module, 'version' => $c['source_version'] ?? null,
+            'customized' => $c['customized'] ?? false, 'proposed_by' => $proposedBy, 'verified' => ($c['level'] ?? null) === RequirementLevel::IMPERATIVE];
     }
 }

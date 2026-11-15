@@ -143,6 +143,22 @@ class WorkforceModule implements ModuleDefinition
             ],
             scope: 'company',
             type: 'addon',
+            // ADR-794 (L4) — contributions PROPOSÉES (jamais imposées) : définitions canoniques existantes.
+            contributions: [
+                'version' => 1,
+                'fields' => [['ref' => 'hire_date'], ['ref' => 'contract_type'], ['ref' => 'iban']],
+                'documents' => [['ref' => 'id_card'], ['ref' => 'rib']],
+                'requirements' => [
+                    ['target' => 'field:hire_date', 'level' => 'default', 'stage' => 'hire',
+                        'reason' => ['fr' => "Sert au suivi de l'ancienneté, des congés et des échéances de contrat.", 'en' => 'Used for seniority, leave and contract milestones.']],
+                    ['target' => 'field:contract_type', 'level' => 'default', 'stage' => 'hire',
+                        'reason' => ['fr' => 'Détermine les règles applicables au collaborateur (durée, période d’essai).', 'en' => 'Determines the rules that apply to the employee (term, probation).']],
+                    ['target' => 'document:id_card', 'level' => 'configurable_required', 'stage' => 'hire',
+                        'reason' => ['fr' => "Vérification de l'identité lors de l'embauche.", 'en' => 'Identity check at hiring.']],
+                    ['target' => 'field:iban', 'level' => 'recommended', 'stage' => 'onboarding',
+                        'reason' => ['fr' => 'Permet le remboursement des frais.', 'en' => 'Allows expense reimbursements.']],
+                ],
+            ],
         );
     }
 }

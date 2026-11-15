@@ -45,5 +45,8 @@ final class ModuleManifest
         public readonly bool $hidden = false,
         public readonly array $marketplace = [],
         public readonly string $commercialStatus = 'available',
+        // ADR-794 (L4) — contributions déclarées (champs, documents, exigences PROPOSÉES), validées par
+        // ModuleContributionSchema. Une contribution n'impose jamais rien : elle est proposée puis adoptée.
+        public readonly array $contributions = [],
     ) {}
 }

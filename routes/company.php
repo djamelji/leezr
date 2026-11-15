@@ -546,6 +546,11 @@ Route::prefix('workforce/requirements')->middleware(['company.access:use-module,
     Route::get('/legacy', [$c, 'legacy']);
     Route::post('/preview', [$c, 'preview']);
     Route::post('/', [$c, 'save']);
+    // ADR-794 (L4) : contributions des modules (aperçu + adoption explicite), même page, même mode parallèle
+    $m = \App\Modules\Workforce\Requirements\Http\ModuleContributionController::class;
+    Route::get('/modules', [$m, 'index']);
+    Route::post('/modules/{module}/preview', [$m, 'preview'])->where('module', '[a-z0-9_]+');
+    Route::post('/modules/{module}/decisions', [$m, 'decide'])->where('module', '[a-z0-9_]+');
 });
 
 // ── Workforce Self-Service (P0 security: auto-resolve employee from auth) ──

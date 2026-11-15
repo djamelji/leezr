@@ -5,6 +5,7 @@
 // l'interface n'affiche que les choix en attente.
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
+import ModuleProposals from './_ModuleProposals.vue'
 
 definePage({ meta: { module: 'workforce', surface: 'structure', anyPermission: ['settings.manage', 'documents.configure'] } })
 
@@ -97,6 +98,10 @@ const originText = o => {
   if (!o)
     return t('requirementsCfg.origin.new')
   const where = o.scope === 'all' ? t('requirementsCfg.origin.allPositions') : t('requirementsCfg.origin.thisPosition')
+  if (o.verified)
+    return t('requirementsCfg.origin.verified')
+  if (o.kind === 'company' && o.proposed_by)
+    return t('requirementsCfg.origin.customizedFrom', { where, name: o.proposed_by.module || t('requirementsCfg.origin.presetName') })
 
   return {
     company: t('requirementsCfg.origin.company', { where }),
@@ -298,6 +303,9 @@ const openLegacy = async () => {
           </VBtn>
         </div>
       </AppSettingsGroup>
+
+      <!-- ADR-794 : contributions des modules (proposées, adoptées explicitement) -->
+      <ModuleProposals @changed="load" />
 
       <!-- Reprise de l'existant : lecture seule, aucune conversion -->
       <AppSettingsGroup
