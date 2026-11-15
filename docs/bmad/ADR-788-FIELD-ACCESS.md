@@ -99,3 +99,67 @@ php artisan roles:revoke-permission driver members.invite --apply
 php artisan roles:revoke-permission driver documents.view --apply
 php artisan employees:assign-missing-numbers
 ```
+
+---
+
+## 8. Application contrôlée (GO du 2026-11-15) — DEV local uniquement
+
+**Environnement vérifié** : branche `dev` @ `f0495a6f`, `APP_ENV=local`, base MySQL `leezr` sur socket local, `APP_URL=https://leezr.test`. Aucun staging ni PROD.
+
+**Simulations préalables — identiques à ADR-788**
+| Opération | Résultat |
+|---|---|
+| `roles:revoke-permission driver members.invite` | 7 rôles (sociétés 1, 2, 3, 31, 32, 33, 34 ; rôles 7, 2, 12, 29, 34, 39, 44), 12 adhésions (4, 23-26, 28-34), toutes société 1 |
+| `roles:revoke-permission driver documents.view` | même périmètre |
+| `employees:assign-missing-numbers --dry-run` | 22 fiches, société 1, `EMP-000024` → `EMP-000045` |
+
+**Application** (dans l'ordre autorisé, aucun `permissions:reconcile`) : trois commandes terminées sans erreur, 0 fiche sautée.
+
+**État avant / après (instantané complet de la base)**
+| Contrôle | Avant | Après |
+|---|---|---|
+| Rôles modifiés | — | **7 exactement** (2, 7, 12, 29, 34, 39, 44), chacun : `−documents.view`, `−members.invite`, rien d'ajouté ; les 37 autres rôles identiques |
+| Permissions du rôle Driver | 8 | 6 : `members.view`, `settings.view`, `shipments.manage_status`, `shipments.view_own`, `theme.manage`, `theme.view` |
+| Adhésions Driver | 12 | 12 (inchangées, héritent du nouveau périmètre) |
+| Fiches avec matricule | 214 | 236 |
+| Fiches sans matricule | 22 | 0 |
+| Matricules existants modifiés | — | **0** (214 comparés) |
+| Doublons (société, matricule) | 0 | 0 |
+| Séquence société 1 | absente | créée, `next_value = 46` → prochaine fiche `EMP-000046` |
+| Audit | — | 14 `role.permission_revoked` + 22 `employee.number_assigned` |
+
+**Matricules attribués (société 1)**
+| Fiche | Matricule | Fiche | Matricule |
+|---|---|---|---|
+| 4 | EMP-000024 | 1222 | EMP-000036 |
+| 5 | EMP-000025 | 1223 | EMP-000037 |
+| 6 | EMP-000026 | 1225 | EMP-000038 |
+| 7 | EMP-000027 | 1226 | EMP-000039 |
+| 8 | EMP-000028 | 1227 | EMP-000040 |
+| 10 | EMP-000029 | 1228 | EMP-000041 |
+| 11 | EMP-000030 | 1229 | EMP-000042 |
+| 12 | EMP-000031 | 1230 | EMP-000043 |
+| 1218 | EMP-000032 | 1231 | EMP-000044 |
+| 1219 | EMP-000033 | 1732 | EMP-000045 |
+| 1220 | EMP-000034 | | |
+| 1221 | EMP-000035 | | |
+
+Aucun écart avec la simulation. Le matricule historique de Bob (`EMP-003`, format antérieur) est conservé tel quel.
+
+**Contrôles d'accès par API directe (transactions annulées, aucune écriture)**
+| Appel | Bob (Driver) | Autre livreur (adhésion 23) | Dispatcher (admin) | Propriétaire |
+|---|---|---|---|---|
+| `POST /company/members` (inviter) | **403** | **403** | 201 | 201 |
+| Coffre Company, conformité, activité, recherche, téléchargement | **403** (×5) | **403** | 200 | 200 |
+| Documents d'un collègue (membres, fiches personnes) | **403** | — | 200 | 200 |
+| Mes documents, mes bulletins, mon espace | 200 | 200 | 200 | 200 |
+| Planning, pointage du jour, heures, congés, documents générés | 200 | — | 200 | 200 |
+| Annuaire (`/company/members`) | 200 | — | 200 | 200 |
+
+**Navigateur** : `adr788-recette.spec.js` 2/2 (Bob : Accueil, Mon activité, Mes documents, Mes bulletins sans aucune réponse 403 ; « Ajouter une personne » absent ; fiche d'un collègue sans onglet Documents ni menu Actions ; Documents inaccessible ; dispatcher : onglet Documents présent), `adr786-rbac-recette` 4/4 (assertion mise à jour : l'onglet Documents d'un collègue n'existe plus pour le livreur), `adr787-recette` 5/5. Un premier passage d'`adr788` a été interrompu par une redirection côté client en cours (navigation abandonnée, sans rapport avec les droits) ; repassé vert. Captures : `docs/bmad/adr788/after-bob-{home,me,my-documents,my-payslips,colleague}.jpg`.
+
+**Tests ciblés** : `Adr786RbacAuditTest`, `Adr787EmployeeExperienceTest`, `Adr788FieldAccessTest`, `M7Lot4RbacMatrixTest`, `DmsM1FoundationsTest`, `DmsM11FoundationsTest`, `M7Lot4DmsRecetteTest`, `Adr772AccountlessEmployeeDocumentCycleTest`, `Adr784SecurityTest`, `CompanyMemberProfileTest` : **86/86**. Pas de suite complète ni de build : aucun code applicatif modifié depuis `f0495a6f` (données DEV et tests E2E seulement).
+
+**Données préservées** : documents UX3 26-33, demandes annulées de Bob 68/69/71/73, préférence de thème de Bob (`system`) ; aucun compte de sonde persistant.
+
+**Risques résiduels après application** : aucun sur le périmètre traité. Les autres environnements (staging, PROD) gardent l'ancien état des rôles Driver et des matricules : les mêmes commandes (simulation puis `--apply`) devront y être rejouées sur décision explicite.

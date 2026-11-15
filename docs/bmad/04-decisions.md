@@ -28380,3 +28380,5 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Aucun rôle existant ni matricule modifié ; aucune route ni interface changée.
 - Tests : `Adr788FieldAccessTest` 7/7 ; suite complète 4375 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` ; build non requis.
 - **Verdict** : 🟢 GO DEV · 🟡 préparation préproduction sous réserve du GO sur les rôles Driver et les matricules · 🔴 NO-GO PROD.
+
+**Application (2026-11-15, GO explicite, DEV local)** : simulations identiques puis `roles:revoke-permission driver members.invite --apply`, `… documents.view --apply`, `employees:assign-missing-numbers`. Résultat : 7 rôles Driver modifiés (seules ces 2 permissions), 12 adhésions héritées ; 22 matricules `EMP-000024`→`EMP-000045`, 0 matricule existant changé, séquence à `EMP-000046` ; audit 14 + 22 entrées. Livreur : invitation et supervision documentaire 403, espace personnel intact (API et navigateur). Tests ciblés 86/86, E2E 11/11. Détail : rapport §8.

@@ -23,8 +23,8 @@ test('livreur : la fiche d\'un collègue ne liste pas ses permissions, libellés
   await page.waitForTimeout(800)
   await expect(page.getByText('Permissions effectives', { exact: false })).toHaveCount(0)
   await expect(page.getByText('members.view', { exact: true })).toHaveCount(0)
-  await page.locator('.v-tab', { hasText: 'Documents & contrats' }).click()
-  await page.waitForTimeout(800)
+  // ADR-788 (appliqué) : plus de documents.view pour le livreur → plus d'onglet Documents sur un collègue.
+  await expect(page.locator('.v-tab', { hasText: 'Documents' })).toHaveCount(0)
   await expect(page.getByText('documents.state.', { exact: false })).toHaveCount(0)
 })
 
