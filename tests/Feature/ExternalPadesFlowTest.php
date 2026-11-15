@@ -248,8 +248,28 @@ class ExternalPadesFlowTest extends TestCase
         // AUCUN secret : pas de clé privée, pas de token, pas d'OTP dans le dossier.
         $json = json_encode($pkg);
         $this->assertStringNotContainsString('PRIVATE KEY', $json);
-        $this->assertStringNotContainsString('token', strtolower($json));
-        $this->assertStringNotContainsString('otp', strtolower($json));
+        // ADR-793.1 : les blobs cryptographiques PUBLICS (PDF base64, certificats PEM) sont aléatoires ; une
+        // recherche de sous-chaîne y trouvait « otp » dans ~2 % des tirages (faux positif). On garde la
+        // recherche de mots sur TOUT le reste, et on prouve en plus l'absence des valeurs secrètes réelles.
+        $textual = $pkg;
+        unset($textual['document']['base64']);
+        array_walk_recursive($textual, function (&$v, $k) {
+            if ($k === 'pem') {
+                $this->assertStringContainsString('BEGIN CERTIFICATE', (string) $v, 'pem = certificat public uniquement');
+                $v = '[public-certificate]';
+            }
+        });
+        $textualJson = strtolower(json_encode($textual));
+        $this->assertStringNotContainsString('token', $textualJson);
+        $this->assertStringNotContainsString('otp', $textualJson);
+        foreach (array_keys(\Illuminate\Support\Arr::dot($pkg)) as $key) {
+            $this->assertDoesNotMatchRegularExpression('/token|otp|secret|private|challenge/i', $key, "champ secret exporté : {$key}");
+        }
+        foreach (SignatureSigner::withoutGlobalScopes()->where('signature_request_id', $req->id)->get() as $s) {
+            foreach (array_filter([$s->token_hash, $s->challenge]) as $secret) {
+                $this->assertStringNotContainsString($secret, $json, 'valeur secrète du signataire absente du dossier');
+            }
+        }
 
         // RESTAURATION EN ENVIRONNEMENT ISOLÉ : on ne garde QUE le dossier exporté (base64), on écrit le PDF
         // hors du stockage applicatif, et on re-vérifie avec pdfsig → les deux signatures restent valides.

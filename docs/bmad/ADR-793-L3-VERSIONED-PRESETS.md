@@ -116,3 +116,35 @@ L4 : contributions des modules (presets déclarés par les manifests), puis mapp
 ## 15. Résultat et SHA
 
 Suite : §11. Commit : `git log --grep ADR-793` sur `dev` (SHA rapporté au checkpoint).
+
+---
+
+## Addendum ADR-793.1 — stabilisation L3 avant L4 (2026-11-15, base `819abd65`)
+
+### 1. Tenant scope
+- **Cause observée** : le verrou société de `PresetService::apply()` était écrit `Company::withoutGlobalScopes()->whereKey()`, forme non couverte par l'exemption « racine tenant » de `TenantScopeBypassGuardTest` (qui n'exempte que `Company::withoutGlobalScopes()->find|first`).
+- **Correctif (présent dans `819abd65`)** : `Company::query()->where('id', …)->lockForUpdate()`. `Company` n'a aucun scope global ; le SQL émis est identique (`select * from companies where id = ? for update`), donc verrouillage, sérialisation et idempotence inchangés : le test de concurrence (12 applications parallèles, aucun doublon) reste valable sans rejeu. Allowlist de la garde **inchangée** (aucun fichier de test de garde modifié). Les `Company::withoutGlobalScopes()->findOrFail` du contrôleur Platform relèvent de l'exemption racine voulue.
+- **Tests** : garde + isolation tenant + ADR-733 + presets : 119/119.
+
+### 2. ExternalPadesFlowTest (échec vu une fois en suite complète)
+- **Non reproduit** par l'ordre : groupe signature (105 tests) en ordres défaut, inverse, 2× aléatoire, puis suite complète rejouée : tout vert.
+- **Cause prouvée par mesure** : le test vérifiait « aucun secret » par `assertStringNotContainsString('otp'|'token', strtolower(json_encode($pkg)))`. Le dossier embarque des **blobs cryptographiques publics aléatoires** (certificat PEM du signataire, PDF base64). Sonde sur 400 dossiers : **9 contenaient « otp »** (2,25 %), tous dans le champ `pem` (ex. `…Hvotp+IN…`, `…KoTPDIp…`) — faux positif, aucune fuite. Pas d'état partagé, de fixture, de fichier temporaire ni de dépendance temporelle en cause.
+- **Correctif (test uniquement, règles de signature intactes)** : la recherche de mots `token`/`otp` est conservée sur **tout le contenu textuel** ; seuls le PDF base64 et les PEM sont remplacés après avoir vérifié que chaque `pem` est un `BEGIN CERTIFICATE` (public). Assertions **ajoutées** : aucun nom de champ exporté ne contient `token|otp|secret|private|challenge` ; les valeurs secrètes réelles des signataires (`token_hash`, `challenge`) sont absentes du dossier ; `PRIVATE KEY` toujours interdit sur le JSON complet.
+- **Preuve** : 300 exécutions consécutives du test : 300/300 (45 000 assertions), là où l'ancien oracle aurait échoué ~7 fois.
+
+### 3. Migration MySQL `2026_10_30_150000_add_signer_identity_to_signers`
+- **Cause** : nom automatique `workforce_signature_enrollments_signature_signer_id_created_at_index` = 68 caractères > 64. Sur MySQL, la table et ses clés étrangères étaient créées, puis l'ajout d'index échouait ; au rejeu, la garde `hasTable` sortait et la migration était enregistrée. **Les bases existantes (dont DEV) n'avaient donc jamais eu les deux index** (composite et `company_id`), seulement les index implicites des clés étrangères.
+- **Correctif rétrocompatible** :
+  - migration d'origine : noms explicites courts `wf_sig_enroll_signer_created_idx`, `wf_sig_enroll_company_idx` (seules les bases neuves l'exécutent ; une base existante ne la rejoue pas) ;
+  - nouvelle migration additive `2026_11_23_000002_repair_signature_enrollment_indexes` : ajoute uniquement l'index absent, **détecté par colonnes** (quel que soit son nom), ne supprime ni ne renomme rien, ne touche aucune ligne ; `down()` sans effet ; rejouable.
+- **Validation sur bases MySQL 9.6 jetables (supprimées ensuite)** :
+  - base neuve : 320 migrations, 0 en attente, 0 erreur ; index aux noms courts ;
+  - base déjà migrée (schéma DEV cloné + table `migrations` + lignes signataires/enrôlements) : seule la réparation s'exécute, ajoute l'index composite (`company_id` déjà couvert par l'index de clé étrangère), checksum des données identique avant/après, second `migrate` = « Nothing to migrate », `up()` rejoué 2× sans doublon.
+- **DEV local** : réparation appliquée (additive), checksum signataires/enrôlements/demandes identique avant/après, deux clés étrangères intactes (l'index composite sert désormais celle de `signature_signer_id`). Aucun `migrate:fresh` sur DEV.
+- **Test** : `Adr7931SignatureEnrollmentIndexRepairTest` 2/2 (noms ≤ 64, recréation des index manquants, idempotence).
+
+### 4. Suite finale (une exécution)
+4415 réussis, 12 ignorés, **3 échecs = dette historique `ControllerSizeInvariantTest`** (inchangée). Aucun autre échec. Build non requis (aucun frontend).
+
+### 5. SHA
+Commit de stabilisation : `git log --grep "ADR-793.1"` sur `dev` (SHA rapporté au checkpoint). L4 non commencé.

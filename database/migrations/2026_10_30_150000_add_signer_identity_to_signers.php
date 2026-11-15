@@ -40,8 +40,9 @@ return new class extends Migration
             $table->dateTime('revoked_at')->nullable();
             $table->timestamps();
 
-            $table->index(['signature_signer_id', 'created_at']);
-            $table->index(['company_id']);
+            // ADR-793.1 : nom explicite (le nom automatique fait 68 caractères > limite MySQL de 64).
+            $table->index(['signature_signer_id', 'created_at'], 'wf_sig_enroll_signer_created_idx');
+            $table->index(['company_id'], 'wf_sig_enroll_company_idx');
         });
     }
 
