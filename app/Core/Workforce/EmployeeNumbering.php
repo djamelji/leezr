@@ -51,10 +51,38 @@ final class EmployeeNumbering
         if (DB::table('company_sequences')->where('company_id', $companyId)->where('name', self::SEQUENCE)->exists()) {
             return;
         }
-        $max = Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_number', 'like', $prefix.'%')
-            ->pluck('employee_number')->map(fn ($n) => ctype_digit($s = substr($n, strlen($prefix))) ? (int) $s : 0)->max() ?? 0;
+        $max = self::maxExisting($companyId, $prefix);
         // INSERT IGNORE : concurrent first uses converge on one row (unique company_id + name).
         DB::table('company_sequences')->insertOrIgnore(['company_id' => $companyId, 'name' => self::SEQUENCE, 'next_value' => $max + 1, 'created_at' => now(), 'updated_at' => now()]);
+    }
+
+    /**
+     * The next `$count` numbers WITHOUT writing anything (no row, no counter move) : what `next()`
+     * would hand out now, in order. Used by simulations.
+     *
+     * @return string[]
+     */
+    public static function preview(int $companyId, int $count): array
+    {
+        ['prefix' => $prefix, 'pad' => $pad] = self::format();
+        $value = (int) (DB::table('company_sequences')->where('company_id', $companyId)->where('name', self::SEQUENCE)->value('next_value')
+            ?? (self::maxExisting($companyId, $prefix) + 1));
+        $taken = Employee::withoutGlobalScopes()->where('company_id', $companyId)->whereNotNull('employee_number')->pluck('employee_number')->flip();
+        $out = [];
+        while (count($out) < $count) {
+            $number = $prefix.str_pad((string) $value++, $pad, '0', STR_PAD_LEFT);
+            if (! isset($taken[$number])) {
+                $out[] = $number;
+            }
+        }
+
+        return $out;
+    }
+
+    private static function maxExisting(int $companyId, string $prefix): int
+    {
+        return (int) (Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_number', 'like', $prefix.'%')
+            ->pluck('employee_number')->map(fn ($n) => ctype_digit($s = substr($n, strlen($prefix))) ? (int) $s : 0)->max() ?? 0);
     }
 
     /** Updates the record and keeps the history of a number change. */

@@ -36,7 +36,10 @@ class RevokeRolePermissionCommand extends Command
 
         $report = ['apply' => (bool) $this->option('apply'), 'permission' => $permission->key, 'roles' => []];
         foreach ($roles as $role) {
-            $report['roles'][] = ['company_id' => $role->company_id, 'role_id' => $role->id, 'members' => DB::table('memberships')->where('company_role_id', $role->id)->count()];
+            $memberships = DB::table('memberships')->join('users', 'users.id', '=', 'memberships.user_id')
+                ->where('company_role_id', $role->id)->orderBy('memberships.id')->get(['memberships.id', 'users.email']);
+            $report['roles'][] = ['company_id' => $role->company_id, 'role_id' => $role->id, 'members' => $memberships->count(),
+                'memberships' => $memberships->map(fn ($m) => ['membership_id' => $m->id, 'email' => $m->email])->all()];
             if ($this->option('apply')) {
                 $role->permissions()->detach($permission->id);
                 app(AuditLogger::class)->logCompany($role->company_id, 'role.permission_revoked', 'company_role', (string) $role->id, [

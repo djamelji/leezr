@@ -28361,3 +28361,22 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Tests : `Adr787EmployeeExperienceTest` 20/20 ; concurrence MySQL réelle 75/75 numéros distincts (base jetable supprimée) ; E2E `adr787-recette` 5/5 ; suite complète 4368 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` (inchangés) ; build propre.
 - Effet de bord corrigé : préférence de thème de Bob remise à `system` après une capture.
 - **Verdict** : 🟢 GO DEV · 🟡 préparation préproduction sous réserve (décision Driver, matricules des fiches existantes, réserves ADR-786) · 🔴 NO-GO PROD.
+
+---
+
+## ADR-788 — Accès terrain : retrait ciblé préparé, matricules historiques simulés, supervision documentaire
+
+**Date** : 2026-11-15 · **Base** : `2e8f3a26` · DEV uniquement · Rapport : `docs/bmad/ADR-788-FIELD-ACCESS.md`
+
+**Contexte** : les 7 rôles Driver hérités détiennent `members.invite` et `documents.view` ; 22 fiches salarié DEV n'ont pas de matricule.
+
+**Décision** :
+- `documents.view` reste une permission de **supervision** (ADR-757) ; un salarié n'en a pas besoin pour ses documents, bulletins et demandes. Le **préréglage Driver** ne l'accorde plus (`documents.access` retiré ; nouvelles sociétés uniquement).
+- Écarté après essai : imposer un rôle administratif aux routes de supervision (casse le lecteur documentaire non administratif, usage testé ADR-757/772).
+- Rôles existants : retraits ciblés préparés et simulés (`roles:revoke-permission driver members.invite` et `… documents.view`, 7 rôles, 12 adhésions), **non appliqués sans GO**.
+- Matricules historiques : commande idempotente `employees:assign-missing-numbers` (séquence par société, écriture conditionnelle, audit) ; `--dry-run` sans aucune écriture : 22 fiches de la société 1 → `EMP-000024` à `EMP-000045`, **non écrits sans GO**.
+
+**Conséquences** :
+- Aucun rôle existant ni matricule modifié ; aucune route ni interface changée.
+- Tests : `Adr788FieldAccessTest` 7/7 ; suite complète 4375 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` ; build non requis.
+- **Verdict** : 🟢 GO DEV · 🟡 préparation préproduction sous réserve du GO sur les rôles Driver et les matricules · 🔴 NO-GO PROD.

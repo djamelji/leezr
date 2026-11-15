@@ -252,7 +252,9 @@ class JobdomainRegistry
                             // pour les entreprises créées ensuite — les rôles existants ne sont pas modifiés.
                             'members.team_view',
                             'settings.company_info',
-                            'documents.access',
+                            // ADR-788 : plus de `documents.access` (documents.view = SUPERVISION : coffre Company,
+                            // conformité, documents des collègues). Ses propres documents, bulletins et demandes
+                            // passent par l'espace personnel, sans permission. Nouvelles sociétés uniquement.
                             'shipments.delivery',
                         ],
                         'fields' => [
