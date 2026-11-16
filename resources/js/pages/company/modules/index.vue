@@ -815,12 +815,12 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ modName(mod) }}
                       </h6>
 
-                      <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
+                      <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
                       <VChip
-                        v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
+                        v-if="mod.is_active && mod.setup_status"
                         size="small"
                         class="mb-2"
-                        :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
+                        :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
                         :to="`/company/modules/${mod.key}`"
                         :data-test="`module-setup-chip-${mod.key}`"
                       >
@@ -946,12 +946,12 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         {{ modName(mod) }}
                       </h6>
 
-                      <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
+                      <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
                       <VChip
-                        v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
+                        v-if="mod.is_active && mod.setup_status"
                         size="small"
                         class="mb-2"
-                        :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
+                        :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
                         :to="`/company/modules/${mod.key}`"
                         :data-test="`module-setup-chip-${mod.key}`"
                       >
@@ -1518,7 +1518,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
               :key="`${it.module}-${it.key}`"
               class="text-body-2 mb-1"
             >
-              <strong>{{ it.module_name }}</strong> — {{ t(`companyModules.impact.${it.key}`, { n: it.count }) }}
+              <strong>{{ modName({ key: it.module, name: it.module_name }) }}</strong> — {{ t(`companyModules.impact.${it.key}`, { n: it.count }) }}
             </div>
             <div class="text-body-2 mt-1">
               {{ t('companyModules.impact.nothingDeleted') }}

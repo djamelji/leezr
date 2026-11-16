@@ -14,6 +14,7 @@ import { useAppToast } from '@/composables/useAppToast'
 const props = defineProps({ moduleKey: { type: String, required: true } })
 const emit = defineEmits(['changed'])
 const { t, te } = useI18n()
+const { capLabel, moduleName } = useCatalogText() // ADR-806
 const { toast } = useAppToast()
 
 const data = ref(null)
@@ -186,8 +187,8 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
             class="d-flex flex-wrap align-center gap-2 text-body-2 mb-2"
             :data-test="`related-${r.key}`"
           >
-            <span class="font-weight-medium">{{ te(`permissionCatalog.bundles.${r.key}.label`) ? t(`permissionCatalog.bundles.${r.key}.label`) : r.label }}</span>
-            <span class="text-medium-emphasis">({{ r.module_name }})</span>
+            <span class="font-weight-medium">{{ capLabel(r) }}</span>
+            <span class="text-medium-emphasis">({{ moduleName(r.module, r.module_name) }})</span>
             <VChip
               v-for="h in r.holders"
               :key="h.role_id"
@@ -269,7 +270,7 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
           :key="c.key"
           class="text-body-2 mb-1"
         >
-          {{ $te(`permissionCatalog.bundles.${c.key}.label`) ? $t(`permissionCatalog.bundles.${c.key}.label`) : c.label }} :
+          {{ capLabel(c) }} :
           {{ holders(c).join(', ') }}
         </div>
         <div
@@ -282,7 +283,7 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
             v-for="(r, i) in data.module.requires"
             :key="r.key"
           >
-            <RouterLink :to="`/company/modules/${r.key}`">{{ r.name }}</RouterLink>
+            <RouterLink :to="`/company/modules/${r.key}`">{{ moduleName(r.key, r.name) }}</RouterLink>
             ({{ r.active ? (r.setup_status ? t(`moduleSetup.status.${r.setup_status}`) : t('moduleSetup.active')) : t('moduleSetup.inactive') }}){{ i < data.module.requires.length - 1 ? ', ' : '' }}
           </template>
         </div>

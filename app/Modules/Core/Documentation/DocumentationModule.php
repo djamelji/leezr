@@ -39,6 +39,7 @@ class DocumentationModule implements ModuleDefinition
                     'key' => 'documentation.access',
                     'label' => 'Documentation Access',
                     'permissions' => ['documentation.view'],
+                    'unwired' => true, // ADR-806 : the help center is open to every member ; no route checks it (ADR-800)
                 ],
             ],
             scope: 'company',

@@ -516,8 +516,10 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
         ->middleware('company.access:use-permission,shipments.create');
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])
         ->middleware('company.access:use-permission,shipments.view');
+    // ADR-806 : changing the status of ANY shipment needs the full view ; a driver (view_own) goes through
+    // /my-deliveries/{id}/status, which checks the assignment.
     Route::put('/shipments/{id}/status', [ShipmentController::class, 'changeStatus'])
-        ->middleware('company.access:use-permission,shipments.manage_status');
+        ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.manage_status']);
     Route::post('/shipments/{id}/assign', [ShipmentController::class, 'assign'])
         ->middleware('company.access:use-permission,shipments.assign');
 

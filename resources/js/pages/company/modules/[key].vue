@@ -8,7 +8,10 @@ import { useAppToast } from '@/composables/useAppToast'
 import { resolveSettingsPanel } from '@/core/registries/settingsPanelRegistry'
 import ModuleSetupWizard from './_ModuleSetupWizard.vue'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+// ADR-806 : nom / description traduits (même source que la page Modules), manifeste en repli.
+const { moduleName } = useCatalogText()
+const modDescription = m => { const k = `moduleCatalog.${String(m?.key || '').replace(/\./g, '_')}.description`; return te(k) ? t(k) : m?.description }
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -183,7 +186,7 @@ const displayStateChip = computed(() => {
 
           <div>
             <h5 class="text-h5">
-              {{ mod.name }}
+              {{ moduleName(mod.key, mod.name) }}
             </h5>
             <div class="d-flex align-center gap-2 mt-1">
               <VChip
@@ -222,7 +225,7 @@ const displayStateChip = computed(() => {
         </VCardTitle>
         <VCardText>
           <p class="text-body-1">
-            {{ mod.description }}
+            {{ modDescription(mod) }}
           </p>
         </VCardText>
       </VCard>

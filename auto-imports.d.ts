@@ -212,6 +212,7 @@ declare global {
   const useBrowserLocation: typeof import('@vueuse/core')['useBrowserLocation']
   const useCached: typeof import('@vueuse/core')['useCached']
   const useCan: typeof import('./resources/js/composables/useCan.js')['useCan']
+  const useCatalogText: typeof import('./resources/js/composables/useCatalogText.js')['useCatalogText']
   const useCeil: typeof import('@vueuse/math')['useCeil']
   const useClamp: typeof import('@vueuse/math')['useClamp']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
@@ -630,6 +631,7 @@ declare module 'vue' {
     readonly useBrowserLocation: UnwrapRef<typeof import('@vueuse/core')['useBrowserLocation']>
     readonly useCached: UnwrapRef<typeof import('@vueuse/core')['useCached']>
     readonly useCan: UnwrapRef<typeof import('./resources/js/composables/useCan.js')['useCan']>
+    readonly useCatalogText: UnwrapRef<typeof import('./resources/js/composables/useCatalogText.js')['useCatalogText']>
     readonly useCeil: UnwrapRef<typeof import('@vueuse/math')['useCeil']>
     readonly useClamp: UnwrapRef<typeof import('@vueuse/math')['useClamp']>
     readonly useClipboard: UnwrapRef<typeof import('@vueuse/core')['useClipboard']>

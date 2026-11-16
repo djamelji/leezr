@@ -35,14 +35,14 @@ class WorkforceDocumentsModule implements ModuleDefinition
                 [
                     'key' => 'workforce_documents.employee',
                     'label' => 'Documents (Employee)',
-                    'hint' => 'View own generated HR documents.',
+                    'hint' => 'View your own HR documents and those of your direct reports.', // ADR-805 scope
                     'permissions' => ['workforce_documents.view'],
                     'scope' => 'team', // ADR-805 : soi + rapports directs (GeneratedDocumentAccess) ; tous = RH Workforce
                 ],
                 [
                     'key' => 'workforce_documents.management',
                     'label' => 'Documents Management',
-                    'hint' => 'Generate documents, manage templates, handle signatures.',
+                    'hint' => 'Generate HR documents for the people you can see. Templates belong to Contracts, signatures to Signatures.', // ADR-806 : manage_templates/sign guard nothing
                     'permissions' => ['workforce_documents.view', 'workforce_documents.generate', 'workforce_documents.manage_templates', 'workforce_documents.sign'],
                     'is_admin' => true, // ADR-805 : permissions de gestion (déjà refusées aux rôles opérationnels)
                 ],

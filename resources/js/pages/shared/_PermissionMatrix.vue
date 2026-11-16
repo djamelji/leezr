@@ -22,12 +22,14 @@ const te = useI18n().te
 const isAdvancedMode = ref(false)
 
 // ─── i18n helpers ─────
-const modName = key => te(`permissionCatalog.modules.${key}.name`) ? t(`permissionCatalog.modules.${key}.name`) : null
-const modDesc = key => te(`permissionCatalog.modules.${key}.description`) ? t(`permissionCatalog.modules.${key}.description`) : null
-const capLabel = key => te(`permissionCatalog.bundles.${key}.label`) ? t(`permissionCatalog.bundles.${key}.label`) : null
-const capHint = key => te(`permissionCatalog.bundles.${key}.hint`) ? t(`permissionCatalog.bundles.${key}.hint`) : null
-const permLabel = key => te(`permissionCatalog.permissions.${key}.label`) ? t(`permissionCatalog.permissions.${key}.label`) : null
-const permHint = key => te(`permissionCatalog.permissions.${key}.hint`) ? t(`permissionCatalog.permissions.${key}.hint`) : null
+// ADR-806 : the catalog keys contain dots — `te/t` on a dotted path never resolved them.
+const { catalogText } = useCatalogText()
+const modName = key => catalogText('modules', key, 'name')
+const modDesc = key => catalogText('modules', key, 'description')
+const capLabel = key => catalogText('bundles', key, 'label')
+const capHint = key => catalogText('bundles', key, 'hint')
+const permLabel = key => catalogText('permissions', key, 'label')
+const permHint = key => catalogText('permissions', key, 'hint')
 
 // ─── Module icon lookup ─────
 const moduleIconMap = computed(() => {

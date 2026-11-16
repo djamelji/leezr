@@ -418,6 +418,7 @@
     "formatDays": true,
     "formatMinutes": true,
     "hundredthsToDays": true,
-    "useSettingsEntry": true
+    "useSettingsEntry": true,
+    "useCatalogText": true
   }
 }

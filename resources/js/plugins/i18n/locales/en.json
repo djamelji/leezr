@@ -2815,56 +2815,172 @@
     },
     "bundles": {
       "settings.company_info": {
-        "label": "Company Information",
-        "hint": "View company name and configuration."
+        "label": "Company information",
+        "hint": "View the company name and configuration."
       },
       "settings.company_management": {
-        "label": "Company Management",
-        "hint": "Change company name, address, and settings."
+        "label": "Company management",
+        "hint": "Change the company name, address and settings."
       },
       "roles.governance": {
-        "label": "Role Governance",
-        "hint": "View, create, edit, and delete roles with permission assignments."
+        "label": "Role governance",
+        "hint": "View, create, edit and delete roles and their access."
       },
       "jobdomain.info": {
-        "label": "Industry Information",
+        "label": "Industry information",
         "hint": "View the company industry profile."
       },
       "jobdomain.management": {
-        "label": "Industry Management",
-        "hint": "Change the company industry profile and sector."
+        "label": "Industry change",
+        "hint": "The industry cannot be changed once assigned: this capability has no effect today."
       },
       "members.team_access": {
-        "label": "Team Access",
+        "label": "Team access",
         "hint": "View the team and invite new members."
       },
       "members.team_management": {
-        "label": "Team Management",
-        "hint": "Edit profiles, assign roles, and manage credentials."
+        "label": "Team management",
+        "hint": "Edit profiles, assign roles and manage sign-in credentials."
       },
       "modules.management": {
-        "label": "Module Management",
-        "hint": "Enable or disable company modules."
+        "label": "Module management",
+        "hint": "Enable, configure or disable the company modules."
       },
       "billing.management": {
-        "label": "Plan & Billing",
-        "hint": "Change company plan and manage billing."
+        "label": "Plan & billing",
+        "hint": "Change the company plan and manage billing."
       },
       "shipments.operations": {
-        "label": "Shipment Operations",
-        "hint": "View, create, manage status, and assign shipments."
+        "label": "Shipment operations",
+        "hint": "View, create, assign shipments and change their status."
       },
       "shipments.administration": {
-        "label": "Shipment Administration",
-        "hint": "Configure custom fields and delete shipments."
+        "label": "Shipment administration",
+        "hint": "Custom fields and deletion do not exist yet: this capability has no effect today."
       },
       "shipments.delivery": {
-        "label": "Delivery Operations",
-        "hint": "View assigned shipments and update their status."
+        "label": "Deliveries",
+        "hint": "View the shipments assigned to you and update their status."
       },
       "members.team_view": {
         "label": "Team directory",
         "hint": "View the team."
+      },
+      "documentation.access": {
+        "label": "Help center access",
+        "hint": "The help center is open to every member: this capability has no effect today."
+      },
+      "audit.viewer": {
+        "label": "Audit log",
+        "hint": "View the trail of administrative actions in this company."
+      },
+      "support.access": {
+        "label": "Support",
+        "hint": "View and open support tickets."
+      },
+      "theme.full": {
+        "label": "Theme control",
+        "hint": "View and change the theme."
+      },
+      "theme.readonly": {
+        "label": "Theme (read-only)",
+        "hint": "See the current theme without changing it."
+      },
+      "members.sensitive_data": {
+        "label": "Members' sensitive data",
+        "hint": "Read sensitive member fields (IBAN, social security number)."
+      },
+      "automations.access": {
+        "label": "Automations",
+        "hint": "View and manage the company automations."
+      },
+      "documents.access": {
+        "label": "Documents",
+        "hint": "View documents, compliance and activity, and download files."
+      },
+      "documents.management": {
+        "label": "Document management",
+        "hint": "Upload and review documents, access confidential pieces, configure document types."
+      },
+      "payslips.distribution": {
+        "label": "Payslip distribution",
+        "hint": "Import, review, publish and download external payslips."
+      },
+      "workforce_contract.management": {
+        "label": "Contract management",
+        "hint": "Manage contract templates and generate contracts."
+      },
+      "workforce_signature.management": {
+        "label": "Signature management",
+        "hint": "Create, follow up and administer electronic signature requests and their evidence."
+      },
+      "workforce_signature.readonly": {
+        "label": "Signatures (read-only)",
+        "hint": "View the signature requests of your own and your direct reports' documents."
+      },
+      "workforce.leave_employee": {
+        "label": "Leave (employee)",
+        "hint": "Request leave and view your own balances."
+      },
+      "workforce.leave_management": {
+        "label": "Leave management",
+        "hint": "Approve requests, view all balances and manage leave types."
+      },
+      "workforce.leave_adjustment": {
+        "label": "Leave balance adjustment",
+        "hint": "No screen adjusts balances yet: this capability has no effect today."
+      },
+      "workforce_documents.employee": {
+        "label": "HR documents (employee)",
+        "hint": "View your own HR documents and those of your direct reports."
+      },
+      "workforce_documents.management": {
+        "label": "HR document generation",
+        "hint": "Generate HR documents for the people you can see. Templates belong to Contracts, signatures to Signatures."
+      },
+      "workforce.payroll": {
+        "label": "Payroll",
+        "hint": "Prepare, validate and export payroll (includes reading pay)."
+      },
+      "workforce.planning_employee": {
+        "label": "Planning (employee)",
+        "hint": "View your schedule and assigned shifts."
+      },
+      "workforce.planning_management": {
+        "label": "Planning management",
+        "hint": "Create, manage and publish shifts and coverage."
+      },
+      "workforce.team": {
+        "label": "Team management",
+        "hint": "View and manage employees, view and correct time entries."
+      },
+      "workforce.hr_management": {
+        "label": "HR management",
+        "hint": "Full HR access: employees, contracts, pay and sensitive data."
+      },
+      "workforce.manager": {
+        "label": "Team manager (planning & approvals)",
+        "hint": "See your team, build and publish the planning, approve timesheets and leave — no pay."
+      },
+      "workforce.operations": {
+        "label": "Operations supervisor",
+        "hint": "Manage time clocking and planning day to day — no contracts, no payroll."
+      },
+      "workforce.time_validation": {
+        "label": "Time validation",
+        "hint": "View, correct and approve time entries and timesheets."
+      },
+      "workforce.timesheet_employee": {
+        "label": "Timesheet (employee)",
+        "hint": "View and submit your own timesheets."
+      },
+      "workforce.timesheet_management": {
+        "label": "Timesheet management",
+        "hint": "Approve and manage all timesheets."
+      },
+      "workforce.timesheet_team_approver": {
+        "label": "Timesheet team approver",
+        "hint": "Approve or reject the timesheets of your direct reports only."
       }
     },
     "permissions": {
@@ -4058,7 +4174,8 @@
     "impact": {
       "issued_documents": "{n} issued document(s) are kept and remain available to each person in their space.",
       "signatures_in_progress": "{n} signature request(s) in progress continue with the signers; their follow-up (reminders, cancellation, evidence) resumes on reactivation.",
-      "nothingDeleted": "No data is deleted by deactivation."
+      "nothingDeleted": "No data is deleted by deactivation.",
+      "shipments_in_progress": "{n} shipment(s) in progress are kept, but nobody (drivers included) can change their status while the module is disabled."
     }
   },
   "contactSales": {
@@ -10556,7 +10673,8 @@
       "contract_template_published": "At least one contract template is published",
       "contract_template_default": "A default contract template is set",
       "signature_provider_available": "A signature provider is available",
-      "signature_provider_production": "The provider is not a test tool"
+      "signature_provider_production": "The provider is not a test tool",
+      "delivery_assigned": "A role (other than the owner) can see the deliveries assigned to it"
     },
     "notReady": "The module cannot be declared ready yet: complete the flagged items.",
     "confirm": "Confirm: the module is ready",

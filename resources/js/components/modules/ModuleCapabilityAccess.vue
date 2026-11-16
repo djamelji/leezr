@@ -42,8 +42,7 @@ const applySuggestion = () => {
   }
 }
 
-const label = c => (te(`permissionCatalog.bundles.${c.key}.label`) ? t(`permissionCatalog.bundles.${c.key}.label`) : c.label)
-const hint = c => (te(`permissionCatalog.bundles.${c.key}.hint`) ? t(`permissionCatalog.bundles.${c.key}.hint`) : c.hint)
+const { capLabel: label, capHint: hint } = useCatalogText() // ADR-806 : dotted catalog keys
 // ADR-804 : une capacité sans fonction branchée (`unwired`) n'est montrée qu'en mode avancé, avec la mention.
 const shown = computed(() => props.capabilities.filter(c => advanced.value || !c.unwired))
 const groups = computed(() => [

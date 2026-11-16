@@ -28758,3 +28758,33 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - `workforce_documents.manage_templates` et `.sign` restent inertes dans le bundle de gestion (à décider).
   - Aucun droit n'a été modifié automatiquement.
 
+
+## ADR-806 — Cohérence des modules et pilote Logistique (Expéditions)
+
+- **Date** : 2026-11-16, DEV uniquement, base `a317170f`, commit `SHA_806`. Rapport : `docs/bmad/ADR-806-MODULE-COHERENCE-LOGISTICS-PILOT.md` ; requêtes PROD en lecture seule : `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Contexte** : rendre le système modulaire fiable et lisible sans nouvelle couche, puis intégrer `logistics_shipments` à l'assistant commun s'il est réellement opérationnel.
+- **Décisions** :
+  - **Traductions du catalogue.** Les clés pointées (`permissionCatalog.bundles.<clé.avec.points>`) ne se résolvaient jamais avec `t/te` : toutes les capacités s'affichaient en anglais.
+    - Lecture unique via `useCatalogText` (`tm` + `rt`).
+    - 42 capacités Company traduites FR/EN/AR.
+    - Noms des 25 modules unifiés sur `moduleCatalog.*`.
+    - ES non fourni : l'espagnol n'est pas une langue de l'application (décision produit).
+  - **Capacités sans effet** (`shipments.administration`, `documentation.access`, `jobdomain.management`, plus `workforce.leave_adjustment` déjà traité par 804) :
+    - drapeau `unwired` : masquées en vue normale, signalées en mode avancé ;
+    - aucune permission retirée des rôles.
+  - **Descriptions alignées sur l'API** : la gestion des documents RH ne promet plus modèles ni signatures ; le périmètre collaborateur est soi + rapports directs.
+  - **Sécurité.** `PUT /shipments/{id}/status` exige aussi `shipments.view`. Un chauffeur ne change que le statut de ses livraisons, via `/my-deliveries` qui vérifie l'affectation.
+  - **Pilote Expéditions.**
+    - Assistant Accès → Confirmation : aucune étape de réglage, car le serveur n'en exécute aucun.
+    - Prêt exige l'accès décidé ; recommandation : un rôle non propriétaire voit ses livraisons.
+    - Impact de désactivation : les expéditions en cours sont conservées mais figées (`continues: false`).
+  - **Entrée « Configuration historique ».** Les modules inclus sont activés à la création sans événement (statut `legacy`) ; leur carte mène désormais à l'assistant.
+  - **UI.** Bascule Équipe → Rôles en onglets pill (preset), car `VBtnToggle` est réservé aux icônes.
+- **Conséquences** :
+  - Les permissions inertes restent dans le catalogue ; leur retrait se fera dans un lot avec plan de compatibilité (ADR-806 §2).
+  - Constats DEV non corrigés (données de recette) : société 21 avec Paie sans Congés ; demandes de signature `internal` ouvertes sur la société 1.
+  - Tests :
+    - suite complète 4587 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques conservés comme dette ;
+    - E2E 3/3 sur société fictive supprimée, société 1 inchangée, 0 écriture de facturation ;
+    - build propre.

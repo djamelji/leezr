@@ -37,6 +37,7 @@ class JobdomainModule implements ModuleDefinition
                     'label' => 'Industry Management',
                     'hint' => 'Change the company industry profile and sector.',
                     'permissions' => ['jobdomain.manage'],
+                    'unwired' => true, // ADR-806 : the industry is immutable once assigned (ADR-134) — PUT always answers 422
                     'is_admin' => true,
                 ],
             ],

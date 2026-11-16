@@ -47,17 +47,21 @@ class ShipmentsModule implements ModuleDefinition
                     'hint' => 'Configure custom fields and delete shipments.',
                     'permissions' => ['shipments.manage_fields', 'shipments.delete'],
                     'is_admin' => true,
+                    'unwired' => true, // ADR-806 : no route, no screen uses these permissions (ADR-800) — advanced mode only
                 ],
                 [
                     'key' => 'shipments.delivery',
                     'label' => 'Delivery Operations',
                     'hint' => 'View assigned shipments and update their status.',
                     'permissions' => ['shipments.view_own', 'shipments.manage_status'],
+                    'scope' => 'own', // ADR-806 : only shipments assigned to the person (status of others needs shipments.view)
                 ],
             ],
             scope: 'company',
             type: 'addon',
             compatibleJobdomains: ['logistique'],
+            // ADR-806 — common module assistant : access only (the module executes no setting).
+            setup: ['steps' => ['access'], 'readiness' => \App\Modules\Logistics\Shipments\Setup\ShipmentsSetupReadiness::class],
         );
     }
 }

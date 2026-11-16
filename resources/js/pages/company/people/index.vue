@@ -243,27 +243,27 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
             v-if="tab === 'roles' && canRoles"
             class="pa-4 pb-0"
           >
-            <VBtnToggle
+            <!-- ADR-806 : onglets « pill » (preset DemoTabsBasicPill) — le VBtnToggle Vuexy est réservé aux icônes
+                 (largeur forcée à 36 px) : les deux libellés se chevauchaient. -->
+            <VTabs
               v-model="rolesView"
-              mandatory
+              class="v-tabs-pill"
               density="compact"
-              variant="outlined"
-              divided
               data-test="roles-view"
             >
-              <VBtn
+              <VTab
                 value="capabilities"
                 data-test="roles-view-capabilities"
               >
                 {{ t('moduleSetup.byCapability') }}
-              </VBtn>
-              <VBtn
+              </VTab>
+              <VTab
                 value="roles"
                 data-test="roles-view-roles"
               >
                 {{ t('moduleSetup.byRole') }}
-              </VBtn>
-            </VBtnToggle>
+              </VTab>
+            </VTabs>
           </div>
           <VCardText v-if="tab === 'roles' && canRoles && rolesView === 'capabilities'">
             <RoleCapabilities />

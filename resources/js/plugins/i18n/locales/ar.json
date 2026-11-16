@@ -365,5 +365,254 @@
     "pageOf": "صفحة {page} / {total}",
     "more": "المزيد",
     "apply": "تطبيق"
+  },
+  "permissionCatalog": {
+    "bundles": {
+      "settings.company_info": {
+        "label": "معلومات الشركة",
+        "hint": "عرض اسم الشركة وإعداداتها."
+      },
+      "settings.company_management": {
+        "label": "إدارة الشركة",
+        "hint": "تعديل اسم الشركة وعنوانها وإعداداتها."
+      },
+      "documentation.access": {
+        "label": "الوصول إلى مركز المساعدة",
+        "hint": "مركز المساعدة متاح لجميع الأعضاء: هذه القدرة ليس لها أي أثر حاليًا."
+      },
+      "roles.governance": {
+        "label": "حوكمة الأدوار",
+        "hint": "عرض الأدوار وإنشاؤها وتعديلها وحذفها مع صلاحياتها."
+      },
+      "jobdomain.info": {
+        "label": "معلومات القطاع",
+        "hint": "عرض الملف القطاعي للشركة."
+      },
+      "jobdomain.management": {
+        "label": "تغيير القطاع",
+        "hint": "لا يمكن تغيير القطاع بعد تعيينه: هذه القدرة ليس لها أي أثر حاليًا."
+      },
+      "audit.viewer": {
+        "label": "سجل التدقيق",
+        "hint": "الاطلاع على سجل الإجراءات الإدارية في الشركة."
+      },
+      "support.access": {
+        "label": "الدعم",
+        "hint": "عرض طلبات الدعم وفتحها."
+      },
+      "theme.full": {
+        "label": "التحكم في المظهر",
+        "hint": "عرض المظهر وتغييره."
+      },
+      "theme.readonly": {
+        "label": "المظهر (قراءة فقط)",
+        "hint": "عرض المظهر الحالي دون تغييره."
+      },
+      "members.team_view": {
+        "label": "دليل الفريق",
+        "hint": "عرض الفريق."
+      },
+      "members.team_access": {
+        "label": "الوصول إلى الفريق",
+        "hint": "عرض الفريق ودعوة أعضاء جدد."
+      },
+      "members.team_management": {
+        "label": "إدارة الفريق",
+        "hint": "تعديل الملفات الشخصية وتعيين الأدوار وإدارة بيانات الدخول."
+      },
+      "members.sensitive_data": {
+        "label": "البيانات الحساسة للأعضاء",
+        "hint": "قراءة الحقول الحساسة للأعضاء (رقم الحساب البنكي، رقم الضمان الاجتماعي)."
+      },
+      "automations.access": {
+        "label": "الأتمتة",
+        "hint": "عرض عمليات الأتمتة في الشركة وإدارتها."
+      },
+      "documents.access": {
+        "label": "المستندات",
+        "hint": "عرض المستندات والامتثال والنشاط وتنزيل الملفات."
+      },
+      "documents.management": {
+        "label": "إدارة المستندات",
+        "hint": "رفع المستندات ومراجعتها، والوصول إلى الوثائق السرية، وإعداد أنواع المستندات."
+      },
+      "payslips.distribution": {
+        "label": "توزيع كشوف الرواتب",
+        "hint": "استيراد كشوف الرواتب الخارجية ومراجعتها ونشرها وتنزيلها."
+      },
+      "modules.management": {
+        "label": "إدارة الوحدات",
+        "hint": "تفعيل وحدات الشركة أو إعدادها أو تعطيلها."
+      },
+      "billing.management": {
+        "label": "الخطة والفوترة",
+        "hint": "تغيير خطة الشركة وإدارة الفوترة."
+      },
+      "workforce_contract.management": {
+        "label": "إدارة العقود",
+        "hint": "إدارة نماذج العقود وإنشاء العقود."
+      },
+      "workforce_signature.management": {
+        "label": "إدارة التوقيعات",
+        "hint": "إنشاء طلبات التوقيع الإلكتروني ومتابعتها وإدارتها مع أدلتها."
+      },
+      "workforce_signature.readonly": {
+        "label": "التوقيعات (قراءة فقط)",
+        "hint": "عرض طلبات التوقيع الخاصة بمستنداتك ومستندات مرؤوسيك المباشرين."
+      },
+      "workforce.leave_employee": {
+        "label": "الإجازات (موظف)",
+        "hint": "طلب إجازة والاطلاع على أرصدتك."
+      },
+      "workforce.leave_management": {
+        "label": "إدارة الإجازات",
+        "hint": "الموافقة على الطلبات وعرض جميع الأرصدة وإدارة أنواع الإجازات."
+      },
+      "workforce.leave_adjustment": {
+        "label": "تعديل أرصدة الإجازات",
+        "hint": "لا توجد شاشة لتعديل الأرصدة بعد: هذه القدرة ليس لها أي أثر حاليًا."
+      },
+      "workforce_documents.employee": {
+        "label": "مستندات الموارد البشرية (موظف)",
+        "hint": "عرض مستنداتك ومستندات مرؤوسيك المباشرين."
+      },
+      "workforce_documents.management": {
+        "label": "إنشاء مستندات الموارد البشرية",
+        "hint": "إنشاء مستندات الموارد البشرية للأشخاص الذين يمكنك رؤيتهم. النماذج تابعة للعقود والتوقيعات تابعة للتوقيعات."
+      },
+      "workforce.payroll": {
+        "label": "الرواتب",
+        "hint": "إعداد الرواتب والتحقق منها وتصديرها (يشمل الاطلاع على الأجور)."
+      },
+      "workforce.planning_employee": {
+        "label": "الجدول (موظف)",
+        "hint": "عرض جدولك والمناوبات المسندة إليك."
+      },
+      "workforce.planning_management": {
+        "label": "إدارة الجدول",
+        "hint": "إنشاء المناوبات والتغطية وإدارتها ونشرها."
+      },
+      "workforce.team": {
+        "label": "إدارة الموظفين",
+        "hint": "عرض الموظفين وإدارتهم، والاطلاع على تسجيلات الوقت وتصحيحها."
+      },
+      "workforce.hr_management": {
+        "label": "إدارة الموارد البشرية",
+        "hint": "وصول كامل للموارد البشرية: الموظفون والعقود والأجور والبيانات الحساسة."
+      },
+      "workforce.manager": {
+        "label": "مدير فريق (الجدول والموافقات)",
+        "hint": "عرض فريقك، وإعداد الجدول ونشره، والموافقة على أوراق الوقت والإجازات — دون الأجور."
+      },
+      "workforce.operations": {
+        "label": "مشرف العمليات",
+        "hint": "إدارة تسجيل الوقت والجدول يوميًا — دون العقود أو الرواتب."
+      },
+      "workforce.time_validation": {
+        "label": "التحقق من الوقت",
+        "hint": "عرض تسجيلات الوقت وأوراق الوقت وتصحيحها والموافقة عليها."
+      },
+      "workforce.timesheet_employee": {
+        "label": "ورقة الوقت (موظف)",
+        "hint": "عرض أوراق وقتك وتقديمها."
+      },
+      "workforce.timesheet_management": {
+        "label": "إدارة أوراق الوقت",
+        "hint": "الموافقة على جميع أوراق الوقت وإدارتها."
+      },
+      "workforce.timesheet_team_approver": {
+        "label": "الموافقة على أوراق وقت الفريق",
+        "hint": "الموافقة على أوراق وقت مرؤوسيك المباشرين فقط أو رفضها."
+      },
+      "shipments.operations": {
+        "label": "عمليات الشحن",
+        "hint": "عرض الشحنات وإنشاؤها وإسنادها وتغيير حالتها."
+      },
+      "shipments.administration": {
+        "label": "إدارة الشحنات",
+        "hint": "الحقول المخصصة والحذف غير متوفرين بعد: هذه القدرة ليس لها أي أثر حاليًا."
+      },
+      "shipments.delivery": {
+        "label": "التوصيلات",
+        "hint": "عرض الشحنات المسندة إليك وتحديث حالتها."
+      }
+    }
+  },
+  "moduleCatalog": {
+    "core_settings": {
+      "name": "إعدادات الشركة"
+    },
+    "core_documentation": {
+      "name": "مركز المساعدة"
+    },
+    "core_roles": {
+      "name": "الأدوار والصلاحيات"
+    },
+    "core_jobdomain": {
+      "name": "القطاع"
+    },
+    "core_dashboard": {
+      "name": "لوحة القيادة"
+    },
+    "core_audit": {
+      "name": "سجل التدقيق"
+    },
+    "core_support": {
+      "name": "الدعم"
+    },
+    "core_theme": {
+      "name": "المظهر"
+    },
+    "core_members": {
+      "name": "الفريق"
+    },
+    "core_workflows": {
+      "name": "الأتمتة"
+    },
+    "core_documents": {
+      "name": "المستندات"
+    },
+    "core_modules": {
+      "name": "الوحدات"
+    },
+    "core_notifications": {
+      "name": "الإشعارات"
+    },
+    "core_billing": {
+      "name": "الخطة والفوترة"
+    },
+    "workforce_contract": {
+      "name": "العقود"
+    },
+    "workforce_signature": {
+      "name": "التوقيع الإلكتروني"
+    },
+    "workforce_leave": {
+      "name": "الإجازات"
+    },
+    "workforce_documents": {
+      "name": "مستندات الموارد البشرية"
+    },
+    "workforce_payroll": {
+      "name": "الرواتب"
+    },
+    "workforce_planning": {
+      "name": "الجدولة"
+    },
+    "workforce": {
+      "name": "الموارد البشرية"
+    },
+    "logistics_shipments": {
+      "name": "الشحنات"
+    },
+    "logistics_tracking": {
+      "name": "التتبع الفوري"
+    },
+    "logistics_fleet": {
+      "name": "إدارة الأسطول"
+    },
+    "logistics_analytics": {
+      "name": "التحليلات المتقدمة"
+    }
   }
 }

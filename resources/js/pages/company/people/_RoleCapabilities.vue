@@ -18,6 +18,7 @@ const preview = ref(null)
 const busy = ref(false)
 const accessRef = ref(null)
 
+const { moduleName } = useCatalogText() // ADR-806 : nom traduit (pas le nom anglais du manifeste)
 const err = e => e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('common.error')
 const load = async () => {
   if (!moduleKey.value) return
@@ -60,7 +61,7 @@ const apply = async confirmAffected => {
   <div data-test="role-capabilities">
     <AppSelect
       v-model="moduleKey"
-      :items="modules.map(m => ({ value: m.key, title: m.name }))"
+      :items="modules.map(m => ({ value: m.key, title: moduleName(m.key, m.name) }))"
       :label="t('moduleSetup.module')"
       class="mb-4"
       style="max-inline-size: 360px;"

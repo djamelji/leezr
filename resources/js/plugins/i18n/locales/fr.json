@@ -2819,20 +2819,20 @@
         "hint": "Voir le nom et la configuration de l'entreprise."
       },
       "settings.company_management": {
-        "label": "Gestion entreprise",
+        "label": "Gestion de l'entreprise",
         "hint": "Modifier le nom, l'adresse et les paramètres de l'entreprise."
       },
       "roles.governance": {
         "label": "Gouvernance des rôles",
-        "hint": "Voir, créer, modifier et supprimer les rôles avec leurs permissions."
+        "hint": "Voir, créer, modifier et supprimer les rôles et leurs accès."
       },
       "jobdomain.info": {
         "label": "Informations secteur",
         "hint": "Voir le profil sectoriel de l'entreprise."
       },
       "jobdomain.management": {
-        "label": "Gestion du secteur",
-        "hint": "Modifier le profil sectoriel de l'entreprise."
+        "label": "Changement de secteur",
+        "hint": "Le secteur ne peut plus être changé une fois attribué : cette capacité n'a aucun effet aujourd'hui."
       },
       "members.team_access": {
         "label": "Accès à l'équipe",
@@ -2844,7 +2844,7 @@
       },
       "modules.management": {
         "label": "Gestion des modules",
-        "hint": "Activer ou désactiver les modules de l'entreprise."
+        "hint": "Activer, configurer ou désactiver les modules de l'entreprise."
       },
       "billing.management": {
         "label": "Plan et facturation",
@@ -2852,19 +2852,135 @@
       },
       "shipments.operations": {
         "label": "Opérations d'expédition",
-        "hint": "Voir, créer, gérer le statut et assigner les expéditions."
+        "hint": "Voir, créer et assigner les expéditions, et changer leur statut."
       },
       "shipments.administration": {
         "label": "Administration des expéditions",
-        "hint": "Configurer les champs personnalisés et supprimer les expéditions."
+        "hint": "Les champs personnalisés et la suppression n'existent pas encore : cette capacité n'a aucun effet aujourd'hui."
       },
       "shipments.delivery": {
-        "label": "Opérations de livraison",
-        "hint": "Voir les expéditions assignées et mettre à jour leur statut."
+        "label": "Livraisons",
+        "hint": "Voir les expéditions qui vous sont assignées et mettre à jour leur statut."
       },
       "members.team_view": {
         "label": "Annuaire de l'équipe",
         "hint": "Consulter l'équipe."
+      },
+      "documentation.access": {
+        "label": "Accès au centre d'aide",
+        "hint": "Le centre d'aide est ouvert à tous les membres : cette capacité n'a aucun effet aujourd'hui."
+      },
+      "audit.viewer": {
+        "label": "Journal d'audit",
+        "hint": "Consulter l'historique des actions d'administration de l'entreprise."
+      },
+      "support.access": {
+        "label": "Support",
+        "hint": "Consulter et ouvrir des demandes de support."
+      },
+      "theme.full": {
+        "label": "Gestion du thème",
+        "hint": "Voir et modifier le thème."
+      },
+      "theme.readonly": {
+        "label": "Thème (lecture seule)",
+        "hint": "Voir le thème actuel sans pouvoir le modifier."
+      },
+      "members.sensitive_data": {
+        "label": "Données sensibles des membres",
+        "hint": "Lire les champs sensibles des membres (IBAN, numéro de sécurité sociale)."
+      },
+      "automations.access": {
+        "label": "Automatisations",
+        "hint": "Voir et gérer les automatisations de l'entreprise."
+      },
+      "documents.access": {
+        "label": "Documents",
+        "hint": "Consulter les documents, la conformité et l'activité, et télécharger les fichiers."
+      },
+      "documents.management": {
+        "label": "Gestion des documents",
+        "hint": "Déposer et valider les documents, accéder aux pièces confidentielles, configurer les types de documents."
+      },
+      "payslips.distribution": {
+        "label": "Distribution des bulletins",
+        "hint": "Importer, vérifier, publier et télécharger les bulletins de paie externes."
+      },
+      "workforce_contract.management": {
+        "label": "Gestion des contrats",
+        "hint": "Gérer les modèles de contrat et générer les contrats."
+      },
+      "workforce_signature.management": {
+        "label": "Gestion des signatures",
+        "hint": "Créer, suivre et administrer les demandes de signature électronique et leurs preuves."
+      },
+      "workforce_signature.readonly": {
+        "label": "Signatures (lecture seule)",
+        "hint": "Voir les demandes de signature de ses documents et de ceux de ses collaborateurs directs."
+      },
+      "workforce.leave_employee": {
+        "label": "Congés (collaborateur)",
+        "hint": "Demander un congé et consulter ses soldes."
+      },
+      "workforce.leave_management": {
+        "label": "Gestion des congés",
+        "hint": "Valider les demandes, voir tous les soldes et gérer les types de congé."
+      },
+      "workforce.leave_adjustment": {
+        "label": "Ajustement des soldes de congé",
+        "hint": "Aucun écran n'ajuste encore les soldes : cette capacité n'a aucun effet aujourd'hui."
+      },
+      "workforce_documents.employee": {
+        "label": "Documents RH (collaborateur)",
+        "hint": "Voir ses documents RH et ceux de ses collaborateurs directs."
+      },
+      "workforce_documents.management": {
+        "label": "Génération des documents RH",
+        "hint": "Générer les documents RH des personnes que l'on peut voir. Les modèles relèvent des Contrats, les signatures des Signatures."
+      },
+      "workforce.payroll": {
+        "label": "Paie",
+        "hint": "Préparer, valider et exporter la paie (inclut la lecture des rémunérations)."
+      },
+      "workforce.planning_employee": {
+        "label": "Planning (collaborateur)",
+        "hint": "Voir son planning et ses créneaux affectés."
+      },
+      "workforce.planning_management": {
+        "label": "Gestion du planning",
+        "hint": "Créer, gérer et publier les créneaux et la couverture."
+      },
+      "workforce.team": {
+        "label": "Gestion des collaborateurs",
+        "hint": "Voir et gérer les collaborateurs, consulter et corriger les pointages."
+      },
+      "workforce.hr_management": {
+        "label": "Gestion RH",
+        "hint": "Accès RH complet : collaborateurs, contrats, rémunération et données sensibles."
+      },
+      "workforce.manager": {
+        "label": "Responsable d'équipe (planning et validations)",
+        "hint": "Voir son équipe, construire et publier le planning, valider feuilles de temps et congés — sans rémunération."
+      },
+      "workforce.operations": {
+        "label": "Superviseur des opérations",
+        "hint": "Gérer au quotidien les pointages et le planning — sans contrats ni paie."
+      },
+      "workforce.time_validation": {
+        "label": "Validation des temps",
+        "hint": "Voir, corriger et valider les pointages et feuilles de temps."
+      },
+      "workforce.timesheet_employee": {
+        "label": "Feuille de temps (collaborateur)",
+        "hint": "Voir et soumettre ses feuilles de temps."
+      },
+      "workforce.timesheet_management": {
+        "label": "Gestion des feuilles de temps",
+        "hint": "Valider et gérer toutes les feuilles de temps."
+      },
+      "workforce.timesheet_team_approver": {
+        "label": "Validation des feuilles de l'équipe",
+        "hint": "Valider ou refuser les feuilles de temps de ses collaborateurs directs uniquement."
       }
     },
     "permissions": {
@@ -4058,7 +4174,8 @@
     "impact": {
       "issued_documents": "{n} document(s) émis restent conservés et accessibles à chaque personne dans son espace.",
       "signatures_in_progress": "{n} demande(s) de signature en cours continuent auprès des signataires ; leur suivi (relance, annulation, preuves) reprend à la réactivation.",
-      "nothingDeleted": "Aucune donnée n'est supprimée par la désactivation."
+      "nothingDeleted": "Aucune donnée n'est supprimée par la désactivation.",
+      "shipments_in_progress": "{n} expédition(s) en cours restent conservées, mais personne (livreurs compris) ne pourra changer leur statut tant que le module est désactivé."
     }
   },
   "contactSales": {
@@ -10556,7 +10673,8 @@
       "contract_template_published": "Au moins un modèle de contrat est publié",
       "contract_template_default": "Un modèle de contrat par défaut est défini",
       "signature_provider_available": "Un prestataire de signature est disponible",
-      "signature_provider_production": "Le prestataire n'est pas un outil de test"
+      "signature_provider_production": "Le prestataire n'est pas un outil de test",
+      "delivery_assigned": "Un rôle (autre que le propriétaire) peut voir les livraisons qui lui sont assignées"
     },
     "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
     "confirm": "Confirmer : le module est prêt",

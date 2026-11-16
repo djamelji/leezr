@@ -10,7 +10,7 @@ const props = defineProps({
 const emit = defineEmits(['apply'])
 const { t, te } = useI18n()
 const accepted = ref(false)
-const capLabel = c => (te(`permissionCatalog.bundles.${c.key}.label`) ? t(`permissionCatalog.bundles.${c.key}.label`) : c.label)
+const { capLabel } = useCatalogText() // ADR-806 : dotted catalog keys
 const canApply = computed(() => !props.preview.blocked && (!props.preview.requires_confirmation || accepted.value))
 watch(() => props.preview, () => { accepted.value = false })
 </script>
