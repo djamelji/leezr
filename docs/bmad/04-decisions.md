@@ -28709,7 +28709,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-804 — Assistant commun : Congés et Planning (pilotes)
 
-- **Date** : 2026-11-16, DEV uniquement, base `9df323fa`. Rapport : `docs/bmad/ADR-804-MODULE-ASSISTANT-LEAVE-PLANNING.md`.
+- **Date** : 2026-11-16, DEV uniquement, base `9df323fa`, commit `bd49f7fa`. Rapport : `docs/bmad/ADR-804-MODULE-ASSISTANT-LEAVE-PLANNING.md`.
 - **Contexte** : généraliser l'assistant ADR-803/803.1 à deux pilotes, sans nouveau moteur et sans étendre le module RH (ADR-561).
 - **Décisions** :
   - **Assistant adaptatif.**
