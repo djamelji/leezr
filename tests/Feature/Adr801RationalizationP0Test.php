@@ -170,9 +170,10 @@ class Adr801RationalizationP0Test extends TestCase
     {
         $ticket = $this->ticket();
         $assigner = $this->userWith(['assign_support']);
+        $agent = $this->userWith(['manage_support']); // ADR-801.1 : the assignee must be able to take charge
 
-        $this->actingAs($assigner, 'platform')->putJson("/api/platform/support/tickets/{$ticket->id}/assign")->assertOk();
-        $this->assertSame($assigner->id, $ticket->fresh()->assigned_to_platform_user_id);
+        $this->actingAs($assigner, 'platform')->putJson("/api/platform/support/tickets/{$ticket->id}/assign", ['platform_user_id' => $agent->id])->assertOk();
+        $this->assertSame($agent->id, $ticket->fresh()->assigned_to_platform_user_id);
 
         foreach ([
             ['get', '/api/platform/support/tickets'],

@@ -8,7 +8,7 @@ definePage({
     platform: true,
     module: 'platform.documents',
     permission: 'manage_document_catalog', // ADR-801
-    navActiveLink: 'platform-documents',
+    navActiveLink: 'platform-catalog-tab', // ADR-801.1 : ancien nom inexistant
   },
 })
 
@@ -56,7 +56,7 @@ const fetchDetail = async () => {
   }
   catch {
     toast(t('common.error'), 'error')
-    router.push({ name: 'platform-documents' })
+    router.push({ name: 'platform-catalog-tab', params: { tab: 'documents' } })
   }
   finally {
     isLoading.value = false
@@ -145,7 +145,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
       size="small"
       prepend-icon="tabler-arrow-left"
       class="mb-4"
-      :to="{ name: 'platform-documents' }"
+      :to="{ name: 'platform-catalog-tab', params: { tab: 'documents' } }"
     >
       {{ t('platformDocumentTypes.title') }}
     </VBtn>

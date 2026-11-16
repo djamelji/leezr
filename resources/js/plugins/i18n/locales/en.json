@@ -6165,7 +6165,13 @@
     "slaResponded": "Responded",
     "slaResolved": "Resolved",
     "slaHours": "{n}h",
-    "slaDeadlinePassed": "Deadline passed"
+    "slaDeadlinePassed": "Deadline passed",
+    "assignmentQueueTitle": "Tickets to assign",
+    "assignmentQueueIntro": "You can dispatch tickets between eligible agents. Conversations, internal notes and requester details are not shown here.",
+    "assignTo": "Assign to",
+    "assigned": "Ticket assigned.",
+    "assigneeNotEligible": "This user cannot take charge of tickets.",
+    "noAgent": "No agent can take charge of tickets."
   },
   "documentation": {
     "audienceBoth": "Both",

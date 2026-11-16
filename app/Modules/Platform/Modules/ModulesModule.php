@@ -20,7 +20,7 @@ class ModulesModule implements ModuleDefinition
                 navItems: [
                     ['key' => 'catalog', 'title' => 'Catalog', 'to' => ['name' => 'platform-catalog-tab', 'params' => ['tab' => 'modules']], 'icon' => 'tabler-package', 'permission' => 'manage_modules', 'group' => 'governance', 'sort' => 10],
                 ],
-                routeNames: ['platform-modules', 'platform-modules-key', 'platform-catalog-tab'],
+                routeNames: ['platform-modules-key', 'platform-catalog-tab'],
             ),
             permissions: [
                 ['key' => 'manage_modules', 'label' => 'Manage Modules'],

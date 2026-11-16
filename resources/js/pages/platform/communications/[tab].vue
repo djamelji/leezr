@@ -1,6 +1,7 @@
 <script setup>
 import CommunicationsSupport from './_CommunicationsSupport.vue'
 import CommunicationsDocumentation from './_CommunicationsDocumentation.vue'
+import SupportAssignmentQueue from './_SupportAssignmentQueue.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
@@ -8,7 +9,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.support',
-    anyPermission: ['manage_support', 'manage_documentation'], // ADR-801
+    anyPermission: ['manage_support', 'assign_support', 'manage_documentation'], // ADR-801 / 801.1
     navActiveLink: 'platform-communications-tab',
   },
 })
@@ -20,9 +21,9 @@ const auth = usePlatformAuthStore()
 
 // ADR-598 LOT C: communications tabs filtered by effective permission.
 const tabs = computed(() => [
-  { title: t('platformCommunications.tabs.support'), icon: 'tabler-message-circle-cog', tab: 'support', permission: 'manage_support' },
+  { title: t('platformCommunications.tabs.support'), icon: 'tabler-message-circle-cog', tab: 'support', permission: ['manage_support', 'assign_support'] }, // ADR-801.1
   { title: t('platformCommunications.tabs.documentation'), icon: 'tabler-book', tab: 'documentation', permission: 'manage_documentation' },
-].filter(item => !item.permission || auth.hasPermission(item.permission)))
+].filter(item => !item.permission || [].concat(item.permission).some(p => auth.hasPermission(p))))
 
 const activeTab = computed({
   get: () => {
@@ -72,7 +73,9 @@ const activeTab = computed({
       :touch="false"
     >
       <VWindowItem value="support">
-        <CommunicationsSupport />
+        <!-- ADR-801.1 : full support desk for manage_support ; dispatch-only queue for assign_support alone -->
+        <CommunicationsSupport v-if="auth.hasPermission('manage_support')" />
+        <SupportAssignmentQueue v-else />
       </VWindowItem>
 
       <VWindowItem value="documentation">

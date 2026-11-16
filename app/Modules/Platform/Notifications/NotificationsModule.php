@@ -18,7 +18,7 @@ class NotificationsModule implements ModuleDefinition
             sortOrder: 91,
             capabilities: new Capabilities(
                 navItems: [],
-                routeNames: ['platform-notifications', 'platform-messaging-tab'],
+                routeNames: ['platform-messaging-tab'],
             ),
             permissions: [
                 ['key' => 'manage_notifications', 'label' => 'Manage Notification Topics'],

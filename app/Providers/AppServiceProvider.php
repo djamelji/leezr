@@ -83,6 +83,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ADR-801.1 — `database` sessions record the Company identity in user_id and the Platform identity
+        // in platform_user_id (each with its own FK), instead of "whatever guard is the default".
+        \Illuminate\Support\Facades\Session::extend('database', fn ($app) => new \App\Core\Auth\ScopedDatabaseSessionHandler(
+            $app['db']->connection($app['config']->get('session.connection')),
+            $app['config']->get('session.table'),
+            $app['config']->get('session.lifetime'),
+            $app,
+        ));
+
         \App\Core\Notifications\Listeners\PlatformPaymentCollectedNotifier::register(); // ADR-781
 
         Relation::enforceMorphMap([

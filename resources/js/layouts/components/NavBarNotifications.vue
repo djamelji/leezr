@@ -111,14 +111,11 @@ const handleRemove = id => {
   store.dismiss(id)
 }
 
+// ADR-801.1 — the Platform has no notification list page (the bell IS the list) : « view all » is
+// Company-only ; the former `platform-notifications` route name never existed.
 const viewAll = () => {
   isMenuOpen.value = false
-
-  const route = store._platformMode
-    ? { name: 'platform-notifications' }
-    : { name: 'company-notifications' }
-
-  router.push(route)
+  router.push({ name: 'company-notifications' })
 }
 </script>
 
@@ -263,7 +260,10 @@ const viewAll = () => {
         <VDivider />
 
         <!-- Footer -->
-        <VCardText class="pa-4">
+        <VCardText
+          v-if="!store._platformMode"
+          class="pa-4"
+        >
           <VBtn
             block
             size="small"

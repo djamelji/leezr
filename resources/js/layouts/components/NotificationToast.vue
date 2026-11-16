@@ -69,13 +69,19 @@ const flyToBell = () => {
 }
 
 const handleClick = () => {
+  const toast = currentToast.value
+
   flyToBell()
 
-  const route = store._platformMode
-    ? { name: 'platform-notifications' }
-    : { name: 'company-notifications' }
+  // ADR-801.1 — Platform : no list page exists (the former `platform-notifications` name never
+  // existed) → open the notification's own link when it has one, otherwise it lands in the bell.
+  if (store._platformMode) {
+    if (toast?._count <= 1 && toast?.link) setTimeout(() => router.push(toast.link), 400)
 
-  setTimeout(() => router.push(route), 400)
+    return
+  }
+
+  setTimeout(() => router.push({ name: 'company-notifications' }), 400)
 }
 
 // Auto-dismiss after 6s

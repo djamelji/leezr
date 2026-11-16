@@ -23,7 +23,7 @@ class JobdomainsModule implements ModuleDefinition
                     // W-CONTRACT-3B (ADR-650) : catalogue des modèles de contrat.
                     ['key' => 'contract-templates', 'title' => 'Contract Templates', 'to' => ['name' => 'platform-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 61],
                 ],
-                routeNames: ['platform-jobdomains', 'platform-jobdomains-id', 'platform-catalog-tab', 'platform-organization-presets', 'platform-organization-presets-id', 'platform-contract-templates'],
+                routeNames: ['platform-jobdomains-id', 'platform-catalog-tab', 'platform-organization-presets', 'platform-organization-presets-id', 'platform-contract-templates'],
             ),
             permissions: [
                 ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],

@@ -23,7 +23,7 @@ class PlatformSupportModule implements ModuleDefinition
                         'title' => 'Communications',
                         'to' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']],
                         'icon' => 'tabler-message-circle-cog',
-                        'permission' => 'manage_support', // gated so restricted roles only see accessible hubs
+                        'anyPermission' => ['manage_support', 'assign_support'], // ADR-801.1 : assigners reach their queue
                         'group' => 'clients',
                         'sort' => 40,
                     ],

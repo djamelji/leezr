@@ -2,6 +2,7 @@
 import Shepherd from 'shepherd.js'
 import { useConfigStore } from '@core/stores/config'
 import { $platformApi } from '@/utils/platformApi'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 defineOptions({
   inheritAttrs: false,
@@ -11,6 +12,11 @@ const { t } = useI18n()
 const configStore = useConfigStore()
 const isAppSearchBarVisible = ref(false)
 const isLoading = ref(false)
+
+// ADR-801.1 — a suggestion is shown only if the user holds the permission of its page (same key as
+// the page's definePage meta) ; `/platform` (dispatcher) needs none.
+const platformAuth = usePlatformAuthStore()
+const canSee = item => !item.permission || platformAuth.hasPermission(item.permission)
 
 // 👉 Default suggestions — real platform routes
 const suggestionGroups = computed(() => [
@@ -26,16 +32,19 @@ const suggestionGroups = computed(() => [
         icon: 'tabler-user-shield',
         title: t('globalSearch.users'),
         url: { name: 'platform-access-tab', params: { tab: 'users' } },
+        permission: 'manage_platform_users',
       },
       {
         icon: 'tabler-building',
         title: t('globalSearch.companies'),
         url: { name: 'platform-companies' },
+        permission: 'view_companies',
       },
       {
         icon: 'tabler-shield-lock',
         title: t('globalSearch.roles'),
         url: { name: 'platform-access-tab', params: { tab: 'roles' } },
+        permission: 'manage_roles',
       },
     ],
   },
@@ -45,26 +54,30 @@ const suggestionGroups = computed(() => [
       {
         icon: 'tabler-briefcase',
         title: t('globalSearch.jobDomains'),
-        url: { name: 'platform-jobdomains' },
+        url: { name: 'platform-catalog-tab', params: { tab: 'jobdomains' } }, // ADR-801.1 : ancien nom inexistant
+        permission: 'manage_jobdomains',
       },
       {
         icon: 'tabler-forms',
         title: t('globalSearch.customFields'),
-        url: { name: 'platform-fields' },
+        url: { name: 'platform-catalog-tab', params: { tab: 'fields' } },
+        permission: 'manage_field_definitions',
       },
       {
         icon: 'tabler-puzzle',
         title: t('globalSearch.modules'),
-        url: { name: 'platform-modules' },
+        url: { name: 'platform-catalog-tab', params: { tab: 'modules' } },
+        permission: 'manage_modules',
       },
       {
         icon: 'tabler-settings',
         title: t('globalSearch.settings'),
         url: { name: 'platform-settings-tab', params: { tab: 'general' } },
+        permission: 'manage_theme_settings',
       },
     ],
   },
-])
+].map(g => ({ ...g, content: g.content.filter(canSee) })).filter(g => g.content.length))
 
 // 👉 No Data suggestion
 const noDataSuggestions = computed(() => [
@@ -77,13 +90,15 @@ const noDataSuggestions = computed(() => [
     title: t('globalSearch.users'),
     icon: 'tabler-user-shield',
     url: { name: 'platform-access-tab', params: { tab: 'users' } },
+    permission: 'manage_platform_users',
   },
   {
     title: t('globalSearch.companies'),
     icon: 'tabler-building',
     url: { name: 'platform-companies' },
+    permission: 'view_companies',
   },
-])
+].filter(canSee))
 
 // i18n mapping for backend group titles
 const groupTitleMap = {

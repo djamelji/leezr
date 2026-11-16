@@ -57,6 +57,17 @@ export const usePlatformSupportStore = defineStore('platformSupport', {
       this._messages = await $platformApi(`/support/tickets/${ticketId}/messages`)
     },
 
+    // ADR-801.1 — assign_support read side (minimal projection, no messages/notes).
+    async fetchAssignmentQueue(params = {}) {
+      const query = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== '')).toString()
+
+      return await $platformApi(`/support/assignment-queue${query ? `?${query}` : ''}`)
+    },
+
+    async fetchAssignees() {
+      return (await $platformApi('/support/assignees')).assignees || []
+    },
+
     async assignTicket(ticketId, platformUserId = null) {
       const data = await $platformApi(`/support/tickets/${ticketId}/assign`, {
         method: 'PUT',

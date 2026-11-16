@@ -6165,7 +6165,13 @@
     "slaResponded": "Répondu",
     "slaResolved": "Résolu",
     "slaHours": "{n}h",
-    "slaDeadlinePassed": "Délai dépassé"
+    "slaDeadlinePassed": "Délai dépassé",
+    "assignmentQueueTitle": "Tickets à assigner",
+    "assignmentQueueIntro": "Vous pouvez répartir les tickets entre les agents habilités. Les échanges, notes internes et coordonnées du demandeur ne sont pas visibles ici.",
+    "assignTo": "Assigner à",
+    "assigned": "Ticket assigné.",
+    "assigneeNotEligible": "Cet utilisateur ne peut pas prendre en charge de tickets.",
+    "noAgent": "Aucun agent habilité à prendre en charge les tickets."
   },
   "documentation": {
     "audienceBoth": "Les deux",

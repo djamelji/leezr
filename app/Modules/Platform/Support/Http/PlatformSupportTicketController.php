@@ -69,6 +69,12 @@ class PlatformSupportTicketController
 
         $assigneeId = $validated['platform_user_id'] ?? $platformUser->id;
 
+        // ADR-801.1 — only an agent who can take charge of the ticket (manage_support / super_admin) can
+        // be assigned. Historical assignments are untouched ; only NEW assignments are checked.
+        if (! \App\Modules\Platform\Support\SupportAssignees::isEligible((int) $assigneeId)) {
+            return response()->json(['message' => 'This user cannot take charge of support tickets.', 'code' => 'assignee_not_eligible'], 422);
+        }
+
         $ticket->update([
             'assigned_to_platform_user_id' => $assigneeId,
             'status' => $ticket->status === 'open' ? 'in_progress' : $ticket->status,

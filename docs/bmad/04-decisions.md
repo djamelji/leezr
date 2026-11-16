@@ -28626,3 +28626,29 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - en DEV, les comptes Platform limités dont l'id n'existe pas dans `users` ne peuvent pas se connecter (clé étrangère `sessions.user_id`, antérieure au lot) ;
     - 6 noms de route cassés déjà avant le lot ;
     - un rôle `assign_support` seul n'a pas d'écran pour assigner.
+
+## ADR-801.1 — Sessions Platform à la source, liens Platform cassés, assignation du support sans administration
+
+- **Date** : 2026-11-16, DEV uniquement, base `e2eacf56`. Addendum : `docs/bmad/ADR-801.1-PLATFORM-SESSIONS-ROUTES-SUPPORT.md`.
+- **Cause** : `DatabaseSessionHandler` écrit `sessions.user_id` = id du guard **par défaut**. `auth:platform` fait de `platform` le guard par défaut, donc l'id d'un `PlatformUser` était écrit dans une colonne liée à `users`. Effets :
+  - 500 à la connexion si l'id manque dans `users` ;
+  - sinon, rattachement silencieux à un utilisateur Company sans rapport ;
+  - en plus, toute déconnexion invalidait la session commune aux deux scopes.
+- **Décisions** :
+  - **Handler `database` scopé** : `user_id` ← guard `web`, `platform_user_id` ← guard `platform`, chacun avec sa propre clé étrangère. Migration **additive** `platform_user_id` (vers `platform_users`, ON DELETE CASCADE), sans perte de données.
+  - **Déconnexion scopée** : l'autre scope est conservé et l'id de session est renouvelé.
+  - **Écartés** : utilisateurs miroirs, fusion des identités, suppression de la clé étrangère. Le cookie par scope est reporté.
+  - **Liens** : `platform-documents`, `platform-jobdomains`, `platform-fields` et `platform-modules` pointent vers les onglets du Catalogue. `platform-notifications` est retiré, faute de page de liste Platform : la cloche est la liste. `platform-no-tenant` n'est pas une route (identifiant d'invariant).
+    - La recherche globale est filtrée par permission.
+    - Le menu Accès est aligné sur la méta de sa page.
+    - Les anciens noms sont retirés des manifests.
+  - **Support** :
+    - une file d'assignation en projection minimale et la liste des agents habilités (`manage_support` ou `super_admin`), ouvertes à `assign_support|manage_support` ;
+    - un assigné non habilité est refusé (422) ;
+    - un écran dédié aux assignateurs.
+    - Aucun rôle ni pivot modifié ; historique intact.
+- **Conséquences** :
+  - Assigner un ticket à un utilisateur sans `manage_support` est désormais refusé ; un test existant a été adapté en connaissance de cause.
+  - PROD est probablement concernée : à vérifier et déployer dans un lot dédié.
+  - 13 sessions DEV antérieures au correctif expireront d'elles-mêmes.
+  - Une identité de recette isolée a été ajoutée (PlatformUser 21, rôle `e2e_assign_8011`).

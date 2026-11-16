@@ -202,12 +202,7 @@ class PlatformAuthController extends Controller
             );
         }
 
-        Auth::guard('platform')->logout();
-
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        }
+        \App\Core\Auth\ScopedLogout::end($request, 'platform'); // ADR-801.1 : never logs the other scope out
 
         return response()->json([
             'message' => 'Logged out.',

@@ -510,6 +510,8 @@ class SupportTicketTest extends TestCase
             'email' => 'other-agent@test.com',
             'password' => 'P@ssw0rd!Strong',
         ]);
+        // ADR-801.1 : the assignee must be able to take charge of tickets (manage_support via the admin role).
+        $otherAdmin->roles()->attach(PlatformRole::where('key', 'admin')->value('id'));
 
         $this->actingAs($this->admin, 'platform')
             ->putJson("/api/platform/support/tickets/{$ticket->id}/assign", [

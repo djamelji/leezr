@@ -18,7 +18,7 @@ class DocumentsModule implements ModuleDefinition
             sortOrder: 62,
             capabilities: new Capabilities(
                 navItems: [],
-                routeNames: ['platform-documents', 'platform-documents-id', 'platform-catalog-tab'],
+                routeNames: ['platform-documents-id', 'platform-catalog-tab'],
             ),
             permissions: [
                 ['key' => 'manage_document_catalog', 'label' => 'Manage Document Type Catalog'],

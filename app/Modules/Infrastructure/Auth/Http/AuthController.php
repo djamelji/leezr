@@ -159,12 +159,7 @@ class AuthController extends Controller
             }
         }
 
-        Auth::guard('web')->logout();
-
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        }
+        \App\Core\Auth\ScopedLogout::end($request, 'web'); // ADR-801.1 : never logs the other scope out
 
         return response()->json([
             'message' => 'Logged out.',
