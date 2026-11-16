@@ -1,7 +1,7 @@
 # ADR-802 : rationalisation P1, une fonction, un parcours
 
 - **Base** : `dev` @ `d7cb183e`. DEV uniquement, rien poussé.
-- **SHA livré** : voir §10.
+- **SHA livré** : `886a9287`.
 - **Préservés, non commités** : `CLAUDE.md`, `typed-router.d.ts` (régénéré par le build, toujours 98 routes), `DMS-ARCHITECTURE.md`.
 - **Aucun backend métier modifié** : aucune API, aucun service, aucune garde serveur, aucune donnée, aucun rôle ni pivot, aucune migration. Seule exception : une entrée de menu Platform retirée d'un manifest.
 - **Hors périmètre** : aucune bascule JobDomain ni Requirements, aucun assistant de modules, `@core` intact. L'identité de recette ADR-801.1 (PlatformUser 21) est conservée.
@@ -167,4 +167,4 @@ Lecture seule : toute écriture API est bloquée, et l'instantané de 11 tables 
 
 ## 10. SHA
 
-Voir l'entrée ADR-802 de `docs/bmad/04-decisions.md` et le commit qui suit.
+Code : `886a9287` (DEV, non poussé).
