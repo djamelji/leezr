@@ -43,3 +43,22 @@
   - F1 : le chauffeur ouvre la fiche de Paul et voit « Fiche indisponible » sans Réessayer ;
   - C2 : règles en français ;
   - C1 : e-mail reçu dans Mailpit (jeton d'aperçu factice).
+
+## Validation finale (ADR-809.1 → ADR-812)
+
+- **Suite PHPUnit complète** après la dernière correction : 4626 réussis, 12 ignorés, 3 échecs. Ce sont les 3 échecs historiques de `ControllerSizeInvariantTest` ; aucun contrôleur n'a été modifié.
+- **Build** : propre.
+- **E2E essentiels sur la version finale** :
+  - inscription sans attente (ADR-809.1) ;
+  - expédition de bout en bout par l'écran (n° 16 : créée, planifiée, assignée, en transit, livrée) ;
+  - vérifications ADR-812 (3/3).
+- **Migrations** : aucune ajoutée, toutes exécutées.
+- **Périmètre** :
+  - aucun fichier `@core`, `@layouts`, Billing ou Paie modifié ;
+  - société 1 inchangée par ces lots ;
+  - fichiers non commités préservés.
+- **Fixture** : la société fictive 101 est conservée et documentée (voir ADR-811). Ses factures portent un numéro de séquence global ; les supprimer créerait un trou de numérotation.
+- **SHA** :
+  - ADR-809.1 `e750f75c` ;
+  - ADR-811 `5c167e3d` ;
+  - ADR-812 `440c4ac0`.
