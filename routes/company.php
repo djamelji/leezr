@@ -209,6 +209,11 @@ Route::middleware('company.access:use-module,core.roles')->group(function () {
         ->middleware('company.access:use-permission,roles.manage');
     Route::post('/company/roles/{id}/confirm-pending', [CompanyRoleController::class, 'confirmPending']) // ADR-808.1
         ->middleware('company.access:use-permission,roles.manage');
+    // ADR-809 — grouped review / confirmation of pending access (one decision, delegation policy, audited)
+    Route::get('/company/pending-access', [\App\Modules\Core\Roles\Http\PendingAccessController::class, 'index'])
+        ->middleware('company.access:use-permission,roles.view');
+    Route::post('/company/pending-access/confirm', [\App\Modules\Core\Roles\Http\PendingAccessController::class, 'confirm'])
+        ->middleware('company.access:use-permission,roles.manage');
     Route::delete('/company/roles/{id}', [CompanyRoleController::class, 'destroy'])
         ->middleware('company.access:use-permission,roles.manage');
 

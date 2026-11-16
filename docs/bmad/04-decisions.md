@@ -28872,3 +28872,25 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques ;
     - E2E 1/1 sur une inscription réelle fictive, supprimée ensuite ;
     - build propre.
+
+## ADR-809 — Bascule expérimentale Logistique (DEV) : inscription simple et fonctionnelle
+
+- **Date** : 2026-11-16, DEV local uniquement, base `d2ae575f`, commit `SHA_809`. Rapport : `docs/bmad/ADR-809-LOGISTICS-SIGNUP-EXPERIMENT.md`.
+- **Contexte** : démontrer qu'une nouvelle entreprise Logistique s'inscrit, reçoit sa configuration minimale, confirme ses accès et commence son activité, sans nouvelle architecture.
+- **Décisions** :
+  - **Presets Logistique contrôlés** contre les manifestes : rôles v2, exigences v1 identiques à l'historique, organisation facultative.
+    - **Liens de recommandation créés sur DEV** (rôles, exigences, organisation).
+    - Planning non lié (module hors métier).
+  - **Bascule DEV** activée le temps de la recette, puis **remise à l'état désactivé** (`.env` restauré à l'identique) ; presets et liens conservés.
+  - **Confirmation groupée des accès.** Revue unique dans Équipe → Rôles et carte d'accueil « Accès à confirmer » (fournisseur de priorités existant).
+    - Affichage : rôles, capacités métier, accès sensibles à part.
+    - Confirmation : `PendingModuleAccess::confirm` (délégation, audit), liée par empreinte à ce qui a été affiché (409 sinon).
+  - Recette E2E par l'écran d'inscription réel jusqu'à la livraison : **1 décision** du propriétaire, 0 validation technique.
+- **Conséquences** :
+  - Constat de sécurité non corrigé, décision requise : les limites de débit numériques partagent un compteur par IP, d'où un 429 possible à l'inscription. Le correctif proposé (préfixe par route) a été refusé par le contrôle automatique.
+  - Rôles de gestion du preset non créables simplement après l'inscription.
+  - Tests :
+    - suite complète 4609 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques ;
+    - E2E 2/2, société fictive supprimée, société 1 inchangée ;
+    - build propre.

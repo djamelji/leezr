@@ -25,6 +25,7 @@ class RolesModule implements ModuleDefinition
                     ['key' => 'settings-roles', 'title' => 'Roles & permissions', 'to' => ['name' => 'company-people', 'query' => ['tab' => 'roles']], 'icon' => 'tabler-shield-lock', 'permission' => 'roles.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 40, 'settings' => ['section' => 'access', 'level' => 'regular']],
                 ],
                 routeNames: ['company-roles'],
+                priorityProviders: [\App\Modules\Core\Roles\Home\PendingAccessHomePriorities::class], // ADR-809
                 middlewareKey: 'core.roles',
             ),
             permissions: [

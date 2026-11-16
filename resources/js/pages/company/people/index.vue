@@ -13,6 +13,7 @@ import PeopleHrTools from './_PeopleHrTools.vue'
 import ProfileFieldsSettings from './_ProfileFieldsSettings.vue'
 import MemberHealth from './_MemberHealth.vue'
 import RoleCapabilities from './_RoleCapabilities.vue'
+import PendingAccessReview from './_PendingAccessReview.vue'
 import { useModuleStore } from '@/core/stores/module'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
@@ -24,6 +25,7 @@ definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'wo
 
 const { t } = useI18n()
 const route = useRoute()
+const accessRevision = ref(0) // ADR-809 : rafraîchit les vues après confirmation groupée
 const router = useRouter()
 const store = usePeopleListStore()
 const { can } = useCan()
@@ -265,10 +267,21 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
               </VTab>
             </VTabs>
           </div>
+          <!-- ADR-809 : revue groupée des accès en attente (une seule décision) -->
+          <div
+            v-if="tab === 'roles' && canRoles"
+            class="px-4 pt-4"
+          >
+            <PendingAccessReview @confirmed="accessRevision++" />
+          </div>
           <VCardText v-if="tab === 'roles' && canRoles && rolesView === 'capabilities'">
-            <RoleCapabilities />
+            <RoleCapabilities :key="`caps-${accessRevision}`" />
           </VCardText>
-          <RolesManager v-if="tab === 'roles' && canRoles && rolesView === 'roles'" embedded />
+          <RolesManager
+            v-if="tab === 'roles' && canRoles && rolesView === 'roles'"
+            :key="`roles-${accessRevision}`"
+            embedded
+          />
         </VWindowItem>
       </VWindow>
     </VCard>

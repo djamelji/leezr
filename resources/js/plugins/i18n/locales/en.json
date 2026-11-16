@@ -4831,7 +4831,8 @@
       "documents_expired": "Expired documents",
       "documents_expiring": "Documents expiring soon",
       "shipments_late": "Late shipments",
-      "shipments_unassigned": "Shipments to assign"
+      "shipments_unassigned": "Shipments to assign",
+      "access_to_confirm": "Access to confirm"
     },
     "situation": {
       "activeEmployees": "Active employees",
@@ -10742,5 +10743,16 @@
     "pendingShort": "pending",
     "pendingNotice": "These roles already have rights of this module, prepared when the company was created or granted before it was activated: {list}. They are not effective until you confirm the access (checked = kept, unchecked = removed).",
     "pendingConfirmRole": "Confirm the rights of {role}"
+  },
+  "pendingAccess": {
+    "title": "Access to confirm for {n} role(s)",
+    "intro": "Your business suggests this access. It is prepared but not active yet: the people concerned cannot use it until you confirm it.",
+    "sensitive": "Sensitive access:",
+    "otherRights": "+ {n} other basic right(s) (display, viewing).",
+    "blocked": "you cannot confirm this role yourself",
+    "confirm": "Confirm access ({n} role(s))",
+    "adjustHint": "To adjust before confirming, edit the role below.",
+    "confirmed": "Access confirmed: the people concerned can work.",
+    "stale": "Access changed: check the new list, then confirm."
   }
 }

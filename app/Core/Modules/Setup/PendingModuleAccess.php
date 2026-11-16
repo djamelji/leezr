@@ -98,6 +98,41 @@ final class PendingModuleAccess
         return $out;
     }
 
+    /**
+     * ADR-809 — grouped review : per role, the BUSINESS capabilities its pending rights complete (labels are
+     * translated client-side), sensitive / administrative ones apart, and whether THIS actor may confirm them
+     * (delegation policy). The fingerprint binds the confirmation to exactly what was shown (no unseen right).
+     */
+    public static function summary(Company $company, ?User $actor): array
+    {
+        $caps = collect((new CapabilityAccessService($company))->capabilities(null));
+        $roles = [];
+        foreach (CompanyRole::query()->where('company_id', $company->id)->with('permissions:id,key')->orderBy('name')->get() as $role) {
+            $pending = self::suspendedFor($role);
+            if (! $pending) {
+                continue;
+            }
+            $held = $role->permissions->pluck('key')->all();
+            $covered = $caps->filter(fn ($c) => $c['permission_set'] && array_intersect($c['permission_set'], $pending) && ! array_diff($c['permission_set'], $held));
+            // keep the widest capabilities only (one contained in another is implied)
+            $covered = $covered->reject(fn ($c) => $covered->contains(fn ($o) => $o['key'] !== $c['key'] && ! array_diff($c['permission_set'], $o['permission_set']) && array_diff($o['permission_set'], $c['permission_set'])));
+            $listed = $covered->flatMap(fn ($c) => $c['permission_set'])->all();
+            $roles[] = ['id' => $role->id, 'name' => $role->name, 'is_administrative' => (bool) $role->is_administrative,
+                'capabilities' => $covered->map(fn ($c) => ['key' => $c['key'], 'module' => $c['module'], 'label' => $c['label'],
+                    'sensitive' => $c['sensitive'] || $c['administrative_only']])->values()->all(),
+                'other_rights' => count(array_diff($pending, $listed)), // pending keys outside any complete capability
+                'blocked' => MembershipSecurityPolicy::rolePermissionChangeViolation($company, $role, $pending, [], $actor)];
+        }
+
+        return ['roles' => $roles, 'fingerprint' => self::fingerprint($company)];
+    }
+
+    public static function fingerprint(Company $company): string
+    {
+        return sha1(json_encode(CompanyModuleSetup::query()->where('company_id', $company->id)->whereNotNull('pending_access')
+            ->orderBy('module_key')->get(['module_key', 'pending_access'])->map(fn ($r) => [$r->module_key, $r->pending_access])->all()));
+    }
+
     /** Pending keys of one role, grouped by module (role editor, Équipe → Rôles). */
     public static function byModule(CompanyRole $role): array
     {

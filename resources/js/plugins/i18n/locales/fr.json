@@ -4831,7 +4831,8 @@
       "documents_expired": "Documents expirés",
       "documents_expiring": "Documents qui expirent bientôt",
       "shipments_late": "Expéditions en retard",
-      "shipments_unassigned": "Expéditions à affecter"
+      "shipments_unassigned": "Expéditions à affecter",
+      "access_to_confirm": "Accès à confirmer"
     },
     "situation": {
       "activeEmployees": "Collaborateurs actifs",
@@ -10742,5 +10743,16 @@
     "pendingShort": "en attente",
     "pendingNotice": "Ces rôles ont déjà des droits de ce module, préparés à la création de l'entreprise ou attribués avant son activation : {list}. Ils ne sont pas effectifs tant que vous n'avez pas confirmé les accès (cochés = conservés, décochés = retirés).",
     "pendingConfirmRole": "Confirmer les droits de {role}"
+  },
+  "pendingAccess": {
+    "title": "Accès à confirmer pour {n} rôle(s)",
+    "intro": "Votre activité propose ces accès. Ils sont préparés mais pas encore actifs : les personnes concernées n'y ont pas accès tant que vous ne les confirmez pas.",
+    "sensitive": "Accès sensibles :",
+    "otherRights": "+ {n} autre(s) droit(s) de base (affichage, consultation).",
+    "blocked": "vous ne pouvez pas confirmer ce rôle vous-même",
+    "confirm": "Confirmer les accès ({n} rôle(s))",
+    "adjustHint": "Pour ajuster avant de confirmer, modifiez le rôle ci-dessous.",
+    "confirmed": "Accès confirmés : les personnes concernées peuvent travailler.",
+    "stale": "Les accès ont changé : vérifiez la nouvelle liste puis confirmez."
   }
 }
