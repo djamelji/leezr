@@ -1,7 +1,7 @@
 # ADR-801 : rationalisation P0 (routes, accès Platform, permission support)
 
 - **Base** : `dev` @ `99692bd4`. DEV uniquement, rien poussé.
-- **SHA livré** : voir §8.
+- **SHA livré** : `5b179f0b`.
 - **Périmètre** : les trois P0 d'ADR-800, et rien d'autre.
   - Aucune donnée modifiée, aucune migration, aucun pivot RBAC touché.
   - Aucune page supprimée, aucun composant supprimé.
@@ -168,4 +168,4 @@ Lecture seule : toute requête API non-GET est bloquée, sauf la connexion. Spé
 
 ## 8. SHA
 
-Voir l'entrée ADR-801 dans `docs/bmad/04-decisions.md` et le commit qui suit ce document.
+Code : `5b179f0b` (DEV, non poussé).
