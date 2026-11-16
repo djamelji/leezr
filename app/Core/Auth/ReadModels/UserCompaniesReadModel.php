@@ -52,7 +52,7 @@ class UserCompaniesReadModel
                     'name' => $membership->companyRole->name,
                     'is_administrative' => (bool) $membership->companyRole->is_administrative,
                     'archetype' => $archetype,
-                    'permissions' => $membership->companyRole->permissions->pluck('key')->values(),
+                    'permissions' => $membership->companyRole->effectivePermissionKeys(), // ADR-808 : pending excluded
                 ];
                 $data['workspace'] = WorkspaceResolver::resolve($archetype);
             } else {

@@ -10732,6 +10732,8 @@
     "days": "{n} days",
     "summaryNotAllowed": "Your role cannot display this summary; the server checks below still apply.",
     "dormant": "Also includes rights of modules that are not active ({list}): they are not granted here and are decided in each module's assistant once it is active.",
-    "inertPermissions": "including {n} with no effect today: {list}"
+    "inertPermissions": "including {n} with no effect today: {list}",
+    "pendingShort": "pending",
+    "pendingNotice": "These roles already have rights of this module, prepared when the company was created or granted before it was activated: {list}. They are not effective until you confirm the access (checked = kept, unchecked = removed)."
   }
 }

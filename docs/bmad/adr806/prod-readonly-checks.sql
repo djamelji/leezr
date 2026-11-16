@@ -131,3 +131,17 @@ WHERE cp.module_key IN ('workforce_leave','workforce_planning','workforce_payrol
   AND NOT EXISTS (SELECT 1 FROM company_module_activation_reasons a WHERE a.company_id = r.company_id AND a.module_key = cp.module_key)
 GROUP BY r.company_id, r.id, r.name, cp.module_key
 ORDER BY r.company_id;
+
+-- ═══ ADR-808 additions ══════════════════════════════════════════════════════════════════════════════════
+-- ─── C9. Migration pending_access (additive) and rights currently on hold ─────────────────────────────
+SELECT COLUMN_NAME FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'company_module_setups' AND COLUMN_NAME = 'pending_access';
+SELECT company_id, module_key, status, pending_access FROM company_module_setups WHERE pending_access IS NOT NULL;
+
+-- ─── C10. Versioned initialisation readiness (before listing a jobdomain in JOBDOMAIN_VERSIONED_INIT_JOBDOMAINS) ─
+-- The jobdomain needs a recommendation link to a PUBLISHED rbac preset that contains the « owner » role.
+SELECT l.jobdomain_key, l.kind, l.family_key, l.pinned_version,
+       (SELECT MAX(p.version) FROM presets p WHERE p.family_key = l.family_key AND p.status = 'published') AS published_version
+FROM jobdomain_preset_links l ORDER BY l.jobdomain_key, l.sort_order;
+SELECT p.family_key, p.version, p.status, JSON_SEARCH(p.content, 'one', 'owner', NULL, '$.roles[*].key') IS NOT NULL AS has_owner
+FROM presets p WHERE p.kind = 'rbac' ORDER BY p.family_key, p.version;

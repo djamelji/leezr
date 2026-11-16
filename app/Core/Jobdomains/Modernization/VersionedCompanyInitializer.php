@@ -107,6 +107,25 @@ final class VersionedCompanyInitializer
     }
 
     /**
+     * ADR-808 — the single switch read by company creation. Versioned ONLY when the flag is on, the jobdomain is
+     * in the allow-list AND a usable RBAC preset provides the owner role ; otherwise the historical path (an
+     * absent / incomplete preset never produces a company without administration).
+     */
+    public static function shouldUse(string $jobdomainKey, ?string $marketKey): bool
+    {
+        if (! config('jobdomains.versioned_init.enabled') || ! in_array($jobdomainKey, (array) config('jobdomains.versioned_init.jobdomains', []), true)) {
+            return false;
+        }
+        $rbac = collect(PresetService::recommendationsFor($jobdomainKey, $marketKey))->firstWhere('kind', 'rbac');
+        if (! $rbac || ! $rbac['usable']) {
+            return false;
+        }
+        $roles = PresetService::content(PresetService::find('rbac', $rbac['effective_id']))['roles'] ?? [];
+
+        return collect($roles)->contains(fn ($r) => ($r['key'] ?? null) === 'owner');
+    }
+
+    /**
      * Full versioned creation of a NEW company (alternative to assignToCompany).
      *
      * @param  array{rbac?: list<string>, planning?: bool, organization?: bool}  $confirm  explicit decisions (role keys / families)
@@ -154,6 +173,7 @@ final class VersionedCompanyInitializer
                 }
             }
             self::cloneCompanyDashboard($company, $jd);
+            $summary['pending_access'] = self::holdOperationalAccess($company, $summary['modules']['activated']);
             app(AuditLogger::class)->logCompany($company->id, 'company.versioned_initialized', 'company', (string) $company->id, ['actorId' => $actorId,
                 'metadata' => ['jobdomain' => $jd->key, 'presets' => array_keys($summary['presets']), 'modules' => count($summary['modules']['activated'])]]);
 
@@ -201,6 +221,27 @@ final class VersionedCompanyInitializer
         if ($owner) {
             $company->memberships()->where('role', 'owner')->whereNull('company_role_id')->update(['company_role_id' => $owner->id]);
         }
+    }
+
+    /**
+     * ADR-808 — the owner role administers the company at once ; the OPERATIONAL roles pre-configured by the
+     * preset keep their module rights stored but NOT effective until the module's assistant confirms the access
+     * (company_module_setups.pending_access). Core modules have no assistant : their rights are effective.
+     */
+    private static function holdOperationalAccess(Company $company, array $activated): array
+    {
+        $held = [];
+        foreach ($activated as $key) {
+            if (! \App\Core\Modules\Setup\ModuleSetupService::contract($key)) {
+                continue;
+            }
+            $pending = \App\Core\Modules\Setup\PendingModuleAccess::snapshot($company, $key);
+            \App\Core\Modules\Setup\CompanyModuleSetup::query()->firstOrCreate(['company_id' => $company->id, 'module_key' => $key],
+                ['status' => \App\Core\Modules\Setup\CompanyModuleSetup::TO_CONFIGURE, 'completed_steps' => [], 'pending_access' => $pending ?: null]);
+            $held[$key] = array_keys($pending);
+        }
+
+        return $held;
     }
 
     /** Operational projection of company-wide items (the historical engine reads activations, not the registry). */

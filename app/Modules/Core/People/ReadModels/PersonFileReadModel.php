@@ -247,7 +247,7 @@ class PersonFileReadModel
             'role' => $role ? ['id' => $role->id, 'name' => $role->name, 'is_administrative' => (bool) $role->is_administrative] : null,
             // ADR-786 : la liste des permissions d'autrui relève de la configuration des rôles (roles.view),
             // pas de l'annuaire (members.view, accordé aux rôles de terrain) — minimisation des données.
-            'effective_permissions' => $role && $canViewRoles ? $role->permissions->pluck('key')->values()->all() : null,
+            'effective_permissions' => $role && $canViewRoles ? $role->effectivePermissionKeys() : null, // ADR-808
             'has_account' => (bool) $user,
             // E-mail employé = cible de l'invitation quand la fiche RH n'a pas encore de compte.
             'grant_email' => $employee && ! $user ? $employee->email : null,

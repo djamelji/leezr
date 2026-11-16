@@ -58,11 +58,22 @@ class CompanyRole extends Model
 
     public function hasPermission(string $key): bool
     {
+        // ADR-808 : a right stored on the role but still pending confirmation in its module's assistant is not honoured.
+        if (in_array($key, \App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($this), true)) {
+            return false;
+        }
         if ($this->relationLoaded('permissions')) {
             return $this->permissions->contains('key', $key);
         }
 
         return $this->permissions()->where('key', $key)->exists();
+    }
+
+    /** ADR-808 — the permissions really honoured (stored minus pending confirmation) : what the client receives. */
+    public function effectivePermissionKeys(): array
+    {
+        return array_values(array_diff($this->permissions->pluck('key')->unique()->values()->all(),
+            \App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($this)));
     }
 
     /**

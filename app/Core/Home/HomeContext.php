@@ -35,7 +35,7 @@ final class HomeContext
         $membership?->loadMissing('companyRole.permissions');
 
         return new self($request, $company, $user, $membership?->companyRole
-            ? $membership->companyRole->permissions->pluck('key')->unique()->values()->all()
+            ? $membership->companyRole->effectivePermissionKeys() /* ADR-808 */
             : []);
     }
 

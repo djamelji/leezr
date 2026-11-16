@@ -13,5 +13,8 @@ class ModuleEnabled
     public function __construct(
         public Company $company,
         public string $moduleKey,
+        // ADR-808 : true when the module had NEVER been active for this company (no company_modules row before).
+        // Only then are the rights roles already held put on hold (a re-activation restores previous rights).
+        public bool $firstActivation = false,
     ) {}
 }

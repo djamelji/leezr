@@ -14,6 +14,9 @@ const { t, te } = useI18n()
 
 const advanced = ref(false)
 const editableRoles = computed(() => props.roles.filter(r => r.editable))
+// ADR-808 : un droit « en attente » est stocké sur le rôle mais pas encore effectif (confirmation requise)
+const isPending = (r, c) => (r.pending || []).some(p => (c.permissions || []).includes(p))
+const pendingRoles = computed(() => editableRoles.value.filter(r => (r.pending || []).length))
 const ownerRoles = computed(() => props.roles.filter(r => !r.editable))
 const desired = ref({}) // `${roleId}:${cap}` → true | false (only touched cells)
 
@@ -86,6 +89,18 @@ defineExpose({ reset })
     >
       {{ t('moduleSetup.ownerNote', { list: ownerRoles.map(r => r.name).join(', ') }) }}
     </p>
+
+    <!-- ADR-808 : droits déjà détenus à la première activation — enregistrés mais pas encore effectifs -->
+    <VAlert
+      v-if="pendingRoles.length"
+      type="warning"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      data-test="capability-pending"
+    >
+      {{ t('moduleSetup.pendingNotice', { list: pendingRoles.map(r => r.name).join(', ') }) }}
+    </VAlert>
 
     <div
       v-for="g in groups"
@@ -176,6 +191,11 @@ defineExpose({ reset })
                 v-if="initial(r, c) === 'partial' && !(key(r, c) in desired)"
                 class="ms-1"
               >({{ t('moduleSetup.partial') }})</span>
+              <span
+                v-if="isPending(r, c) && !(key(r, c) in desired)"
+                class="ms-1"
+                :data-test="`cap-${c.key}-role-${r.id}-pending`"
+              >({{ t('moduleSetup.pendingShort') }})</span>
               <VIcon
                 v-if="suggested(r, c) && !isOn(r, c)"
                 icon="tabler-sparkles"

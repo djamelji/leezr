@@ -132,8 +132,10 @@ final class ModuleSetupService
             CompanyModuleSetup::query()->whereKey($row->id)->lockForUpdate()->first();
             $plan = $this->access->apply($moduleKey, $changes, $fingerprint, $actor, $confirmAffected, 'module_setup');
             $this->completeStep($row->fresh(), 'access');
+            $pending = $row->fresh()->pending_access; // ADR-808 : holders reviewed in the assistant ⇒ decided
+            PendingModuleAccess::confirmAll($this->company->id, $moduleKey);
             app(AuditLogger::class)->logCompany($this->company->id, 'module.access_configured', 'module', $moduleKey, [
-                'actorId' => $actor->id, 'metadata' => ['roles' => count($plan)],
+                'actorId' => $actor->id, 'metadata' => ['roles' => count($plan), 'confirmed_pending_roles' => array_keys($pending ?? [])],
             ]);
         });
 

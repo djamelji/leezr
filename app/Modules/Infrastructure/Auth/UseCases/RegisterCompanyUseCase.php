@@ -83,7 +83,8 @@ class RegisterCompanyUseCase
             // ADR-798 : initialisation versionnée derrière drapeau (désactivé). Désactiver le drapeau = retour au
             // chemin historique pour les créations futures. À l'inscription, seul le rôle « owner » (sensible) est
             // confirmé explicitement par le créateur ; les autres rôles sensibles restent une décision ultérieure.
-            if (config('jobdomains.versioned_init.enabled')) {
+            // ADR-808 : bascule contrôlée (drapeau + liste de métiers + preset RBAC utilisable avec rôle owner).
+            if (\App\Core\Jobdomains\Modernization\VersionedCompanyInitializer::shouldUse($data->jobdomainKey, $company->market_key)) {
                 \App\Core\Jobdomains\Modernization\VersionedCompanyInitializer::initializeNew($company, $data->jobdomainKey, ['rbac' => ['owner']], $user->id);
             } else {
                 JobdomainGate::assignToCompany($company, $data->jobdomainKey);

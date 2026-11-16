@@ -120,6 +120,9 @@ final class CapabilityAccessService
                 'id' => $r->id, 'key' => $r->key, 'name' => $r->name, 'is_administrative' => (bool) $r->is_administrative,
                 'editable' => $r->key !== 'owner',
                 'holds' => collect($caps)->mapWithKeys(fn ($c) => [$c['key'] => self::holding($r->permissions->pluck('key')->all(), $c)])->all(),
+                // ADR-808 : stored but not effective until the module's access step is confirmed (shown, never hidden)
+                'pending' => array_values(array_intersect(\App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($r),
+                    collect($caps)->flatMap(fn ($c) => $c['permission_set'])->all())),
             ])->values()->all(),
             'fingerprint' => $this->fingerprint($moduleKey),
             'can_change' => $actor->hasCompanyPermission($this->company, 'roles.manage'),
@@ -211,6 +214,10 @@ final class CapabilityAccessService
                 MembershipSecurityPolicy::assertCanChangeRolePermissions($this->company, $role, $p['add_keys'], $p['remove_keys'], $actor);
                 $keys = array_values(array_diff(array_unique(array_merge($role->permissions->pluck('key')->all(), $p['add_keys'])), $p['remove_keys']));
                 $role->syncPermissionsSafe(CompanyPermission::whereIn('key', $keys)->pluck('id')->all());
+            }
+            // ADR-808 : an explicit decision on a role for this module ends its pending (dormant) rights for the module.
+            foreach ($preview['plan'] as $p) {
+                \App\Core\Modules\Setup\PendingModuleAccess::release($this->company->id, $moduleKey, (int) $p['role_id']);
             }
             app(AuditLogger::class)->logCompany($this->company->id, 'role.capabilities_changed', 'module', $moduleKey, [
                 'actorId' => $actor->id,

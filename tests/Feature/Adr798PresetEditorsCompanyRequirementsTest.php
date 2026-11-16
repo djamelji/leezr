@@ -286,6 +286,9 @@ class Adr798PresetEditorsCompanyRequirementsTest extends TestCase
         $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'rbac', 'family_key' => 'logistique_rbac'], ['kind' => 'requirements', 'family_key' => 'logistique_requirements']]])->assertOk();
         config(['jobdomains.versioned_init.enabled' => true]);
         $this->app['auth']->forgetGuards();
+        $this->assertSame(0, PresetApplication::where('company_id', $register('flag-only@example.test'))->count(), 'ADR-808 : drapeau seul = chemin historique');
+        config(['jobdomains.versioned_init.jobdomains' => ['logistique']]); // ADR-808 : bascule contrôlée par métier
+        $this->app['auth']->forgetGuards();
         $newId = $register('versioned@example.test');
         $this->assertSame(2, PresetApplication::where('company_id', $newId)->count(), 'création versionnée tracée');
         $this->assertTrue(CompanyRole::where('company_id', $newId)->where('key', 'owner')->exists(), 'rôle owner confirmé par le créateur');

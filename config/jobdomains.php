@@ -12,5 +12,8 @@ return [
     'legacy_editing' => (bool) env('JOBDOMAIN_LEGACY_EDITING', false),
     'versioned_init' => [
         'enabled' => (bool) env('JOBDOMAIN_VERSIONED_INIT', false),
+        // ADR-808 — controlled switch : NEW companies of these jobdomains only (comma list). Empty = none, even
+        // when enabled. Rollback = remove the key (or disable) : future creations go back to the historical path.
+        'jobdomains' => array_values(array_filter(array_map('trim', explode(',', (string) env('JOBDOMAIN_VERSIONED_INIT_JOBDOMAINS', ''))))),
     ],
 ];

@@ -20,6 +20,13 @@ class CreateSetupOnModuleEnabled
             ['company_id' => $event->company->id, 'module_key' => $event->moduleKey],
             ['status' => CompanyModuleSetup::TO_CONFIGURE, 'completed_steps' => []],
         );
+        // ADR-808 — FIRST activation : rights roles already held for this module (dormant, e.g. granted through a
+        // composite capability or an old role editor) are put on hold until the access step is confirmed.
+        if ($row->wasRecentlyCreated && $event->firstActivation && ($held = PendingModuleAccess::snapshot($event->company, $event->moduleKey))) {
+            $row->forceFill(['pending_access' => $held])->save();
+            app(\App\Core\Audit\AuditLogger::class)->logCompany($event->company->id, 'module.access_pending', 'module', $event->moduleKey,
+                ['metadata' => ['roles' => array_keys($held)]]);
+        }
         // ADR-803.1 — re-activation : choices kept, but a previous « ready » must be confirmed again.
         if (! $row->wasRecentlyCreated) {
             (new ModuleSetupService($event->company))->onReactivated($event->moduleKey);

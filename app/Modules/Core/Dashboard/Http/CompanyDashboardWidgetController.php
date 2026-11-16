@@ -21,7 +21,7 @@ class CompanyDashboardWidgetController extends Controller
         $membership = $user->membershipFor($company);
         $archetype = $membership?->companyRole?->archetype;
         $isOwner = $user->isOwnerOf($company);
-        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->permissions->pluck('key')->all() ?? []);
+        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->effectivePermissionKeys() ?? []);
 
         $widgets = DashboardCatalogService::forArchetype($company, $archetype, $userPermissions, $isOwner);
 
@@ -62,7 +62,7 @@ class CompanyDashboardWidgetController extends Controller
         $membership = $user->membershipFor($company);
         $archetype = $membership?->companyRole?->archetype;
         $isOwner = $user->isOwnerOf($company);
-        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->permissions->pluck('key')->all() ?? []);
+        $userPermissions = $isOwner ? [] : ($membership?->companyRole?->effectivePermissionKeys() ?? []);
 
         // Build allowed widget keys from filtered catalog
         $allowedKeys = collect(DashboardCatalogService::forArchetype($company, $archetype, $userPermissions, $isOwner))

@@ -28817,3 +28817,34 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques ;
     - E2E 3/3 sur société fictive supprimée, société 1 inchangée, aucune facturation ;
     - build propre.
+
+## ADR-808 — Initialisation par JobDomain et presets ; droits dormants sécurisés
+
+- **Date** : 2026-11-16, DEV uniquement, base `251c144a`, commit `SHA_808`. Rapport : `docs/bmad/ADR-808-INITIALIZATION-DORMANT-RIGHTS.md` ; contrôles PROD C9 et C10 ajoutés à `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Contexte** : faire converger l'initialisation historique et les presets versionnés vers un seul parcours, sans troisième mécanisme et sans attribution imprévue de droits.
+- **Décisions** :
+  - **Un seul point de bascule.** `VersionedCompanyInitializer::shouldUse` exige trois conditions : le drapeau, le métier listé dans `JOBDOMAIN_VERSIONED_INIT_JOBDOMAINS`, et un preset RBAC publié contenant `owner`. Sinon, c'est le chemin historique.
+    - Nouvelles sociétés uniquement.
+    - Retour arrière : retirer le métier de la liste.
+    - Aucune bascule activée.
+  - **Presets `logistique` publiés sur DEV** :
+    - rôles v2 : bundles existants sans les capacités inertes, noms français ;
+    - exigences v1 : copie exacte de l'historique ;
+    - planning v1 ;
+    - organisation `logistique_base_v1`, déjà publiée.
+
+    **Aucun lien de recommandation créé** : c'est le premier geste de la bascule.
+  - **Droits dormants.** Colonne additive `company_module_setups.pending_access`.
+    - **Mise en attente** : à la **première** activation d'un module doté d'un assistant (directe ou comme dépendance), et pour les rôles opérationnels d'une création versionnée, les droits déjà détenus par les rôles non propriétaires sont mémorisés.
+    - **Effet** : ils ne sont pas honorés (`CompanyRole::hasPermission`, `effectivePermissionKeys`) tant que l'étape Accès n'est pas confirmée, ou que le rôle n'a pas fait l'objet d'une décision explicite dans Équipe → Rôles.
+    - **Garanties** : aucun pivot modifié ; réactivation et modules historiquement actifs inchangés ; propriétaire jamais suspendu.
+  - Écarts ancien/nouveau mesurés par `CreationParity` : 0 défaut ; écarts volontaires documentés.
+- **Conséquences** :
+  - Droits dormants restants : modules sans assistant (Paie).
+  - L'éditeur avancé n'indique pas l'attente.
+  - Dette Billing distincte : le devis crée le portefeuille.
+  - Tests :
+    - suite complète 4601 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques ;
+    - E2E 2/2 sur sociétés fictives supprimées, société 1 inchangée ;
+    - build propre.

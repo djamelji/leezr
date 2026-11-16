@@ -114,6 +114,9 @@ class ModuleActivationEngine
         }
 
         $activated = [];
+        // ADR-808 : modules NEVER active before for this company (no company_modules row yet) — dependencies included.
+        $firstTime = array_values(array_diff(array_merge([$key], $allRequires),
+            CompanyModule::where('company_id', $company->id)->whereIn('module_key', array_merge([$key], $allRequires))->pluck('module_key')->all()));
 
         DB::transaction(function () use ($company, $key, $allRequires, &$activated) {
             // 1. Add 'direct' reason for the requested module
@@ -167,7 +170,7 @@ class ModuleActivationEngine
 
         // Dispatch events outside transaction
         foreach (array_unique($activated) as $moduleKey) {
-            ModuleEnabled::dispatch($company, $moduleKey);
+            ModuleEnabled::dispatch($company, $moduleKey, in_array($moduleKey, $firstTime, true));
         }
 
         // ADR-168b: auto-activate fields required by newly activated modules
