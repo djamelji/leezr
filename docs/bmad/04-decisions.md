@@ -28731,7 +28731,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-805 — Configuration modulaire : Documents RH, Contrats, Signatures
 
-- **Date** : 2026-11-16, DEV uniquement, base `85c08c5f`. Rapport : `docs/bmad/ADR-805-MODULE-ASSISTANT-DOCUMENTS-CONTRACT-SIGNATURE.md`.
+- **Date** : 2026-11-16, DEV uniquement, base `85c08c5f`, commit `18f2ff40`. Rapport : `docs/bmad/ADR-805-MODULE-ASSISTANT-DOCUMENTS-CONTRACT-SIGNATURE.md`.
 - **Contexte** : étendre l'assistant ADR-803/804 aux trois modules documentaires, sans moteur ni interface recréée (ADR-802).
 - **Décisions** :
   - **Étapes adaptées aux prérequis réellement exécutés.**
