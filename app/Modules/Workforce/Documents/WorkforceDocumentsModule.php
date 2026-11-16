@@ -28,8 +28,8 @@ class WorkforceDocumentsModule implements ModuleDefinition
             permissions: [
                 ['key' => 'workforce_documents.view', 'label' => 'View HR Documents', 'hint' => 'View generated HR documents.'],
                 ['key' => 'workforce_documents.generate', 'label' => 'Generate Documents', 'is_admin' => true, 'hint' => 'Generate PDF documents from templates.'],
-                ['key' => 'workforce_documents.manage_templates', 'label' => 'Manage Templates', 'is_admin' => true, 'hint' => 'Create and edit document templates.'],
-                ['key' => 'workforce_documents.sign', 'label' => 'Manage Signatures', 'is_admin' => true, 'hint' => 'Manage document signature status.'],
+                ['key' => 'workforce_documents.manage_templates', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Manage Templates', 'is_admin' => true, 'hint' => 'Create and edit document templates.'],
+                ['key' => 'workforce_documents.sign', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Manage Signatures', 'is_admin' => true, 'hint' => 'Manage document signature status.'],
             ],
             bundles: [
                 [

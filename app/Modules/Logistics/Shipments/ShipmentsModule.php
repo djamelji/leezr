@@ -31,8 +31,8 @@ class ShipmentsModule implements ModuleDefinition
                 ['key' => 'shipments.manage_status', 'label' => 'Manage Shipment Status', 'hint' => 'Update shipment status and workflow.'],
                 ['key' => 'shipments.assign', 'label' => 'Assign Shipments', 'hint' => 'Assign shipments to team members.'],
                 ['key' => 'shipments.view_own', 'label' => 'View Own Deliveries', 'hint' => 'See only shipments assigned to you.'],
-                ['key' => 'shipments.manage_fields', 'label' => 'Manage Shipment Fields', 'is_admin' => true, 'hint' => 'Configure custom fields on shipments.'],
-                ['key' => 'shipments.delete', 'label' => 'Delete Shipments', 'is_admin' => true, 'hint' => 'Permanently remove shipments from the system.'],
+                ['key' => 'shipments.manage_fields', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Manage Shipment Fields', 'is_admin' => true, 'hint' => 'Configure custom fields on shipments.'],
+                ['key' => 'shipments.delete', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Delete Shipments', 'is_admin' => true, 'hint' => 'Permanently remove shipments from the system.'],
             ],
             bundles: [
                 [

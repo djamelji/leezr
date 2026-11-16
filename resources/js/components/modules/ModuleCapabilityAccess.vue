@@ -42,7 +42,7 @@ const applySuggestion = () => {
   }
 }
 
-const { capLabel: label, capHint: hint } = useCatalogText() // ADR-806 : dotted catalog keys
+const { capLabel: label, capHint: hint, moduleName } = useCatalogText() // ADR-806 : dotted catalog keys
 // ADR-804 : une capacité sans fonction branchée (`unwired`) n'est montrée qu'en mode avancé, avec la mention.
 const shown = computed(() => props.capabilities.filter(c => advanced.value || !c.unwired))
 const groups = computed(() => [
@@ -136,11 +136,23 @@ defineExpose({ reset })
           >
             {{ t('moduleSetup.unwired') }}
           </VAlert>
+          <!-- ADR-807 : droits d'un autre module non activé, jamais attribués d'ici -->
+          <div
+            v-if="c.dormant_modules?.length"
+            class="text-body-2 text-medium-emphasis mb-2"
+            :data-test="`capability-dormant-${c.key}`"
+          >
+            {{ t('moduleSetup.dormant', { list: c.dormant_modules.map(k => moduleName(k)).join(', ') }) }}
+          </div>
           <div
             v-if="advanced"
             class="text-caption text-medium-emphasis mb-2"
           >
             {{ c.key }} · {{ t('moduleSetup.permissionCount', { n: c.permission_count }) }}
+            <span
+              v-if="c.inert_permissions?.length"
+              :data-test="`capability-inert-${c.key}`"
+            > · {{ t('moduleSetup.inertPermissions', { n: c.inert_permissions.length, list: c.inert_permissions.join(', ') }) }}</span>
           </div>
           <div class="d-flex flex-wrap gap-2">
             <VChip

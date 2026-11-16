@@ -4176,7 +4176,16 @@
       "signatures_in_progress": "{n} signature request(s) in progress continue with the signers; their follow-up (reminders, cancellation, evidence) resumes on reactivation.",
       "nothingDeleted": "No data is deleted by deactivation.",
       "shipments_in_progress": "{n} shipment(s) in progress are kept, but nobody (drivers included) can change their status while the module is disabled."
-    }
+    },
+    "quoteRequested": "Requested module",
+    "quoteAdded": "Required modules, activated at the same time:",
+    "quoteNoCharge": "No charge",
+    "quoteAlreadyActive": "Already active (no change):",
+    "quoteDeactivation": "If you disable {module} later, its data is kept.",
+    "quoteDeactivationWithAdded": "If you disable {module} later, the modules added for it ({list}) will also be disabled if no other module needs them; data is kept.",
+    "quoteBillingStopsEndOfPeriod": "A paid module stays billed until the end of the current period.",
+    "quoteBillingStopsNow": "A paid module stops being billed immediately; the rest of the period is credited pro rata.",
+    "includedLocked": "Included in your business: this module is part of your industry and cannot be disabled here. Its access and settings remain customizable."
   },
   "contactSales": {
     "title": "Premium module",
@@ -10721,6 +10730,8 @@
     "signatureValidity": "Validity",
     "signatureManage": "Open signature settings",
     "days": "{n} days",
-    "summaryNotAllowed": "Your role cannot display this summary; the server checks below still apply."
+    "summaryNotAllowed": "Your role cannot display this summary; the server checks below still apply.",
+    "dormant": "Also includes rights of modules that are not active ({list}): they are not granted here and are decided in each module's assistant once it is active.",
+    "inertPermissions": "including {n} with no effect today: {list}"
   }
 }

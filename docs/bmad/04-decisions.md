@@ -28788,3 +28788,32 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques conservés comme dette ;
     - E2E 3/3 sur société fictive supprimée, société 1 inchangée, 0 écriture de facturation ;
     - build propre.
+
+## ADR-807 — Rationalisation des permissions et cohérence modulaire
+
+- **Date** : 2026-11-16, DEV uniquement, base `deea2a00`, commit `SHA_807`. Rapport : `docs/bmad/ADR-807-PERMISSION-RATIONALIZATION.md` ; contrôles PROD C1-C8 : `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Contexte** : éliminer les configurations trompeuses sans nouveau moteur et sans modifier silencieusement les droits existants.
+- **Décisions** :
+  - **Expéditions, périmètres serveur explicites.**
+    - Collectif = `shipments.view` + l'opération, ce qui vaut désormais aussi pour l'affectation.
+    - Personnel = `shipments.view_own` + l'opération + la règle « affectée à moi », vérifiée sur la ligne verrouillée par `ChangeShipmentStatus`.
+    - Une permission ne remplace jamais l'appartenance à une ressource.
+  - **Permissions inertes.** Aucune ne satisfait la condition de retrait : 7 sont attribuées, 3 sont référencées par les rôles par défaut et un preset publié, et `leave_adjust` reste conservée par consigne.
+    - Elles sont marquées `inert` dans les manifestes et signalées en mode avancé.
+    - Plan de migration en deux déploiements, soumis à validation (rapport §2).
+  - **Capacités composées.** Seules les permissions du module de la capacité ou de modules actifs sont attribuées, retirées ou comptées.
+    - Les permissions des modules non activés (« dormantes ») sont signalées, jamais attribuées ni retirées.
+    - Les rôles existants sont préservés.
+  - **Devis.** Le devis existant est demandé pour le module **et** ses prérequis inactifs, ce que l'activation facture réellement. Il est aussi demandé quand le module est gratuit mais qu'un prérequis est payant.
+    - Affichage : module demandé, modules ajoutés, déjà actifs, total, règle de désactivation et de facturation.
+    - Aucun changement Billing.
+  - **Modules inclus.** La carte explique pourquoi le module ne se désactive pas ici ; assistant et réglages restent accessibles.
+- **Conséquences** :
+  - Les rôles PROD avec `assign` sans vue, ou `manage_status` sans portée, perdent ces actions (contrôle C6 ; aucun sur DEV).
+  - Les droits dormants historiques restent effectifs à l'activation de leur module (contrôle C8 ; aucun sur DEV).
+  - Constat Billing non corrigé : le devis crée le portefeuille s'il manque.
+  - Tests :
+    - suite complète 4595 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques ;
+    - E2E 3/3 sur société fictive supprimée, société 1 inchangée, aucune facturation ;
+    - build propre.

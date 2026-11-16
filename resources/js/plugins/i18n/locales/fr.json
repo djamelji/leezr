@@ -4176,7 +4176,16 @@
       "signatures_in_progress": "{n} demande(s) de signature en cours continuent auprès des signataires ; leur suivi (relance, annulation, preuves) reprend à la réactivation.",
       "nothingDeleted": "Aucune donnée n'est supprimée par la désactivation.",
       "shipments_in_progress": "{n} expédition(s) en cours restent conservées, mais personne (livreurs compris) ne pourra changer leur statut tant que le module est désactivé."
-    }
+    },
+    "quoteRequested": "Module demandé",
+    "quoteAdded": "Modules nécessaires, activés en même temps :",
+    "quoteNoCharge": "Sans frais",
+    "quoteAlreadyActive": "Déjà actifs (aucun changement) :",
+    "quoteDeactivation": "Si vous désactivez {module} plus tard, ses données sont conservées.",
+    "quoteDeactivationWithAdded": "Si vous désactivez {module} plus tard, les modules ajoutés pour lui ({list}) seront aussi désactivés s'ils ne servent à aucun autre module ; les données sont conservées.",
+    "quoteBillingStopsEndOfPeriod": "Un module payant reste facturé jusqu'à la fin de la période en cours.",
+    "quoteBillingStopsNow": "Un module payant cesse d'être facturé immédiatement ; le reste de la période est crédité au prorata.",
+    "includedLocked": "Inclus dans votre activité : ce module fait partie de votre métier et ne se désactive pas ici. Ses accès et réglages restent personnalisables."
   },
   "contactSales": {
     "title": "Module premium",
@@ -10721,6 +10730,8 @@
     "signatureValidity": "Validité",
     "signatureManage": "Ouvrir les réglages de signature",
     "days": "{n} jours",
-    "summaryNotAllowed": "Votre rôle ne permet pas d'afficher ce récapitulatif ; les contrôles serveur ci-dessous restent appliqués."
+    "summaryNotAllowed": "Votre rôle ne permet pas d'afficher ce récapitulatif ; les contrôles serveur ci-dessous restent appliqués.",
+    "dormant": "Comprend aussi des droits de modules non activés ({list}) : ils ne sont pas attribués ici et se décident dans l'assistant de chaque module après son activation.",
+    "inertPermissions": "dont {n} sans effet aujourd'hui : {list}"
   }
 }

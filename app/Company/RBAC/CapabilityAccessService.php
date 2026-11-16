@@ -5,6 +5,7 @@ namespace App\Company\RBAC;
 use App\Core\Audit\AuditLogger;
 use App\Core\Models\Company;
 use App\Core\Models\User;
+use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -32,9 +33,17 @@ final class CapabilityAccessService
     {
         $defs = ModuleRegistry::definitions();
         $modules = $moduleKey ? [$moduleKey => $defs[$moduleKey] ?? abort(404)] : ModuleRegistry::forScope('company');
+        [$owner, $inert] = self::permissionIndex();
         $out = [];
         foreach ($modules as $key => $m) {
             foreach ($m->bundles as $b) {
+                $all = array_values($b['permissions'] ?? []);
+                // ADR-807 — a composite capability may embed permissions of OTHER modules (e.g. workforce.manager
+                // → Leave approval). Only the permissions of modules ACTIVE for this company are granted, revoked
+                // or counted ; the others (« dormant ») are never attributed here, so activating a module later
+                // never gives rights nobody decided. Historical pivots are left untouched.
+                $dormant = array_values(array_filter($all, fn ($p) => ($owner[$p] ?? $key) !== $key && ! $this->moduleActive($owner[$p])));
+                $set = array_values(array_diff($all, $dormant));
                 $out[] = ['key' => $b['key'], 'module' => $key, 'label' => $b['label'] ?? $b['key'], 'hint' => $b['hint'] ?? null,
                     // ADR-804 : « sensible » = déclaré explicitement (rémunération, données personnelles) ; `is_admin`
                     // reste une CONTRAINTE (rôles de gestion seulement), pas une catégorie d'affichage.
@@ -42,12 +51,40 @@ final class CapabilityAccessService
                     'administrative_only' => (bool) ($b['is_admin'] ?? false),
                     'scope' => $b['scope'] ?? 'collective',
                     'unwired' => (bool) ($b['unwired'] ?? false), // ADR-804 : aucune fonction ne l'utilise encore
-                    'permission_count' => count($b['permissions'] ?? []),
-                    'permission_set' => array_values($b['permissions'] ?? [])];
+                    'permission_count' => count($set),
+                    'inert_permissions' => array_values(array_intersect($set, $inert)), // ADR-807 : guard nothing
+                    'dormant_modules' => array_values(array_unique(array_map(fn ($p) => $owner[$p] ?? $key, $dormant))),
+                    'permission_set' => $set];
             }
         }
 
         return $out;
+    }
+
+    /** @return array{0: array<string,string>, 1: list<string>} permission → declaring module ; inert permission keys. */
+    public static function permissionIndex(): array
+    {
+        $owner = [];
+        $inert = [];
+        foreach (ModuleRegistry::definitions() as $key => $m) {
+            foreach ($m->permissions ?? [] as $p) {
+                $k = is_array($p) ? $p['key'] : $p;
+                $owner[$k] = $key;
+                if (is_array($p) && ($p['inert'] ?? false)) {
+                    $inert[] = $k;
+                }
+            }
+        }
+
+        return [$owner, $inert];
+    }
+
+    /** @var array<string,bool> */
+    private array $activeCache = [];
+
+    private function moduleActive(string $moduleKey): bool
+    {
+        return $this->activeCache[$moduleKey] ??= ModuleGate::isActive($this->company, $moduleKey);
     }
 
     public function roles()
@@ -64,6 +101,9 @@ final class CapabilityAccessService
 
     public static function holding(array $permissionKeys, array $cap): string
     {
+        if (! $cap['permission_set']) {
+            return 'none'; // ADR-807 : capability of an inactive module (nothing grantable)
+        }
         $held = array_intersect($cap['permission_set'], $permissionKeys);
 
         return count($held) === count($cap['permission_set']) ? 'full' : (count($held) ? 'partial' : 'none');

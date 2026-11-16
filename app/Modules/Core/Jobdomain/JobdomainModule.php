@@ -23,7 +23,7 @@ class JobdomainModule implements ModuleDefinition
             ),
             permissions: [
                 ['key' => 'jobdomain.view', 'label' => 'View Industry', 'hint' => 'See the company industry profile.'],
-                ['key' => 'jobdomain.manage', 'label' => 'Manage Industry', 'is_admin' => true, 'hint' => 'Change the company industry profile and sector.'],
+                ['key' => 'jobdomain.manage', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Manage Industry', 'is_admin' => true, 'hint' => 'Change the company industry profile and sector.'],
             ],
             bundles: [
                 [

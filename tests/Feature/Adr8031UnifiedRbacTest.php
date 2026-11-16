@@ -291,6 +291,12 @@ class Adr8031UnifiedRbacTest extends TestCase
         $this->assertSame([], $chef->fresh()->permissions()->pluck('key')->all(), 'a suggestion grants nothing');
         $fp = $this->as($owner, $c)->postJson('/api/modules/workforce/setup/access/preview', ['changes' => [['role_id' => $chef->id, 'capability' => 'workforce.manager', 'grant' => true]]])->json('fingerprint');
         $this->as($owner, $c)->putJson('/api/modules/workforce/setup/access', ['changes' => [['role_id' => $chef->id, 'capability' => 'workforce.manager', 'grant' => true]], 'fingerprint' => $fp])->assertOk();
-        $this->assertContains('workforce.planning_publish', $chef->fresh()->permissions()->pluck('key')->all());
+        // ADR-807 : the composite capability grants only the permissions of ACTIVE modules — Planning / Leave
+        // are not active here, so their rights are not given (they are decided in their own assistant later).
+        $keys = $chef->fresh()->permissions()->pluck('key')->all();
+        $this->assertContains('workforce.view', $keys);
+        $this->assertNotContains('workforce.planning_publish', $keys);
+        $cap = collect($d['capabilities'])->firstWhere('key', 'workforce.manager');
+        $this->assertEqualsCanonicalizing(['workforce_planning', 'workforce_leave'], $cap['dormant_modules']);
     }
 }

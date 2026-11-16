@@ -516,12 +516,13 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
         ->middleware('company.access:use-permission,shipments.create');
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])
         ->middleware('company.access:use-permission,shipments.view');
-    // ADR-806 : changing the status of ANY shipment needs the full view ; a driver (view_own) goes through
-    // /my-deliveries/{id}/status, which checks the assignment.
+    // ADR-806/807 — explicit server scopes. COLLECTIVE (any shipment of the company) = shipments.view + the
+    // operation permission. OWN (« my deliveries ») = shipments.view_own + the operation, AND the resource
+    // rule « assigned to me » checked on the locked row. A permission never replaces the assignment rule.
     Route::put('/shipments/{id}/status', [ShipmentController::class, 'changeStatus'])
         ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.manage_status']);
     Route::post('/shipments/{id}/assign', [ShipmentController::class, 'assign'])
-        ->middleware('company.access:use-permission,shipments.assign');
+        ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.assign']);
 
     // Driver routes (strictly separated)
     Route::get('/my-deliveries', [MyDeliveryController::class, 'index'])
@@ -529,7 +530,7 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
     Route::get('/my-deliveries/{id}', [MyDeliveryController::class, 'show'])
         ->middleware('company.access:use-permission,shipments.view_own');
     Route::put('/my-deliveries/{id}/status', [MyDeliveryController::class, 'updateStatus'])
-        ->middleware('company.access:use-permission,shipments.manage_status');
+        ->middleware(['company.access:use-permission,shipments.view_own', 'company.access:use-permission,shipments.manage_status']);
 });
 
 // ── Support Tickets ─────────────────────────────────────────

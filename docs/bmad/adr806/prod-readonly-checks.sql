@@ -94,3 +94,40 @@ SELECT COUNT(*) AS sessions_total,
        SUM(user_id IS NOT NULL) AS company_bound,
        SUM(platform_user_id IS NOT NULL) AS platform_bound
 FROM sessions;
+
+-- ═══ ADR-807 additions ══════════════════════════════════════════════════════════════════════════════════
+-- ─── C6. Shipments : roles whose rights narrow with the explicit scopes ────────────────────────────────
+-- (a) assign WITHOUT the collective view : since ADR-807 they can no longer assign (POST /shipments/{id}/assign → 403).
+-- (b) manage_status WITHOUT view_own and WITHOUT view : can no longer change any status.
+SELECT r.company_id, r.id AS role_id, r.name,
+       SUM(p.`key` = 'shipments.assign') AS has_assign, SUM(p.`key` = 'shipments.manage_status') AS has_status,
+       SUM(p.`key` = 'shipments.view') AS has_view, SUM(p.`key` = 'shipments.view_own') AS has_view_own,
+       (SELECT COUNT(*) FROM memberships m WHERE m.company_role_id = r.id) AS members
+FROM company_roles r
+JOIN company_role_permission rp ON rp.company_role_id = r.id
+JOIN company_permissions p ON p.id = rp.company_permission_id AND p.`key` LIKE 'shipments.%'
+GROUP BY r.company_id, r.id, r.name
+HAVING (has_assign = 1 AND has_view = 0) OR (has_status = 1 AND has_view = 0 AND has_view_own = 0);
+
+-- ─── C7. Inert permissions : attributions to migrate before any removal (ADR-807 §2) ─────────────────────
+SELECT p.`key`, COUNT(DISTINCT rp.company_role_id) AS roles, COUNT(DISTINCT r.company_id) AS companies
+FROM company_permissions p
+LEFT JOIN company_role_permission rp ON rp.company_permission_id = p.id
+LEFT JOIN company_roles r ON r.id = rp.company_role_id
+WHERE p.`key` IN ('workforce_documents.manage_templates','workforce_documents.sign','workforce.admin','documentation.view',
+                  'jobdomain.manage','shipments.manage_fields','shipments.delete','workforce.leave_adjust')
+GROUP BY p.`key`;
+SELECT pr.`key` AS platform_role, COUNT(*) AS n FROM platform_role_permission x
+JOIN platform_permissions pp ON pp.id = x.platform_permission_id AND pp.`key` = 'manage_audience'
+JOIN platform_roles pr ON pr.id = x.platform_role_id GROUP BY pr.`key`;
+
+-- ─── C8. Dormant rights : roles holding permissions of a module NOT active in their company ─────────────
+-- (granted before ADR-807 through a composite capability ; they become effective when the module is activated).
+SELECT r.company_id, r.id AS role_id, r.name, cp.module_key, COUNT(*) AS dormant_permissions
+FROM company_roles r
+JOIN company_role_permission rp ON rp.company_role_id = r.id
+JOIN company_permissions cp ON cp.id = rp.company_permission_id
+WHERE cp.module_key IN ('workforce_leave','workforce_planning','workforce_payroll','workforce_documents','workforce_contract','workforce_signature','logistics_shipments')
+  AND NOT EXISTS (SELECT 1 FROM company_module_activation_reasons a WHERE a.company_id = r.company_id AND a.module_key = cp.module_key)
+GROUP BY r.company_id, r.id, r.name, cp.module_key
+ORDER BY r.company_id;

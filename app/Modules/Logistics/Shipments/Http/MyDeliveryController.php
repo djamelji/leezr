@@ -2,7 +2,6 @@
 
 namespace App\Modules\Logistics\Shipments\Http;
 
-use App\Core\Models\Shipment;
 use App\Modules\Logistics\Shipments\Http\Requests\ChangeShipmentStatusRequest;
 use App\Modules\Logistics\Shipments\ReadModels\MyDeliveryReadModel;
 use App\Modules\Logistics\Shipments\UseCases\ChangeShipmentStatus;
@@ -40,16 +39,13 @@ class MyDeliveryController
     {
         $company = $request->attributes->get('company');
 
-        // Verify assignment: shipment must be assigned to the current user
-        $shipment = Shipment::where('company_id', $company->id)
-            ->where('assigned_to_user_id', $request->user()->id)
-            ->findOrFail($id);
-
+        // ADR-807 : the assignment rule is enforced by the use case on the locked row (no check-then-act).
         try {
             $shipment = ChangeShipmentStatus::handle(
                 company: $company,
-                shipmentId: $shipment->id,
+                shipmentId: $id,
                 newStatus: $request->input('status'),
+                assignedToUserId: $request->user()->id,
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json([

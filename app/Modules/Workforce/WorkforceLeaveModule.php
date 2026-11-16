@@ -34,7 +34,7 @@ class WorkforceLeaveModule implements ModuleDefinition
                 ['key' => 'workforce.leave_approve', 'label' => 'Approve Leave', 'is_admin' => true, 'hint' => 'Approve or reject leave requests.'],
                 ['key' => 'workforce.leave_view_all', 'label' => 'View All Leave', 'is_admin' => true, 'hint' => 'View all employee leave requests and balances.'],
                 ['key' => 'workforce.leave_manage', 'label' => 'Manage Leave Types', 'is_admin' => true, 'hint' => 'Create, edit, and disable leave types.'],
-                ['key' => 'workforce.leave_adjust', 'label' => 'Adjust Balances', 'is_admin' => true, 'hint' => 'Manually adjust leave balances via ledger.'],
+                ['key' => 'workforce.leave_adjust', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Adjust Balances', 'is_admin' => true, 'hint' => 'Manually adjust leave balances via ledger.'],
             ],
             bundles: [
                 [

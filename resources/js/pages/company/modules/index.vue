@@ -32,6 +32,20 @@ const quoteLoading = ref(false)
 const quoteData = ref(null)
 const quoteModuleKey = ref(null)
 const quoteModuleName = ref('')
+// ADR-807 — the real activation also activates (and bills) every INACTIVE requirement : the quote covers
+// them, and the dialog separates requested / added / already active modules and states the deactivation rule.
+const quoteAdded = ref([])
+const quoteAlreadyActive = ref([])
+const modByKey = k => moduleStore.modules.find(m => m.key === k)
+const requiresClosure = key => {
+  const seen = new Set()
+  const walk = k => { for (const r of (modByKey(k)?.requires || [])) if (!seen.has(r)) { seen.add(r); walk(r) } }
+  walk(key)
+
+  return [...seen]
+}
+const quoteLine = k => quoteData.value?.lines?.find(l => l.key === k)
+const quoteName = k => modName(modByKey(k) || { key: k })
 
 // Deactivation confirmation dialog
 const deactivateDialog = ref(false)
@@ -339,10 +353,14 @@ const formatPeriodEnd = dateStr => {
 const activateModule = async module => {
   errorMessage.value = ''
 
-  // Addon pricing → check grace period first, then fetch quote
-  if (module.pricing_mode === 'addon') {
+  const closure = requiresClosure(module.key)
+  const missing = closure.filter(k => !modByKey(k)?.is_active)
+  const paidMissing = missing.some(k => modByKey(k)?.pricing_mode === 'addon')
+
+  // Addon pricing (requested module OR one of its inactive requirements) → check grace period, then fetch quote
+  if (module.pricing_mode === 'addon' || paidMissing) {
     // ADR-341: Check if addon is in grace period (deactivated_at in the future)
-    const addonSub = moduleStore.getAddonSub(module.key)
+    const addonSub = module.pricing_mode === 'addon' ? moduleStore.getAddonSub(module.key) : null
     if (addonSub?.deactivated_at && new Date(addonSub.deactivated_at) > new Date()) {
       reactivateModuleKey.value = module.key
       reactivateModuleName.value = modName(module)
@@ -354,12 +372,14 @@ const activateModule = async module => {
 
     quoteModuleKey.value = module.key
     quoteModuleName.value = modName(module)
+    quoteAdded.value = missing
+    quoteAlreadyActive.value = closure.filter(k => modByKey(k)?.is_active)
     quoteLoading.value = true
     quoteDialog.value = true
     quoteData.value = null
 
     try {
-      quoteData.value = await moduleStore.fetchQuote([module.key])
+      quoteData.value = await moduleStore.fetchQuote([module.key, ...missing])
     }
     catch (error) {
       quoteDialog.value = false
@@ -866,6 +886,20 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                         />
                         <span class="text-caption text-medium-emphasis">
                           {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
+                        </span>
+                      </div>
+                      <!-- ADR-807 : pourquoi il n'y a pas de bouton « Désactiver » sur un module inclus -->
+                      <div
+                        class="d-flex align-start gap-1 mt-2"
+                        :data-test="`module-included-locked-${mod.key}`"
+                      >
+                        <VIcon
+                          icon="tabler-lock"
+                          size="16"
+                          class="mt-1"
+                        />
+                        <span class="text-caption text-medium-emphasis">
+                          {{ t('companyModules.includedLocked') }}
                         </span>
                       </div>
                     </VCardText>
@@ -1607,16 +1641,37 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
           <template v-else-if="quoteData">
             <!-- ADR-340: Line items HT -->
+            <!-- ADR-807 : module demandé, puis modules nécessaires ajoutés (facturés s'ils sont payants) -->
+            <div class="text-caption text-medium-emphasis">
+              {{ t('companyModules.quoteRequested') }}
+            </div>
             <div
-              v-for="line in quoteData.lines"
-              :key="line.key"
               class="d-flex justify-space-between align-center py-1"
+              data-test="quote-requested"
             >
-              <span class="text-body-1">{{ line.title }}</span>
+              <span class="text-body-1">{{ quoteName(quoteModuleKey) }}</span>
               <span class="text-body-1 font-weight-medium">
-                {{ formatMoney(line.amount, { currency: quoteData.currency }) }}/{{ t('companyModules.quoteMonth') }}
+                <template v-if="quoteLine(quoteModuleKey)">{{ formatMoney(quoteLine(quoteModuleKey).amount, { currency: quoteData.currency }) }}/{{ t('companyModules.quoteMonth') }}</template>
+                <template v-else>{{ t('companyModules.quoteNoCharge') }}</template>
               </span>
             </div>
+            <template v-if="quoteAdded.length">
+              <div class="text-caption text-medium-emphasis mt-2">
+                {{ t('companyModules.quoteAdded') }}
+              </div>
+              <div
+                v-for="k in quoteAdded"
+                :key="k"
+                class="d-flex justify-space-between align-center py-1"
+                :data-test="`quote-added-${k}`"
+              >
+                <span class="text-body-1">{{ quoteName(k) }}</span>
+                <span class="text-body-1 font-weight-medium">
+                  <template v-if="quoteLine(k) && quoteLine(k).amount > 0">{{ formatMoney(quoteLine(k).amount, { currency: quoteData.currency }) }}/{{ t('companyModules.quoteMonth') }}</template>
+                  <template v-else>{{ t('companyModules.quoteNoCharge') }}</template>
+                </span>
+              </div>
+            </template>
 
             <VDivider class="my-3" />
 
@@ -1651,6 +1706,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
             <!-- ADR-340: Charged immediately notice -->
             <VAlert
+              v-if="quoteData.total_ttc > 0"
               type="info"
               variant="tonal"
               density="compact"
@@ -1661,24 +1717,41 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
             <!-- ADR-340: Included modules (no charge) -->
             <div
-              v-if="quoteData.included.length"
+              v-if="quoteAlreadyActive.length"
               class="mt-4"
+              data-test="quote-already-active"
             >
               <span class="text-body-2 text-medium-emphasis">
-                {{ t('companyModules.quoteIncludesNoCharge') }}
+                {{ t('companyModules.quoteAlreadyActive') }}
               </span>
               <div class="d-flex flex-wrap gap-1 mt-1">
                 <VChip
-                  v-for="inc in quoteData.included"
-                  :key="inc.key"
+                  v-for="k in quoteAlreadyActive"
+                  :key="k"
                   size="small"
                   variant="tonal"
                   color="info"
                 >
-                  {{ inc.title }}
+                  {{ quoteName(k) }}
                 </VChip>
               </div>
             </div>
+            <!-- ADR-807 : conséquence d'une désactivation future (règle réelle de ModuleActivationEngine::disable) -->
+            <VAlert
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mt-4"
+              data-test="quote-deactivation"
+            >
+              <template v-if="quoteAdded.length">
+                {{ t('companyModules.quoteDeactivationWithAdded', { module: quoteModuleName, list: quoteAdded.map(quoteName).join(', ') }) }}
+              </template>
+              <template v-else>
+                {{ t('companyModules.quoteDeactivation', { module: quoteModuleName }) }}
+              </template>
+              {{ moduleStore.addonDeactivationTiming === 'immediate' ? t('companyModules.quoteBillingStopsNow') : t('companyModules.quoteBillingStopsEndOfPeriod') }}
+            </VAlert>
           </template>
         </VCardText>
 

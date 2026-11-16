@@ -32,7 +32,7 @@ class DocumentationModule implements ModuleDefinition
                 ],
             ),
             permissions: [
-                ['key' => 'documentation.view', 'label' => 'View documentation'],
+                ['key' => 'documentation.view', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'View documentation'],
             ],
             bundles: [
                 [

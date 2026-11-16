@@ -66,7 +66,7 @@ class WorkforceModule implements ModuleDefinition
                 ['key' => 'workforce.sensitive_read', 'label' => 'View Sensitive Data', 'is_admin' => true, 'hint' => 'Access SSN, IBAN, and other sensitive fields.'],
                 ['key' => 'workforce.time_manage', 'label' => 'Manage Time Entries', 'hint' => 'Correct and manage time tracking entries.'],
                 ['key' => 'workforce.time_approve', 'label' => 'Approve Timesheets', 'is_admin' => true, 'hint' => 'Validate and approve employee timesheets.'],
-                ['key' => 'workforce.admin', 'label' => 'Workforce Administration', 'is_admin' => true, 'hint' => 'Full workforce administration access.'],
+                ['key' => 'workforce.admin', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Workforce Administration', 'is_admin' => true, 'hint' => 'Full workforce administration access.'],
                 ['key' => 'workforce.timesheet_view', 'label' => 'View Timesheets', 'hint' => 'View own timesheets.'],
                 ['key' => 'workforce.timesheet_submit', 'label' => 'Submit Timesheets', 'hint' => 'Submit timesheets for approval.'],
                 ['key' => 'workforce.timesheet_approve', 'label' => 'Approve Timesheets (Company)', 'is_admin' => true, 'hint' => 'Approve or reject any employee\'s submitted timesheets (company-wide).'],
