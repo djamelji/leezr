@@ -81,7 +81,9 @@ const markStep = async s => {
 
 // ── Confirmation ────────────────────────────────────────────
 const holders = c => (data.value?.roles || []).filter(r => r.holds?.[c.key] === 'full').map(r => r.name)
-const missing = computed(() => (data.value?.readiness || []).filter(r => !r.ok))
+const required = computed(() => (data.value?.readiness || []).filter(r => r.required !== false))
+const recommended = computed(() => (data.value?.readiness || []).filter(r => r.required === false))
+const missing = computed(() => required.value.filter(r => !r.ok))
 const confirm = async () => {
   busy.value = true
   try {
@@ -232,15 +234,22 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
         <div
           v-if="data.module.requires.length"
           class="text-body-2 mt-3"
+          data-test="module-setup-dependencies"
         >
           {{ t('moduleSetup.dependencies') }} :
-          {{ data.module.requires.map(r => r.key + (r.active ? '' : ` (${t('moduleSetup.inactive')})`)).join(', ') }}
+          <template
+            v-for="(r, i) in data.module.requires"
+            :key="r.key"
+          >
+            <RouterLink :to="`/company/modules/${r.key}`">{{ r.name }}</RouterLink>
+            ({{ r.active ? (r.setup_status ? t(`moduleSetup.status.${r.setup_status}`) : t('moduleSetup.active')) : t('moduleSetup.inactive') }}){{ i < data.module.requires.length - 1 ? ', ' : '' }}
+          </template>
         </div>
         <h6 class="text-h6 mt-4 mb-2">
           {{ t('moduleSetup.summaryReady') }}
         </h6>
         <div
-          v-for="r in data.readiness"
+          v-for="r in required"
           :key="r.key"
           class="d-flex align-center gap-2 text-body-2 mb-1"
           :data-test="`readiness-${r.key}`"
@@ -252,6 +261,24 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
           />
           {{ t(`moduleSetup.readiness.${r.key}`) }}
         </div>
+        <template v-if="recommended.length">
+          <h6 class="text-h6 mt-4 mb-2">
+            {{ t('moduleSetup.summaryRecommended') }}
+          </h6>
+          <div
+            v-for="r in recommended"
+            :key="r.key"
+            class="d-flex align-center gap-2 text-body-2 mb-1"
+            :data-test="`recommendation-${r.key}`"
+          >
+            <VIcon
+              :icon="r.ok ? 'tabler-circle-check' : 'tabler-info-circle'"
+              :color="r.ok ? 'success' : 'info'"
+              size="18"
+            />
+            {{ t(`moduleSetup.readiness.${r.key}`) }}
+          </div>
+        </template>
         <VAlert
           v-if="missing.length"
           type="warning"

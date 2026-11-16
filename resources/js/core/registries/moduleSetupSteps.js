@@ -5,6 +5,7 @@
  */
 const steps = {
   working_time: () => import('@/pages/company/workforce/_WorkingTimeSetup.vue'),
+  leave_types: () => import('@/pages/company/workforce/leave/_LeaveTypesSetupStep.vue'), // ADR-804
 }
 
 export const resolveSetupStep = key => steps[key] || null

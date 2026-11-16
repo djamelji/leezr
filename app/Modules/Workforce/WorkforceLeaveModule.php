@@ -41,6 +41,7 @@ class WorkforceLeaveModule implements ModuleDefinition
                     'key' => 'workforce.leave_employee',
                     'label' => 'Leave (Employee)',
                     'hint' => 'Request leave and view own balances.',
+                    'scope' => 'own', // ADR-804 : ses propres demandes et soldes
                     'permissions' => ['workforce.leave_request'],
                 ],
                 [
@@ -48,17 +49,25 @@ class WorkforceLeaveModule implements ModuleDefinition
                     'label' => 'Leave Management',
                     'hint' => 'Approve requests, view all balances, manage leave types.',
                     'permissions' => ['workforce.leave_request', 'workforce.leave_approve', 'workforce.leave_view_all', 'workforce.leave_manage'],
+                    'is_admin' => true, // ADR-804 : contient des permissions d'administration (aligné sur le serveur)
                 ],
                 [
                     'key' => 'workforce.leave_adjustment',
                     'label' => 'Leave Adjustment',
                     'hint' => 'Manually adjust employee leave balances.',
                     'permissions' => ['workforce.leave_adjust'],
+                    'is_admin' => true,
+                    'unwired' => true, // ADR-804 : aucune fonction ne l'utilise encore (ADR-800) — mode avancé seulement
                 ],
             ],
             scope: 'company',
             type: 'addon',
             requires: ['workforce'],
+            // ADR-804 — pilote de l'assistant commun : Accès → Types de congés (récapitulatif) → Confirmation.
+            setup: [
+                'steps' => ['access', 'leave_types'],
+                'readiness' => \App\Modules\Workforce\Leave\LeaveSetupReadiness::class,
+            ],
         );
     }
 }

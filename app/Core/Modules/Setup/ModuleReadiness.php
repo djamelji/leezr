@@ -5,19 +5,17 @@ namespace App\Core\Modules\Setup;
 use App\Core\Models\Company;
 
 /**
- * ADR-803 — a module's REAL prerequisites to be « ready ». Each check is verified server-side from the
- * module's own source of truth ; « ready » is granted only when every check passes.
+ * ADR-803 / 804 — a module's REAL prerequisites, verified server-side from the module's own source of truth.
+ *
+ * - checks() : list of {key, ok, required}. « ready » needs every REQUIRED check ; non-required checks are
+ *   RECOMMENDATIONS (shown, never blocking).
+ * - settingsFingerprint() : hash of the EFFECTIVE mandatory settings (null = the module has none). Stored at
+ *   confirmation ; a different value later means « needs review ». Writes without effective change are ignored.
  */
 interface ModuleReadiness
 {
-    /** @return list<array{key:string, ok:bool}> */
+    /** @return list<array{key:string, ok:bool, required?:bool}> */
     public function checks(Company $company, CompanyModuleSetup $setup): array;
 
-    /**
-     * ADR-803.1 — why a past confirmation is no longer trustworthy (e.g. a mandatory setting changed after
-     * `configured_at`). Empty = still valid. Computed at read time, never by a background sync.
-     *
-     * @return list<string>
-     */
-    public function staleReasons(Company $company, CompanyModuleSetup $setup): array;
+    public function settingsFingerprint(Company $company): ?string;
 }

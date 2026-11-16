@@ -10496,7 +10496,9 @@
       "working_time": "Working time",
       "working_timeHint": "Framework, rhythm, rest, hours",
       "confirm": "Confirmation",
-      "confirmHint": "Review and finish"
+      "confirmHint": "Review and finish",
+      "leave_types": "Leave types",
+      "leave_typesHint": "Review the proposed types"
     },
     "groups": {
       "collective": "Access to the team or the company",
@@ -10535,7 +10537,11 @@
     "readiness": {
       "access_decided": "Access has been decided",
       "framework_confirmed": "The collective agreement framework is confirmed",
-      "weekly_reference": "A weekly reference duration applies"
+      "weekly_reference": "A weekly reference duration applies",
+      "leave_type_enabled": "At least one leave type is enabled",
+      "approver_assigned": "A role (other than the owner) can approve leave",
+      "workforce_framework": "The working-time framework is confirmed in the HR module",
+      "publisher_assigned": "A role (other than the owner) can publish the schedule"
     },
     "notReady": "The module cannot be declared ready yet: complete the flagged items.",
     "confirm": "Confirm: the module is ready",
@@ -10549,10 +10555,19 @@
     "byRole": "By role (advanced)",
     "needsReview": "The configuration changed since it was confirmed: review it and confirm again.",
     "stale_access_changed": "Access was changed outside the assistant (role edited or deleted).",
-    "stale_settings_changed": "A working-time setting changed.",
+    "stale_settings_changed": "A mandatory setting of the module changed since confirmation.",
     "stale_framework_changed": "The applicable agreement was confirmed again.",
     "stale_missing_access_decided": "Access is no longer decided.",
     "stale_missing_framework_confirmed": "The agreement framework is no longer confirmed.",
-    "stale_missing_weekly_reference": "No weekly reference duration."
+    "stale_missing_weekly_reference": "No weekly reference duration.",
+    "summaryRecommended": "Recommendations (optional)",
+    "active": "active",
+    "unwired": "No feature uses this capability yet: granting it has no effect today.",
+    "leaveTypesIntro": "Leave types were prepared at activation. Review them; they are managed in the Leave screen.",
+    "leaveTypesNone": "No enabled leave type: enable at least one in the Leave screen.",
+    "leaveTypesManage": "Manage leave types",
+    "requiresApproval": "Approval required",
+    "noApproval": "No approval",
+    "adminOnly": "Management roles only"
   }
 }

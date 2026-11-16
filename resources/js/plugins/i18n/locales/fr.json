@@ -10496,7 +10496,9 @@
       "working_time": "Temps de travail",
       "working_timeHint": "Cadre, rythme, repos, horaires",
       "confirm": "Confirmation",
-      "confirmHint": "Vérifier et terminer"
+      "confirmHint": "Vérifier et terminer",
+      "leave_types": "Types de congés",
+      "leave_typesHint": "Vérifier les types proposés"
     },
     "groups": {
       "collective": "Accès à l'équipe ou à l'entreprise",
@@ -10535,7 +10537,11 @@
     "readiness": {
       "access_decided": "Les accès ont été décidés",
       "framework_confirmed": "Le cadre conventionnel est confirmé",
-      "weekly_reference": "Une durée hebdomadaire de référence s'applique"
+      "weekly_reference": "Une durée hebdomadaire de référence s'applique",
+      "leave_type_enabled": "Au moins un type de congé est actif",
+      "approver_assigned": "Un rôle (autre que le propriétaire) peut valider les congés",
+      "workforce_framework": "Le cadre de temps de travail est confirmé dans le module RH",
+      "publisher_assigned": "Un rôle (autre que le propriétaire) peut publier le planning"
     },
     "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
     "confirm": "Confirmer : le module est prêt",
@@ -10549,10 +10555,19 @@
     "byRole": "Par rôle (avancé)",
     "needsReview": "La configuration a changé depuis sa confirmation : vérifiez-la puis confirmez à nouveau.",
     "stale_access_changed": "Les accès ont été modifiés en dehors de l'assistant (rôle modifié ou supprimé).",
-    "stale_settings_changed": "Un réglage du temps de travail a changé.",
+    "stale_settings_changed": "Un réglage obligatoire du module a changé depuis la confirmation.",
     "stale_framework_changed": "La convention applicable a été confirmée à nouveau.",
     "stale_missing_access_decided": "Les accès ne sont plus décidés.",
     "stale_missing_framework_confirmed": "Le cadre conventionnel n'est plus confirmé.",
-    "stale_missing_weekly_reference": "Aucune durée hebdomadaire de référence."
+    "stale_missing_weekly_reference": "Aucune durée hebdomadaire de référence.",
+    "summaryRecommended": "Recommandations (facultatives)",
+    "active": "actif",
+    "unwired": "Aucune fonction n'utilise encore cette capacité : l'attribuer n'a pas d'effet aujourd'hui.",
+    "leaveTypesIntro": "Les types de congés ont été préparés à l'activation. Vérifiez-les ; leur gestion se fait dans l'écran Congés.",
+    "leaveTypesNone": "Aucun type de congé actif : activez-en au moins un dans l'écran Congés.",
+    "leaveTypesManage": "Gérer les types de congés",
+    "requiresApproval": "Validation requise",
+    "noApproval": "Sans validation",
+    "adminOnly": "Rôles de gestion uniquement"
   }
 }

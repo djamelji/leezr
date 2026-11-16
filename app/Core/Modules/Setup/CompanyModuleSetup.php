@@ -16,7 +16,7 @@ class CompanyModuleSetup extends Model
 
     public const READY = 'ready';
 
-    protected $fillable = ['company_id', 'module_key', 'status', 'completed_steps', 'revision', 'access_fingerprint', 'configured_at', 'configured_by'];
+    protected $fillable = ['company_id', 'module_key', 'status', 'completed_steps', 'revision', 'access_fingerprint', 'settings_fingerprint', 'configured_at', 'configured_by'];
 
     protected function casts(): array
     {

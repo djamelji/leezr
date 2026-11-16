@@ -28706,3 +28706,26 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - **Recette réelle.** Les 14 étapes, sur une société fictive isolée, avec un preset fictif publié sur un JobDomain fictif. Nettoyage exact après vérification des dépendances ; société 1 inchangée.
   - **E2E.** `workforce-e3a` et `workforce-hr-nav-group` sont réécrits sur l'interface actuelle.
 - **Conséquences** : comportement administratif plus strict pour les non-propriétaires (voulu) ; les droits historiques ne sont pas revus automatiquement.
+
+## ADR-804 — Assistant commun : Congés et Planning (pilotes)
+
+- **Date** : 2026-11-16, DEV uniquement, base `9df323fa`. Rapport : `docs/bmad/ADR-804-MODULE-ASSISTANT-LEAVE-PLANNING.md`.
+- **Contexte** : généraliser l'assistant ADR-803/803.1 à deux pilotes, sans nouveau moteur et sans étendre le module RH (ADR-561).
+- **Décisions** :
+  - **Assistant adaptatif.**
+    - `workforce_leave` a les étapes accès et types de congés : un récapitulatif sur l'API existante, avec un lien vers l'écran Congés.
+    - `workforce_planning` a l'étape accès seule.
+    - Les vérifications sont obligatoires (`required`) ou des recommandations (`required: false`, jamais bloquantes).
+    - Les dépendances sont affichées avec leur état de configuration.
+  - **Capacités fidèles aux règles du serveur.**
+    - `scope` : `own` pour les demandes de congés, `team` pour la consultation du planning.
+    - `is_admin` sur les bundles de gestion ; affiché comme le badge « Rôles de gestion uniquement », distinct de `sensitive`, qui est désormais seulement déclaratif.
+    - `unwired` sur `leave_adjustment` : permission lue par aucune route, donc mode avancé seulement, avec un avertissement.
+  - **Plus de faux « À revoir ».** `ModuleReadiness::settingsFingerprint()` (configuration effective) est enregistré à la confirmation (migration additive `settings_fingerprint`) et remplace l'heuristique par horodatage.
+  - **Le module Congés est gardé.** Les 19 routes de congés, libre-service compris, exigent `use-module,workforce_leave`. Le bloc « Mes congés » suit la même règle.
+  - **Catalogue à jour.** Le cache du catalogue des modules est vidé à chaque activation ou désactivation : corrige le renvoi « module non actif » au rechargement.
+- **Conséquences** :
+  - Aucun droit n'est attribué à l'activation, et aucune revue automatique des droits historiques n'a lieu.
+  - Une entreprise qui utilisait les congés sans le module Congés actif perd ces écrans ; c'est voulu et cohérent avec le catalogue.
+  - Les autres modules ne sont pas adaptés (méthode documentée au §9 du rapport).
+

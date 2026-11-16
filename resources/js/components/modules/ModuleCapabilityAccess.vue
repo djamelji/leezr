@@ -44,10 +44,12 @@ const applySuggestion = () => {
 
 const label = c => (te(`permissionCatalog.bundles.${c.key}.label`) ? t(`permissionCatalog.bundles.${c.key}.label`) : c.label)
 const hint = c => (te(`permissionCatalog.bundles.${c.key}.hint`) ? t(`permissionCatalog.bundles.${c.key}.hint`) : c.hint)
+// ADR-804 : une capacité sans fonction branchée (`unwired`) n'est montrée qu'en mode avancé, avec la mention.
+const shown = computed(() => props.capabilities.filter(c => advanced.value || !c.unwired))
 const groups = computed(() => [
-  { key: 'collective', title: t('moduleSetup.groups.collective'), items: props.capabilities.filter(c => !c.sensitive && c.scope === 'collective') },
-  { key: 'own', title: t('moduleSetup.groups.own'), items: props.capabilities.filter(c => !c.sensitive && c.scope !== 'collective') },
-  { key: 'sensitive', title: t('moduleSetup.groups.sensitive'), items: props.capabilities.filter(c => c.sensitive) },
+  { key: 'collective', title: t('moduleSetup.groups.collective'), items: shown.value.filter(c => !c.sensitive && c.scope === 'collective') },
+  { key: 'own', title: t('moduleSetup.groups.own'), items: shown.value.filter(c => !c.sensitive && c.scope !== 'collective') },
+  { key: 'sensitive', title: t('moduleSetup.groups.sensitive'), items: shown.value.filter(c => c.sensitive) },
 ].filter(g => g.items.length))
 const reset = () => { desired.value = {}; emit('update:changes', []) }
 
@@ -108,8 +110,16 @@ defineExpose({ reset })
         class="mb-2"
       >
         <VCardText>
-          <div class="text-body-1 font-weight-medium">
+          <div class="text-body-1 font-weight-medium d-flex align-center flex-wrap gap-2">
             {{ label(c) }}
+            <VChip
+              v-if="c.administrative_only"
+              size="x-small"
+              variant="tonal"
+              :data-test="`capability-admin-only-${c.key}`"
+            >
+              {{ t('moduleSetup.adminOnly') }}
+            </VChip>
           </div>
           <div
             v-if="hint(c)"
@@ -117,6 +127,16 @@ defineExpose({ reset })
           >
             {{ hint(c) }}
           </div>
+          <VAlert
+            v-if="c.unwired"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-2"
+            :data-test="`capability-unwired-${c.key}`"
+          >
+            {{ t('moduleSetup.unwired') }}
+          </VAlert>
           <div
             v-if="advanced"
             class="text-caption text-medium-emphasis mb-2"

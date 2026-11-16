@@ -6,6 +6,7 @@ import { useDisplay } from 'vuetify'
 import { daysToHundredths, formatDays, formatMinutes } from '@/utils/workUnits'
 import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
+import { useModuleStore } from '@/core/stores/module'
 
 definePage({ meta: { module: 'workforce' } })
 
@@ -94,6 +95,8 @@ function shiftRange(s) {
 const employee = computed(() => clockStore.employee)
 const todayClock = computed(() => clockStore.todayClock)
 const leaveBalances = computed(() => clockStore.leaveBalances)
+const moduleStore = useModuleStore()
+const hasLeaveModule = computed(() => moduleStore.isActive('workforce_leave')) // ADR-804 : mêmes gardes que l'API
 // Soldes stockés en CENTIÈMES de jour (1 j = 100) — conversion en jours pour l'affichage.
 const toDays = v => (Number(v) || 0) / 100
 
@@ -671,8 +674,11 @@ function signatureChipProps(status) {
         </div>
 
         <div class="me-col">
-          <!-- Mes congés : une ligne par type, l'action dans l'en-tête -->
-          <AppSurface class="me-block">
+          <!-- Mes congés : une ligne par type, l'action dans l'en-tête (ADR-804 : seulement si le module Congés est actif) -->
+          <AppSurface
+            v-if="hasLeaveModule"
+            class="me-block"
+          >
             <div class="me-block__head">
               <h6 class="me-block__title">
                 {{ t('workforceMe.leaveBalances') }}

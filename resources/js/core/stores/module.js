@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
+import { cacheRemove } from '@/core/runtime/cache'
 
 export const useModuleStore = defineStore('module', {
   state: () => ({
@@ -75,6 +76,8 @@ export const useModuleStore = defineStore('module', {
         method: 'PUT',
       })
 
+      cacheRemove('features:modules') // ADR-804 : le catalogue en cache (SWR 5 min) ne doit pas survivre à un changement d'activation
+
       this._modules = data.modules
 
       // ADR-341: Refresh addon subscriptions after toggle
@@ -87,6 +90,8 @@ export const useModuleStore = defineStore('module', {
       const data = await $api(`/modules/${key}/disable`, {
         method: 'PUT',
       })
+
+      cacheRemove('features:modules') // ADR-804 : le catalogue en cache (SWR 5 min) ne doit pas survivre à un changement d'activation
 
       this._modules = data.modules
 

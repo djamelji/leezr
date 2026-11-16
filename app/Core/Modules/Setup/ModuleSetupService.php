@@ -63,13 +63,24 @@ final class ModuleSetupService
     /** Why a stored « ready » is no longer trustworthy (empty = still valid). */
     private function staleness(string $moduleKey, CompanyModuleSetup $row): array
     {
-        $reasons = collect($this->readiness($moduleKey, $row))->where('ok', false)->pluck('key')->map(fn ($k) => "missing:$k")->all();
+        $reasons = collect($this->readiness($moduleKey, $row))->where('ok', false)->where('required', true)->pluck('key')->map(fn ($k) => "missing:$k")->all();
         if ($row->access_fingerprint && ! hash_equals($row->access_fingerprint, $this->access->fingerprint($moduleKey))) {
             $reasons[] = 'access_changed';
         }
+        // ADR-804 — EFFECTIVE settings compared (no timestamp heuristic : a write without change is not a change).
+        $current = $this->settingsFingerprint($moduleKey);
+        if ($row->settings_fingerprint && $current && ! hash_equals($row->settings_fingerprint, $current)) {
+            $reasons[] = 'settings_changed';
+        }
+
+        return array_values($reasons);
+    }
+
+    private function settingsFingerprint(string $moduleKey): ?string
+    {
         $class = self::contract($moduleKey)['readiness'] ?? null;
 
-        return array_values(array_merge($reasons, $class ? app($class)->staleReasons($this->company, $row) : []));
+        return $class ? app($class)->settingsFingerprint($this->company) : null;
     }
 
     public function row(string $moduleKey): CompanyModuleSetup
@@ -89,7 +100,8 @@ final class ModuleSetupService
         $transient = $row ?? new CompanyModuleSetup(['company_id' => $this->company->id, 'module_key' => $moduleKey, 'completed_steps' => []]);
 
         return [
-            'module' => ['key' => $moduleKey, 'name' => $manifest->name, 'requires' => array_map(fn ($k) => ['key' => $k, 'active' => ModuleGate::isActive($this->company, $k)], $manifest->requires)],
+            'module' => ['key' => $moduleKey, 'name' => $manifest->name, 'requires' => array_map(fn ($k) => ['key' => $k, 'name' => ModuleRegistry::definitions()[$k]->name ?? $k,
+                'active' => ModuleGate::isActive($this->company, $k), 'setup_status' => $this->status($k)], $manifest->requires)],
             'status' => $this->status($moduleKey),
             'stale_reasons' => $row && $row->status === CompanyModuleSetup::READY ? $this->staleness($moduleKey, $row) : [],
             'revision' => $row?->revision ?? 0,
@@ -151,12 +163,13 @@ final class ModuleSetupService
             if ($row->revision !== $revision) {
                 abort(response()->json(['message' => 'Configuration changed meanwhile.', 'code' => 'stale_revision'], 409));
             }
-            $missing = collect($this->readiness($moduleKey, $row))->where('ok', false)->pluck('key')->all();
+            $missing = collect($this->readiness($moduleKey, $row))->where('ok', false)->where('required', true)->pluck('key')->all();
             if ($missing) {
                 abort(response()->json(['message' => 'Prerequisites missing.', 'code' => 'not_ready', 'missing' => $missing], 422));
             }
             $row->forceFill(['status' => CompanyModuleSetup::READY, 'configured_at' => now(), 'configured_by' => $actor->id,
-                'access_fingerprint' => $this->access->fingerprint($moduleKey), 'revision' => $row->revision + 1])->save();
+                'access_fingerprint' => $this->access->fingerprint($moduleKey), 'settings_fingerprint' => $this->settingsFingerprint($moduleKey),
+                'revision' => $row->revision + 1])->save();
             app(AuditLogger::class)->logCompany($this->company->id, 'module.configured', 'module', $moduleKey, ['actorId' => $actor->id, 'metadata' => ['steps' => $row->completed_steps]]);
 
             return $this->describe($moduleKey, $actor);
@@ -183,7 +196,8 @@ final class ModuleSetupService
     {
         $class = self::contract($moduleKey)['readiness'] ?? null;
 
-        return $class ? app($class)->checks($this->company, $row) : [];
+        // `required` defaults to true ; non-required checks are recommendations (never blocking).
+        return $class ? array_map(fn ($c) => $c + ['required' => true], app($class)->checks($this->company, $row)) : [];
     }
 
     /** Suggestions from the RBAC preset recommended for the company's JobDomain (company role key ↔ preset role key). */

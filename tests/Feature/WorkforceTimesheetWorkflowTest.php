@@ -33,7 +33,7 @@ class WorkforceTimesheetWorkflowTest extends TestCase
         parent::setUp();
         Model::unguard();
 
-        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce']]);
+        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_leave']]);
         Market::create([
             'key' => 'FR', 'name' => 'France', 'currency' => 'EUR', 'locale' => 'fr-FR',
             'timezone' => 'Europe/Paris', 'vat_rate_bps' => 2000, 'dial_code' => '+33',
@@ -50,6 +50,8 @@ class WorkforceTimesheetWorkflowTest extends TestCase
             'module_key' => 'workforce',
             'reason' => CompanyModuleActivationReason::REASON_DIRECT,
         ]);
+        PlatformModule::create(['key' => 'workforce_leave', 'name' => 'Leave', 'is_enabled_globally' => true]); // ADR-804
+        CompanyModuleActivationReason::create(['company_id' => $this->company->id, 'module_key' => 'workforce_leave', 'reason' => CompanyModuleActivationReason::REASON_DIRECT]);
         CompanyModuleActivationReason::create([
             'company_id' => $this->company->id,
             'module_key' => 'workforce_payroll',

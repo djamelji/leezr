@@ -6,7 +6,6 @@ use App\Core\Models\Company;
 use App\Core\Modules\Setup\CompanyModuleSetup;
 use App\Core\Modules\Setup\ModuleReadiness;
 use App\Core\Workforce\Services\WorkforceRuleResolver;
-use Illuminate\Support\Facades\DB;
 
 /**
  * ADR-803 — Workforce is ready when : the company DECIDED who does what (access step confirmed, even if the
@@ -28,22 +27,22 @@ final class WorkforceSetupReadiness implements ModuleReadiness
     }
 
     /**
-     * ADR-803.1 — a confirmation made BEFORE these changes no longer proves readiness : the collective agreement
-     * was (re)confirmed, or a working-time setting of the company changed, after `configured_at`.
+     * ADR-804 — EFFECTIVE mandatory settings : resolved values of the working-time, break and organisation rules,
+     * the week start, the applicable agreement and whether it is confirmed. A write that changes nothing (same
+     * value, same agreement re-confirmed) leaves the fingerprint unchanged → no false « needs review ».
      */
-    public function staleReasons(Company $company, CompanyModuleSetup $setup): array
+    public function settingsFingerprint(Company $company): ?string
     {
-        if (! $setup->configured_at) {
-            return [];
-        }
-        $reasons = [];
-        if ($company->convention_confirmed_at && $company->convention_confirmed_at->gt($setup->configured_at)) {
-            $reasons[] = 'framework_changed';
-        }
-        if (DB::table('company_policies')->where('company_id', $company->id)->where('domain', 'workforce')->where('updated_at', '>', $setup->configured_at)->exists()) {
-            $reasons[] = 'settings_changed';
-        }
+        $r = app(WorkforceRuleResolver::class);
+        $values = fn (array $rules) => collect($rules)->map(fn ($x) => $x['value'] ?? null)->sortKeys()->all();
 
-        return $reasons;
+        return sha1(json_encode([
+            'worktime' => $values($r->resolveWorkTimeRules($company)),
+            'breaks' => $values($r->resolveBreakRules($company)),
+            'organization' => $values($r->resolveOrganizationRules($company)),
+            'week_start' => $company->week_start_day,
+            'convention' => $company->default_convention_collective_id,
+            'convention_confirmed' => $company->convention_confirmed_at !== null,
+        ]));
     }
 }

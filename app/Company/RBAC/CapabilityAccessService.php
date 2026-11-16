@@ -36,9 +36,12 @@ final class CapabilityAccessService
         foreach ($modules as $key => $m) {
             foreach ($m->bundles as $b) {
                 $out[] = ['key' => $b['key'], 'module' => $key, 'label' => $b['label'] ?? $b['key'], 'hint' => $b['hint'] ?? null,
-                    'sensitive' => (bool) (($b['sensitive'] ?? false) || ($b['is_admin'] ?? false)),
+                    // ADR-804 : « sensible » = déclaré explicitement (rémunération, données personnelles) ; `is_admin`
+                    // reste une CONTRAINTE (rôles de gestion seulement), pas une catégorie d'affichage.
+                    'sensitive' => (bool) ($b['sensitive'] ?? false),
                     'administrative_only' => (bool) ($b['is_admin'] ?? false),
                     'scope' => $b['scope'] ?? 'collective',
+                    'unwired' => (bool) ($b['unwired'] ?? false), // ADR-804 : aucune fonction ne l'utilise encore
                     'permission_count' => count($b['permissions'] ?? []),
                     'permission_set' => array_values($b['permissions'] ?? [])];
             }

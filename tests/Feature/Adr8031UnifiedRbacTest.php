@@ -247,15 +247,20 @@ class Adr8031UnifiedRbacTest extends TestCase
 
     public function test_ready_becomes_needs_review_when_settings_or_framework_change(): void
     {
+        // ADR-804 : comparaison de la configuration EFFECTIVE (empreinte), plus d'horodatage.
         $this->ready();
         $this->travel(2)->seconds();
-        app(WorkforceRuleResolver::class)->setWorkTimeRule($this->company, 'weekly_hours_reference', 39);
+        app(WorkforceRuleResolver::class)->setWorkTimeRule($this->company, 'weekly_hours_reference', 35); // même valeur réécrite
+        $this->company->forceFill(['convention_confirmed_at' => now()])->save(); // même cadre reconfirmé
+        $this->assertSame('ready', $this->setupStatus(), 'a write without effective change is not a change (no false positive)');
+
+        app(WorkforceRuleResolver::class)->setWorkTimeRule($this->company, 'weekly_hours_reference', 39); // valeur changée
         $this->assertContains('settings_changed', $this->as($this->owner)->getJson('/api/modules/workforce/setup')->json('stale_reasons'));
 
         $this->ready();
-        $this->travel(2)->seconds();
-        $this->company->forceFill(['convention_confirmed_at' => now()])->save();
-        $this->assertContains('framework_changed', $this->as($this->owner)->getJson('/api/modules/workforce/setup')->json('stale_reasons'));
+        $this->company->forceFill(['convention_confirmed_at' => null])->save(); // cadre plus confirmé
+        $reasons = $this->as($this->owner)->getJson('/api/modules/workforce/setup')->json('stale_reasons');
+        $this->assertContains('missing:framework_confirmed', $reasons);
     }
 
     public function test_reactivation_requires_a_new_confirmation(): void

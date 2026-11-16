@@ -49,6 +49,7 @@ class WorkforcePlanningModule implements ModuleDefinition
                     'key' => 'workforce.planning_employee',
                     'label' => 'Planning (Employee)',
                     'hint' => 'View own schedule and assigned shifts.',
+                    'scope' => 'team', // ADR-804 : soi + rapports directs (WorkforceAccess::visibleEmployeeIds)
                     'permissions' => ['workforce.planning_view'],
                 ],
                 [
@@ -56,11 +57,17 @@ class WorkforcePlanningModule implements ModuleDefinition
                     'label' => 'Planning Management',
                     'hint' => 'Create, manage, and publish shifts.',
                     'permissions' => ['workforce.planning_view', 'workforce.planning_manage', 'workforce.planning_publish', 'workforce.coverage_manage'],
+                    'is_admin' => true, // ADR-804 : aligné sur les permissions d'administration qu'il contient
                 ],
             ],
             scope: 'company',
             type: 'addon',
             requires: ['workforce'],
+            // ADR-804 — pilote : aucune étape de réglage obligatoire → Accès → Confirmation.
+            setup: [
+                'steps' => ['access'],
+                'readiness' => \App\Modules\Workforce\Planning\PlanningSetupReadiness::class,
+            ],
         );
     }
 }

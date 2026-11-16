@@ -583,10 +583,10 @@ Route::prefix('workforce/me')->middleware('company.access:use-module,workforce')
     Route::post('/clock-out', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'clockOut']);
     Route::post('/break/start', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'startBreak']);
     Route::post('/break/end', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'endBreak']);
-    Route::get('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaves']);
-    Route::post('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'createLeave']);
-    Route::post('/leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveDeductionPreview']); // ADR-779
-    Route::get('/leave-balances', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveBalances']);
+    Route::get('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaves'])->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('/leaves', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'createLeave'])->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('/leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveDeductionPreview'])->middleware('company.access:use-module,workforce_leave'); // ADR-779 // ADR-804
+    Route::get('/leave-balances', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'leaveBalances'])->middleware('company.access:use-module,workforce_leave'); // ADR-804
     Route::get('/hours', \App\Modules\Workforce\Employees\Http\EmployeeSelfHoursController::class); // ADR-787 : mes heures
     Route::get('/documents', [\App\Modules\Workforce\Employees\Http\EmployeeSelfController::class, 'documents']);
     // ADR-771 : la personne télécharge SES documents générés (original ou version signée) — propriété.
@@ -750,21 +750,21 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('time-entries/{id}/break/end', [\App\Modules\Workforce\Employees\Http\TimeEntryController::class, 'endBreak'])->middleware($perm('workforce.time_manage'));
 
     // Leave — leave_request to view/create, leave_approve to approve/reject/cancel, leave_manage for types
-    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'index'])->middleware($perm('workforce.leave_request'));
-    Route::post('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'store'])->middleware($perm('workforce.leave_manage'));
-    Route::put('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'update'])->middleware($perm('workforce.leave_manage'));
-    Route::delete('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'destroy'])->middleware($perm('workforce.leave_manage'));
-    Route::get('leaves/calendar', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'calendar'])->middleware($perm('workforce.leave_request'));
-    Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics'])->middleware($perm('workforce.leave_request'));
-    Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index'])->middleware($perm('workforce.leave_request'));
-    Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store'])->middleware($perm('workforce.leave_request'));
-    Route::post('leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'deductionPreview'])->middleware($perm('workforce.leave_request'));
-    Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show'])->middleware($perm('workforce.leave_request'));
-    Route::get('leaves/{id}/impacted-shifts', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'impactedShifts'])->middleware($perm('workforce.leave_approve'));
-    Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve'])->middleware($perm('workforce.leave_approve'));
-    Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject'])->middleware($perm('workforce.leave_approve'));
-    Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel'])->middleware($perm('workforce.leave_approve'));
-    Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances'])->middleware($perm('workforce.leave_request'));
+    Route::get('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'index'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves/types', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'store'])->middleware($perm('workforce.leave_manage'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::put('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'update'])->middleware($perm('workforce.leave_manage'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::delete('leaves/types/{id}', [\App\Modules\Workforce\Employees\Http\LeaveTypeController::class, 'destroy'])->middleware($perm('workforce.leave_manage'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('leaves/calendar', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'calendar'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('leaves/statistics', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'statistics'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'index'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'store'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves/deduction-preview', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'deductionPreview'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('leaves/{id}', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'show'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('leaves/{id}/impacted-shifts', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'impactedShifts'])->middleware($perm('workforce.leave_approve'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves/{id}/approve', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'approve'])->middleware($perm('workforce.leave_approve'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves/{id}/reject', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'reject'])->middleware($perm('workforce.leave_approve'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::post('leaves/{id}/cancel', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'cancel'])->middleware($perm('workforce.leave_approve'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
+    Route::get('employees/{employeeId}/leave-balances', [\App\Modules\Workforce\Employees\Http\LeaveController::class, 'balances'])->middleware($perm('workforce.leave_request'))->middleware('company.access:use-module,workforce_leave'); // ADR-804
 });
 
 // ── Workforce Planning ────────────────────────────────────────

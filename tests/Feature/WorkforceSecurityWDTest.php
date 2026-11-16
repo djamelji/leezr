@@ -39,14 +39,15 @@ class WorkforceSecurityWDTest extends TestCase
         parent::setUp();
         Model::unguard();
 
-        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_documents']]);
+        Jobdomain::create(['key' => 'logistique', 'label' => 'Logistique', 'default_modules' => ['workforce', 'workforce_documents', 'workforce_leave']]);
         Market::create(['key' => 'FR', 'name' => 'France', 'currency' => 'EUR', 'locale' => 'fr-FR', 'timezone' => 'Europe/Paris', 'vat_rate_bps' => 2000, 'dial_code' => '+33', 'flag_code' => 'fr', 'flag_svg' => '']);
         PlatformModule::create(['key' => 'workforce', 'name' => 'Workforce', 'is_enabled_globally' => true]);
         PlatformModule::create(['key' => 'workforce_documents', 'name' => 'Workforce Documents', 'is_enabled_globally' => true]);
+        PlatformModule::create(['key' => 'workforce_leave', 'name' => 'Leave', 'is_enabled_globally' => true]); // ADR-804 : routes congés gardées par le module
         CompanyPermissionCatalog::sync();
 
         $this->company = Company::create(['name' => 'WD Co', 'slug' => 'wd-co', 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
-        foreach (['workforce', 'workforce_documents'] as $m) {
+        foreach (['workforce', 'workforce_documents', 'workforce_leave'] as $m) {
             CompanyModuleActivationReason::create(['company_id' => $this->company->id, 'module_key' => $m, 'reason' => CompanyModuleActivationReason::REASON_DIRECT]);
         }
 
