@@ -28581,3 +28581,29 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - aucune société réelle modifiée, aucune réapplication, pas de bascule des exigences, pas de changement Billing ou paie ;
   - correction de `CompanyPolicyResolver::set` (recherche par date, sans doublon le même jour) ;
   - rotations, règles par établissement et contrôle des jours par semaine préparés pour un prochain lot.
+
+## ADR-800 — Audit global de rationalisation produit et technique (audit seulement)
+
+- **Date** : 2026-11-16, DEV uniquement, base `c3f468fa`. Livrables dans `docs/bmad/adr800/` ; synthèse dans `ADR-800-AUDIT-SUMMARY.md`.
+- **Contexte** : le propriétaire suspend les développements fonctionnels. L'application devient trop complexe à administrer.
+- **Décisions** : inventaire factuel et plan, **aucune correction**.
+  - **Doctrine confirmée** :
+    - le Module porte capacités, permissions, paramètres et contributions ;
+    - le JobDomain recommande ;
+    - le Preset propose une configuration versionnée, jamais appliquée silencieusement ;
+    - la Société choisit ;
+    - Workforce reste le seul moteur opérationnel.
+  - **Constats prouvés** :
+    - 192 sous-composants `_*.vue` sont exposés comme routes sans garde UI. L'API reste protégée (403) : aucune fuite de données prouvée.
+    - 8 routes redondantes et 6 parcours redondants.
+    - 7 mécanismes parallèles, dont 2 créations de société et 3 moteurs d'exigences.
+    - Chemin versionné prêt mais vide sur DEV.
+    - 9 permissions sans effet, dont `assign_support`, non vérifiée alors que l'assignation exige `manage_support`.
+    - 23 endpoints testés sans interface, 1 endpoint toujours en échec (`PUT company/jobdomain`).
+    - Moteur `FeatureFlag` sans lecteur, 7 classes et 18 composants morts.
+  - **Cible** : une interface principale par action ; un assistant commun de module construit sur le manifest (bundles, contributions, `settingsPanels`), l'assistant Workforce et `syncPermissionsSafe`. Aucun nouveau moteur.
+  - **Programme** : lots P0 à P3 indépendants dans `RATIONALIZATION-BACKLOG.md`.
+- **Conséquences** :
+  - aucun code, aucune donnée ni aucune migration modifiés ;
+  - 8 arbitrages demandés au propriétaire ;
+  - ADR-801 n'est pas commencé.
