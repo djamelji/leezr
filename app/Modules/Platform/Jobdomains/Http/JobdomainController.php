@@ -38,7 +38,9 @@ class JobdomainController extends Controller
             'default_fields' => ['sometimes', 'array'],
             'default_fields.*.code' => ['required', 'string'],
             'default_fields.*.order' => ['sometimes', 'integer', 'min:0'],
+            'sector' => ['nullable', 'string', 'max:100'],
         ]);
+        self::assertLegacyEditable($validated, ['default_fields']); // ADR-797 : les champs passent par les presets d'exigences
 
         $jobdomain = $useCase->execute(CreateJobdomainData::fromValidated($validated));
 
@@ -66,7 +68,12 @@ class JobdomainController extends Controller
             'default_documents' => ['sometimes', 'array'],
             'default_documents.*.code' => ['required', 'string'],
             'default_documents.*.order' => ['sometimes', 'integer', 'min:0'],
+            // ADR-797 — identité métier
+            'sector' => ['nullable', 'string', 'max:100'],
+            'terminology' => ['nullable', 'array', 'max:30'],
+            'terminology.*' => ['nullable', 'string', 'max:60'],
         ]);
+        self::assertLegacyEditable($validated, ['default_fields', 'default_roles', 'default_documents']);
 
         $result = $useCase->execute(UpdateJobdomainData::fromValidated($id, $validated));
 
@@ -91,5 +98,21 @@ class JobdomainController extends Controller
         return response()->json([
             'message' => 'Job domain deleted.',
         ]);
+    }
+
+    /**
+     * ADR-797 (L7) — the historical per-JobDomain roles / fields / documents are no longer edited here : they
+     * belong to the versioned presets (RBAC, Requirements). Still READ by company creation and resolution.
+     * Technical escape hatch only : `jobdomains.legacy_editing` (off).
+     */
+    public static function assertLegacyEditable(array $data, array $keys): void
+    {
+        $touched = array_values(array_filter($keys, fn ($k) => array_key_exists($k, $data) && $data[$k] !== null));
+        if ($touched !== [] && ! config('jobdomains.legacy_editing')) {
+            abort(response()->json([
+                'message' => 'Legacy JobDomain configuration is read-only : manage it through versioned presets.',
+                'code' => 'legacy_configuration_read_only', 'fields' => $touched,
+            ], 422));
+        }
     }
 }

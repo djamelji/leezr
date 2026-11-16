@@ -4,6 +4,7 @@ import CatalogJobdomains from '../jobdomains/_CatalogJobdomains.vue'
 import CatalogFields from './_CatalogFields.vue'
 import CatalogDocuments from '../documents/_CatalogDocuments.vue'
 import CatalogPlans from './_CatalogPlans.vue'
+import CatalogPresets from './_CatalogPresets.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
@@ -25,6 +26,7 @@ const auth = usePlatformAuthStore()
 const tabs = computed(() => [
   { title: t('platformCatalog.tabs.modules'), icon: 'tabler-puzzle', tab: 'modules', permission: 'manage_modules' },
   { title: t('platformCatalog.tabs.jobdomains'), icon: 'tabler-briefcase', tab: 'jobdomains', permission: 'manage_jobdomains' },
+  { title: t('platformCatalog.tabs.presets'), icon: 'tabler-stack-2', tab: 'presets', permission: 'manage_jobdomains' }, // ADR-797
   { title: t('platformCatalog.tabs.fields'), icon: 'tabler-forms', tab: 'fields', permission: 'manage_field_definitions' },
   { title: t('platformCatalog.tabs.documents'), icon: 'tabler-file-text', tab: 'documents', permission: 'manage_document_catalog' },
   { title: t('platformCatalog.tabs.plans'), icon: 'tabler-chart-bar', tab: 'plans', permission: 'manage_plans' },
@@ -73,6 +75,10 @@ const activeTab = computed({
 
       <VWindowItem value="jobdomains">
         <CatalogJobdomains />
+      </VWindowItem>
+
+      <VWindowItem value="presets">
+        <CatalogPresets />
       </VWindowItem>
 
       <VWindowItem value="fields">

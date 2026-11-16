@@ -89,7 +89,8 @@ class PlatformPresetController extends Controller
     public function setRecommendations(Request $request, string $jobdomain): JsonResponse
     {
         $data = $request->validate(['links' => 'present|array', 'links.*.kind' => 'required|in:rbac,organization,requirements,planning',
-            'links.*.family_key' => 'required|string|max:80', 'links.*.market_key' => 'nullable|exists:markets,key']);
+            'links.*.family_key' => 'required|string|max:80', 'links.*.market_key' => 'nullable|exists:markets,key',
+            'links.*.pinned_version' => 'nullable|integer|min:1']);
         abort_unless(\App\Core\Jobdomains\Jobdomain::where('key', $jobdomain)->exists(), 404);
         PresetService::setRecommendations($jobdomain, $data['links']);
 

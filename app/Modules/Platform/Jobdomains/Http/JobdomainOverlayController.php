@@ -42,6 +42,7 @@ class JobdomainOverlayController
             'remove_roles' => ['nullable', 'array'],
             'remove_roles.*' => ['string'],
         ]);
+        JobdomainController::assertLegacyEditable($validated, ['override_fields', 'override_documents', 'override_roles', 'remove_fields', 'remove_documents', 'remove_roles']); // ADR-797
 
         $overlay = $useCase->execute($jobdomainKey, $marketKey, $validated);
 
@@ -56,6 +57,12 @@ class JobdomainOverlayController
         string $marketKey,
         DeleteJobdomainOverlayUseCase $useCase,
     ): JsonResponse {
+        // ADR-797 : supprimer une surcharge de rôles / champs / documents modifie la configuration historique (gelée).
+        $overlay = \App\Core\Jobdomains\JobdomainMarketOverlay::where('jobdomain_key', $jobdomainKey)->where('market_key', $marketKey)->first();
+        if ($overlay) {
+            JobdomainController::assertLegacyEditable(array_filter($overlay->only(['override_fields', 'override_documents', 'override_roles', 'remove_fields', 'remove_documents', 'remove_roles'])),
+                ['override_fields', 'override_documents', 'override_roles', 'remove_fields', 'remove_documents', 'remove_roles']);
+        }
         $useCase->execute($jobdomainKey, $marketKey);
 
         return response()->json([

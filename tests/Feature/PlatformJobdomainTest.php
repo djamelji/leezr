@@ -26,6 +26,9 @@ class PlatformJobdomainTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ADR-797 : l'ancienne configuration JobDomain est gelée par défaut ; ces tests vérifient le moteur
+        // historique via l'échappatoire technique explicite.
+        config(['jobdomains.legacy_editing' => true]);
         $this->seed(\Database\Seeders\PlatformSeeder::class);
         FieldDefinitionCatalog::sync();
 

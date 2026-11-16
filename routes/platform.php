@@ -598,6 +598,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/presets/{kind}/{from}/diff/{to}', [$pp, 'diff'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
         Route::get('/presets/{kind}/{id}/companies/{companyId}/preview', [$pp, 'preview'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
         Route::post('/presets/{kind}/{id}/companies/{companyId}/apply', [$pp, 'apply'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
+        // ADR-797 (L7) — JobDomain = contexte métier + recommandations ; diagnostic, brouillons depuis l'historique, initialisation préparée
+        $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
+        Route::get('/jobdomains/{id}/profile', [$jm, 'profile'])->whereNumber('id');
+        Route::post('/jobdomains/{id}/legacy-drafts', [$jm, 'legacyDraft'])->whereNumber('id');
+        Route::get('/jobdomains/{id}/initialization-plan', [$jm, 'initializationPlan'])->whereNumber('id');
+        Route::get('/companies/{companyId}/jobdomain-compatibility', [$jm, 'companyCompatibility'])->whereNumber('companyId');
+        Route::get('/presets/{kind}/{id}', [$jm, 'presetDetail'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization'])->whereNumber('id');
         Route::get('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'recommendations']);
         Route::put('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'setRecommendations']);
         Route::get('/organization-presets/meta', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'meta']); // W-E2 référentiels

@@ -13,6 +13,8 @@ class Jobdomain extends Model
         'key',
         'label',
         'description',
+        'sector',       // ADR-797 — identité métier
+        'terminology',  // ADR-797 — vocabulaire métier (ex. « collaborateur » → « livreur »)
         'is_active',
         'default_modules',
         'default_fields',
@@ -26,6 +28,7 @@ class Jobdomain extends Model
     {
         return [
             'is_active' => 'boolean',
+            'terminology' => 'array',
             'default_modules' => 'array',
             'default_fields' => 'array',
             'default_documents' => 'array',

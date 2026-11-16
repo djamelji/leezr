@@ -28520,3 +28520,17 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - Migration additive `2026_11_28_000001`, rendue reprenable après un échec partiel du DDL MySQL.
   - Aucun changement Billing, paie, rôles, contrats signés ni exigences opérationnelles.
   - Antivirus réel, SMTP de production, worker de file, sauvegardes et validation juridique restent des dépendances externes.
+
+## ADR-797 — L7 : le JobDomain devient un contexte métier et un orchestrateur de recommandations
+
+- **Date** : 2026-11-16 — DEV uniquement (base `0b582b2f`). Rapport complet : `docs/bmad/ADR-797-L7-JOBDOMAIN-MODERNIZATION.md`.
+- **Contexte** : le JobDomain restait un second moteur de configuration (rôles, champs, documents, planning éditables, copiés à la création des sociétés), concurrent des presets versionnés d'ADR-793.
+- **Décisions** :
+  - Le JobDomain porte son identité (secteur, terminologie : colonnes additives), ses marchés, ses modules recommandés et ses **presets recommandés**. Une recommandation désigne une famille et une version publiée, épinglée ou la dernière ; elle ne vaut jamais application, et une nouvelle version ne réapplique rien.
+  - L'ancienne configuration (rôles, champs, documents, surcharges par marché) passe en **lecture seule** côté API et interface. Elle reste lue par `assignToCompany`, qui demeure le seul chemin de création. Échappatoire technique `JOBDOMAIN_LEGACY_EDITING`, désactivée.
+  - **Diagnostic de compatibilité** par JobDomain, classé élément par élément ; brouillons de presets construits depuis l'historique, sans prescriptions par rôle (un rôle n'est pas un poste) et sans éléments de niveau société.
+  - **Rapport de compatibilité par société** en lecture seule (API et `jobdomains:compatibility-report`), assemblant les instruments existants : aperçus des adaptateurs, parité des exigences, correspondance rôles → postes, état réel des modules, fiches.
+  - **Initialisation versionnée préparée** (`VersionedCompanyInitializer`) : plan et parité en lecture ; application refusée tant que `JOBDOMAIN_VERSIONED_INIT` est désactivé ; jamais de module activé ni de rôle sensible implicite ; parité jamais déclarée automatiquement (activation des modules à trancher).
+  - Page Platform JobDomain refondue en une seule page sans onglets ; onglet « Presets » dans le catalogue (consulter, versions, comparer, publier, archiver, nouvelle version, aperçu sur une société), sans éditeur JSON.
+  - Six fixtures DEV ADR-796 (1771→1776) supprimées sur autorisation explicite, après vérification de la simulation.
+- **Conséquences** : migration additive `2026_11_29_000001` ; aucune société modifiée (empreintes avant/après) ; resolver non basculé ; aucun changement Billing, paie ni RBAC ; conditions de désactivation des anciens moteurs et de bascule documentées.

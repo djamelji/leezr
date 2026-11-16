@@ -143,36 +143,63 @@ final class PresetService
 
     // ── JobDomain : recommandations (jamais appliquées seules) ────────────────
 
-    /** @return list<array{kind: string, family_key: string, published_version: ?int, label: ?string}> */
+    /**
+     * ADR-793 / ADR-797 — what a JobDomain RECOMMENDS : a stable preset identity (kind + family_key) and an
+     * identifiable version (pinned, or the latest published). A recommendation is never an application ;
+     * a newer version never re-applies anything.
+     *
+     * @return list<array>
+     */
     public static function recommendationsFor(string $jobdomainKey, ?string $marketKey = null): array
     {
         return JobdomainPresetLink::where('jobdomain_key', $jobdomainKey)
             ->where(fn ($q) => $q->whereNull('market_key')->orWhere('market_key', $marketKey))
             ->orderBy('sort_order')->get()
             ->map(function ($l) {
-                $published = $l->kind === 'organization'
-                    ? OrganizationPreset::where('family_key', $l->family_key)->where('status', 'published')->first()
-                    : Preset::where('kind', $l->kind)->where('family_key', $l->family_key)->where('status', 'published')->first();
+                $versions = self::familyVersions($l->kind, $l->family_key);
+                $published = $versions->firstWhere('status', 'published');
+                $pinned = $l->pinned_version ? $versions->firstWhere('version', $l->pinned_version) : null;
+                $effective = $pinned ?? $published;
 
-                return ['kind' => $l->kind, 'family_key' => $l->family_key, 'market_key' => $l->market_key, 'published_version' => $published?->version, 'label' => $published?->label];
+                return ['kind' => $l->kind, 'family_key' => $l->family_key, 'market_key' => $l->market_key, 'pinned_version' => $l->pinned_version,
+                    'published_version' => $published?->version, 'effective_version' => $effective?->version, 'effective_id' => $effective?->id,
+                    'effective_status' => $effective?->status, 'label' => $effective?->label ?? $published?->label,
+                    'newer_published' => $pinned && $published && $published->version > $pinned->version ? $published->version : null,
+                    'versions' => $versions->map(fn ($v) => ['id' => $v->id, 'version' => $v->version, 'status' => $v->status])->values()->all(),
+                    // Lisible tel quel par l'interface : rien n'est recommandable sans version publiée.
+                    'usable' => $effective !== null && $effective->published_at !== null];
             })->all();
     }
 
     public static function setRecommendations(string $jobdomainKey, array $links): void
     {
         foreach ($links as $l) {
-            $exists = $l['kind'] === 'organization'
-                ? OrganizationPreset::where('family_key', $l['family_key'])->exists()
-                : Preset::where('kind', $l['kind'])->where('family_key', $l['family_key'])->exists();
-            if (! in_array($l['kind'], self::KINDS, true) || ! $exists) {
+            if (! in_array($l['kind'] ?? null, self::KINDS, true)) {
                 throw ValidationException::withMessages(['links' => "Unknown preset family {$l['kind']}:{$l['family_key']}."]);
+            }
+            $versions = self::familyVersions($l['kind'], $l['family_key']);
+            if ($versions->isEmpty()) {
+                throw ValidationException::withMessages(['links' => "Unknown preset family {$l['kind']}:{$l['family_key']}."]);
+            }
+            // ADR-797 : une version épinglée doit être publiée (ou archivée après publication) — jamais un brouillon.
+            if (! empty($l['pinned_version']) && ! $versions->contains(fn ($v) => (int) $v->version === (int) $l['pinned_version'] && $v->published_at !== null)) {
+                throw ValidationException::withMessages(['links' => "Version {$l['pinned_version']} of {$l['family_key']} is not a published version."]);
             }
         }
         DB::transaction(function () use ($jobdomainKey, $links) {
             JobdomainPresetLink::where('jobdomain_key', $jobdomainKey)->delete(); // liens de recommandation uniquement (aucune donnée métier)
             foreach (array_values($links) as $i => $l) {
-                JobdomainPresetLink::create(['jobdomain_key' => $jobdomainKey, 'market_key' => $l['market_key'] ?? null, 'kind' => $l['kind'], 'family_key' => $l['family_key'], 'sort_order' => $i]);
+                JobdomainPresetLink::create(['jobdomain_key' => $jobdomainKey, 'market_key' => $l['market_key'] ?? null, 'kind' => $l['kind'],
+                    'family_key' => $l['family_key'], 'pinned_version' => $l['pinned_version'] ?? null, 'sort_order' => $i]);
             }
         });
+        app(AuditLogger::class)->logPlatform('jobdomain.preset_recommendations_updated', 'jobdomain', $jobdomainKey, ['metadata' => ['links' => count($links)]]);
+    }
+
+    /** @return \Illuminate\Support\Collection versions of one family, newest first */
+    public static function familyVersions(string $kind, string $family)
+    {
+        return ($kind === 'organization' ? OrganizationPreset::query() : Preset::where('kind', $kind))
+            ->where('family_key', $family)->orderByDesc('version')->get();
     }
 }
