@@ -165,4 +165,4 @@ Le résolveur normatif existant est conservé ; ce n'est pas un simple « la val
 
 ## 11. SHA DEV
 
-Voir le checkpoint (commit sur la base `a3808c42`).
+Commit du lot : `c5b19548` (base `a3808c42`).
