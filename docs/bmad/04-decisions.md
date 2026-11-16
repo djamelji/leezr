@@ -28820,7 +28820,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-808 — Initialisation par JobDomain et presets ; droits dormants sécurisés
 
-- **Date** : 2026-11-16, DEV uniquement, base `251c144a`, commit `SHA_808`. Rapport : `docs/bmad/ADR-808-INITIALIZATION-DORMANT-RIGHTS.md` ; contrôles PROD C9 et C10 ajoutés à `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Date** : 2026-11-16, DEV uniquement, base `251c144a`, commit `94022be5`. Rapport : `docs/bmad/ADR-808-INITIALIZATION-DORMANT-RIGHTS.md` ; contrôles PROD C9 et C10 ajoutés à `docs/bmad/adr806/prod-readonly-checks.sql`.
 - **Contexte** : faire converger l'initialisation historique et les presets versionnés vers un seul parcours, sans troisième mécanisme et sans attribution imprévue de droits.
 - **Décisions** :
   - **Un seul point de bascule.** `VersionedCompanyInitializer::shouldUse` exige trois conditions : le drapeau, le métier listé dans `JOBDOMAIN_VERSIONED_INIT_JOBDOMAINS`, et un preset RBAC publié contenant `owner`. Sinon, c'est le chemin historique.

@@ -147,3 +147,5 @@ La société ne voit ni identifiant de preset, ni adaptateur, ni version, ni per
 - **Société créée par le chemin historique** : ses rôles opérationnels gardent des accès immédiats, comme avant. Seule la bascule les met en attente.
 - **Dette Billing distincte (non traitée ici)** : `GET /modules/quote` crée le portefeuille de la société s'il n'existe pas (`WalletLedger::ensureWallet`). C'est une écriture lors d'une lecture, vide et sans effet financier. À corriger dans un lot Billing dédié.
 - **ControllerSizeInvariantTest** : 3 échecs historiques, conservés comme dette.
+
+- **SHA DEV** : `94022be5`.
