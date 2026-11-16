@@ -1,0 +1,265 @@
+<script setup>
+// W-SIGNATURE-1 (ADR-651) — RH → Signatures : tableau de bord, liste, détail, assistant de demande.
+// ADR-802 — vue embarquée par l'espace Documents (`/company/documents/signatures`) ; l'ancienne route redirige.
+
+import { useSignatureStore } from '@/modules/company/workforce/signature.store'
+import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
+import SignatureWizard from './_SignatureWizard.vue'
+import SignatureDetailDrawer from './_SignatureDetailDrawer.vue'
+
+// PRODUCT-UX-2 (LOT A) — `embedded` : masque l'en-tête de page quand la vue est montée comme
+// onglet de l'espace Documents unifié (évite les doublons de titre). Logique 100 % réutilisée.
+defineProps({ embedded: { type: Boolean, default: false } })
+
+const { t } = useI18n()
+const store = useSignatureStore()
+const { toast } = useAppToast()
+const { can } = useCan()
+
+const STATUS_META = {
+  draft: { color: 'secondary', icon: 'tabler-pencil' },
+  pending: { color: 'warning', icon: 'tabler-clock' },
+  partially_signed: { color: 'info', icon: 'tabler-progress' },
+  completed: { color: 'success', icon: 'tabler-circle-check' },
+  declined: { color: 'error', icon: 'tabler-x' },
+  cancelled: { color: 'secondary', icon: 'tabler-ban' },
+  expired: { color: 'secondary', icon: 'tabler-clock-off' },
+  failed: { color: 'error', icon: 'tabler-alert-triangle' },
+}
+const statusColor = s => STATUS_META[s]?.color ?? 'secondary'
+const statusIcon = s => STATUS_META[s]?.icon ?? 'tabler-point'
+const statusLabel = s => t(`signature.status.${s}`)
+
+const TABS = [
+  { key: '', label: 'signature.tabs.all' },
+  { key: 'pending', label: 'signature.tabs.pending' },
+  { key: 'partially_signed', label: 'signature.tabs.inProgress' },
+  { key: 'completed', label: 'signature.tabs.completed' },
+  { key: 'declined', label: 'signature.tabs.declined' },
+  { key: 'expired', label: 'signature.tabs.expired' },
+]
+const currentTab = ref(typeof useRoute().query.status === 'string' ? useRoute().query.status : '') // ADR-777 : lien filtré depuis l'accueil
+const search = ref('')
+
+const headers = [
+  { title: t('signature.columns.document'), key: 'document_label', sortable: false },
+  { title: t('signature.columns.signers'), key: 'signers', sortable: false },
+  { title: t('signature.columns.provider'), key: 'provider', sortable: false },
+  { title: t('signature.columns.status'), key: 'status', sortable: false },
+  { title: t('signature.columns.created'), key: 'created_at', sortable: false },
+  { title: '', key: 'actions', sortable: false, align: 'end' },
+]
+
+const load = async () => {
+  await store.fetchList({ status: currentTab.value || undefined, search: search.value || undefined })
+}
+
+watch(currentTab, load)
+watchDebounced(search, load, { debounce: 350 })
+onMounted(load)
+
+const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString() : '—')
+
+// Détail
+const detailId = ref(null)
+const detailOpen = ref(false)
+const openDetail = id => { detailId.value = id; detailOpen.value = true }
+
+// Assistant
+const wizardOpen = ref(false)
+const onCreated = () => { wizardOpen.value = false; toast(t('signature.toasts.created'), 'success'); load() }
+
+// W-SIGNATURE-12 — supervision opérationnelle (métriques agrégées, lecture seule, gated view_evidence)
+const supervision = ref(null)
+const canSupervise = computed(() => can('workforce_signature.view_evidence'))
+onMounted(async () => {
+  if (canSupervise.value) {
+    try { supervision.value = await store.fetchSupervision() } catch { /* non bloquant */ }
+  }
+})
+</script>
+
+<template>
+  <div>
+    <div class="d-flex flex-wrap justify-space-between align-center gap-4 mb-6">
+      <div v-if="!embedded">
+        <h4 class="text-h4 font-weight-bold">
+          {{ t('signature.title') }}
+        </h4>
+        <p class="text-body-1 text-medium-emphasis mb-0">
+          {{ t('signature.subtitle') }}
+        </p>
+      </div>
+      <VSpacer v-else />
+      <VBtn
+        v-if="can('workforce_signature.request')"
+        prepend-icon="tabler-plus"
+        @click="wizardOpen = true"
+      >
+        {{ t('signature.actions.new') }}
+      </VBtn>
+    </div>
+
+    <!-- W-SIGNATURE-12 — supervision opérationnelle (agrégée, non sensible) -->
+    <VCard v-if="canSupervise && supervision" class="mb-4">
+      <VCardText class="d-flex flex-wrap align-center gap-2">
+        <span class="text-caption font-weight-medium me-2">{{ t('signature.supervision.title') }}</span>
+        <VChip size="small" color="warning" variant="tonal" label>
+          {{ t('signature.supervision.pending') }}: {{ supervision.requests.pending }}
+        </VChip>
+        <VChip size="small" color="secondary" variant="tonal" label>
+          {{ t('signature.supervision.expired') }}: {{ supervision.requests.expired }}
+        </VChip>
+        <VChip size="small" color="error" variant="tonal" label>
+          {{ t('signature.supervision.failed') }}: {{ supervision.requests.failed }}
+        </VChip>
+        <VChip
+          size="small"
+          :color="supervision.operational.needs_reconciliation ? 'error' : 'success'"
+          variant="tonal"
+          label
+        >
+          {{ t('signature.supervision.reconcile') }}: {{ supervision.operational.needs_reconciliation }}
+        </VChip>
+        <VChip size="small" color="secondary" variant="tonal" label>
+          {{ t('signature.supervision.expiredPreps') }}: {{ supervision.operational.expired_preparations }}
+        </VChip>
+        <VChip size="small" color="info" variant="tonal" label>
+          {{ t('signature.supervision.certs') }}: {{ supervision.certificates.issued }} / {{ supervision.certificates.revoked }}
+        </VChip>
+      </VCardText>
+    </VCard>
+
+    <VCard>
+      <VTabs
+        v-model="currentTab"
+        class="v-tabs-pill"
+        show-arrows
+      >
+        <VTab
+          v-for="tab in TABS"
+          :key="tab.key"
+          :value="tab.key"
+        >
+          {{ t(tab.label) }}
+        </VTab>
+      </VTabs>
+
+      <VCardText>
+        <AppTextField
+          v-model="search"
+          :placeholder="t('signature.searchPlaceholder')"
+          prepend-inner-icon="tabler-search"
+          density="compact"
+          clearable
+          style="max-inline-size: 320px;"
+          class="mb-4"
+        />
+
+        <VDataTable
+          :headers="headers"
+          :items="store.items"
+          :loading="store.loading"
+          :items-per-page="15"
+          density="comfortable"
+          class="text-no-wrap"
+          @click:row="(_, { item }) => openDetail(item.id)"
+        >
+          <template #item.document_label="{ item }">
+            <div class="d-flex align-center gap-2">
+              <VIcon
+                icon="tabler-file-text"
+                size="18"
+                class="text-medium-emphasis"
+              />
+              <span class="font-weight-medium">{{ item.document_label || t('signature.unknownDocument') }}</span>
+              <VChip
+                v-if="item.certified"
+                size="x-small"
+                color="success"
+                variant="tonal"
+              >
+                {{ t('signature.certified') }}
+              </VChip>
+            </div>
+          </template>
+
+          <template #item.signers="{ item }">
+            <div class="d-flex align-center gap-1">
+              <VChip
+                v-for="s in item.signers"
+                :key="s.id"
+                size="x-small"
+                :color="s.status === 'signed' ? 'success' : (s.status === 'declined' ? 'error' : 'default')"
+                variant="tonal"
+              >
+                {{ s.name }}
+              </VChip>
+            </div>
+          </template>
+
+          <template #item.provider="{ item }">
+            <span class="text-body-2">{{ item.provider }}</span>
+            <div class="text-caption text-medium-emphasis">
+              {{ t(`signature.level.${item.signature_level}`) }} · {{ t(`signature.order.${item.signing_order}`) }}
+            </div>
+          </template>
+
+          <template #item.status="{ item }">
+            <VChip
+              :color="statusColor(item.status)"
+              size="small"
+              label
+            >
+              <VIcon
+                :icon="statusIcon(item.status)"
+                start
+                size="14"
+              />
+              {{ statusLabel(item.status) }}
+            </VChip>
+          </template>
+
+          <template #item.created_at="{ item }">
+            <span class="text-body-2">{{ fmtDate(item.created_at) }}</span>
+          </template>
+
+          <template #item.actions="{ item }">
+            <VBtn
+              icon
+              variant="text"
+              size="small"
+              color="default"
+              @click.stop="openDetail(item.id)"
+            >
+              <VIcon icon="tabler-eye" />
+            </VBtn>
+          </template>
+
+          <template #no-data>
+            <div class="text-center py-8 text-medium-emphasis">
+              <VIcon
+                icon="tabler-signature"
+                size="40"
+                class="mb-2"
+              />
+              <div>{{ t('signature.empty') }}</div>
+            </div>
+          </template>
+        </VDataTable>
+      </VCardText>
+    </VCard>
+
+    <SignatureWizard
+      v-model:is-dialog-visible="wizardOpen"
+      @created="onCreated"
+    />
+
+    <SignatureDetailDrawer
+      v-model:is-drawer-open="detailOpen"
+      :request-id="detailId"
+      @changed="load"
+    />
+  </div>
+</template>

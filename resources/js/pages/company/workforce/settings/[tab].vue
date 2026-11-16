@@ -6,6 +6,7 @@ definePage({
 })
 
 import WorkforceRulesSection from './_WorkforceRulesSection.vue'
+import WorkingTimeSetup from '../_WorkingTimeSetup.vue'
 import ContractSettingsSection from './_ContractSettingsSection.vue'
 import SignatureSettingsSection from './_SignatureSettingsSection.vue'
 import { $api } from '@/utils/api'
@@ -57,7 +58,7 @@ const LEGACY_TAB_REDIRECT = {
   organization: '/company/workforce/organization/departments',
   leave: '/company/workforce/leave',
   planning: '/company/workforce/planning', // ADR-729 (M6.A) — Planning = page autonome
-  documents: '/company/workforce/documents?tab=templates',
+  documents: '/company/documents/templates', // ADR-802 : destination directe
   rules: '/company/workforce/settings/worktime', // merged into "worktime"
 }
 // ADR-729 (M6.A) — tant qu'une redirection legacy est en cours, on NEUTRALISE l'auto-correction d'onglet
@@ -70,6 +71,7 @@ if (redirecting.value) {
 
 const sections = computed(() => data.value?.sections || [])
 const ctx = computed(() => data.value?.context || {})
+const setupKeys = ref(null) // ADR-802 : clés gérées par le formulaire Temps de travail
 const currentTab = computed({
   get: () => route.params.tab || sections.value[0]?.key || 'general',
   set: v => { if (!redirecting.value) router.replace({ params: { tab: v } }) },
@@ -195,17 +197,30 @@ onMounted(() => { load(); loadWeekStart() })
 
           <!-- Temps de travail & pauses (éditable, avec provenance) -->
           <VWindowItem value="worktime">
-            <p class="text-body-2 text-medium-emphasis mb-2">
-              {{ t('hrSettings.worktimeIntro') }}
-            </p>
-            <h6 class="text-h6 mt-4 mb-2">
-              {{ t('hrSettings.sections.worktime') }}
-            </h6>
-            <WorkforceRulesSection domain="work-time" />
-            <h6 class="text-h6 mt-6 mb-2">
-              {{ t('hrSettings.breaks') }}
-            </h6>
-            <WorkforceRulesSection domain="breaks" />
+            <!-- ADR-802 : UN seul formulaire — le même composant que l'étape « Temps de travail » de l'assistant ;
+                 le détail ne montre que les règles que ce formulaire ne gère pas (pas de doublon). -->
+            <WorkingTimeSetup @loaded="keys => (setupKeys = keys)" />
+            <VExpansionPanels
+              v-if="setupKeys"
+              class="mt-6"
+              data-test="worktime-advanced"
+            >
+              <VExpansionPanel :title="t('hrSettings.advancedRules')">
+                <VExpansionPanelText>
+                  <p class="text-body-2 text-medium-emphasis mb-2">
+                    {{ t('hrSettings.advancedRulesIntro') }}
+                  </p>
+                  <h6 class="text-h6 mt-4 mb-2">
+                    {{ t('hrSettings.sections.worktime') }}
+                  </h6>
+                  <WorkforceRulesSection domain="work-time" :exclude="setupKeys" />
+                  <h6 class="text-h6 mt-6 mb-2">
+                    {{ t('hrSettings.breaks') }}
+                  </h6>
+                  <WorkforceRulesSection domain="breaks" :exclude="setupKeys" />
+                </VExpansionPanelText>
+              </VExpansionPanel>
+            </VExpansionPanels>
           </VWindowItem>
 
           <!-- Contrats de travail (W-CONTRACT-3B) — visible si module Contract actif -->

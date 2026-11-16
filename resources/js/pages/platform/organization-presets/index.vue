@@ -4,7 +4,7 @@
 import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
 
-definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: 'manage_jobdomains' } })
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: 'manage_jobdomains', navActiveLink: 'platform-catalog-tab' } }) // ADR-802 : rangé sous Catalogue (plus de menu dédié)
 
 const { t } = useI18n()
 const router = useRouter()

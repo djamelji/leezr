@@ -15,6 +15,18 @@ const { toast } = useAppToast()
 const auth = usePlatformAuthStore()
 // ADR-798 : actions affichées selon les droits réels (l'API les vérifie de toute façon).
 const can = p => auth.hasPermission('manage_jobdomains') || auth.hasPermission(p)
+
+// ADR-802 — UN endroit pour éditer un preset : une famille RECOMMANDÉE par un JobDomain s'édite et se
+// publie depuis la fiche de ce JobDomain (onglet de la famille) ; le catalogue y renvoie. Le catalogue garde
+// la bibliothèque (familles non rattachées), l'historique, les écarts, l'aperçu société et l'archivage.
+const ownedByDomain = computed(() => (detail.value?.recommended_by?.length || 0) > 0)
+const KIND_TAB = { rbac: 'roles', requirements: 'requirements', planning: 'planning' }
+const jdIds = ref({})
+onMounted(async () => {
+  try { jdIds.value = Object.fromEntries(((await $platformApi('/jobdomains')).jobdomains || []).map(j => [j.key, j.id])) }
+  catch { jdIds.value = {} }
+})
+const domainLink = key => jdIds.value[key] ? { path: `/platform/jobdomains/${jdIds.value[key]}`, query: { tab: KIND_TAB[detail.value?.preset?.kind] || 'general' } } : null
 const editor = ref(false)
 const editing = ref(null)
 const blocked = ref(null)
@@ -263,7 +275,18 @@ const runPreview = async () => {
 
         <div class="d-flex flex-wrap gap-2 my-4">
           <VBtn
-            v-if="detail.preset.status === 'draft' && can('presets.edit')"
+            v-for="r in (ownedByDomain ? detail.recommended_by : []).filter(r => domainLink(r.jobdomain_key))"
+            :key="`jd-${r.jobdomain_key}-${r.market_key || ''}`"
+            variant="tonal"
+            size="small"
+            prepend-icon="tabler-briefcase"
+            :to="domainLink(r.jobdomain_key)"
+            data-test="preset-open-jobdomain"
+          >
+            {{ t('presetAdmin.editInJobdomain', { key: r.jobdomain_key }) }}
+          </VBtn>
+          <VBtn
+            v-if="detail.preset.status === 'draft' && can('presets.edit') && !ownedByDomain"
             variant="tonal"
             size="small"
             prepend-icon="tabler-edit"
@@ -273,7 +296,7 @@ const runPreview = async () => {
             {{ t('presetEditor.edit') }}
           </VBtn>
           <VBtn
-            v-if="detail.preset.status === 'draft' && can('presets.publish')"
+            v-if="detail.preset.status === 'draft' && can('presets.publish') && !ownedByDomain"
             color="primary"
             size="small"
             :loading="busy"
@@ -283,7 +306,7 @@ const runPreview = async () => {
             {{ t('presetAdmin.publish') }}
           </VBtn>
           <VBtn
-            v-if="detail.preset.status !== 'draft' && can('presets.edit')"
+            v-if="detail.preset.status !== 'draft' && can('presets.edit') && !ownedByDomain"
             variant="tonal"
             size="small"
             :loading="busy"

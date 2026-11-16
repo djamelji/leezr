@@ -1597,7 +1597,9 @@
       "overtime_daily_threshold_hours": "Overtime daily threshold (h)",
       "night_work_start": "Night work start",
       "night_work_end": "Night work end"
-    }
+    },
+    "advancedRules": "Detailed settings (breaks, maxima, overtime)",
+    "advancedRulesIntro": "Additional rules not covered by the form above, with their origin (law, agreement, company). Settings of the form are not repeated here."
   },
   "contractSettings": {
     "intro": "Configure your company's documentary identity and default contract templates. This information appears in the header and footer of your contracts.",
@@ -4652,7 +4654,11 @@
     "invitedQueued": "Invitation saved. The e-mail is queued and has not been sent yet.",
     "invitedPendingQueued": "This account already exists: the invitation is saved and its e-mail is queued. Access will be activated once accepted.",
     "openFile": "Open {name}'s file",
-    "access": "Access"
+    "access": "Access",
+    "tabHr": "HR management",
+    "hrToolsIntro": "Advanced filters, multi-selection, bulk actions, import and export of employee records.",
+    "showIncomplete": "Show",
+    "hideIncomplete": "Hide"
   },
   "home": {
     "title": "Home",
@@ -10216,7 +10222,7 @@
   "presetAdmin": {
     "all": "All",
     "organizationEditor": "Organisation presets (dedicated editor) →",
-    "hint": "A draft starts from an existing version (\"New version\") or from the legacy configuration of a business domain. Publishing changes no company; applying stays explicit, company by company.",
+    "hint": "Preset library. A preset recommended by a business domain is edited and published from that domain's page; library presets (not attached) are managed here. Publishing changes no company; applying stays explicit, company by company.",
     "preset": "Preset",
     "family": "Family",
     "version": "Version",
@@ -10250,7 +10256,8 @@
       "conflict": "Conflict",
       "not_applicable": "Not applicable",
       "requires_confirmation": "Confirmation required"
-    }
+    },
+    "editInJobdomain": "Edit from domain {key}"
   },
   "presetEditor": {
     "newPreset": "New preset",
@@ -10381,7 +10388,9 @@
       "company": "Asked to the company",
       "person": "Asked to employees",
       "legal_representative": "Asked to the legal representative"
-    }
+    },
+    "useShared": "Use a shared model",
+    "useSharedApply": "Associate"
   },
   "workingTime": {
     "section": {

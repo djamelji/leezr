@@ -19,7 +19,8 @@ class JobdomainsModule implements ModuleDefinition
             capabilities: new Capabilities(
                 // ADR-638 (W-E2) : administration visuelle des presets organisationnels (groupe gouvernance).
                 navItems: [
-                    ['key' => 'organization-presets', 'title' => 'Organization Presets', 'to' => ['name' => 'platform-organization-presets'], 'icon' => 'tabler-sitemap', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 60],
+                    // ADR-802 : plus d'entrée de menu « Presets d'organisation » — l'éditeur dédié reste ouvert depuis
+                    // JobDomain → onglet Organisation et depuis le catalogue (un seul point d'entrée : le JobDomain).
                     // W-CONTRACT-3B (ADR-650) : catalogue des modèles de contrat.
                     ['key' => 'contract-templates', 'title' => 'Contract Templates', 'to' => ['name' => 'platform-contract-templates'], 'icon' => 'tabler-file-text', 'permission' => 'manage_jobdomains', 'group' => 'governance', 'sort' => 61],
                 ],

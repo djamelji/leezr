@@ -1596,7 +1596,9 @@
       "overtime_daily_threshold_hours": "Seuil heures supplémentaires / jour (h)",
       "night_work_start": "Début du travail de nuit",
       "night_work_end": "Fin du travail de nuit"
-    }
+    },
+    "advancedRules": "Réglages détaillés (pauses, maxima, heures supplémentaires)",
+    "advancedRulesIntro": "Règles complémentaires non couvertes par le formulaire ci-dessus, avec leur provenance (loi, convention, entreprise). Les réglages du formulaire ne sont pas répétés ici."
   },
   "contractSettings": {
     "intro": "Configurez l'identité documentaire de votre entreprise et les modèles de contrat par défaut. Ces informations apparaissent dans l'en-tête et le pied de vos contrats.",
@@ -4652,7 +4654,11 @@
     "invitedQueued": "Invitation enregistrée. L'e-mail est en file d'attente et n'est pas encore parti.",
     "invitedPendingQueued": "Ce compte existe déjà : l'invitation est enregistrée, son e-mail est en file d'attente. L'accès sera activé après son acceptation.",
     "openFile": "Ouvrir la fiche de {name}",
-    "access": "Accès"
+    "access": "Accès",
+    "tabHr": "Gestion RH",
+    "hrToolsIntro": "Filtres avancés, sélection multiple, actions groupées, import et export des fiches salariés.",
+    "showIncomplete": "Afficher",
+    "hideIncomplete": "Masquer"
   },
   "home": {
     "title": "Accueil",
@@ -10216,7 +10222,7 @@
   "presetAdmin": {
     "all": "Toutes",
     "organizationEditor": "Presets d’organisation (éditeur dédié) →",
-    "hint": "Un brouillon naît d’une version existante (« Nouvelle version ») ou de la configuration historique d’un domaine d’activité. Publier ne modifie aucune société ; l’application reste explicite, société par société.",
+    "hint": "Bibliothèque des presets. Un preset recommandé par un domaine d’activité se modifie et se publie depuis la fiche de ce domaine ; les presets de bibliothèque (non rattachés) se gèrent ici. Publier ne modifie aucune société ; l’application reste explicite, société par société.",
     "preset": "Preset",
     "family": "Famille",
     "version": "Version",
@@ -10250,7 +10256,8 @@
       "conflict": "Conflit",
       "not_applicable": "Non applicable",
       "requires_confirmation": "Confirmation requise"
-    }
+    },
+    "editInJobdomain": "Modifier depuis le domaine {key}"
   },
   "presetEditor": {
     "newPreset": "Nouveau preset",
@@ -10381,7 +10388,9 @@
       "company": "Demandé à l’entreprise",
       "person": "Demandé aux collaborateurs",
       "legal_representative": "Demandé au représentant légal"
-    }
+    },
+    "useShared": "Utiliser un modèle partagé",
+    "useSharedApply": "Associer"
   },
   "workingTime": {
     "section": {

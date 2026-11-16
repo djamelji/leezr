@@ -28652,3 +28652,18 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - PROD est probablement concernée : à vérifier et déployer dans un lot dédié.
   - 13 sessions DEV antérieures au correctif expireront d'elles-mêmes.
   - Une identité de recette isolée a été ajoutée (PlatformUser 21, rôle `e2e_assign_8011`).
+
+## ADR-802 — Rationalisation P1 : une fonction, un parcours (Équipe, Documents, JobDomain, temps de travail)
+
+- **Date** : 2026-11-16, DEV uniquement, base `d7cb183e`. Rapport : `docs/bmad/ADR-802-ONE-FUNCTION-ONE-PATH.md`.
+- **Décisions** :
+  - **Équipe.** `/company/people` est la seule page de personnes. La liste RH avancée devient la vue « Gestion RH », avec la même garde et ses filtres conservés. Les champs du profil et le quota / profils incomplets de l'ancienne liste Membres passent dans Équipe. Il ne reste qu'un formulaire de création et un d'invitation. `/company/members` et `/company/workforce/employees` deviennent des redirections gardées.
+    - Les modèles Compte, Membre et Salarié ne sont pas fusionnés.
+    - La garde UI des champs est alignée sur l'API (`settings.manage`).
+  - **Documents.** Signatures, modèles de contrat et registre RH deviennent des vues de l'espace Documents (`git mv`, sans `definePage`). Les anciennes routes deviennent des redirections gardées.
+  - **JobDomain.** Un preset recommandé par un domaine ne se modifie et ne se publie que depuis ce domaine ; le catalogue reste la bibliothèque (familles non rattachées, historique, écarts, aperçu, archivage). Le partage d'un preset entre domaines est possible depuis la fiche, via l'endpoint existant. Le menu « Presets d'organisation » est retiré, l'éditeur dédié reste accessible.
+  - **Temps de travail.** Un seul formulaire (`_WorkingTimeSetup`) dans l'assistant et dans Paramètres. Les réglages détaillés ne montrent que les règles non couvertes ; la liste des clés exclues vient du serveur.
+- **Conséquences** :
+  - 0 endpoint, service ou moteur ajouté ; 0 route retirée (98) ; 5 routes redirigées.
+  - 1 composant supprimé sur preuve (`AddMemberDrawer`) ; aucune donnée modifiée (instantané de 11 tables identique).
+  - Des E2E historiques ciblent encore les anciennes listes, à mettre à jour.

@@ -92,7 +92,7 @@ onMounted(async () => {
   }
   catch {
     toast(t('members.failedToLoadProfile'), 'error')
-    router.push('/company/members')
+    router.push('/company/people')
   }
   finally {
     isLoading.value = false
@@ -196,7 +196,7 @@ const handleSetPassword = async () => {
         icon
         variant="text"
         size="small"
-        @click="router.push('/company/members')"
+        @click="router.push('/company/people')"
       >
         <VIcon icon="tabler-arrow-left" />
       </VBtn>

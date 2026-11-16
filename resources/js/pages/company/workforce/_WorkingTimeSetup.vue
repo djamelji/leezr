@@ -7,7 +7,7 @@
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
-const emit = defineEmits(['saved'])
+const emit = defineEmits(['saved', 'loaded'])
 const { t } = useI18n()
 const { toast } = useAppToast()
 
@@ -20,6 +20,8 @@ const section = ref('framework')
 
 const load = async () => {
   data.value = await $api('/workforce/working-time-setup')
+  // ADR-802 : clés gérées ici (source serveur) → la section « Réglages détaillés » ne les propose pas une 2ᵉ fois.
+  emit('loaded', Object.values(data.value.sections).flat().map(x => x.key))
   const f = {}
   for (const list of Object.values(data.value.sections)) for (const field of list) f[field.key] = field.source === 'company' || field.key === 'week_start_day' ? field.value : null
   form.value = f

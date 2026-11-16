@@ -80,13 +80,16 @@ const saveGeneral = () => run(() => $platformApi(`/jobdomains/${id.value}`, { me
 } }), t('jobdomainProfile.saved'))
 const saveModules = () => run(() => $platformApi(`/jobdomains/${id.value}`, { method: 'PUT', body: { default_modules: modules.value } }),
   res => (res.auto_added?.length ? t('jobdomainProfile.modulesSavedDeps', { list: res.auto_added.join(', ') }) : t('jobdomainProfile.saved')))
-const saveOrganization = () => run(() => {
-  const links = profile.value.recommendations.filter(r => !(r.kind === 'organization' && !r.market_key))
+// ADR-802 — une seule façon d'associer une famille au domaine (toutes familles) : remplace la recommandation
+// générale (sans marché) de cette famille, garde les autres liens tels quels.
+const linkFamily = (kind, familyKey) => run(() => {
+  const links = profile.value.recommendations.filter(r => !(r.kind === kind && !r.market_key))
     .map(r => ({ kind: r.kind, family_key: r.family_key, market_key: r.market_key, pinned_version: r.pinned_version }))
-  if (orgFamily.value) links.push({ kind: 'organization', family_key: orgFamily.value })
+  if (familyKey) links.push({ kind, family_key: familyKey })
 
   return $platformApi(`/jobdomains/${profile.value.identity.key}/preset-recommendations`, { method: 'PUT', body: { links } })
 }, t('jobdomainProfile.saved'))
+const saveOrganization = () => linkFamily('organization', orgFamily.value)
 
 const conventionsFor = market => (profile.value?.conventions || []).filter(c => c.market_key === market)
   .map(c => ({ value: c.id, title: `${c.name} (IDCC ${c.idcc})${c.verified ? '' : ` — ${t('jobdomainTabs.unverified')}`}` }))
@@ -349,6 +352,7 @@ const orgStructure = computed(() => profile.value?.workspace.organization.publis
               :state="profile.workspace.rbac"
               :meta="meta"
               @changed="load"
+              @link="fk => linkFamily('rbac', fk)"
             />
           </VCardText>
         </VCard>
@@ -416,6 +420,7 @@ const orgStructure = computed(() => profile.value?.workspace.organization.publis
               :state="profile.workspace.requirements"
               :meta="meta"
               @changed="load"
+              @link="fk => linkFamily('requirements', fk)"
             />
           </VCardText>
         </VCard>
@@ -434,6 +439,7 @@ const orgStructure = computed(() => profile.value?.workspace.organization.publis
               :state="profile.workspace.planning"
               :meta="meta"
               @changed="load"
+              @link="fk => linkFamily('planning', fk)"
             />
           </VCardText>
         </VCard>

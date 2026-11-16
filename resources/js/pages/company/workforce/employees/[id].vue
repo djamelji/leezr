@@ -132,7 +132,7 @@ const onboardingComplete = computed(() => onboardingDone.value === onboardingSte
   <div>
     <VBtn
       variant="text"
-      :to="{ name: 'company-workforce-employees' }"
+      :to="{ path: '/company/people', query: { tab: 'hr' } }"
       prepend-icon="tabler-arrow-left"
       class="mb-4"
     >

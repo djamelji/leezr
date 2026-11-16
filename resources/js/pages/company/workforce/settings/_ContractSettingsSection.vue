@@ -202,7 +202,7 @@ const go = p => router.push(p)
           size="small"
           prepend-icon="tabler-files"
           class="mt-4"
-          @click="go('/company/workforce/contract/templates')"
+          @click="go('/company/documents/templates')"
         >
           {{ t('contractSettings.defaults.manage') }}
         </VBtn>

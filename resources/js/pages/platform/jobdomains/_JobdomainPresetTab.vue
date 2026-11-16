@@ -13,7 +13,7 @@ const props = defineProps({
   state: { type: Object, required: true },
   meta: { type: Object, default: null },
 })
-const emit = defineEmits(['changed'])
+const emit = defineEmits(['changed', 'link'])
 const { t, te } = useI18n()
 const { toast } = useAppToast()
 
@@ -54,6 +54,22 @@ const publish = async () => {
   finally { busy.value = false }
 }
 const DAY = d => t(`presetEditor.day.${d}`)
+
+// ADR-802 — partager un preset entre domaines depuis la fiche (avant : seulement par l'API). Liste des
+// familles PUBLIÉES de la même famille (`GET /platform/presets?kind=`), enregistrement par le parent via
+// `preset-recommendations` (endpoint existant). Rien n'est publié ni appliqué.
+const currentFamily = computed(() => props.state.published?.family_key || props.state.draft?.family_key || null)
+const shareable = ref([])
+const shareChoice = ref(null)
+onMounted(async () => {
+  try {
+    const all = (await $platformApi(`/presets?kind=${props.kind}`)).presets || []
+    const seen = new Map()
+    for (const p of all) if (p.status === 'published' && p.family_key !== currentFamily.value && !seen.has(p.family_key)) seen.set(p.family_key, { value: p.family_key, title: p.label || p.family_key })
+    shareable.value = [...seen.values()]
+  }
+  catch { shareable.value = [] }
+})
 </script>
 
 <template>
@@ -91,6 +107,28 @@ const DAY = d => t(`presetEditor.day.${d}`)
         @click="publish"
       >
         {{ t('jobdomainTabs.publish') }}
+      </VBtn>
+    </div>
+
+    <div
+      v-if="!state.draft && shareable.length"
+      class="d-flex flex-wrap align-center gap-2 mb-4"
+      :data-test="`jd-share-${kind}`"
+    >
+      <AppSelect
+        v-model="shareChoice"
+        :items="shareable"
+        :label="t('jobdomainTabs.useShared')"
+        clearable
+        density="compact"
+        style="flex: 1 1 260px"
+      />
+      <VBtn
+        variant="tonal"
+        :disabled="!shareChoice"
+        @click="emit('link', shareChoice)"
+      >
+        {{ t('jobdomainTabs.useSharedApply') }}
       </VBtn>
     </div>
 

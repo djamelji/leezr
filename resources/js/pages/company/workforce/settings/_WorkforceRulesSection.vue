@@ -7,6 +7,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
   domain: { type: String, required: true }, // 'breaks' | 'work-time'
+  exclude: { type: Array, default: () => [] }, // ADR-802 : clés déjà réglées par l'assistant Temps de travail
   readOnly: { type: Boolean, default: false },
 })
 
@@ -66,7 +67,7 @@ onMounted(load)
       </thead>
       <tbody>
         <tr
-          v-for="r in rules"
+          v-for="r in rules.filter(x => !props.exclude.includes(x.key))"
           :key="r.key"
         >
           <td>

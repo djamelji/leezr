@@ -9,6 +9,10 @@ import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 import PersonAddDrawer from './_PersonAddDrawer.vue'
 import OnboardingPanel from './_OnboardingPanel.vue'
+import PeopleHrTools from './_PeopleHrTools.vue'
+import ProfileFieldsSettings from './_ProfileFieldsSettings.vue'
+import MemberHealth from './_MemberHealth.vue'
+import { useModuleStore } from '@/core/stores/module'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -38,14 +42,19 @@ const onPersonAdded = ({ personRef, tab }) => {
 
 const canPeople = computed(() => can('members.view') || can('workforce.view'))
 const canRoles = computed(() => can('roles.view'))
+// ADR-802 — « Gestion RH » = l'ancienne liste /company/workforce/employees (même garde : module workforce +
+// workforce.view). « Champs du profil » = l'ancien tiroir de /company/members (members.manage).
+const moduleStore = useModuleStore()
+const canHr = computed(() => moduleStore.isActive('workforce') && can('workforce.view'))
+const fieldsRef = ref(null)
 // ADR-766 (M7) — deep-link `?tab=roles` (depuis l'alias /company/roles) ou repli selon les facettes.
-const initialTab = (route.query.tab === 'roles' && canRoles.value) ? 'roles' : (canPeople.value ? 'people' : 'roles')
+const initialTab = (route.query.tab === 'roles' && canRoles.value) ? 'roles'
+  : (route.query.tab === 'hr' && canHr.value) ? 'hr'
+    : (canPeople.value ? 'people' : 'roles')
 const tab = ref(initialTab)
 watch(tab, v => {
-  const q = { ...route.query }
-  if (v === 'roles') q.tab = 'roles'
-  else delete q.tab
-  router.replace({ query: q })
+  // Changer de vue repart d'une URL propre (les filtres de la vue Gestion RH ne fuient pas ailleurs).
+  router.replace({ query: v === 'people' ? {} : { tab: v } })
 })
 
 const search = ref('')
@@ -113,9 +122,9 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         <p class="text-body-1 text-medium-emphasis mb-0">{{ t('peopleList.subtitle') }}</p>
       </div>
       <VSpacer />
-      <!-- Outils des listes historiques dont la parité n'est pas acquise (import / export / actions
-           groupées, réglage des champs personnalisés) : accessibles, jamais masqués. -->
-      <VMenu v-if="tab === 'people' && (can('workforce.import') || can('workforce.export') || can('workforce.manage') || can('members.manage'))">
+      <!-- ADR-802 : les outils ne renvoient plus vers d'autres pages — Gestion RH est un onglet d'Équipe,
+           les champs du profil s'ouvrent ici. -->
+      <VMenu v-if="tab === 'people' && can('members.view') && can('settings.manage')">
         <template #activator="{ props }">
           <VBtn
             v-bind="props"
@@ -129,23 +138,16 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         </template>
         <VList>
           <VListItem
-            v-if="can('workforce.view') && (can('workforce.import') || can('workforce.export') || can('workforce.manage'))"
-            :to="{ name: 'company-workforce-employees' }"
-            prepend-icon="tabler-table-import"
-            :title="t('peopleList.toolsHr')"
-            :subtitle="t('peopleList.toolsHrHint')"
-          />
-          <VListItem
-            v-if="can('members.view') && can('members.manage')"
-            to="/company/members"
+            data-test="people-tools-fields"
             prepend-icon="tabler-forms"
+            @click="fieldsRef?.open()"
             :title="t('peopleList.toolsFields')"
             :subtitle="t('peopleList.toolsFieldsHint')"
           />
         </VList>
       </VMenu>
       <VBtn
-        v-if="tab === 'people' && canAdd"
+        v-if="(tab === 'people' || tab === 'hr') && canAdd"
         color="primary"
         prepend-icon="tabler-user-plus"
         data-test="people-add"
@@ -157,10 +159,17 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
 
     <!-- ADR-796 : intégrations en cours (RH) — même page Équipe, aucun nouveau menu -->
     <OnboardingPanel v-if="tab === 'people' && can('workforce.manage')" />
+    <MemberHealth v-if="tab === 'people' && can('members.view')" />
+    <!-- Garde = celle de l'API (POST field-activations / field-definitions : settings.manage) -->
+    <ProfileFieldsSettings
+      v-if="can('members.view') && can('settings.manage')"
+      ref="fieldsRef"
+    />
 
     <VCard flat border>
       <VTabs v-model="tab" class="border-b">
         <VTab v-if="canPeople" value="people"><VIcon icon="tabler-users" start size="18" />{{ t('peopleList.tabPeople') }}</VTab>
+        <VTab v-if="canHr" value="hr" data-test="people-tab-hr"><VIcon icon="tabler-table-options" start size="18" />{{ t('peopleList.tabHr') }}</VTab>
         <VTab v-if="canRoles" value="roles"><VIcon icon="tabler-shield-lock" start size="18" />{{ t('peopleList.tabRoles') }}</VTab>
       </VTabs>
 
@@ -221,6 +230,11 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         </VWindowItem>
 
         <!-- ═══ RÔLES & AUTORISATIONS (réutilise /company/roles) ═══ -->
+        <VWindowItem value="hr">
+          <VCardText>
+            <PeopleHrTools v-if="tab === 'hr' && canHr" @create="openAdd(false)" />
+          </VCardText>
+        </VWindowItem>
         <VWindowItem value="roles">
           <RolesManager v-if="tab === 'roles' && canRoles" embedded />
         </VWindowItem>
