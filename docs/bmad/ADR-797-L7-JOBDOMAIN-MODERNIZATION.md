@@ -203,4 +203,4 @@ Rien d'autre n'a été supprimé.
 
 ## 16. SHA DEV
 
-Voir le checkpoint : commit de ce lot sur la base `0b582b2f`.
+Commit de ce lot : `e918e4d8` (base `0b582b2f`). Suite complète : 4469 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` seulement. Build propre.
