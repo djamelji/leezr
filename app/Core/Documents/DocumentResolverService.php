@@ -108,10 +108,23 @@ class DocumentResolverService
             $uploads = collect();
         }
 
+        // ADR-810 : the role configuration defines the DEFAULT expected list ; it never hides a document that
+        // concerns this person explicitly — an active / approved request addressed to her, or a file she has.
+        // (Otherwise a requested, submitted then approved document vanished from her space and her file.)
+        $explicit = [];
+        if ($user !== null && $scope !== DocumentType::SCOPE_COMPANY) {
+            $explicit = DocumentRequest::query()->where('company_id', $companyId)
+                ->where(fn ($q) => $q->where(fn ($s) => $s->where('document_subject_type', DocumentSubject::TYPE_USER)->where('document_subject_id', $user->id))
+                    ->orWhere('user_id', $user->id))
+                ->whereIn('document_type_id', array_keys($map))
+                ->where('status', '!=', DocumentRequest::STATUS_CANCELLED)
+                ->pluck('document_type_id')->merge($uploads->keys())->map(fn ($id) => (int) $id)->unique()->values()->all();
+        }
+
         $result = [];
         foreach ($map as $typeId => $entry) {
-            if (! $entry['visible']) {
-                continue; // masqué par la configuration du rôle (jamais un document obligatoire)
+            if (! $entry['visible'] && ! in_array((int) $typeId, $explicit, true)) {
+                continue; // masqué par la configuration du rôle (jamais un document obligatoire, ni demandé, ni détenu)
             }
             $type = $entry['type'];
             $upload = $uploads->get($typeId);

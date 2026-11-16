@@ -28894,3 +28894,20 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques ;
     - E2E 2/2, société fictive supprimée, société 1 inchangée ;
     - build propre.
+
+## ADR-810 — Documents approuvés mais invisibles au salarié
+
+- **Date** : 2026-11-16, DEV uniquement, base `28869cd4`, commit `SHA_810`. Rapport : `docs/bmad/ADR-810-APPROVED-DOCUMENT-VISIBILITY.md`.
+- **Contexte** : un document demandé, transmis puis approuvé n'apparaissait ni dans la fiche de la personne ni dans Mon espace.
+- **Cause** : `DocumentResolverService::resolve` (source de la fiche et de Mon espace) écartait tout type masqué par le `doc_config` du rôle, même quand ce type faisait l'objet d'une demande adressée à la personne ou d'un document qu'elle détient. La file « À traiter » lisait les demandes : trois projections incohérentes. Le modèle ne comporte aucune politique « visible après approbation ou signature ».
+- **Décisions** :
+  - Le `doc_config` du rôle ne définit que la liste **par défaut**. Une demande non annulée ou un document détenu reste toujours affiché pour cette personne (présentation seulement ; `requirementMap` et la conformité sont inchangés ; contrôles d'accès inchangés).
+  - L'approbation groupée signale les demandes non approuvées (pièce absente), au lieu d'un succès trompeur.
+- **Conséquences** :
+  - Demande 5 de la société 1 (DEV, transmise sans fichier) laissée en l'état, désormais visible et refournissable.
+  - Écarts mineurs consignés : référence `employee-…` sans Workforce ; mention « Approuvé » absente de la fiche.
+  - Tests :
+    - suite complète 4613 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques ;
+    - E2E (dépôt, approbation, visibilité, refus) sur société fictive supprimée, société 1 inchangée ;
+    - build propre.

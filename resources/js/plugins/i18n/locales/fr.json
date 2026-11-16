@@ -2681,7 +2681,8 @@
       "bulkApproveSuccess": "{count} document(s) approuvé(s).",
       "bulkRejectSuccess": "{count} document(s) rejeté(s).",
       "bulkRejectTitle": "Rejeter les documents sélectionnés",
-      "bulkRejectConfirm": "Rejeter"
+      "bulkRejectConfirm": "Rejeter",
+      "bulkApprovePartial": "{count} approuvé(s), {skipped} non approuvé(s) : pièce absente ou déjà traitée — ouvrez la demande pour la redemander."
     },
     "compliance": {
       "title": "Conformité documentaire",

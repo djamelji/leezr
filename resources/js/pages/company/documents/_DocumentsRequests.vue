@@ -138,7 +138,9 @@ const handleBulkApprove = async () => {
   try {
     const result = await store.bulkAction(ids, 'approved')
 
-    toast(t('companyDocuments.requests.bulkApproveSuccess', { count: result.processed }), 'success')
+    // ADR-810 : le résultat réel — une demande sans pièce n'est jamais approuvée (elle reste à traiter)
+    if (result.skipped > 0) toast(t('companyDocuments.requests.bulkApprovePartial', { count: result.processed, skipped: result.skipped }), 'warning')
+    else toast(t('companyDocuments.requests.bulkApproveSuccess', { count: result.processed }), 'success')
     selectedItems.value = []
   }
   catch (error) {

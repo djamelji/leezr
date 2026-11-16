@@ -2681,7 +2681,8 @@
       "status_processing": "Processing",
       "status_validated": "Validated",
       "sectionToReview": "To review",
-      "sectionPending": "Awaiting submission"
+      "sectionPending": "Awaiting submission",
+      "bulkApprovePartial": "{count} approved, {skipped} not approved: file missing or already processed — open the request to ask for it again."
     },
     "compliance": {
       "title": "Document Compliance",

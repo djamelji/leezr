@@ -656,5 +656,10 @@
     "priorities": {
       "access_to_confirm": "صلاحيات بانتظار التأكيد"
     }
+  },
+  "companyDocuments": {
+    "requests": {
+      "bulkApprovePartial": "تمت الموافقة على {count}، ولم تتم الموافقة على {skipped}: الملف مفقود أو سبقت معالجته — افتح الطلب لإعادة طلبه."
+    }
   }
 }
