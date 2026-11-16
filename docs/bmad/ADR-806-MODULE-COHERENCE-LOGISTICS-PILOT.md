@@ -165,3 +165,4 @@ Aucun abonnement, paiement ni facture modifié.
 ## 8. Dette conservée
 
 - Les 3 échecs `ControllerSizeInvariantTest` sont historiques, identifiés et **non masqués**.
+- **SHA DEV** : `6bf723fb`.

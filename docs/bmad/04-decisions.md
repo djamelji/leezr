@@ -28761,7 +28761,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-806 — Cohérence des modules et pilote Logistique (Expéditions)
 
-- **Date** : 2026-11-16, DEV uniquement, base `a317170f`, commit `SHA_806`. Rapport : `docs/bmad/ADR-806-MODULE-COHERENCE-LOGISTICS-PILOT.md` ; requêtes PROD en lecture seule : `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Date** : 2026-11-16, DEV uniquement, base `a317170f`, commit `6bf723fb`. Rapport : `docs/bmad/ADR-806-MODULE-COHERENCE-LOGISTICS-PILOT.md` ; requêtes PROD en lecture seule : `docs/bmad/adr806/prod-readonly-checks.sql`.
 - **Contexte** : rendre le système modulaire fiable et lisible sans nouvelle couche, puis intégrer `logistics_shipments` à l'assistant commun s'il est réellement opérationnel.
 - **Décisions** :
   - **Traductions du catalogue.** Les clés pointées (`permissionCatalog.bundles.<clé.avec.points>`) ne se résolvaient jamais avec `t/te` : toutes les capacités s'affichaient en anglais.
