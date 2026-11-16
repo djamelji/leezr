@@ -68,7 +68,7 @@ class DocumentComplianceStateService
 
         // A. Validation (depuis la demande)
         $validation = match ($requestStatus) {
-            'submitted' => self::V_PENDING,
+            'submitted', 'in_review' => self::V_PENDING, // ADR-810.1 : « en vérification » attend aussi la validation
             'approved' => self::V_APPROVED,
             'rejected' => self::V_REJECTED,
             default => self::V_NOT_REQUIRED, // requested / cancelled / null
@@ -77,7 +77,7 @@ class DocumentComplianceStateService
         // C. Demande
         $request = match ($requestStatus) {
             'requested' => self::R_REQUESTED,
-            'submitted' => self::R_SUBMITTED,
+            'submitted', 'in_review' => self::R_SUBMITTED,
             'approved' => self::R_FULFILLED,
             'cancelled' => self::R_CANCELLED,
             'rejected' => self::R_OVERDUE,

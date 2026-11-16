@@ -558,16 +558,6 @@ class DevSeeder extends Seeder
             return; // DocumentTypeCatalog hasn't been synced yet
         }
 
-        // Request 1: driving_license — SUBMITTED (Bob uploaded a file)
-        $dlRequest = DocumentRequest::updateOrCreate(
-            ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $drivingLicense->id],
-            [
-                'status' => DocumentRequest::STATUS_SUBMITTED,
-                'requested_at' => now()->subDays(5),
-                'submitted_at' => now()->subDays(2),
-            ],
-        );
-
         // The actual uploaded document for the submitted request
         if (isset($storedFiles['dummy_driving_license.png'])) {
             MemberDocument::updateOrCreate(
@@ -583,6 +573,17 @@ class DevSeeder extends Seeder
                 ],
             );
         }
+
+        // Request 1: driving_license — SUBMITTED (Bob uploaded a file)
+        $dlRequest = DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $user->id, 'document_type_id' => $drivingLicense->id],
+            [
+                // ADR-810.1 : « transmise » seulement si la pièce existe.
+                'status' => isset($storedFiles['dummy_driving_license.png']) ? DocumentRequest::STATUS_SUBMITTED : DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now()->subDays(5),
+                'submitted_at' => isset($storedFiles['dummy_driving_license.png']) ? now()->subDays(2) : null,
+            ],
+        );
 
         // Request 2: id_card — REQUESTED (pending upload from Bob)
         DocumentRequest::updateOrCreate(
@@ -603,16 +604,6 @@ class DevSeeder extends Seeder
         );
 
         // ─── 4. Member document requests for Alice (dispatcher) ─────
-        // Alice: id_card SUBMITTED (with file)
-        DocumentRequest::updateOrCreate(
-            ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $idCard->id],
-            [
-                'status' => DocumentRequest::STATUS_SUBMITTED,
-                'requested_at' => now()->subDays(7),
-                'submitted_at' => now()->subDays(4),
-            ],
-        );
-
         if (isset($storedFiles['dummy_id_card.png'])) {
             MemberDocument::updateOrCreate(
                 ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $idCard->id],
@@ -627,6 +618,17 @@ class DevSeeder extends Seeder
                 ],
             );
         }
+
+        // Alice: id_card SUBMITTED (with file)
+        DocumentRequest::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $admin->id, 'document_type_id' => $idCard->id],
+            [
+                // ADR-810.1 : « transmise » seulement si la pièce existe.
+                'status' => isset($storedFiles['dummy_id_card.png']) ? DocumentRequest::STATUS_SUBMITTED : DocumentRequest::STATUS_REQUESTED,
+                'requested_at' => now()->subDays(7),
+                'submitted_at' => isset($storedFiles['dummy_id_card.png']) ? now()->subDays(4) : null,
+            ],
+        );
 
         // Alice: driving_license REQUESTED
         DocumentRequest::updateOrCreate(

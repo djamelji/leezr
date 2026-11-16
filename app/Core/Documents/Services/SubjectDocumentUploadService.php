@@ -58,7 +58,7 @@ final class SubjectDocumentUploadService
 
         $integrity = app(DocumentIntegrityService::class);
         $versioning = app(DocumentVersioningService::class);
-        $newHash = $integrity->hashOf($path);
+        $newHash = $integrity->storedHash($path); // ADR-810.1 : échec de stockage → rien n'est écrit
         $keys = ['company_id' => $company->id, 'document_subject_type' => $subject->type, 'document_subject_id' => $subject->id, 'document_type_id' => $type->id];
         $existing = MemberDocument::where($keys)->first();
 

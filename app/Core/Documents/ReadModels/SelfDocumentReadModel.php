@@ -67,6 +67,10 @@ class SelfDocumentReadModel
             $doc['request_message'] = $request?->message;
             $doc['due_date'] = $request?->due_date?->toDateString();
             $doc['is_overdue'] = (bool) $request?->isOverdue();
+            // ADR-810.1 : même état consolidé que la fiche (une seule règle serveur, un seul libellé).
+            $doc['compliance_status'] = \App\Core\Documents\Services\DocumentComplianceStateService::evaluateFromParts(
+                ($doc['upload'] ?? null) !== null, $request?->status, $doc['lifecycle_status'] ?? 'missing',
+            )['consolidated'];
             $doc['can_upload'] = true;
             $doc['can_delete'] = false;
         }

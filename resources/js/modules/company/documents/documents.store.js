@@ -61,8 +61,10 @@ export const useCompanyDocumentsStore = defineStore('companyDocuments', {
     missingCount: state => state._compliance.summary.missing,
     expiredCount: state => state._compliance.summary.expired,
     expiringSoonCount: state => state._compliance.summary.expiring_soon,
-    pendingRequestsCount: state => state._requests.filter(r => r.status === 'requested').length,
-    submittedRequestsCount: state => state._requests.filter(r => r.status === 'submitted').length,
+    // ADR-810.1 : same groups as the queue — awaiting the person (demandé / refusé / à remplacer),
+    // awaiting review (transmis / en vérification). Every state the server returns is counted.
+    pendingRequestsCount: state => state._requests.filter(r => ['requested', 'rejected', 'to_replace'].includes(r.status)).length,
+    submittedRequestsCount: state => state._requests.filter(r => ['submitted', 'in_review'].includes(r.status)).length,
   },
 
   actions: {

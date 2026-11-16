@@ -43,6 +43,23 @@ class DocumentIntegrityService
         return hash_final($ctx);
     }
 
+    /**
+     * ADR-810.1 — hash of a file JUST WRITTEN by an upload. A failed write (`store()` returns false) or
+     * an unreadable file stops the upload BEFORE any document row or request state is written : no
+     * reference to a file that does not exist, no « submitted » without a file.
+     */
+    public function storedHash(string|false|null $path): string
+    {
+        $hash = is_string($path) ? $this->hashOf($path) : null;
+        if ($hash === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => ['The file could not be stored. Please try again.'],
+            ]);
+        }
+
+        return $hash;
+    }
+
     /** Vérifie qu'un fichier correspond à son hash stocké. Sans hash stocké : au moins accessible. */
     public function verify(?string $path, ?string $expectedSha256): bool
     {

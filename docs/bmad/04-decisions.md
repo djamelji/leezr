@@ -28911,3 +28911,35 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques ;
     - E2E (dépôt, approbation, visibilité, refus) sur société fictive supprimée, société 1 inchangée ;
     - build propre.
+
+## ADR-810.1 — Cohérence documentaire et intégrité des demandes
+
+- **Date** : 2026-11-16, DEV uniquement, base `be419daf`. Rapport : `docs/bmad/ADR-810.1-DOCUMENT-REQUEST-INTEGRITY.md`.
+- **Contexte** : la demande 5 de la société 1 (permis d'Alice) était « transmise » sans aucun fichier. Les trois écrans documentaires employaient des libellés différents.
+- **Cause de la demande 5** : un script `tinker` de préparation des captures de la recette ADR-759 (11/11, 16:58:07 UTC) a écrit l'état directement par `updateOrCreate`, hors de tout parcours. Ce n'est ni un dépôt, ni un traitement asynchrone, ni ADR-810. La demande et ses événements ne sont pas modifiés (aucune autorisation).
+- **Failles réelles corrigées** :
+  - aucun invariant « pas de transmis sans pièce » ;
+  - un échec d'écriture du fichier (`store()` à `false`) laissait passer la demande à « transmise » ;
+  - suppression d'une pièce non atomique, et « en vérification » non remise à « demandée ».
+- **Décisions** :
+  - Invariant : une demande ne peut être `submitted`, `in_review` ou `approved` que si son sujet détient la pièce (fichier référencé). Garde `saving` sur `DocumentRequest` et règle unique `evidenceDocument()`, partagée avec l'approbation.
+  - `DocumentIntegrityService::storedHash()` arrête tout dépôt (422) avant écriture en base si le fichier n'a pas été écrit. Les 4 chemins de dépôt l'utilisent.
+  - La suppression d'une pièce et la remise de sa demande à « demandée » se font dans une même transaction ; le fichier est effacé après.
+  - Un seul vocabulaire : Demandé, Transmis, Refusé, Approuvé, Expiré, Remplacé le…
+    - Fiche et Mon espace partagent `DocumentStateChip` et l'état consolidé du serveur (`compliance_status` ajouté à Mon espace) ;
+    - `in_review` compte comme une attente de validation.
+  - La file « À traiter » affiche et compte tous les états renvoyés par le serveur. Avant, les demandes refusées, en vérification ou à remplacer étaient masquées.
+  - La fiche distingue « Documents demandés à la personne » et « Documents RH générés par l'entreprise ».
+  - `DevSeeder` crée la pièce avant la demande transmise.
+- **Conséquences** :
+  - aucune transition, aucun état et aucun droit nouveau ;
+  - aucune migration ;
+  - demande 5 en attente de décision ;
+  - écritures SQL brutes non couvertes par la garde (aucune dans l'application).
+  - Tests :
+    - `Adr8101DocumentRequestIntegrityTest` 5/5 (4 échouent sans le correctif) ;
+    - 6 fixtures historiques incohérentes corrigées ;
+    - régression documents 545 verts ;
+    - suite complète 4618 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` ;
+    - E2E (demandé → transmis → refusé → remplacé → approuvé, par l'écran, contrôles négatifs) sur société fictive supprimée, société 1 inchangée ;
+    - build propre.

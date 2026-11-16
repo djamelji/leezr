@@ -158,6 +158,8 @@ class DocumentRequestApiTest extends TestCase
     public function test_request_single_allows_after_previous_closed(): void
     {
         // A previously approved request should not block a new one
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $this->docType->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member->id]); // ADR-810.1 : un état « transmis/approuvé » repose sur une pièce
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member->id,
@@ -200,6 +202,8 @@ class DocumentRequestApiTest extends TestCase
     public function test_batch_skips_members_with_active_request(): void
     {
         // member already has active request
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $this->docType->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member->id]); // ADR-810.1 : un état « transmis/approuvé » repose sur une pièce
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member->id,
@@ -269,6 +273,8 @@ class DocumentRequestApiTest extends TestCase
             'requested_at' => now()->subHour(),
         ]);
 
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member2->id, 'document_type_id' => $this->docType->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member2->id]); // ADR-810.1 : un état « transmis/approuvé » repose sur une pièce
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member2->id,
@@ -286,6 +292,8 @@ class DocumentRequestApiTest extends TestCase
                 'is_system' => true,
             ]);
 
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $anotherDocType->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member->id]); // ADR-810.1
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member->id,

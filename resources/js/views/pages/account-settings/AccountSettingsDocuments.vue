@@ -2,8 +2,7 @@
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
-import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
-import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
+import DocumentStateChip from '@/views/shared/documents/DocumentStateChip.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 
 const props = defineProps({
@@ -204,13 +203,11 @@ const handleViewerDownload = () => {
                 </td>
                 <td>
                   <div class="d-flex align-center gap-2 flex-wrap">
-                    <DocumentLifecycleChip
-                      :status="doc.lifecycle_status"
-                      :expires-at="doc.upload?.expires_at"
-                    />
-                    <DocumentStatusChip
-                      v-if="doc.request_status"
-                      :status="doc.request_status"
+                    <!-- ADR-810.1 : même état et même libellé que la fiche de la personne. -->
+                    <DocumentStateChip
+                      :state="doc.compliance_status"
+                      :request-status="doc.request_status"
+                      :data-test="`my-document-state-${doc.code}`"
                     />
                     <VChip
                       v-if="doc.upload"
@@ -225,12 +222,6 @@ const handleViewerDownload = () => {
                       />
                       {{ fileFormatLabel(doc.upload.mime_type) }}
                     </VChip>
-                    <span
-                      v-if="!doc.upload && !doc.request_status"
-                      class="text-disabled"
-                    >
-                      {{ t('documents.noFileUploaded') }}
-                    </span>
                   </div>
                 </td>
                 <td>

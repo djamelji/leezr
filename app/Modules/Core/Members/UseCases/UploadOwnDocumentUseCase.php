@@ -119,7 +119,7 @@ class UploadOwnDocumentUseCase
 
         $integrity = app(DocumentIntegrityService::class);
         $versioning = app(DocumentVersioningService::class);
-        $newHash = $integrity->hashOf($path);
+        $newHash = $integrity->storedHash($path); // ADR-810.1 : échec de stockage → rien n'est écrit
 
         $isDuplicate = $existing && $existing->file_path && $versioning->isDuplicate($existing, $newHash);
 

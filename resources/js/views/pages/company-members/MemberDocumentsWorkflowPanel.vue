@@ -5,8 +5,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
-import DocumentStatusChip from '@/views/shared/documents/DocumentStatusChip.vue'
-import DocumentLifecycleChip from '@/views/shared/documents/DocumentLifecycleChip.vue'
+import DocumentStateChip from '@/views/shared/documents/DocumentStateChip.vue'
 import DocumentAiChip from '@/views/shared/documents/DocumentAiChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
@@ -57,7 +56,6 @@ const viewerDocument = ref(null)
 const requestMenuVisible = ref(false)
 
 // ADR-778 (UX3) : un seul état par pièce — la valeur consolidée par le serveur.
-const STATE_COLOR = { missing: 'secondary', requested: 'info', pending_validation: 'warning', rejected: 'error', valid: 'success', expiring_soon: 'warning', expired: 'error' }
 const requestingCode = ref(null)
 
 // ADR-760 (M3) : personRef extrait de resourceBase (ex. /company/people/employee-5 → employee-5)
@@ -437,15 +435,11 @@ defineExpose({ openRequest: () => { if (requestableDocTypes.value.length) reques
             </td>
             <!-- ADR-778 (UX3) : UN état par pièce (consolidé par le serveur), pas un empilement de puces. -->
             <td>
-              <VChip
-                :color="STATE_COLOR[doc.compliance_status] || 'secondary'"
-                size="small"
-                variant="tonal"
-                label
+              <DocumentStateChip
+                :state="doc.compliance_status"
+                :request-status="doc.request_status"
                 :data-test="`document-state-${doc.code}`"
-              >
-                {{ t(`documents.state.${doc.compliance_status || 'missing'}`) }}
-              </VChip>
+              />
               <div
                 v-if="doc.upload?.expires_at"
                 class="text-caption text-medium-emphasis mt-1"

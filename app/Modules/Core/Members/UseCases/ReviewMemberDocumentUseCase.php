@@ -5,7 +5,6 @@ namespace App\Modules\Core\Members\UseCases;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
-use App\Core\Documents\MemberDocument;
 use App\Core\Documents\Services\DocumentRequestService;
 use App\Core\Models\Company;
 use App\Core\Models\User;
@@ -61,26 +60,11 @@ class ReviewMemberDocumentUseCase
         $request = $this->requests->findExisting($company->id, $subject, $type->id);
         abort_if($request === null, 404);
 
-        if ($status === DocumentRequest::STATUS_APPROVED && $subject->is(DocumentSubject::TYPE_COMPANY)) {
-            // ADR-772 : obligation portée par l'entreprise → le fichier est celui de SON coffre.
-            $companyDocument = \App\Core\Documents\CompanyDocument::where('company_id', $company->id)->where('document_type_id', $type->id)->first();
-            if ($companyDocument === null || empty($companyDocument->file_path)) {
-                throw ValidationException::withMessages(['status' => ['Cannot approve: no file has been submitted.']]);
-            }
-            $this->requests->approve($request, $actor, $companyDocument, $this->renewalProof($request, $companyDocument, $actor, $extendUntil));
-        } elseif ($status === DocumentRequest::STATUS_APPROVED) {
-            // Tolérant aux documents legacy d'un membre (sujet non renseigné) : match sujet OU user_id.
-            $document = MemberDocument::where('company_id', $company->id)
-                ->where('document_type_id', $type->id)
-                ->where(function ($w) use ($subject) {
-                    $w->where(fn ($a) => $a->where('document_subject_type', $subject->type)->where('document_subject_id', $subject->id));
-                    if ($subject->is(DocumentSubject::TYPE_USER)) {
-                        $w->orWhere('user_id', $subject->id);
-                    }
-                })
-                ->first();
-
-            if ($document === null || empty($document->file_path)) {
+        if ($status === DocumentRequest::STATUS_APPROVED) {
+            // ADR-772 / ADR-810.1 : la pièce validée est celle du sujet (coffre de l'entreprise pour une
+            // obligation d'entreprise ; pièce de la personne sinon) — même règle que la garde de transition.
+            $document = $request->evidenceDocument();
+            if ($document === null) {
                 throw ValidationException::withMessages(['status' => ['Cannot approve: no file has been submitted.']]);
             }
 

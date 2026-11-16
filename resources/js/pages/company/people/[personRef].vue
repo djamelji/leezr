@@ -637,6 +637,19 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
               >
                 {{ t('people.tabs.documents') }}
               </h6>
+                  <!-- ADR-810.1 : deux catégories distinctes, chacune titrée (jamais deux « Aucun document » anonymes). -->
+                  <div
+                    v-if="can('documents.view') && store.personRef"
+                    class="mb-3"
+                    data-test="person-documents-requested-title"
+                  >
+                    <div class="text-subtitle-1 font-weight-medium">
+                      {{ t('people.documentsRequestedTitle') }}
+                    </div>
+                    <div class="text-body-2 text-medium-emphasis">
+                      {{ t('people.documentsRequestedHint') }}
+                    </div>
+                  </div>
                   <MemberDocumentsWorkflowPanel
                     v-if="can('documents.view') && store.personRef"
                     ref="documentsPanel"
@@ -645,11 +658,20 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                     :can-edit="can('documents.manage')"
                     @create-custom-type="docTypeDrawerOpen = true"
                   />
-                  <EmployeeDocumentsSection
-                    v-if="store.employeeId && store.employment?.documents && can('workforce_documents.view')"
-                    :employee-id="store.employeeId"
-                    class="mt-6"
-                  />
+                  <template v-if="store.employeeId && store.employment?.documents && can('workforce_documents.view')">
+                    <div
+                      class="mt-6 mb-3"
+                      data-test="person-documents-generated-title"
+                    >
+                      <div class="text-subtitle-1 font-weight-medium">
+                        {{ t('people.documentsGeneratedTitle') }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ t('people.documentsGeneratedHint') }}
+                      </div>
+                    </div>
+                    <EmployeeDocumentsSection :employee-id="store.employeeId" />
+                  </template>
                   <EmployeeSignaturesSection
                     v-if="store.employeeId && store.can.view_signatures"
                     :employee-id="store.employeeId"

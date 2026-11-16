@@ -351,7 +351,8 @@
     }
   },
   "employeeFile": {
-    "manageAccess": "إدارة الوصول"
+    "manageAccess": "إدارة الوصول",
+    "noDocuments": "لا توجد مستندات موارد بشرية مُنشأة."
   },
   "navbar": {
     "language": "اللغة",
@@ -659,7 +660,9 @@
   },
   "companyDocuments": {
     "requests": {
-      "bulkApprovePartial": "تمت الموافقة على {count}، ولم تتم الموافقة على {skipped}: الملف مفقود أو سبقت معالجته — افتح الطلب لإعادة طلبه."
+      "bulkApprovePartial": "تمت الموافقة على {count}، ولم تتم الموافقة على {skipped}: الملف مفقود أو سبقت معالجته — افتح الطلب لإعادة طلبه.",
+      "status_submitted": "مُرسَل",
+      "status_rejected": "مرفوض"
     }
   }
 }

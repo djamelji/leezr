@@ -39,8 +39,8 @@ watch(() => route.query.status, v => { if (!props.presetStatus) filterStatus.val
 const filterDocType = ref(null)
 
 const statusFilterItems = computed(() => [
-  { title: t('companyDocuments.requests.status_requested'), value: 'requested' },
-  { title: t('companyDocuments.requests.status_submitted'), value: 'submitted' },
+  { title: t('companyDocuments.requests.sectionPending'), value: 'requested' },
+  { title: t('companyDocuments.requests.sectionToReview'), value: 'submitted' },
 ])
 
 const docTypeFilterItems = computed(() => {
@@ -58,6 +58,9 @@ const docTypeFilterItems = computed(() => {
   return [...types.values()]
 })
 
+const REVIEW_STATES = ['submitted', 'in_review']
+const AWAITING_PERSON_STATES = ['requested', 'rejected', 'to_replace']
+
 const filteredRequests = computed(() => {
   let items = store.requests
 
@@ -72,8 +75,10 @@ const filteredRequests = computed(() => {
     })
   }
 
+  // ADR-810.1 : the two filters are the two groups (awaiting review / awaiting the person).
   if (filterStatus.value) {
-    items = items.filter(r => r.status === filterStatus.value)
+    const group = filterStatus.value === 'submitted' ? REVIEW_STATES : AWAITING_PERSON_STATES
+    items = items.filter(r => group.includes(r.status))
   }
 
   if (filterDocType.value) {
@@ -83,32 +88,30 @@ const filteredRequests = computed(() => {
   return items
 })
 
-// B1: Split into inbox sections
-const submittedRequests = computed(() => filteredRequests.value.filter(r => r.status === 'submitted'))
-const pendingRequests = computed(() => filteredRequests.value.filter(r => r.status === 'requested'))
+// B1: Split into inbox sections.
+// ADR-810.1 : every state the server returns is shown — awaiting review (transmis / en vérification) or
+// awaiting the person (demandé / refusé / à remplacer). No row the backend authorises is dropped.
+const submittedRequests = computed(() => filteredRequests.value.filter(r => REVIEW_STATES.includes(r.status)))
+const pendingRequests = computed(() => filteredRequests.value.filter(r => AWAITING_PERSON_STATES.includes(r.status)))
 
-// B4: Unified lifecycle mapping (frontend only — backend untouched)
-const unifiedStatus = item => {
-  if (item.status === 'submitted' && item.upload?.ai_status === 'processing') return 'processing'
-  if (item.status === 'submitted' && item.upload?.ai_status === 'pending') return 'processing'
-  if (item.status === 'approved') return 'validated'
-  return item.status
-}
+// ADR-810.1 : one vocabulary for request states (same keys as the person's file and My space).
+// The AI analysis keeps its own chip (DocumentAiChip) instead of replacing the « Transmis » state.
+const unifiedStatus = item => item.status
 
 const unifiedStatusColor = status => {
   switch (status) {
     case 'requested': return 'info'
-    case 'submitted': return 'warning'
-    case 'processing': return 'secondary'
-    case 'validated': return 'success'
+    case 'submitted':
+    case 'in_review':
+    case 'to_replace': return 'warning'
+    case 'approved': return 'success'
     case 'rejected': return 'error'
-    case 'cancelled': return 'secondary'
     default: return 'secondary'
   }
 }
 
 const unifiedStatusLabel = status => {
-  return t(`companyDocuments.requests.status_${status}`, status)
+  return status === 'cancelled' ? t('companyDocuments.requests.status_cancelled') : t(`documents.${status}`)
 }
 
 // ─── Request queue table ────────────────────────────────
@@ -177,21 +180,6 @@ const handleBulkReject = async () => {
   finally {
     isBulkLoading.value = false
   }
-}
-
-const statusColor = status => {
-  switch (status) {
-    case 'requested': return 'info'
-    case 'submitted': return 'warning'
-    case 'approved': return 'success'
-    case 'rejected': return 'error'
-    case 'cancelled': return 'secondary'
-    default: return 'secondary'
-  }
-}
-
-const statusLabel = status => {
-  return t(`companyDocuments.requests.status_${status}`, status)
 }
 
 // ─── Review actions (S1.2) ──────────────────────────────
@@ -878,7 +866,7 @@ const submitRequest = async () => {
             <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="success" :title="t('documents.uploadForMember')" @click="openAdminUpload(item)">
               <VIcon icon="tabler-upload" />
             </VBtn>
-            <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="warning" :title="t('companyDocuments.requests.remind')" @click="handleRemind(item)">
+            <VBtn v-if="canManage && item.status === 'requested'" v-can="'documents.manage'" icon variant="text" size="small" color="warning" :title="t('companyDocuments.requests.remind')" @click="handleRemind(item)">
               <VIcon icon="tabler-bell-ringing" />
             </VBtn>
             <VBtn v-if="canManage" v-can="'documents.manage'" icon variant="text" size="small" color="secondary" :title="t('companyDocuments.requests.cancelRequest')" @click="handleCancel(item)">

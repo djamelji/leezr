@@ -88,7 +88,7 @@ const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '
             v{{ v.version_no }} · {{ v.file_name }}
           </span>
           <div class="d-flex align-center gap-2">
-            <span class="text-caption text-medium-emphasis">{{ fmtDate(v.archived_at) }}</span>
+            <span class="text-caption text-medium-emphasis">{{ t('documents.replacedOn', { date: fmtDate(v.archived_at) }) }}</span>
             <VBtn
               :href="`${versionsUrl}/${v.id}/download`"
               target="_blank"

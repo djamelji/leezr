@@ -1872,7 +1872,7 @@
     "noPlanning": "Aucun shift à venir.",
     "document": "Document",
     "download": "Télécharger",
-    "noDocuments": "Aucun document.",
+    "noDocuments": "Aucun document RH généré.",
     "manager": "Responsable",
     "since": "depuis le",
     "contractType": "Type de contrat",
@@ -2635,9 +2635,9 @@
       "requestedAt": "Date demande",
       "actions": "Actions",
       "status_requested": "Demandé",
-      "status_submitted": "Soumis",
+      "status_submitted": "Transmis",
       "status_approved": "Approuvé",
-      "status_rejected": "Rejeté",
+      "status_rejected": "Refusé",
       "status_processing": "Analyse en cours",
       "status_validated": "Validé",
       "sectionToReview": "À traiter",
@@ -4761,7 +4761,11 @@
       "user": "par un utilisateur",
       "system": "automatique",
       "platform": "par le support"
-    }
+    },
+    "documentsRequestedTitle": "Documents demandés à la personne",
+    "documentsRequestedHint": "Pièces administratives fournies par la personne (identité, permis, certificats…).",
+    "documentsGeneratedTitle": "Documents RH générés par l'entreprise",
+    "documentsGeneratedHint": "Contrats, avenants et attestations produits par l'entreprise."
   },
   "peopleList": {
     "title": "Équipe",
@@ -5615,10 +5619,10 @@
       "company_registration": "Enregistrement de l'entreprise"
     },
     "requested": "Demandé",
-    "submitted": "Soumis",
+    "submitted": "Transmis",
     "in_review": "En vérification",
     "approved": "Approuvé",
-    "rejected": "Rejeté",
+    "rejected": "Refusé",
     "to_replace": "À remplacer",
     "dueDate": "Échéance",
     "overdue": "En retard",
@@ -6006,15 +6010,17 @@
     "state": {
       "missing": "À fournir",
       "requested": "Demandé",
-      "pending_validation": "À valider",
+      "pending_validation": "Transmis",
       "rejected": "Refusé",
       "valid": "Valide",
       "expiring_soon": "Expire bientôt",
       "expired": "Expiré",
-      "restricted": "Accès réservé"
+      "restricted": "Accès réservé",
+      "approved": "Approuvé"
     },
     "replaceFile": "Remplacer le fichier",
-    "moreActions": "Plus d'actions"
+    "moreActions": "Plus d'actions",
+    "replacedOn": "Remplacé le {date}"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",

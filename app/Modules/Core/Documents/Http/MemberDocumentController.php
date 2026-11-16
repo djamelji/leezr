@@ -123,7 +123,7 @@ class MemberDocumentController extends Controller
         // ADR-756 (DMS M0): intégrité + remplacement NON destructif + idempotence.
         $integrity = app(DocumentIntegrityService::class);
         $versioning = app(DocumentVersioningService::class);
-        $newHash = $integrity->hashOf($path);
+        $newHash = $integrity->storedHash($path); // ADR-810.1 : échec de stockage → rien n'est écrit
 
         $keys = [
             'company_id' => $company->id,

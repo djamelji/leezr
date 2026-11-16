@@ -70,6 +70,57 @@ class DocumentRequest extends Model
         'last_reminded_at' => 'datetime',
     ];
 
+    /**
+     * ADR-810.1 — states that ASSERT a file was provided. A request may only hold one of them when its
+     * subject holds a document of that type whose file is referenced (the same piece an approval
+     * validates). Enforced on every write, including direct model writes (seeders, scripts).
+     */
+    public const FILE_BACKED_STATES = [self::STATUS_SUBMITTED, self::STATUS_IN_REVIEW, self::STATUS_APPROVED];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $request): void {
+            if (! $request->isDirty('status') || ! in_array($request->status, self::FILE_BACKED_STATES, true)) {
+                return;
+            }
+            if ($request->evidenceDocument() === null) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => ["Cannot mark the request {$request->status}: no file has been submitted."],
+                ]);
+            }
+        });
+    }
+
+    /**
+     * ADR-810.1 — the document a file-backed state rests on : the subject's document of this type with
+     * a referenced file (company vault for a company subject ; legacy member rows matched by user_id).
+     * Single rule shared by the transition guard and the approval.
+     */
+    public function evidenceDocument(): ?Model
+    {
+        $subjectType = $this->document_subject_type ?? ($this->user_id !== null ? DocumentSubject::TYPE_USER : null);
+        $subjectId = $this->document_subject_id ?? $this->user_id;
+        if ($subjectType === null || $subjectId === null) {
+            return null;
+        }
+
+        if ($subjectType === DocumentSubject::TYPE_COMPANY) {
+            $query = CompanyDocument::withoutGlobalScopes()->where('company_id', $this->company_id);
+        } else {
+            $query = MemberDocument::withoutGlobalScopes()->where('company_id', $this->company_id)
+                ->where(function ($w) use ($subjectType, $subjectId) {
+                    $w->where(fn ($a) => $a->where('document_subject_type', $subjectType)->where('document_subject_id', $subjectId));
+                    if ($subjectType === DocumentSubject::TYPE_USER) {
+                        $w->orWhere('user_id', $subjectId);
+                    }
+                });
+        }
+
+        return $query->where('document_type_id', $this->document_type_id)
+            ->whereNotNull('file_path')->where('file_path', '!=', '')
+            ->first();
+    }
+
     public function canTransitionTo(string $target): bool
     {
         return in_array($target, self::TRANSITIONS[$this->status] ?? [], true);

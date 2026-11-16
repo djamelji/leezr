@@ -30,27 +30,32 @@ class DeleteMemberDocumentUseCase
             ->where('document_type_id', $type->id)
             ->firstOrFail();
 
-        // 4. Delete file from storage
-        Storage::disk('local')->delete($document->file_path);
+        // 4+5+6. ADR-810.1 : la ligne du coffre et l'état de la demande changent ENSEMBLE ; le fichier n'est
+        // effacé qu'après validation de la transaction (un échec ne laisse jamais une demande « transmise »
+        // pointant vers un fichier déjà supprimé). Une demande en vérification revient aussi à « demandée ».
+        $filePath = $document->file_path;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($data, $user, $type, $document) {
+            $document->delete();
 
-        // 5. Delete record
-        $document->delete();
+            $request = DocumentRequest::where('company_id', $data->company->id)
+                ->where('user_id', $user->id)
+                ->where('document_type_id', $type->id)
+                ->whereIn('status', [DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_IN_REVIEW, DocumentRequest::STATUS_APPROVED, DocumentRequest::STATUS_REJECTED])
+                ->first();
 
-        // 6. Reset workflow request if exists
-        $request = DocumentRequest::where('company_id', $data->company->id)
-            ->where('user_id', $user->id)
-            ->where('document_type_id', $type->id)
-            ->whereIn('status', [DocumentRequest::STATUS_SUBMITTED, DocumentRequest::STATUS_APPROVED, DocumentRequest::STATUS_REJECTED])
-            ->first();
+            if ($request) {
+                $request->update([
+                    'status' => DocumentRequest::STATUS_REQUESTED,
+                    'reviewer_id' => null,
+                    'review_note' => null,
+                    'reviewed_at' => null,
+                    'submitted_at' => null,
+                ]);
+            }
+        });
 
-        if ($request) {
-            $request->update([
-                'status' => DocumentRequest::STATUS_REQUESTED,
-                'reviewer_id' => null,
-                'review_note' => null,
-                'reviewed_at' => null,
-                'submitted_at' => null,
-            ]);
+        if ($filePath) {
+            Storage::disk('local')->delete($filePath);
         }
     }
 }

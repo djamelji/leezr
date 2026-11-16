@@ -106,7 +106,7 @@ test('UX3 parcours exécutés (propriétaire, registre d\'exécution)', async ({
     ])
     expect(pe.status(), 'document collaborateur déposé').toBeLessThan(300)
     m.deposer_collaborateur = await read(2)
-    await expect(page.locator('[data-test="document-state-medical_certificate"]'), 'un seul état, à valider').toContainText(/valider/i)
+    await expect(page.locator('[data-test="document-state-medical_certificate"]'), 'un seul état, transmis (ADR-810.1)').toContainText(/Transmis|Submitted/i)
     await page.screenshot({ path: `${OUT}/file-documents.jpg`, type: 'jpeg', quality: 55, fullPage: true })
 
     // ── 3. Valider (depuis la ligne : une action principale) ─────────────────────────────
@@ -117,7 +117,7 @@ test('UX3 parcours exécutés (propriétaire, registre d\'exécution)', async ({
       page.locator('[data-test="document-approve-medical_certificate"]').click(),
     ])
     expect(rev.status(), 'validation').toBe(200)
-    await expect(page.locator('[data-test="document-state-medical_certificate"]')).toContainText(/Valide/i)
+    await expect(page.locator('[data-test="document-state-medical_certificate"]')).toContainText(/Approuvé|Approved/i)
     m.valider = await read(0)
 
     // ── 4. Demander un document (personne préremplie, sans compte) ───────────────────────

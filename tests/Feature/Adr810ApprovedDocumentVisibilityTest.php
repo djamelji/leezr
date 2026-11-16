@@ -178,8 +178,10 @@ class Adr810ApprovedDocumentVisibilityTest extends TestCase
     {
         // A submitted request whose file is gone (DEV request 5 case) : approval refused, request unchanged.
         $type = DocumentType::where('code', 'driving_license')->firstOrFail();
-        $req = DocumentRequest::create(['company_id' => $this->c->id, 'document_subject_type' => 'user', 'document_subject_id' => $this->alice->id, 'user_id' => $this->alice->id,
-            'document_type_id' => $type->id, 'status' => DocumentRequest::STATUS_SUBMITTED, 'requested_at' => now(), 'submitted_at' => now(), 'requires_validation' => true]);
+        // ADR-810.1 : this state can no longer be written through the model ; a pre-existing row is simulated in SQL.
+        $id = \Illuminate\Support\Facades\DB::table('document_requests')->insertGetId(['company_id' => $this->c->id, 'document_subject_type' => 'user', 'document_subject_id' => $this->alice->id, 'user_id' => $this->alice->id,
+            'document_type_id' => $type->id, 'status' => DocumentRequest::STATUS_SUBMITTED, 'requested_at' => now(), 'submitted_at' => now(), 'requires_validation' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $req = DocumentRequest::findOrFail($id);
         $this->as($this->owner)->postJson('/api/company/document-requests/bulk-action', ['ids' => [$req->id], 'action' => 'approved'])->assertOk()
             ->assertJsonPath('processed', 0)->assertJsonPath('skipped', 1);
         $this->as($this->owner)->putJson("/api/company/people/{$this->ref($this->alice)}/documents/driving_license/review", ['status' => 'approved'])->assertStatus(422);

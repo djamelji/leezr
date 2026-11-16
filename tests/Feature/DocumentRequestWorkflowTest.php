@@ -445,6 +445,8 @@ class DocumentRequestWorkflowTest extends TestCase
     {
         $type = DocumentType::where('code', 'kbis')->first(); // scope=company
 
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $type->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member->id]); // ADR-810.1 : un état « transmis/approuvé » repose sur une pièce
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member->id,
@@ -471,6 +473,8 @@ class DocumentRequestWorkflowTest extends TestCase
 
         $type = DocumentType::where('code', 'id_card')->first();
 
+        \App\Core\Documents\MemberDocument::create(['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $type->id,
+            'file_path' => 'documents/test/evidence.pdf', 'file_name' => 'evidence.pdf', 'file_size_bytes' => 10, 'mime_type' => 'application/pdf', 'uploaded_by' => $this->member->id]); // ADR-810.1 : un état « transmis/approuvé » repose sur une pièce
         DocumentRequest::create([
             'company_id' => $this->company->id,
             'user_id' => $this->member->id,
