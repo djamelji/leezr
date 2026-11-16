@@ -177,4 +177,4 @@ Quand les presets publiés diffèrent de l'ancienne configuration, les écarts s
 
 ## 12. SHA DEV
 
-Voir le checkpoint (commit sur la base `7df6b82d`).
+Commit du lot : `264935a3` (base `7df6b82d`).
