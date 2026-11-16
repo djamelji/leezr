@@ -13,6 +13,16 @@ const props = defineProps({
   selectedPermissions: { type: Array, required: true },
   isAdministrative: { type: Boolean, default: true },
   scope: { type: String, default: 'company', validator: v => ['company', 'platform'].includes(v) },
+  // ADR-808.1 : clés attribuées mais en attente de confirmation (3e état : jamais présenté comme effectif)
+  pendingPermissions: { type: Array, default: () => [] },
+})
+const isPending = key => props.pendingPermissions.includes(key)
+// ADR-808.1 : nombre de droits en attente par module (visible même panneau replié)
+const modulePending = moduleKey => props.permissionCatalog.filter(p => p.module_key === moduleKey && isPending(p.key) && props.selectedPermissions.includes(p.id)).length
+const capPending = cap => (cap.permission_ids || []).some(id => {
+  const p = props.permissionCatalog.find(x => x.id === id)
+
+  return p && isPending(p.key) && props.selectedPermissions.includes(id)
 })
 
 const emit = defineEmits(['update:selectedPermissions'])
@@ -428,6 +438,16 @@ const togglePermission = permId => {
               >
                 {{ moduleSelectionCounts[mod.module_key]?.selected || 0 }} / {{ moduleSelectionCounts[mod.module_key]?.total || 0 }}
               </VChip>
+              <VChip
+                v-if="modulePending(mod.module_key)"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                class="ms-2"
+                :data-test="`module-pending-${mod.module_key}`"
+              >
+                {{ t('roles.pendingCount', { n: modulePending(mod.module_key) }) }}
+              </VChip>
             </div>
           </VExpansionPanelTitle>
           <VExpansionPanelText>
@@ -451,6 +471,16 @@ const togglePermission = permId => {
               >
                 <template #label>
                   <span>{{ capLabel(cap.key) || cap.label }}</span>
+                  <VChip
+                    v-if="capPending(cap)"
+                    size="x-small"
+                    color="warning"
+                    variant="tonal"
+                    class="ms-2"
+                    :data-test="`cap-pending-${cap.key}`"
+                  >
+                    {{ t('roles.pendingShort') }}
+                  </VChip>
                   <VTooltip
                     v-if="cap.hint"
                     location="top"
@@ -522,6 +552,16 @@ const togglePermission = permId => {
               >
                 {{ moduleSelectionCounts[mod.module_key]?.selected || 0 }} / {{ moduleSelectionCounts[mod.module_key]?.total || 0 }}
               </VChip>
+              <VChip
+                v-if="modulePending(mod.module_key)"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                class="ms-2"
+                :data-test="`module-pending-${mod.module_key}`"
+              >
+                {{ t('roles.pendingCount', { n: modulePending(mod.module_key) }) }}
+              </VChip>
             </div>
           </VExpansionPanelTitle>
           <VExpansionPanelText>
@@ -544,6 +584,16 @@ const togglePermission = permId => {
               >
                 <template #label>
                   <span>{{ permLabel(perm.key) || perm.label }}</span>
+                  <VChip
+                    v-if="isPending(perm.key) && isPermissionChecked(perm.id)"
+                    size="x-small"
+                    color="warning"
+                    variant="tonal"
+                    class="ms-2"
+                    :data-test="`perm-pending-${perm.key}`"
+                  >
+                    {{ t('roles.pendingShort') }}
+                  </VChip>
                   <VTooltip
                     v-if="perm.hint"
                     location="top"
@@ -633,6 +683,16 @@ const togglePermission = permId => {
               >
                 {{ moduleSelectionCounts[group.module_key]?.selected || 0 }} / {{ moduleSelectionCounts[group.module_key]?.total || 0 }}
               </VChip>
+              <VChip
+                v-if="modulePending(group.module_key)"
+                size="x-small"
+                color="warning"
+                variant="tonal"
+                class="ms-2"
+                :data-test="`module-pending-${group.module_key}`"
+              >
+                {{ t('roles.pendingCount', { n: modulePending(group.module_key) }) }}
+              </VChip>
             </div>
           </VExpansionPanelTitle>
           <VExpansionPanelText>
@@ -659,6 +719,16 @@ const togglePermission = permId => {
                 >
                   <template #label>
                     <span class="font-weight-medium">{{ capLabel(cap.key) || cap.label }}</span>
+                    <VChip
+                      v-if="capPending(cap)"
+                      size="x-small"
+                      color="warning"
+                      variant="tonal"
+                      class="ms-2"
+                      :data-test="`cap-pending-${cap.key}`"
+                    >
+                      {{ t('roles.pendingShort') }}
+                    </VChip>
                     <VTooltip
                       v-if="cap.hint"
                       location="top"
@@ -757,6 +827,16 @@ const togglePermission = permId => {
                 >
                   <template #label>
                     <span>{{ permLabel(perm.key) || perm.label }}</span>
+                    <VChip
+                      v-if="isPending(perm.key) && isPermissionChecked(perm.id)"
+                      size="x-small"
+                      color="warning"
+                      variant="tonal"
+                      class="ms-2"
+                      :data-test="`perm-pending-${perm.key}`"
+                    >
+                      {{ t('roles.pendingShort') }}
+                    </VChip>
                     <VTooltip
                       v-if="perm.hint"
                       location="top"

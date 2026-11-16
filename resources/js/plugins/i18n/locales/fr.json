@@ -252,7 +252,13 @@
     "sensitiveData": "Accès aux données sensibles",
     "sensitiveDataHint": "Lecture des données sensibles des membres (IBAN, numéro de sécurité sociale)",
     "empty": "Aucun rôle personnalisé",
-    "emptyDesc": "Les rôles personnalisés permettent de contrôler finement les accès de vos membres."
+    "emptyDesc": "Les rôles personnalisés permettent de contrôler finement les accès de vos membres.",
+    "pendingCount": "{n} droit(s) en attente",
+    "pendingAlert": "{n} droit(s) de ce rôle sont attribués mais pas encore effectifs : ils attendent une confirmation (activation d'un module ou création de l'entreprise).",
+    "pendingConfirm": "Confirmer ces droits",
+    "pendingShort": "En attente",
+    "pendingConfirmed": "Droits confirmés : ils sont maintenant effectifs.",
+    "pendingPartly": "Certains droits restent en attente : vous ne pouvez pas les accorder vous-même."
   },
   "coupons": {
     "title": "Codes promo",
@@ -10734,6 +10740,7 @@
     "dormant": "Comprend aussi des droits de modules non activés ({list}) : ils ne sont pas attribués ici et se décident dans l'assistant de chaque module après son activation.",
     "inertPermissions": "dont {n} sans effet aujourd'hui : {list}",
     "pendingShort": "en attente",
-    "pendingNotice": "Ces rôles ont déjà des droits de ce module, préparés à la création de l'entreprise ou attribués avant son activation : {list}. Ils ne sont pas effectifs tant que vous n'avez pas confirmé les accès (cochés = conservés, décochés = retirés)."
+    "pendingNotice": "Ces rôles ont déjà des droits de ce module, préparés à la création de l'entreprise ou attribués avant son activation : {list}. Ils ne sont pas effectifs tant que vous n'avez pas confirmé les accès (cochés = conservés, décochés = retirés).",
+    "pendingConfirmRole": "Confirmer les droits de {role}"
   }
 }

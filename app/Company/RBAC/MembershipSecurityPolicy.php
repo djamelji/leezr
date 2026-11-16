@@ -107,7 +107,8 @@ class MembershipSecurityPolicy
             return [];
         }
 
-        return $m->companyRole->permissions()->pluck('key')->all();
+        // ADR-808.1 : a right pending confirmation is not held — it can neither be used nor delegated.
+        return $m->companyRole->effectivePermissionKeys();
     }
 
     /** Permissions `$actor` may add or remove on a role. null = everything (owner). */

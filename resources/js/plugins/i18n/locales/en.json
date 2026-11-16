@@ -252,7 +252,13 @@
     "sensitiveData": "Sensitive Data Access",
     "sensitiveDataHint": "Read sensitive member fields (IBAN, social security)",
     "empty": "No custom roles",
-    "emptyDesc": "Custom roles let you fine-tune access control for your team members."
+    "emptyDesc": "Custom roles let you fine-tune access control for your team members.",
+    "pendingCount": "{n} right(s) pending",
+    "pendingAlert": "{n} right(s) of this role are granted but not effective yet: they await a confirmation (module activation or company creation).",
+    "pendingConfirm": "Confirm these rights",
+    "pendingShort": "Pending",
+    "pendingConfirmed": "Rights confirmed: they are now effective.",
+    "pendingPartly": "Some rights remain pending: you cannot grant them yourself."
   },
   "coupons": {
     "title": "Coupons",
@@ -10734,6 +10740,7 @@
     "dormant": "Also includes rights of modules that are not active ({list}): they are not granted here and are decided in each module's assistant once it is active.",
     "inertPermissions": "including {n} with no effect today: {list}",
     "pendingShort": "pending",
-    "pendingNotice": "These roles already have rights of this module, prepared when the company was created or granted before it was activated: {list}. They are not effective until you confirm the access (checked = kept, unchecked = removed)."
+    "pendingNotice": "These roles already have rights of this module, prepared when the company was created or granted before it was activated: {list}. They are not effective until you confirm the access (checked = kept, unchecked = removed).",
+    "pendingConfirmRole": "Confirm the rights of {role}"
   }
 }

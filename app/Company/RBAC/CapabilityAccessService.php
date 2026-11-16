@@ -217,7 +217,7 @@ final class CapabilityAccessService
             }
             // ADR-808 : an explicit decision on a role for this module ends its pending (dormant) rights for the module.
             foreach ($preview['plan'] as $p) {
-                \App\Core\Modules\Setup\PendingModuleAccess::release($this->company->id, $moduleKey, (int) $p['role_id']);
+                \App\Core\Modules\Setup\PendingModuleAccess::confirm($this->company, $actor, $moduleKey, (int) $p['role_id'], $source);
             }
             app(AuditLogger::class)->logCompany($this->company->id, 'role.capabilities_changed', 'module', $moduleKey, [
                 'actorId' => $actor->id,

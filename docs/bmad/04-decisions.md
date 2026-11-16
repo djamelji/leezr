@@ -28848,3 +28848,27 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - 3 échecs `ControllerSizeInvariantTest` historiques ;
     - E2E 2/2 sur sociétés fictives supprimées, société 1 inchangée ;
     - build propre.
+
+## ADR-808.1 — Fermeture des exceptions sur les droits dormants ; bascule Logistique prête mais désactivée
+
+- **Date** : 2026-11-16, DEV uniquement, base `ffeb5e89`, commit `SHA_8081`. Rapport : `docs/bmad/ADR-808.1-DORMANT-RIGHTS-CLOSURE.md`.
+- **Contexte** : aucun module ne doit rendre effectifs des droits sans décision explicite et tracée, quels que soient le chemin d'activation et la page utilisée.
+- **Décisions** :
+  - **Lecteurs de permissions alignés sur les droits effectifs** : menus (`NavController`) et délégation (`MembershipSecurityPolicy::heldPermissions`). Un droit en attente n'ouvre ni API, ni menu, ni permission côté client, et ne se délègue pas.
+  - **Confirmation unique** : `PendingModuleAccess::confirm`, qui applique la politique de délégation existante rôle par rôle.
+    - Les refus restent en attente ; tout est audité (`role.pending_confirmed`).
+    - Points d'entrée : assistant, Équipe → Rôles, et `POST /company/roles/{id}/confirm-pending` (`roles.manage`).
+  - **Modules sans assistant (Paie)** : même mise en attente à la première activation, confirmation par rôle. Pas d'assistant Paie ; aucun calcul touché ; Paie historiquement active inchangée.
+  - **Création versionnée** : aucun droit effectif pour les rôles opérationnels à la création, modules cœur compris.
+  - **Éditeur avancé à trois états** (non attribué, effectif, en attente). L'enregistrement ne confirme jamais implicitement.
+  - **Bascule** : elle exige une version RBAC effectivement **publiée**. Défaut corrigé : une version épinglée puis archivée faisait échouer l'inscription.
+- **Conséquences** :
+  - Le propriétaire d'une nouvelle société confirme chaque rôle opérationnel.
+  - Les sociétés existantes sont inchangées.
+  - Conditions restantes avant activation : rapport §7.
+  - Dette Billing (portefeuille créé par le devis) toujours distincte.
+  - Tests :
+    - suite complète 4607 réussis, 12 ignorés ;
+    - 3 échecs `ControllerSizeInvariantTest` historiques ;
+    - E2E 1/1 sur une inscription réelle fictive, supprimée ensuite ;
+    - build propre.

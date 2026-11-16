@@ -27,9 +27,26 @@ class CompanyRoleController extends Controller
             ->withCount('memberships')
             ->with('permissions')
             ->orderBy('key')
-            ->get();
+            ->get()
+            // ADR-808.1 : attributed but pending confirmation (never shown as effective)
+            ->each(fn (CompanyRole $r) => $r->setAttribute('pending_permissions', array_values(array_intersect(
+                \App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($r), $r->permissions->pluck('key')->all()))));
 
         return response()->json(['roles' => $roles]);
+    }
+
+    /** ADR-808.1 — confirm a role's pending rights (all modules, or one), through the delegation policy. */
+    public function confirmPending(Request $request, int $id): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        $role = CompanyRole::where('company_id', $company->id)->findOrFail($id);
+        $module = $request->validate(['module' => 'nullable|string|max:100'])['module'] ?? null;
+        $out = \App\Core\Modules\Setup\PendingModuleAccess::confirm($company, $request->user(), $module, $role->id, 'role_editor');
+        if (! $out['confirmed'] && $out['refused']) {
+            abort(422, 'Not allowed: '.$out['refused'][0]['code']);
+        }
+
+        return response()->json($out + ['pending_permissions' => \App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($role->fresh())]);
     }
 
     public function permissionCatalog(Request $request): JsonResponse

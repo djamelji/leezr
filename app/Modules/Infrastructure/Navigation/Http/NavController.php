@@ -60,7 +60,7 @@ class NavController
         } else {
             $membership->loadMissing('companyRole.permissions');
             $permissions = $membership->companyRole
-                ? $membership->companyRole->permissions->pluck('key')->unique()->values()->all()
+                ? $membership->companyRole->effectivePermissionKeys() // ADR-808.1 : pending rights never open a menu
                 : [];
         }
 

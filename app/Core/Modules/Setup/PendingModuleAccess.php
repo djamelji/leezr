@@ -4,6 +4,9 @@ namespace App\Core\Modules\Setup;
 
 use App\Company\RBAC\CapabilityAccessService;
 use App\Company\RBAC\CompanyRole;
+use App\Company\RBAC\MembershipSecurityPolicy;
+use App\Core\Audit\AuditLogger;
+use App\Core\Models\User;
 use App\Core\Models\Company;
 
 /**
@@ -51,24 +54,56 @@ final class PendingModuleAccess
         return $map[$role->id] ?? [];
     }
 
-    /** Explicit decision taken for one role (Équipe → Rôles, role editor) : its pending keys of that module become plain rights. */
-    public static function release(int $companyId, ?string $moduleKey, int $roleId): void
+    /**
+     * ADR-808.1 — THE confirmation of pending rights (assistant access step, Équipe → Rôles, role editor). Each
+     * role is checked with the existing delegation policy as if its pending keys were ADDED now : an actor never
+     * makes effective a right he could not grant (beyond his rights, his own role, an operational role and an
+     * administrative key…). Refused roles stay pending. Pivots are never changed. Audited.
+     *
+     * @return array{confirmed: list<array{role_id:int, module:string, keys:list<string>}>, refused: list<array{role_id:int, module:string, code:string}>}
+     */
+    public static function confirm(Company $company, ?User $actor, ?string $moduleKey = null, ?int $roleId = null, string $source = 'assistant'): array
     {
-        CompanyModuleSetup::query()->where('company_id', $companyId)->whereNotNull('pending_access')
-            ->when($moduleKey, fn ($q) => $q->where('module_key', $moduleKey))->get()
-            ->each(function (CompanyModuleSetup $row) use ($roleId) {
-                $pending = $row->pending_access ?? [];
-                unset($pending[$roleId], $pending[(string) $roleId]);
-                $row->forceFill(['pending_access' => $pending ?: null])->save();
-            });
+        return \Illuminate\Support\Facades\DB::transaction(fn () => self::doConfirm($company, $actor, $moduleKey, $roleId, $source));
     }
 
-    /** The access step was confirmed in the assistant : the holders shown there are decided. */
-    public static function confirmAll(int $companyId, string $moduleKey): void
+    private static function doConfirm(Company $company, ?User $actor, ?string $moduleKey, ?int $roleId, string $source): array
     {
-        CompanyModuleSetup::query()->where('company_id', $companyId)->where('module_key', $moduleKey)
-            ->whereNotNull('pending_access')->update(['pending_access' => null]);
+        $out = ['confirmed' => [], 'refused' => []];
+        $rows = CompanyModuleSetup::query()->where('company_id', $company->id)->whereNotNull('pending_access')
+            ->when($moduleKey, fn ($q) => $q->where('module_key', $moduleKey))->lockForUpdate()->get();
+        foreach ($rows as $row) {
+            $pending = $row->pending_access ?? [];
+            foreach ($pending as $rid => $keys) {
+                if ($roleId !== null && (int) $rid !== $roleId) {
+                    continue;
+                }
+                $role = CompanyRole::query()->where('company_id', $company->id)->find((int) $rid);
+                if ($role && ($code = MembershipSecurityPolicy::rolePermissionChangeViolation($company, $role, array_values((array) $keys), [], $actor))) {
+                    $out['refused'][] = ['role_id' => (int) $rid, 'module' => $row->module_key, 'code' => $code];
+
+                    continue;
+                }
+                unset($pending[$rid]);
+                $out['confirmed'][] = ['role_id' => (int) $rid, 'module' => $row->module_key, 'keys' => array_values((array) $keys)];
+            }
+            $row->forceFill(['pending_access' => $pending ?: null])->save();
+        }
+        if ($out['confirmed'] || $out['refused']) {
+            app(AuditLogger::class)->logCompany($company->id, 'role.pending_confirmed', 'module', $moduleKey ?? '*', [
+                'actorId' => $actor?->id, 'metadata' => $out + ['source' => $source]]);
+        }
         self::flush();
+
+        return $out;
+    }
+
+    /** Pending keys of one role, grouped by module (role editor, Équipe → Rôles). */
+    public static function byModule(CompanyRole $role): array
+    {
+        return CompanyModuleSetup::query()->where('company_id', $role->company_id)->whereNotNull('pending_access')->get()
+            ->mapWithKeys(fn ($r) => [$r->module_key => array_values((array) (($r->pending_access ?? [])[$role->id] ?? ($r->pending_access ?? [])[(string) $role->id] ?? []))])
+            ->filter()->all();
     }
 
     public static function flush(): void

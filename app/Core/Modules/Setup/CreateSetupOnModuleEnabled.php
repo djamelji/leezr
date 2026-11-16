@@ -14,6 +14,16 @@ class CreateSetupOnModuleEnabled
     public function handle(ModuleEnabled $event): void
     {
         if (! ModuleSetupService::contract($event->moduleKey)) {
+            // ADR-808.1 — a module WITHOUT assistant (e.g. Payroll) : same protection, no assistant row semantics.
+            // Rights already held at its FIRST activation stay pending until a role-level confirmation
+            // (Équipe → Rôles / role editor), checked by the delegation policy. Historically active : untouched.
+            if ($event->firstActivation && ($held = PendingModuleAccess::snapshot($event->company, $event->moduleKey))) {
+                CompanyModuleSetup::query()->updateOrCreate(['company_id' => $event->company->id, 'module_key' => $event->moduleKey],
+                    ['status' => CompanyModuleSetup::TO_CONFIGURE, 'completed_steps' => [], 'pending_access' => $held]);
+                app(\App\Core\Audit\AuditLogger::class)->logCompany($event->company->id, 'module.access_pending', 'module', $event->moduleKey,
+                    ['metadata' => ['roles' => array_keys($held), 'assistant' => false]]);
+            }
+
             return;
         }
         $row = CompanyModuleSetup::query()->firstOrCreate(

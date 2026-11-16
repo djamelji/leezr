@@ -34,6 +34,18 @@ onMounted(async () => {
 })
 watch(moduleKey, load)
 
+const pendingRoles = computed(() => (data.value?.roles || []).filter(r => r.editable && (r.pending || []).length))
+const confirmPending = async r => {
+  busy.value = true
+  try {
+    const out = await $api(`/company/roles/${r.id}/confirm-pending`, { method: 'POST', body: { module: moduleKey.value } })
+    toast(out.refused?.length ? t('roles.pendingPartly') : t('roles.pendingConfirmed'), out.refused?.length ? 'warning' : 'success')
+    await load()
+  }
+  catch (e) { toast(err(e), 'error') }
+  finally { busy.value = false }
+}
+
 const askPreview = async () => {
   busy.value = true
   try { preview.value = await $api(`/company/role-capabilities/${moduleKey.value}/preview`, { method: 'POST', body: { changes: changes.value } }) }
@@ -85,6 +97,24 @@ const apply = async confirmAffected => {
         :readonly="!data.can_change"
         @update:changes="v => { changes = v; preview = null }"
       />
+      <!-- ADR-808.1 : confirmation par rôle des droits en attente (seul point pour un module sans assistant) -->
+      <div
+        v-if="data.can_change && pendingRoles.length"
+        class="d-flex flex-wrap gap-2 mb-4"
+      >
+        <VBtn
+          v-for="r in pendingRoles"
+          :key="r.id"
+          size="small"
+          variant="tonal"
+          color="warning"
+          :loading="busy"
+          :data-test="`role-capabilities-confirm-${r.id}`"
+          @click="confirmPending(r)"
+        >
+          {{ t('moduleSetup.pendingConfirmRole', { role: r.name }) }}
+        </VBtn>
+      </div>
       <VBtn
         v-if="data.can_change && changes.length"
         color="primary"

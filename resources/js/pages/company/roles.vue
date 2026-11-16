@@ -18,6 +18,7 @@ const props = defineProps({ embedded: { type: Boolean, default: false } })
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
+const { can } = useCan() // ADR-808.1 (permissions effectives, propriétaire inclus)
 const settingsStore = useCompanySettingsStore()
 const membersStore = useMembersStore()
 const { toast } = useAppToast()
@@ -194,6 +195,22 @@ const handleDrawerSubmit = async () => {
   }
 }
 
+// ADR-808.1 — confirme les droits en attente du rôle (mécanisme existant : politique de délégation serveur)
+const confirmingPending = ref(false)
+const confirmPending = async role => {
+  confirmingPending.value = true
+  try {
+    const r = await $api(`/company/roles/${role.id}/confirm-pending`, { method: 'POST', body: {} })
+    editingRole.value = { ...role, pending_permissions: r.pending_permissions || [] }
+    await settingsStore.fetchCompanyRoles()
+    toast(r.refused?.length ? t('roles.pendingPartly') : t('roles.pendingConfirmed'), r.refused?.length ? 'warning' : 'success')
+  }
+  catch (error) {
+    toast(error?.data?.message || t('common.operationFailed'), 'error')
+  }
+  finally { confirmingPending.value = false }
+}
+
 const deleteRole = async role => {
   const ok = await confirm({
     question: t('roles.confirmDelete', { name: role.name }),
@@ -270,6 +287,16 @@ const deleteRole = async role => {
               variant="tonal"
             >
               {{ t('roles.fieldProfile') }}
+            </VChip>
+            <!-- ADR-808.1 : droits attribués mais pas encore effectifs -->
+            <VChip
+              v-if="item.pending_permissions?.length"
+              size="x-small"
+              color="warning"
+              variant="tonal"
+              :data-test="`role-pending-${item.key}`"
+            >
+              {{ t('roles.pendingCount', { n: item.pending_permissions.length }) }}
             </VChip>
           </div>
         </template>
@@ -440,10 +467,39 @@ const deleteRole = async role => {
                 <VDivider />
               </VCol>
 
+              <!-- ADR-808.1 : droits en attente — confirmation explicite (politique de délégation côté serveur) -->
+              <VCol
+                v-if="isEditMode && editingRole?.pending_permissions?.length"
+                cols="12"
+              >
+                <VAlert
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  data-test="role-pending-alert"
+                >
+                  {{ t('roles.pendingAlert', { n: editingRole.pending_permissions.length }) }}
+                  <template #append>
+                    <VBtn
+                      v-if="can('roles.manage')"
+                      size="small"
+                      variant="tonal"
+                      color="warning"
+                      :loading="confirmingPending"
+                      data-test="role-pending-confirm"
+                      @click="confirmPending(editingRole)"
+                    >
+                      {{ t('roles.pendingConfirm') }}
+                    </VBtn>
+                  </template>
+                </VAlert>
+              </VCol>
+
               <!-- Permissions (shared component) -->
               <VCol cols="12">
                 <PermissionMatrix
                   v-model:selected-permissions="drawerForm.permissions"
+                  :pending-permissions="isEditMode ? (editingRole?.pending_permissions || []) : []"
                   :permission-catalog="settingsStore.permissionCatalog"
                   :permission-modules="settingsStore.permissionModules"
                   :is-administrative="drawerForm.is_administrative"

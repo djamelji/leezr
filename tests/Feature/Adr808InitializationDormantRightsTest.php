@@ -137,7 +137,9 @@ class Adr808InitializationDormantRightsTest extends TestCase
 
         $out = VersionedCompanyInitializer::initializeNew($c, 'logistique', ['rbac' => ['owner']], $owner->id);
         $this->assertEqualsCanonicalizing(['livreur', 'owner'], CompanyRole::where('company_id', $c->id)->pluck('key')->all(), 'chef (sensitive) not confirmed');
-        $this->assertSame(['logistics_shipments' => [CompanyRole::where('company_id', $c->id)->where('key', 'livreur')->value('id')]], $out['pending_access']);
+        $livreurId = CompanyRole::where('company_id', $c->id)->where('key', 'livreur')->value('id');
+        // ADR-808.1 : every activated module (core included) holds the operational role's rights.
+        $this->assertSame(['core.members' => [$livreurId], 'logistics_shipments' => [$livreurId]], $out['pending_access']);
         $setup = CompanyModuleSetup::where('company_id', $c->id)->where('module_key', 'logistics_shipments')->sole();
         $this->assertSame(CompanyModuleSetup::TO_CONFIGURE, $setup->status);
         $stored = $this->perms($c, 'livreur');
@@ -147,7 +149,7 @@ class Adr808InitializationDormantRightsTest extends TestCase
         $this->as($driver, $c)->getJson('/api/my-deliveries')->assertForbidden(); // … but not effective
         $role = CompanyRole::where('company_id', $c->id)->where('key', 'livreur')->first();
         $this->assertNotContains('shipments.view_own', $role->effectivePermissionKeys());
-        $this->assertContains('members.view', $role->effectivePermissionKeys(), 'core rights (no assistant) effective');
+        $this->assertNotContains('members.view', $role->effectivePermissionKeys(), 'ADR-808.1 : core rights held too');
         $this->as($owner, $c)->getJson('/api/shipments')->assertOk(); // owner administers immediately
 
         // The assistant shows the pending holder ; confirming the access (unchanged) makes it effective.

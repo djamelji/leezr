@@ -117,7 +117,9 @@ final class VersionedCompanyInitializer
             return false;
         }
         $rbac = collect(PresetService::recommendationsFor($jobdomainKey, $marketKey))->firstWhere('kind', 'rbac');
-        if (! $rbac || ! $rbac['usable']) {
+        // ADR-808.1 : a version pinned then archived is « usable » for recommendations but cannot be APPLIED
+        // (PresetService::apply) — it would break the registration : historical path instead.
+        if (! $rbac || ! $rbac['usable'] || $rbac['effective_status'] !== 'published') {
             return false;
         }
         $roles = PresetService::content(PresetService::find('rbac', $rbac['effective_id']))['roles'] ?? [];
@@ -148,6 +150,11 @@ final class VersionedCompanyInitializer
 
             foreach (PresetService::recommendationsFor($jd->key, $company->market_key) as $rec) {
                 if (! $rec['usable']) {
+                    continue;
+                }
+                if ($rec['effective_status'] !== 'published') { // ADR-808.1 : pinned archived version — never applied
+                    $summary['presets'][$rec['kind']] = ['skipped' => 'version_not_published'];
+
                     continue;
                 }
                 $preset = PresetService::find($rec['kind'], $rec['effective_id']);
@@ -226,15 +233,14 @@ final class VersionedCompanyInitializer
     /**
      * ADR-808 — the owner role administers the company at once ; the OPERATIONAL roles pre-configured by the
      * preset keep their module rights stored but NOT effective until the module's assistant confirms the access
-     * (company_module_setups.pending_access). Core modules have no assistant : their rights are effective.
+     * (company_module_setups.pending_access) — ADR-808.1 : core modules included, confirmed per role.
      */
     private static function holdOperationalAccess(Company $company, array $activated): array
     {
         $held = [];
         foreach ($activated as $key) {
-            if (! \App\Core\Modules\Setup\ModuleSetupService::contract($key)) {
-                continue;
-            }
+            // ADR-808.1 : every activated module, core included (no implicit right for operational roles) ;
+            // modules without assistant are confirmed per role in Équipe → Rôles.
             $pending = \App\Core\Modules\Setup\PendingModuleAccess::snapshot($company, $key);
             \App\Core\Modules\Setup\CompanyModuleSetup::query()->firstOrCreate(['company_id' => $company->id, 'module_key' => $key],
                 ['status' => \App\Core\Modules\Setup\CompanyModuleSetup::TO_CONFIGURE, 'completed_steps' => [], 'pending_access' => $pending ?: null]);

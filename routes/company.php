@@ -207,6 +207,8 @@ Route::middleware('company.access:use-module,core.roles')->group(function () {
         ->middleware('company.access:use-permission,roles.manage');
     Route::put('/company/roles/{id}', [CompanyRoleController::class, 'update'])
         ->middleware('company.access:use-permission,roles.manage');
+    Route::post('/company/roles/{id}/confirm-pending', [CompanyRoleController::class, 'confirmPending']) // ADR-808.1
+        ->middleware('company.access:use-permission,roles.manage');
     Route::delete('/company/roles/{id}', [CompanyRoleController::class, 'destroy'])
         ->middleware('company.access:use-permission,roles.manage');
 
