@@ -17,14 +17,14 @@ use App\Modules\Platform\Audience\Http\AudienceController;
 use Illuminate\Support\Facades\Route;
 
 // Public (no auth) — rate limited
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1,auth-register');
 Route::post('/register/funnel-track', \App\Modules\Infrastructure\Auth\Http\FunnelTrackController::class)->middleware('throttle:30,1');
 Route::post('/register/confirm-payment', \App\Modules\Infrastructure\Auth\Http\ConfirmRegistrationPaymentController::class)
-    ->middleware(['auth:sanctum', 'throttle:10,1']);
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15,1');
-Route::post('/2fa/verify', [AuthController::class, 'verify2fa'])->middleware('throttle:5,1');
-Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
-Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
+    ->middleware(['auth:sanctum', 'throttle:10,1,auth-register-payment']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:15,1,auth-login');
+Route::post('/2fa/verify', [AuthController::class, 'verify2fa'])->middleware('throttle:5,1,auth-2fa');
+Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1,auth-forgot');
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1,auth-reset');
 
 // ADR-330: Lightweight version endpoint for live version polling
 Route::get('/public/version', fn () => response()->json([
@@ -44,7 +44,7 @@ Route::prefix('public')->middleware('throttle:30,1')->group(function () {
     Route::post('/plans/estimate-registration', [PublicPlanController::class, 'estimateRegistration']);
     Route::get('/fields', [PublicFieldController::class, 'companyFields']);
     Route::get('/addons', [PublicAddonController::class, 'index']);
-    Route::post('/validate-coupon', PublicCouponController::class)->middleware('throttle:10,1');
+    Route::post('/validate-coupon', PublicCouponController::class)->middleware('throttle:10,1,public-coupon');
 });
 
 // Help Center — unified API (ADR-356 — optional auth via session cookies)

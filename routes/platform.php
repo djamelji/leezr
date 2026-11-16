@@ -79,13 +79,13 @@ Route::get('/billing/metrics-export', BillingMetricsExportController::class)
 
 // Platform auth — public (throttled)
 Route::post('/login', [PlatformAuthController::class, 'login'])
-    ->middleware('throttle:15,1');
+    ->middleware('throttle:15,1,platform-login');
 Route::post('/2fa/verify', [PlatformAuthController::class, 'verify2fa'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:5,1,platform-2fa');
 Route::post('/forgot-password', [PlatformPasswordResetController::class, 'forgotPassword'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:5,1,platform-forgot');
 Route::post('/reset-password', [PlatformPasswordResetController::class, 'resetPassword'])
-    ->middleware('throttle:5,1');
+    ->middleware('throttle:5,1,platform-reset');
 
 // Authenticated platform routes
 Route::middleware(['auth:platform', 'session.governance'])->group(function () {

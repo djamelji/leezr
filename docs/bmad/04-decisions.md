@@ -28957,3 +28957,17 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - aucun faux fichier, aucune écriture SQL directe, aucune migration ;
   - aucun changement RBAC, Billing ni paie ;
   - 1 test ajouté (6/6 dans `Adr8101DocumentRequestIntegrityTest`) ; régression documentaire 476 verts.
+
+## ADR-809.1 — Compteurs de limitation séparés par opération
+
+- **Date** : 2026-11-16, DEV, base `f7466cf1`. Rapport : `docs/bmad/ADR-809.1-RATE-LIMITING.md`.
+- **Contexte** : `throttle:N,M` sans préfixe a pour clé `sha1(domaine|IP)` (la route n'en fait pas partie). Toutes les routes publiques d'une IP partageaient un compteur. Les appels préparatoires de l'inscription épuisaient le quota de `/register` (429).
+- **Décision** : préfixe natif par opération, limites inchangées :
+  - `auth-register`, `auth-register-payment`, `auth-login`, `auth-2fa`, `auth-forgot`, `auth-reset` ;
+  - `platform-login`, `platform-2fa`, `platform-forgot`, `platform-reset` ;
+  - `public-coupon`.
+- **Conséquences** :
+  - le 429 fonctionne toujours, opération par opération, et l'en-tête `X-Forwarded-For` ne permet pas de le contourner ;
+  - les lectures publiques gardent leur compteur commun ;
+  - `Adr8091ThrottleIsolationTest` 3/3 (2 échouent sans correctif) ;
+  - E2E inscription sans attente : 201, 0 réponse 429.
