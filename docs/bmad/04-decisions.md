@@ -28971,3 +28971,19 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - les lectures publiques gardent leur compteur commun ;
   - `Adr8091ThrottleIsolationTest` 3/3 (2 échouent sans correctif) ;
   - E2E inscription sans attente : 201, 0 réponse 429.
+
+## ADR-811 — Recette UX globale au navigateur
+
+- **Date** : 2026-11-16, DEV, base `e750f75c`. Rapport : `docs/bmad/ADR-811-UX-ACCEPTANCE.md`.
+- **Contexte** : vérifier qu'un nouvel utilisateur s'inscrit, configure son entreprise, utilise ses modules et mène ses opérations sans blocage.
+- **Méthode** :
+  - 8 profils (Platform super_admin et limité, propriétaire, administrateur, manager, salarié, chauffeur, salarié sans compte) ;
+  - variantes mobile, sombre et anglais ;
+  - parcours A à F faits par l'écran sur une société fictive (101), créée par la vraie inscription.
+- **Résultat** :
+  - aucune P0, aucune P1 définitive ;
+  - 7 P2 prouvées : C1 e-mail d'invitation générique, C2 page mot de passe, A2 clé brute du catalogue, C3 proposition vide, D3 créneau sans contrat, D4 congé sans solde, F1 fiche hors périmètre ;
+  - 1 P2 soumise à décision produit : C4, noms de rôles par défaut en anglais ;
+  - 4 P3 ;
+  - les comportements voulus et les faux positifs sont listés à part.
+- **Conséquences** : corrections dans ADR-812. Aucune société réelle modifiée.
