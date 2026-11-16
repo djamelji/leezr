@@ -98,7 +98,7 @@ class Adr804LeavePlanningSetupTest extends TestCase
         $planning = $this->start('workforce_planning');
         $this->assertSame(['access', 'leave_types'], $leave['steps']);
         $this->assertSame(['access'], $planning['steps'], 'no mandatory setting → access + confirmation only');
-        $this->as($this->owner)->getJson('/api/modules/workforce_documents/setup')->assertNotFound(); // no contract → no assistant
+        $this->as($this->owner)->getJson('/api/modules/workforce_payroll/setup')->assertNotFound(); // no contract → no assistant
         $this->assertSame([['key' => 'workforce', 'name' => 'Workforce', 'active' => true, 'setup_status' => 'legacy']], $leave['module']['requires']);
     }
 

@@ -44,6 +44,12 @@ class ModuleSetupController
         return response()->json($this->svc($request)->confirm($key, (int) $request->validate(['revision' => 'required|integer|min:0'])['revision'], $request->user()));
     }
 
+    /** ADR-805 — consequences of a deactivation (read-only ; the deactivation itself is unchanged). */
+    public function deactivationImpact(Request $request, string $key): JsonResponse
+    {
+        return response()->json($this->svc($request)->deactivationImpact($key));
+    }
+
     private function changes(Request $request): array
     {
         return $request->validate([

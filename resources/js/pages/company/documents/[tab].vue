@@ -19,6 +19,7 @@ import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizar
 import CreateDocumentTypeDrawer from '@/company/views/CreateDocumentTypeDrawer.vue'
 import DocumentDepositDialog from '@/company/views/DocumentDepositDialog.vue'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
+import { useModuleStore } from '@/core/stores/module'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 
 const { t } = useI18n()
@@ -26,6 +27,7 @@ const route = useRoute('company-documents-tab')
 const router = useRouter()
 const store = useCompanyDocumentsStore()
 const { can, moduleActive } = useCompanyPermissionContext()
+const moduleStore = useModuleStore() // ADR-805
 
 // ── ADR-778 (Company Experience 2.0 / UX3) — Documents par INTENTION ────────────────────────────────
 // Quatre vues : À traiter · Entreprise · Collaborateurs · Signatures. Les fonctions avancées
@@ -52,6 +54,12 @@ const toolViews = computed(() => [
   { tab: 'templates', title: t('documents.tools.templates'), hint: t('documents.tools.templatesHint'), icon: 'tabler-file-text', show: canTemplates.value },
   { tab: 'settings', title: t('documents.tools.settings'), hint: t('documents.tools.settingsHint'), icon: 'tabler-settings', show: can('documents.configure') },
 ].filter(v => v.show))
+
+// ADR-805 — retrouver la configuration des modules documentaires depuis l'espace Documents (même assistant,
+// aucune nouvelle page) : seulement les modules actifs avec un assistant, pour qui gère les modules.
+const configModules = computed(() => !can('modules.manage') ? [] : ['workforce_documents', 'workforce_contract', 'workforce_signature']
+  .map(k => moduleStore.modules.find(m => m.key === k))
+  .filter(m => m && m.is_active && m.setup_status))
 
 // Anciens onglets : leurs liens restent valides et ouvrent la vue qui les contient désormais.
 const resolveLegacy = (tab, query) => ({
@@ -200,7 +208,7 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
         </VMenu>
       </VBtn>
       <VBtn
-        v-if="toolViews.length"
+        v-if="toolViews.length || configModules.length"
         variant="tonal"
         color="secondary"
         prepend-icon="tabler-tool"
@@ -222,6 +230,20 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
               <VListItemTitle>{{ v.title }}</VListItemTitle>
               <VListItemSubtitle>{{ v.hint }}</VListItemSubtitle>
             </VListItem>
+            <template v-if="configModules.length">
+              <VDivider class="my-1" />
+              <VListSubheader>{{ t('documents.tools.configure') }}</VListSubheader>
+              <VListItem
+                v-for="m in configModules"
+                :key="m.key"
+                prepend-icon="tabler-adjustments"
+                :to="`/company/modules/${m.key}`"
+                :data-test="`documents-configure-${m.key}`"
+              >
+                <VListItemTitle>{{ m.name }}</VListItemTitle>
+                <VListItemSubtitle>{{ t(`moduleSetup.status.${m.setup_status}`) }}</VListItemSubtitle>
+              </VListItem>
+            </template>
           </VList>
         </VMenu>
       </VBtn>

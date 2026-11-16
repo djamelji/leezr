@@ -55,6 +55,13 @@ final class CapabilityAccessService
         return CompanyRole::query()->where('company_id', $this->company->id)->with('permissions:id,key')->orderBy('name')->get();
     }
 
+    /** @return array<int, list<string>> role id → permission keys (company roles only). */
+    public static function rolePermissionKeys(Company $company): array
+    {
+        return CompanyRole::query()->where('company_id', $company->id)->with('permissions:id,key')->get()
+            ->mapWithKeys(fn (CompanyRole $r) => [$r->id => $r->permissions->pluck('key')->all()])->all();
+    }
+
     public static function holding(array $permissionKeys, array $cap): string
     {
         $held = array_intersect($cap['permission_set'], $permissionKeys);

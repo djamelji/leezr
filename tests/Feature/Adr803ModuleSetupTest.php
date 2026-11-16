@@ -123,10 +123,10 @@ class Adr803ModuleSetupTest extends TestCase
 
     public function test_module_without_contract_has_no_assistant(): void
     {
-        // ADR-804 : workforce_planning a désormais un contrat — workforce_documents n'en a pas.
-        $this->as($this->owner)->getJson('/api/modules/workforce_documents/setup')->assertNotFound();
+        // ADR-804/805 : planning et documents ont désormais un contrat — workforce_payroll n'en a pas.
+        $this->as($this->owner)->getJson('/api/modules/workforce_payroll/setup')->assertNotFound();
         $catalog = collect($this->as($this->owner)->getJson('/api/modules')->assertOk()->json('modules'));
-        $this->assertNull($catalog->firstWhere('key', 'workforce_documents')['setup_status']);
+        $this->assertNull($catalog->firstWhere('key', 'workforce_payroll')['setup_status']);
         $this->assertSame('legacy', $catalog->firstWhere('key', 'workforce')['setup_status']);
     }
 

@@ -13,7 +13,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({ moduleKey: { type: String, required: true } })
 const emit = defineEmits(['changed'])
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { toast } = useAppToast()
 
 const data = ref(null)
@@ -168,6 +168,47 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
           :readonly="!data.can.configure_access"
           @update:changes="v => { changes = v; preview = null }"
         />
+        <!-- ADR-805 : accès décidés dans un AUTRE module (lecture seule, modifiés là où ils vivent) -->
+        <div
+          v-if="data.related?.length"
+          class="mt-4 mb-2"
+          data-test="module-setup-related"
+        >
+          <h6 class="text-h6 mb-1">
+            {{ t('moduleSetup.relatedTitle') }}
+          </h6>
+          <p class="text-body-2 text-medium-emphasis mb-2">
+            {{ t('moduleSetup.relatedHint') }}
+          </p>
+          <div
+            v-for="r in data.related"
+            :key="r.key"
+            class="d-flex flex-wrap align-center gap-2 text-body-2 mb-2"
+            :data-test="`related-${r.key}`"
+          >
+            <span class="font-weight-medium">{{ te(`permissionCatalog.bundles.${r.key}.label`) ? t(`permissionCatalog.bundles.${r.key}.label`) : r.label }}</span>
+            <span class="text-medium-emphasis">({{ r.module_name }})</span>
+            <VChip
+              v-for="h in r.holders"
+              :key="h.role_id"
+              size="x-small"
+              :color="h.holds === 'full' ? 'primary' : undefined"
+              variant="tonal"
+            >
+              {{ h.role }}{{ h.holds === 'partial' ? ` · ${t('moduleSetup.partial')}` : '' }}
+            </VChip>
+            <span
+              v-if="!r.holders.length"
+              class="text-medium-emphasis"
+            >{{ t('moduleSetup.relatedNobody') }}</span>
+            <RouterLink
+              :to="{ path: '/company/people', query: { tab: 'roles', module: r.module } }"
+              class="text-primary"
+            >
+              {{ t('moduleSetup.relatedEdit') }}
+            </RouterLink>
+          </div>
+        </div>
         <div
           v-if="data.can.configure_access"
           class="d-flex flex-wrap gap-2 mt-2"

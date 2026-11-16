@@ -4054,7 +4054,12 @@
     "summaryAvailable": "{n} to discover",
     "summarySubscribed": "{n} subscribed",
     "featured": "Recommended",
-    "previewNotice": "Coming soon"
+    "previewNotice": "Coming soon",
+    "impact": {
+      "issued_documents": "{n} issued document(s) are kept and remain available to each person in their space.",
+      "signatures_in_progress": "{n} signature request(s) in progress continue with the signers; their follow-up (reminders, cancellation, evidence) resumes on reactivation.",
+      "nothingDeleted": "No data is deleted by deactivation."
+    }
   },
   "contactSales": {
     "title": "Premium module",
@@ -5801,7 +5806,8 @@
       "templates": "Contract templates",
       "templatesHint": "Templates used to generate contracts.",
       "settings": "Types & settings",
-      "settingsHint": "Requested documents, reminders, automatic checks."
+      "settingsHint": "Requested documents, reminders, automatic checks.",
+      "configure": "Configure modules"
     },
     "new": {
       "label": "New",
@@ -10498,7 +10504,11 @@
       "confirm": "Confirmation",
       "confirmHint": "Review and finish",
       "leave_types": "Leave types",
-      "leave_typesHint": "Review the proposed types"
+      "leave_typesHint": "Review the proposed types",
+      "contract_templates": "Contract templates",
+      "contract_templatesHint": "Review the published templates",
+      "signature_settings": "Signature settings",
+      "signature_settingsHint": "Review the provider"
     },
     "groups": {
       "collective": "Access to the team or the company",
@@ -10541,7 +10551,12 @@
       "leave_type_enabled": "At least one leave type is enabled",
       "approver_assigned": "A role (other than the owner) can approve leave",
       "workforce_framework": "The working-time framework is confirmed in the HR module",
-      "publisher_assigned": "A role (other than the owner) can publish the schedule"
+      "publisher_assigned": "A role (other than the owner) can publish the schedule",
+      "generator_assigned": "A role (other than the owner) can generate documents",
+      "contract_template_published": "At least one contract template is published",
+      "contract_template_default": "A default contract template is set",
+      "signature_provider_available": "A signature provider is available",
+      "signature_provider_production": "The provider is not a test tool"
     },
     "notReady": "The module cannot be declared ready yet: complete the flagged items.",
     "confirm": "Confirm: the module is ready",
@@ -10568,6 +10583,26 @@
     "leaveTypesManage": "Manage leave types",
     "requiresApproval": "Approval required",
     "noApproval": "No approval",
-    "adminOnly": "Management roles only"
+    "adminOnly": "Management roles only",
+    "relatedTitle": "Access decided in another module",
+    "relatedHint": "These capabilities decide who sees everyone's documents, the pay they contain or confidential pieces. They are changed in Team → Roles.",
+    "relatedNobody": "no role",
+    "relatedEdit": "Change in Team",
+    "contractTemplatesIntro": "A contract is generated from a published template. Templates are managed in Documents → Templates.",
+    "contractTemplatesNone": "No published contract template: publish one in Documents → Templates.",
+    "contractTemplatesManage": "Manage templates",
+    "defaultTemplate": "Default",
+    "platformTemplate": "Catalog",
+    "companyTemplate": "Company",
+    "unvalidatedExample": "example, not legally validated",
+    "signatureIntro": "Signature requests use these settings. They are changed in Settings → Electronic signature.",
+    "signatureNoProvider": "No signature provider is available: no request can be sent.",
+    "signatureDevProvider": "Test provider: evidence is not certified. Replace it before real use.",
+    "signatureProvider": "Provider",
+    "signatureLevel": "Default level",
+    "signatureValidity": "Validity",
+    "signatureManage": "Open signature settings",
+    "days": "{n} days",
+    "summaryNotAllowed": "Your role cannot display this summary; the server checks below still apply."
   }
 }

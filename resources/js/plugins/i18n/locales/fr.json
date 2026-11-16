@@ -4054,7 +4054,12 @@
     "summaryAvailable": "{n} à découvrir",
     "summarySubscribed": "{n} souscrit(s)",
     "featured": "Recommandé",
-    "previewNotice": "Bientôt disponible"
+    "previewNotice": "Bientôt disponible",
+    "impact": {
+      "issued_documents": "{n} document(s) émis restent conservés et accessibles à chaque personne dans son espace.",
+      "signatures_in_progress": "{n} demande(s) de signature en cours continuent auprès des signataires ; leur suivi (relance, annulation, preuves) reprend à la réactivation.",
+      "nothingDeleted": "Aucune donnée n'est supprimée par la désactivation."
+    }
   },
   "contactSales": {
     "title": "Module premium",
@@ -5801,7 +5806,8 @@
       "templates": "Modèles de contrat",
       "templatesHint": "Modèles utilisés pour générer les contrats.",
       "settings": "Types & réglages",
-      "settingsHint": "Pièces demandées, rappels, vérification automatique."
+      "settingsHint": "Pièces demandées, rappels, vérification automatique.",
+      "configure": "Configurer les modules"
     },
     "new": {
       "label": "Nouveau",
@@ -10498,7 +10504,11 @@
       "confirm": "Confirmation",
       "confirmHint": "Vérifier et terminer",
       "leave_types": "Types de congés",
-      "leave_typesHint": "Vérifier les types proposés"
+      "leave_typesHint": "Vérifier les types proposés",
+      "contract_templates": "Modèles de contrat",
+      "contract_templatesHint": "Vérifier les modèles publiés",
+      "signature_settings": "Réglages de signature",
+      "signature_settingsHint": "Vérifier le prestataire"
     },
     "groups": {
       "collective": "Accès à l'équipe ou à l'entreprise",
@@ -10541,7 +10551,12 @@
       "leave_type_enabled": "Au moins un type de congé est actif",
       "approver_assigned": "Un rôle (autre que le propriétaire) peut valider les congés",
       "workforce_framework": "Le cadre de temps de travail est confirmé dans le module RH",
-      "publisher_assigned": "Un rôle (autre que le propriétaire) peut publier le planning"
+      "publisher_assigned": "Un rôle (autre que le propriétaire) peut publier le planning",
+      "generator_assigned": "Un rôle (autre que le propriétaire) peut générer des documents",
+      "contract_template_published": "Au moins un modèle de contrat est publié",
+      "contract_template_default": "Un modèle de contrat par défaut est défini",
+      "signature_provider_available": "Un prestataire de signature est disponible",
+      "signature_provider_production": "Le prestataire n'est pas un outil de test"
     },
     "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
     "confirm": "Confirmer : le module est prêt",
@@ -10568,6 +10583,26 @@
     "leaveTypesManage": "Gérer les types de congés",
     "requiresApproval": "Validation requise",
     "noApproval": "Sans validation",
-    "adminOnly": "Rôles de gestion uniquement"
+    "adminOnly": "Rôles de gestion uniquement",
+    "relatedTitle": "Accès réglés dans un autre module",
+    "relatedHint": "Ces capacités décident qui voit les documents de tous, le salaire qu'ils contiennent ou les pièces confidentielles. Elles se modifient dans Équipe → Rôles.",
+    "relatedNobody": "aucun rôle",
+    "relatedEdit": "Modifier dans Équipe",
+    "contractTemplatesIntro": "Un contrat est généré à partir d'un modèle publié. Les modèles se gèrent dans Documents → Modèles.",
+    "contractTemplatesNone": "Aucun modèle de contrat publié : publiez-en un dans Documents → Modèles.",
+    "contractTemplatesManage": "Gérer les modèles",
+    "defaultTemplate": "Par défaut",
+    "platformTemplate": "Catalogue",
+    "companyTemplate": "Entreprise",
+    "unvalidatedExample": "exemple non validé juridiquement",
+    "signatureIntro": "Les demandes de signature utilisent ces réglages. Ils se modifient dans Réglages → Signature électronique.",
+    "signatureNoProvider": "Aucun prestataire de signature n'est disponible : aucune demande ne peut être envoyée.",
+    "signatureDevProvider": "Prestataire de test : les preuves ne sont pas certifiées. À remplacer avant un usage réel.",
+    "signatureProvider": "Prestataire",
+    "signatureLevel": "Niveau par défaut",
+    "signatureValidity": "Validité",
+    "signatureManage": "Ouvrir les réglages de signature",
+    "days": "{n} jours",
+    "summaryNotAllowed": "Votre rôle ne permet pas d'afficher ce récapitulatif ; les contrôles serveur ci-dessous restent appliqués."
   }
 }

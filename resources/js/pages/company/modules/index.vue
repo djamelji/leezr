@@ -1,4 +1,5 @@
 <script setup>
+import { $api } from '@/utils/api'
 definePage({ meta: { surface: 'structure', module: 'core.modules', permission: 'modules.manage' } })
 
 import { useAuthStore } from '@/core/stores/auth'
@@ -34,6 +35,7 @@ const quoteModuleName = ref('')
 
 // Deactivation confirmation dialog
 const deactivateDialog = ref(false)
+const deactivateImpact = ref(null) // ADR-805
 const deactivateTarget = ref(null)
 const deactivatePreview = ref(null)
 const deactivatePreviewLoading = ref(false)
@@ -386,7 +388,10 @@ const navigateToPlanUpgrade = mod => {
 const requestDeactivation = async module => {
   deactivateTarget.value = module
   deactivatePreview.value = null
+  deactivateImpact.value = null
   deactivateDialog.value = true
+  // ADR-805 : processus en cours / documents émis concernés (lecture seule, la désactivation ne change pas)
+  $api(`/modules/${module.key}/deactivation-impact`).then(r => { deactivateImpact.value = r }).catch(() => {})
 
   // Fetch deactivation preview for addon modules
   if (module.pricing_mode === 'addon') {
@@ -1498,6 +1503,26 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             class="mt-3"
           >
             {{ t('companyModules.deactivateWillAffect', { modules: dependentNames(deactivateTarget) }) }}
+          </VAlert>
+
+          <VAlert
+            v-if="deactivateImpact?.items?.length"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+            data-test="module-deactivate-impact"
+          >
+            <div
+              v-for="it in deactivateImpact.items"
+              :key="`${it.module}-${it.key}`"
+              class="text-body-2 mb-1"
+            >
+              <strong>{{ it.module_name }}</strong> — {{ t(`companyModules.impact.${it.key}`, { n: it.count }) }}
+            </div>
+            <div class="text-body-2 mt-1">
+              {{ t('companyModules.impact.nothingDeleted') }}
+            </div>
           </VAlert>
         </VCardText>
 

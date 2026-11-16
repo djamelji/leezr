@@ -37,17 +37,23 @@ class WorkforceDocumentsModule implements ModuleDefinition
                     'label' => 'Documents (Employee)',
                     'hint' => 'View own generated HR documents.',
                     'permissions' => ['workforce_documents.view'],
+                    'scope' => 'team', // ADR-805 : soi + rapports directs (GeneratedDocumentAccess) ; tous = RH Workforce
                 ],
                 [
                     'key' => 'workforce_documents.management',
                     'label' => 'Documents Management',
                     'hint' => 'Generate documents, manage templates, handle signatures.',
                     'permissions' => ['workforce_documents.view', 'workforce_documents.generate', 'workforce_documents.manage_templates', 'workforce_documents.sign'],
+                    'is_admin' => true, // ADR-805 : permissions de gestion (déjà refusées aux rôles opérationnels)
                 ],
             ],
             scope: 'company',
             type: 'addon',
             requires: ['workforce'],
+            // ADR-805 — assistant : aucun réglage obligatoire (accès seul). Les accès SENSIBLES vivent ailleurs
+            // et sont seulement montrés (RH : documents de tous + salaire ; Documents : pièces confidentielles).
+            setup: ['steps' => ['access'], 'readiness' => \App\Modules\Workforce\Documents\Setup\DocumentsSetupReadiness::class,
+                'related' => ['workforce.team', 'workforce.hr_management', 'documents.management']],
         );
     }
 }

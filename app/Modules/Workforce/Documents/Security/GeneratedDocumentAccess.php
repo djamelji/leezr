@@ -41,10 +41,17 @@ class GeneratedDocumentAccess
         return in_array($document->subject_type, self::EMBEDS_COMPENSATION, true);
     }
 
-    public static function canOpen(Request $request, GeneratedDocument $document): bool
+    /** ADR-805 — the person the document is about is within the actor's perimeter (registry list / detail). */
+    public static function inScope(Request $request, GeneratedDocument $document): bool
     {
         $employeeId = self::employeeIdOf($document);
-        if ($employeeId !== null && ! WorkforceAccess::canViewEmployeeData($request, $employeeId, 'employee')) {
+
+        return $employeeId === null || WorkforceAccess::canViewEmployeeData($request, $employeeId, 'employee');
+    }
+
+    public static function canOpen(Request $request, GeneratedDocument $document): bool
+    {
+        if (! self::inScope($request, $document)) {
             return false;
         }
 

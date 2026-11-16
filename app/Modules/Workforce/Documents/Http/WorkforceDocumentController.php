@@ -38,6 +38,8 @@ class WorkforceDocumentController extends Controller
                 'search' => $request->input('search'),
                 'date_from' => $request->input('date_from'),
                 'date_to' => $request->input('date_to'),
+                // ADR-805 : périmètre du lecteur (soi + rapports directs ; tout pour la vue RH).
+                'employee_ids' => \App\Modules\Workforce\Security\WorkforceAccess::scopeIdsOrNull($request, 'employee'),
             ],
             perPage: (int) $request->input('per_page', 15),
         );
@@ -101,6 +103,8 @@ class WorkforceDocumentController extends Controller
             ->where('company_id', $companyId)
             ->findOrFail($id);
 
+        abort_unless(\App\Modules\Workforce\Documents\Security\GeneratedDocumentAccess::inScope($request, $document), 403); // ADR-805
+
         GeneratedDocumentReadModel::applyRealSignatureState(collect([$document]), (int) $companyId); // ADR-772 : état réel
 
         // P2 (ADR-684): generation_snapshot may embed salaries — scrub for non-comp viewers.
@@ -159,6 +163,10 @@ class WorkforceDocumentController extends Controller
             'subject_id' => 'required|integer',
             'force_vault' => 'sometimes|boolean',
         ]);
+
+        // ADR-805 — on ne génère que ce qu'on pourrait ouvrir (périmètre collaborateur + rémunération).
+        $probe = new \App\Core\Documents\GeneratedDocument(['company_id' => $companyId, 'subject_type' => $validated['subject_type'], 'subject_id' => $validated['subject_id']]);
+        abort_unless(\App\Modules\Workforce\Documents\Security\GeneratedDocumentAccess::canOpen($request, $probe), 403, 'Not authorized for this subject.');
 
         try {
             $document = app(GenerateDocumentUseCase::class)->execute(

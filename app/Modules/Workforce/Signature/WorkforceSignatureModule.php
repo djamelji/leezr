@@ -53,12 +53,16 @@ class WorkforceSignatureModule implements ModuleDefinition
                     'label' => 'Signatures (Read-only)',
                     'hint' => 'View signature requests and download signed documents.',
                     'permissions' => ['workforce_signature.view'],
+                    'scope' => 'team', // ADR-805 : SignatureReadModel = soi + rapports directs ; tous = RH Workforce
                 ],
             ],
             scope: 'company',
             type: 'addon',
             requires: ['workforce', 'workforce_documents'],
             iconRef: 'tabler-signature',
+            // ADR-805 — prérequis réel : un prestataire résolu (Réglages → Signature électronique).
+            setup: ['steps' => ['access', 'signature_settings'], 'readiness' => \App\Modules\Workforce\Signature\Setup\SignatureSetupReadiness::class,
+                'related' => ['workforce.team', 'workforce.hr_management']],
         );
     }
 }

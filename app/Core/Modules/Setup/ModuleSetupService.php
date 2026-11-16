@@ -111,6 +111,7 @@ final class ModuleSetupService
             'roles' => $access['roles'],
             'suggestion' => $this->suggestion($access['capabilities'], $access['roles']),
             'readiness' => $this->readiness($moduleKey, $transient),
+            'related' => $this->related($contract['related'] ?? [], $access['roles']),
             'fingerprint' => $access['fingerprint'],
             'can' => ['configure_access' => $access['can_change'], 'configure_settings' => true],
         ];
@@ -198,6 +199,57 @@ final class ModuleSetupService
 
         // `required` defaults to true ; non-required checks are recommendations (never blocking).
         return $class ? array_map(fn ($c) => $c + ['required' => true], app($class)->checks($this->company, $row)) : [];
+    }
+
+    /**
+     * ADR-805 — capabilities of OTHER modules that decide part of this module's access (e.g. who sees everyone's
+     * documents, the pay inside them). Shown read-only with their holding per role and the owning module :
+     * they are changed where they belong (Équipe → Rôles), never duplicated in this assistant.
+     */
+    private function related(array $keys, array $roles): array
+    {
+        if (! $keys) {
+            return [];
+        }
+        $byKey = collect($this->access->capabilities(null))->keyBy('key');
+        $perms = CapabilityAccessService::rolePermissionKeys($this->company);
+
+        return collect($keys)->filter(fn ($k) => $byKey->has($k))->map(function ($k) use ($byKey, $roles, $perms) {
+            $c = $byKey[$k];
+
+            return ['key' => $k, 'label' => $c['label'], 'module' => $c['module'], 'module_name' => ModuleRegistry::definitions()[$c['module']]->name ?? $c['module'],
+                'module_active' => ModuleGate::isActive($this->company, $c['module']), 'sensitive' => $c['sensitive'],
+                'holders' => collect($roles)->map(fn ($r) => ['role_id' => $r['id'], 'role' => $r['name'], 'holds' => CapabilityAccessService::holding($perms[$r['id']] ?? [], $c)])
+                    ->where('holds', '!=', 'none')->values()->all()];
+        })->values()->all();
+    }
+
+    /**
+     * ADR-805 — what still runs / is still relied upon if `$moduleKey` is deactivated, including the active
+     * modules that require it (they go with it). Read-only : never blocks, never changes the deactivation.
+     */
+    public function deactivationImpact(string $moduleKey): array
+    {
+        $defs = ModuleRegistry::definitions();
+        abort_unless(isset($defs[$moduleKey]), 404);
+        $keys = [$moduleKey];
+        for ($i = 0; $i < count($keys); $i++) { // active dependents, transitively
+            foreach ($defs as $k => $m) {
+                if (! in_array($k, $keys, true) && in_array($keys[$i], $m->requires, true) && ModuleGate::isActive($this->company, $k)) {
+                    $keys[] = $k;
+                }
+            }
+        }
+        $out = [];
+        foreach ($keys as $k) {
+            $class = self::contract($k)['readiness'] ?? null;
+            $impl = $class ? app($class) : null;
+            foreach ($impl instanceof ModuleDeactivationImpact ? $impl->deactivationImpact($this->company) : [] as $item) {
+                $out[] = $item + ['module' => $k, 'module_name' => $defs[$k]->name];
+            }
+        }
+
+        return ['modules' => $keys, 'items' => $out];
     }
 
     /** Suggestions from the RBAC preset recommended for the company's JobDomain (company role key ↔ preset role key). */

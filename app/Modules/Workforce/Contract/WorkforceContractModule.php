@@ -54,6 +54,9 @@ class WorkforceContractModule implements ModuleDefinition
             type: 'addon',
             requires: ['workforce', 'workforce_documents'],
             iconRef: 'tabler-file-text',
+            // ADR-805 — un contrat se génère depuis un modèle PUBLIÉ (géré dans Documents → Modèles).
+            setup: ['steps' => ['access', 'contract_templates'], 'readiness' => \App\Modules\Workforce\Contract\Setup\ContractSetupReadiness::class,
+                'related' => ['workforce.team', 'workforce.hr_management']],
         );
     }
 }

@@ -60,6 +60,23 @@ class GeneratedDocumentReadModel
             });
         }
 
+        // ADR-805 — PÉRIMÈTRE du lecteur (null = vue RH complète) : les documents rattachés à une personne
+        // (employé, contrat, congé, bulletin) ne sont listés que pour les personnes visibles ; les documents
+        // d'entreprise suivent la règle d'ouverture (GeneratedDocumentAccess). Même autorité que le téléchargement.
+        if (array_key_exists('employee_ids', $filters) && $filters['employee_ids'] !== null) {
+            $ids = array_map('intval', $filters['employee_ids']) ?: [0];
+            $contractIds = EmploymentContract::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('employee_id', $ids)->pluck('id')->all();
+            $leaveIds = LeaveRequest::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('employee_id', $ids)->pluck('id')->all();
+            // Exactement les sujets que GeneratedDocumentAccess::employeeIdOf rattache à une personne ; les bulletins
+            // (payroll_*) relèvent de la confidentialité de la rémunération (PayrollConfidentiality), pas du périmètre.
+            $query->where(function ($q) use ($ids, $contractIds, $leaveIds) {
+                $q->whereNotIn('subject_type', ['employee', 'contract', 'leave_request'])
+                    ->orWhere(fn ($w) => $w->where('subject_type', 'employee')->whereIn('subject_id', $ids))
+                    ->orWhere(fn ($w) => $w->where('subject_type', 'contract')->whereIn('subject_id', $contractIds ?: [0]))
+                    ->orWhere(fn ($w) => $w->where('subject_type', 'leave_request')->whereIn('subject_id', $leaveIds ?: [0]));
+            });
+        }
+
         // Recherche texte : nom/code du modèle ou chemin de fichier (colonnes réelles uniquement).
         if (! empty($filters['search'])) {
             $term = '%'.$filters['search'].'%';

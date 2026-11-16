@@ -28729,3 +28729,32 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - Une entreprise qui utilisait les congés sans le module Congés actif perd ces écrans ; c'est voulu et cohérent avec le catalogue.
   - Les autres modules ne sont pas adaptés (méthode documentée au §9 du rapport).
 
+## ADR-805 — Configuration modulaire : Documents RH, Contrats, Signatures
+
+- **Date** : 2026-11-16, DEV uniquement, base `85c08c5f`. Rapport : `docs/bmad/ADR-805-MODULE-ASSISTANT-DOCUMENTS-CONTRACT-SIGNATURE.md`.
+- **Contexte** : étendre l'assistant ADR-803/804 aux trois modules documentaires, sans moteur ni interface recréée (ADR-802).
+- **Décisions** :
+  - **Étapes adaptées aux prérequis réellement exécutés.**
+    - Documents RH : Accès seul.
+    - Contrats : Accès + récapitulatif des modèles ; ≥ 1 modèle publié est obligatoire.
+    - Signatures : Accès + récapitulatif des réglages ; un prestataire résolu est obligatoire, et le prestataire de test est signalé.
+    - Empreintes de réglages effectifs.
+  - **Accès sensibles réglés ailleurs.** Contrat `related` : ce sont les capacités d'autres modules (RH équipe ou entreprise, salaire, pièces confidentielles du DMS), affichées en lecture seule avec leurs détenteurs. Elles se modifient dans Équipe → Rôles, jamais dans l'assistant.
+  - **Impact de désactivation.** Interface optionnelle `ModuleDeactivationImpact` et `GET /modules/{key}/deactivation-impact`, affichés dans la boîte de désactivation.
+    - L'impact couvre les documents émis et les signatures en cours.
+    - Rien n'est bloqué, annulé ni supprimé.
+    - Le parcours du signataire et les webhooks continuent.
+  - **Espace Documents.** Outils → « Configurer les modules » ouvre le même assistant ; aucune nouvelle page.
+  - **Sécurité, défauts corrigés.**
+    - Le registre RH (liste et fiche) est borné au périmètre du lecteur.
+    - La génération est limitée aux sujets que l'acteur pourrait ouvrir.
+    - Ces deux règles réutilisent `GeneratedDocumentAccess` et `WorkforceAccess`.
+  - **Résidus ADR-804.**
+    - Inventaire DEV et requête de vérification PROD des congés ; stratégie proposée, non appliquée.
+    - `leave_adjust` reste inerte et explicite : le mécanisme de registre existe mais n'a ni route ni écran (extension gelée).
+    - Recette nominale prouvée par 200/201 et l'état en base.
+- **Conséquences** :
+  - Un rôle « gestion documents » sans vue RH ne voit et ne génère plus qu'à l'intérieur de son périmètre (voulu ; à mesurer en PROD).
+  - `workforce_documents.manage_templates` et `.sign` restent inertes dans le bundle de gestion (à décider).
+  - Aucun droit n'a été modifié automatiquement.
+

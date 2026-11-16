@@ -495,6 +495,7 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
         Route::put('/modules/{key}/setup/access', [$ms, 'applyAccess'])->middleware('company.access:use-permission,roles.manage');
         Route::post('/modules/{key}/setup/steps', [$ms, 'step']);
         Route::post('/modules/{key}/setup/confirm', [$ms, 'confirm']);
+        Route::get('/modules/{key}/deactivation-impact', [$ms, 'deactivationImpact']); // ADR-805
     });
     Route::get('/modules/quote', ModuleQuoteController::class);
     Route::get('/modules/{key}/deactivation-preview', ModuleDeactivationPreviewController::class);
