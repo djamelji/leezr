@@ -28851,7 +28851,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-808.1 — Fermeture des exceptions sur les droits dormants ; bascule Logistique prête mais désactivée
 
-- **Date** : 2026-11-16, DEV uniquement, base `ffeb5e89`, commit `SHA_8081`. Rapport : `docs/bmad/ADR-808.1-DORMANT-RIGHTS-CLOSURE.md`.
+- **Date** : 2026-11-16, DEV uniquement, base `ffeb5e89`, commit `e40c842b`. Rapport : `docs/bmad/ADR-808.1-DORMANT-RIGHTS-CLOSURE.md`.
 - **Contexte** : aucun module ne doit rendre effectifs des droits sans décision explicite et tracée, quels que soient le chemin d'activation et la page utilisée.
 - **Décisions** :
   - **Lecteurs de permissions alignés sur les droits effectifs** : menus (`NavController`) et délégation (`MembershipSecurityPolicy::heldPermissions`). Un droit en attente n'ouvre ni API, ni menu, ni permission côté client, et ne se délègue pas.
