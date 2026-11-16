@@ -28791,7 +28791,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-807 — Rationalisation des permissions et cohérence modulaire
 
-- **Date** : 2026-11-16, DEV uniquement, base `deea2a00`, commit `SHA_807`. Rapport : `docs/bmad/ADR-807-PERMISSION-RATIONALIZATION.md` ; contrôles PROD C1-C8 : `docs/bmad/adr806/prod-readonly-checks.sql`.
+- **Date** : 2026-11-16, DEV uniquement, base `deea2a00`, commit `c90ddc7d`. Rapport : `docs/bmad/ADR-807-PERMISSION-RATIONALIZATION.md` ; contrôles PROD C1-C8 : `docs/bmad/adr806/prod-readonly-checks.sql`.
 - **Contexte** : éliminer les configurations trompeuses sans nouveau moteur et sans modifier silencieusement les droits existants.
 - **Décisions** :
   - **Expéditions, périmètres serveur explicites.**

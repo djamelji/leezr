@@ -153,3 +153,5 @@ Requêtes : `docs/bmad/adr806/prod-readonly-checks.sql` (C1 à C8, lecture seule
 - **Devis côté client.** La fermeture des prérequis est calculée à partir des `requires` du catalogue, qui sont aussi la source du moteur. Si un prérequis n'est pas commercialisable, le devis répond 422 et l'activation est refusée : comportement cohérent.
 - **Écriture lors du devis** (`ensureWallet`) : lot Billing.
 - **ControllerSizeInvariantTest** : 3 échecs historiques, conservés comme dette.
+
+- **SHA DEV** : `c90ddc7d`.
