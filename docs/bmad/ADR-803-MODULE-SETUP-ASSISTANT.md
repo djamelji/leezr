@@ -1,6 +1,6 @@
 # ADR-803 : assistant commun de configuration des modules (pilote Workforce)
 
-- **Base** : `dev` @ `6e4368f3`. DEV local uniquement, rien poussé. SHA livré : voir §14.
+- **Base** : `dev` @ `6e4368f3`. DEV local uniquement, rien poussé. SHA livré : `83ef8057`.
 - **Préservés, non commités** : `CLAUDE.md`, `typed-router.d.ts` (régénéré, toujours 98 routes), `DMS-ARCHITECTURE.md`.
 - L'identité de recette ADR-801.1 est conservée.
 - **Contraintes respectées** :
@@ -213,4 +213,4 @@ Le contrat existe maintenant, chaque module s'adapte en déclarant `setup` et un
 
 ## 14. SHA
 
-Voir l'entrée ADR-803 de `docs/bmad/04-decisions.md` et le commit qui suit.
+Code : `83ef8057` (DEV, non poussé).
