@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { loginCompany, apiRequest } from './helpers'
+import { loginCompany, apiRequest, createEmployeeViaTeam } from './helpers'
 
 /**
  * W-HR-UX-4 §2 — "Premier jour d'un salarié", parcours A→Z réel dans le navigateur, trois rôles :
@@ -85,19 +85,9 @@ test('W-HR-UX-4 — premier jour du salarié, A→Z (RH + salarié + manager)', 
   })
 
   await step(rh, 'A2-create-employee', async () => {
-    await rh.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
-    await rh.waitForTimeout(1000)
-    await rh.locator('[data-test="emp-add"]').click()
-    await expect(rh.getByText('Ajouter un employé').first()).toBeVisible({ timeout: 10000 })
-    await rh.locator('[data-test="emp-first-name"] input').fill(firstName)
-    await rh.locator('[data-test="emp-last-name"] input').fill(lastName)
-    // email field has no data-test → target the email input inside the open drawer
-    await rh.locator('.v-navigation-drawer input[type="email"], [role="dialog"] input[type="email"]').first().fill(email)
+    // ADR-802 : tiroir unique d'Équipe (l'ancien dialogue de /company/workforce/employees n'existe plus).
+    const resp = await createEmployeeViaTeam(rh, { firstName, lastName, email })
     await shot(rh, 'A2-create-form')
-    const [resp] = await Promise.all([
-      rh.waitForResponse(r => r.url().includes('/workforce/employees') && r.request().method() === 'POST', { timeout: 20000 }),
-      rh.locator('[data-test="emp-submit"]').click(),
-    ])
     expect(resp.status(), 'create employee 201').toBe(201)
     employeeId = (await resp.json()).id
     expect(employeeId).toBeTruthy()

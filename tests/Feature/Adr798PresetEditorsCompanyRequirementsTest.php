@@ -206,7 +206,8 @@ class Adr798PresetEditorsCompanyRequirementsTest extends TestCase
 
         $this->api()->postJson("/api/platform/presets/{$p['id']}/archive")->assertStatus(422)->assertJsonPath('code', 'recommendation_would_break')->assertJsonPath('latest_for', ['logistique']);
         $v2 = $this->api()->postJson("/api/platform/presets/{$p['id']}/new-version")->json('id');
-        $this->api()->postJson("/api/platform/presets/rbac/{$v2}/publish")->assertOk(); // remplacement : v1 archivée par la publication
+        $this->api()->postJson("/api/platform/presets/rbac/{$v2}/publish")->assertStatus(409)->assertJsonPath('code', 'shared_preset'); // ADR-803 : famille suivie par un domaine
+        $this->api()->postJson("/api/platform/presets/rbac/{$v2}/publish", ['mode' => 'shared'])->assertOk(); // remplacement explicite : v1 archivée par la publication
         $this->assertSame('archived', Preset::find($p['id'])->status);
         $this->api()->postJson("/api/platform/presets/{$v2}/archive")->assertStatus(422); // dernière publiée, recommandée sans épinglage
 

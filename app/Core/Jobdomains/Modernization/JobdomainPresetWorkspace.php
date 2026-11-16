@@ -73,11 +73,39 @@ final class JobdomainPresetWorkspace
     }
 
     /** Publish the draft and make it the domain's recommendation (other families and markets untouched). */
-    public static function publish(Jobdomain $jd, string $kind, int $presetId, ?int $by): array
+    /**
+     * ADR-803 — a family FOLLOWED by other domains (link without pinned version) must never change for them
+     * silently. Without an explicit `mode`, such a publication is refused (409 `shared_preset`) :
+     *  - `shared`  : publish for every domain following the family (explicit, audited) ;
+     *  - `variant` : the draft becomes an INDEPENDENT family owned by this domain (other domains untouched).
+     * Domains that pinned a version are never affected (they are not listed).
+     */
+    public static function followersElsewhere(Jobdomain $jd, string $kind, string $family): array
+    {
+        return JobdomainPresetLink::where('kind', $kind)->where('family_key', $family)->where('jobdomain_key', '!=', $jd->key)
+            ->whereNull('pinned_version')->pluck('jobdomain_key')->unique()->values()->all();
+    }
+
+    public static function publish(Jobdomain $jd, string $kind, int $presetId, ?int $by, ?string $mode = null): array
     {
         $preset = PresetService::find($kind, $presetId);
-        DB::transaction(function () use ($jd, $kind, $preset, $by) {
+        $followers = self::followersElsewhere($jd, $kind, $preset->family_key);
+        if ($followers && ! in_array($mode, ['shared', 'variant'], true)) {
+            abort(response()->json(['message' => 'This preset is followed by other domains.', 'code' => 'shared_preset', 'shared_with' => $followers], 409));
+        }
+        DB::transaction(function () use ($jd, $kind, &$preset, $by, $mode, $followers) {
+            if ($followers && $mode === 'variant') {
+                $family = self::ownFamily($jd, $kind);
+                for ($i = 2; PresetService::familyVersions($kind, $family)->isNotEmpty() || $family === $preset->family_key; $i++) {
+                    $family = substr(self::ownFamily($jd, $kind), 0, 74).'_'.$i;
+                }
+                $preset->forceFill(['family_key' => $family, 'version' => 1, 'key' => substr($family.'_v1', 0, 100)])->save();
+            }
             PresetService::publish($preset, $by);
+            if ($followers) {
+                app(AuditLogger::class)->logPlatform('presets.shared_publication', 'preset', (string) $preset->id,
+                    ['actorId' => $by, 'metadata' => ['jobdomain' => $jd->key, 'kind' => $kind, 'mode' => $mode, 'followers' => $mode === 'shared' ? $followers : []]]);
+            }
             $links = JobdomainPresetLink::where('jobdomain_key', $jd->key)->orderBy('sort_order')->get()
                 ->reject(fn ($l) => $l->kind === $kind && $l->market_key === null)
                 ->map(fn ($l) => ['kind' => $l->kind, 'family_key' => $l->family_key, 'market_key' => $l->market_key, 'pinned_version' => $l->pinned_version])->values()->all();

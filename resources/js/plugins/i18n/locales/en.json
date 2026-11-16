@@ -10390,7 +10390,12 @@
       "legal_representative": "Asked to the legal representative"
     },
     "useShared": "Use a shared model",
-    "useSharedApply": "Associate"
+    "useSharedApply": "Associate",
+    "sharedPublishTitle": "Shared model",
+    "sharedPublishText": "This model is also followed by: {list}. Publishing will change it for those domains. You can instead make a variant for this domain only, with no effect on the others.",
+    "publishVariant": "Create a variant for this domain",
+    "publishShared": "Publish for all",
+    "cancel": "Cancel"
   },
   "workingTime": {
     "section": {
@@ -10471,5 +10476,66 @@
     "save": "Save",
     "saved": "Working time organisation saved.",
     "error": "Could not save."
+  },
+  "moduleSetup": {
+    "title": "Module configuration",
+    "intro": "Three steps: who can use the module, its settings, then confirmation. Nothing is applied without your approval.",
+    "legacyHint": "Module activated before the assistant: it runs with its current configuration. You can review it here; nothing changes without your confirmation.",
+    "status": {
+      "available": "Available",
+      "to_configure": "To configure",
+      "in_progress": "Configuration in progress",
+      "ready": "Ready",
+      "suspended": "Suspended",
+      "legacy": "Historical configuration"
+    },
+    "steps": {
+      "access": "Access",
+      "accessHint": "Who can do what",
+      "working_time": "Working time",
+      "working_timeHint": "Framework, rhythm, rest, hours",
+      "confirm": "Confirmation",
+      "confirmHint": "Review and finish"
+    },
+    "groups": {
+      "collective": "Access to the team or the company",
+      "own": "Access to one's own data or direct team",
+      "sensitive": "Sensitive rights"
+    },
+    "sensitiveHint": "Pay, contracts and personal data: grant only to roles that truly need them. Management roles only.",
+    "applySuggestion": "Apply the \"{name}\" proposal",
+    "noSuggestion": "No proposal available for your business: choose yourself.",
+    "advanced": "Advanced mode",
+    "ownerNote": "{list}: full access at all times (not editable here).",
+    "partial": "partial",
+    "permissionCount": "{n} technical right(s)",
+    "undo": "Undo my changes",
+    "accessNeedsRoles": "Only a user allowed to manage roles can grant these accesses. You can review and complete the settings.",
+    "preview": "See the changes",
+    "keepAccess": "Keep current access",
+    "noChange": "No change: current access is kept.",
+    "diff": "+{adds} right(s), −{removes} right(s)",
+    "apply": "Apply",
+    "accessSaved": "Access saved.",
+    "stale": "Access changed meanwhile: the page was reloaded.",
+    "blocked": {
+      "operational_role": "management capability not allowed on an operational role",
+      "beyond_your_rights": "you cannot grant rights you do not hold",
+      "owner_role": "owner role cannot be edited"
+    },
+    "stepDone": "These settings are fine",
+    "summaryAccess": "Granted access",
+    "summaryReady": "Prerequisites",
+    "dependencies": "Dependencies",
+    "inactive": "inactive",
+    "readiness": {
+      "access_decided": "Access has been decided",
+      "framework_confirmed": "The collective agreement framework is confirmed",
+      "weekly_reference": "A weekly reference duration applies"
+    },
+    "notReady": "The module cannot be declared ready yet: complete the flagged items.",
+    "confirm": "Confirm: the module is ready",
+    "isReady": "Module ready",
+    "readyToast": "The module is ready."
   }
 }

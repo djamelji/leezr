@@ -46,6 +46,12 @@ class PlatformPresetController extends Controller
     public function publish(Request $request, string $kind, int $id): JsonResponse
     {
         $preset = PresetService::find($kind, $id);
+        // ADR-803 — a family followed by domains (unpinned links) changes for them : explicit `mode=shared`
+        // only ; otherwise publish from the domain page (variant possible there).
+        $followers = \App\Core\Presets\JobdomainPresetLink::where('kind', $kind)->where('family_key', $preset->family_key)->whereNull('pinned_version')->pluck('jobdomain_key')->unique()->values()->all();
+        if ($followers && $request->input('mode') !== 'shared') {
+            return response()->json(['message' => 'This preset is followed by domains.', 'code' => 'shared_preset', 'shared_with' => $followers], 409);
+        }
         PresetService::publish($preset, $request->user()?->id);
 
         return response()->json($preset->fresh());

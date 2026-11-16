@@ -94,6 +94,7 @@ class WorkforceModule implements ModuleDefinition
                     // paramètres ; + timesheet_view/planning_view pour la visibilité temps/planning.
                     'permissions' => ['workforce.view', 'workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin', 'workforce.import', 'workforce.export', 'workforce.timesheet_view', 'workforce.planning_view'],
                     'is_admin' => true,
+                    'sensitive' => true, // ADR-803 : rémunération et données sensibles — présenté à part
                 ],
                 [
                     'key' => 'workforce.manager',
@@ -124,6 +125,7 @@ class WorkforceModule implements ModuleDefinition
                     'key' => 'workforce.timesheet_employee',
                     'label' => 'Timesheet (Employee)',
                     'hint' => 'View and submit own timesheets.',
+                    'scope' => 'own', // ADR-803 : ses propres données
                     'permissions' => ['workforce.timesheet_view', 'workforce.timesheet_submit'],
                 ],
                 [
@@ -137,6 +139,7 @@ class WorkforceModule implements ModuleDefinition
                 [
                     'key' => 'workforce.timesheet_team_approver',
                     'label' => 'Timesheet Team Approver',
+                    'scope' => 'team', // ADR-803 : ses rapports directs seulement
                     'hint' => 'Approve/reject timesheets of direct reports only (team perimeter).',
                     'permissions' => ['workforce.timesheet_view', 'workforce.timesheet_approve_team'],
                 ],
@@ -144,6 +147,11 @@ class WorkforceModule implements ModuleDefinition
             scope: 'company',
             type: 'addon',
             // ADR-794 (L4) — contributions PROPOSÉES (jamais imposées) : définitions canoniques existantes.
+            // ADR-803 — module pilote de la configuration guidée (Accès → Temps de travail → Confirmation).
+            setup: [
+                'steps' => ['access', 'working_time'],
+                'readiness' => \App\Modules\Workforce\Settings\WorkforceSetupReadiness::class,
+            ],
             contributions: [
                 'version' => 1,
                 'fields' => [['ref' => 'hire_date'], ['ref' => 'contract_type'], ['ref' => 'iban']],

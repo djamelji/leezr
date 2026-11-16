@@ -23,6 +23,7 @@ class ModuleCatalogReadModel
     public static function forCompany(Company $company): array
     {
         $companyModuleKeys = array_keys(ModuleRegistry::forScope('company'));
+        $setupSvc = new \App\Core\Modules\Setup\ModuleSetupService($company); // ADR-803
 
         $platformModules = PlatformModule::whereIn('key', $companyModuleKeys)
             ->orderBy('sort_order')
@@ -58,7 +59,7 @@ class ModuleCatalogReadModel
         return $platformModules
             ->sortBy(fn (PlatformModule $pm) => $pm->sort_order_override ?? $pm->sort_order)
             ->values()
-            ->map(function (PlatformModule $pm) use ($company, $companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan, $dependentsMap, $addonSubs) {
+            ->map(function (PlatformModule $pm) use ($company, $companyModules, $activationReasons, $entitlements, $jobdomain, $companyPlan, $dependentsMap, $addonSubs, $setupSvc) {
                 $cm = $companyModules->get($pm->key);
                 $capabilities = ModuleRegistry::capabilities($pm->key);
                 $manifest = ModuleRegistry::definitions()[$pm->key] ?? null;
@@ -150,6 +151,9 @@ class ModuleCatalogReadModel
                     'is_subscribed' => $addonSubs->has($pm->key),
                     'contracted_amount_cents' => $addonSubs->get($pm->key)?->amount_cents,
                     'subscribed_interval' => $addonSubs->get($pm->key)?->interval,
+
+                    // ADR-803 — guided-configuration state (null = module without setup contract, historical path).
+                    'setup_status' => $setupSvc->status($pm->key),
                 ];
             })
             ->filter()

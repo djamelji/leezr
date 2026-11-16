@@ -81,7 +81,7 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
 
   // Fonctions encore propres aux listes historiques : elles doivent rester atteignables.
   await visit(page, '/company/workforce/employees')
-  await expect(page.locator('[data-test="emp-add"]').first(), 'liste salariés : création').toBeVisible()
+  await expect(page.locator('[data-test="people-add"]').first(), 'Équipe : création (ADR-802)').toBeVisible()
   if (await page.locator('[data-test="emp-more"]').count()) await page.locator('[data-test="emp-more"]').first().click()
   for (const testId of ['emp-import', 'emp-export'])
     await expect(page.locator(`[data-test="${testId}"]`).first(), `liste salariés : action ${testId}`).toBeVisible({ timeout: 10000 })

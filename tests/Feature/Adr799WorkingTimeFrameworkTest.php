@@ -250,8 +250,15 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
         $this->assertSame(['messagerie'], JobdomainPresetWorkspace::state($logi)['rbac']['shared_with']);
         $next = JobdomainPresetWorkspace::draft($logi, 'rbac', null);
         $this->assertSame(2, $next['version'], 'nouvelle version, l’ancienne reste en historique');
-        JobdomainPresetWorkspace::publish($logi, 'rbac', $next['id'], null);
-        $this->assertSame(2, collect(\App\Core\Presets\PresetService::recommendationsFor('messagerie'))->first()['effective_version'], 'le domaine partageant suit la version publiée');
+        // ADR-803 : plus de modification silencieuse d'un domaine qui suit la famille — un choix explicite est exigé.
+        try {
+            JobdomainPresetWorkspace::publish($logi, 'rbac', $next['id'], null);
+            $this->fail('a followed family must not be published without an explicit mode');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException|\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            $this->assertSame(1, collect(\App\Core\Presets\PresetService::recommendationsFor('messagerie'))->first()['effective_version'], 'rien n’a changé pour le domaine partageant');
+        }
+        JobdomainPresetWorkspace::publish($logi, 'rbac', $next['id'], null, 'shared');
+        $this->assertSame(2, collect(\App\Core\Presets\PresetService::recommendationsFor('messagerie'))->first()['effective_version'], 'publication partagée explicite : le domaine partageant suit');
         $this->assertCount(2, JobdomainPresetWorkspace::state($logi)['rbac']['history']);
         $this->assertSame(0, PresetApplication::count());
     }

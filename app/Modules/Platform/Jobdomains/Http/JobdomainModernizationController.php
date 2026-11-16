@@ -105,6 +105,7 @@ class JobdomainModernizationController extends Controller
     {
         abort_unless(in_array($kind, \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::KINDS, true), 404);
 
-        return response()->json(\App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::publish(Jobdomain::findOrFail($id), $kind, $presetId, $request->user()?->id));
+        return response()->json(\App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::publish(Jobdomain::findOrFail($id), $kind, $presetId, $request->user()?->id,
+            $request->validate(['mode' => 'nullable|in:shared,variant'])['mode'] ?? null)); // ADR-803
     }
 }

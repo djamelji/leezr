@@ -45,16 +45,17 @@ test('dialogue de création plein écran mobile + clavier (actions atteignables)
   await loginCompany(page, 'owner@leezr.test')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
-  await page.locator('[data-test="emp-add"]').waitFor({ state: 'visible', timeout: 15000 })
-  await page.locator('[data-test="emp-add"]').click()
-  await expect(page.locator('[data-test="emp-first-name"]')).toBeVisible({ timeout: 8000 })
+  // ADR-802 : la création passe par le tiroir unique d'Équipe (« Ajouter »).
+  await page.locator('[data-test="people-add"]').waitFor({ state: 'visible', timeout: 15000 })
+  await page.locator('[data-test="people-add"]').click()
+  await expect(page.locator('[data-test="person-add-first-name"]')).toBeVisible({ timeout: 8000 })
   // Action de validation atteignable (bas de l'écran), pas masquée.
-  await expect(page.locator('[data-test="emp-submit"]')).toBeVisible()
-  // Clavier : on remplit via le clavier et on ferme avec le bouton close.
-  await page.locator('[data-test="emp-first-name"] input').fill('Test')
-  await expect(page.locator('[data-test="emp-first-name"] input')).toHaveValue('Test')
-  await page.locator('[data-test="aad-close"]').click()
-  await expect(page.locator('[data-test="emp-first-name"]')).toHaveCount(0)
+  await expect(page.locator('[data-test="person-add-submit"]')).toBeVisible()
+  await page.locator('[data-test="person-add-first-name"] input').fill('Test')
+  await expect(page.locator('[data-test="person-add-first-name"] input')).toHaveValue('Test')
+  // Tiroir temporaire : fermeture par le voile (Escape n'est pas géré par VNavigationDrawer).
+  await page.locator('.v-navigation-drawer__scrim').first().click({ force: true })
+  await expect(page.locator('[data-test="person-add-drawer"].v-navigation-drawer--active')).toHaveCount(0, { timeout: 8000 })
 })
 
 test('filtres en bottom-sheet mobile + valeurs préservées au changement de largeur', async ({ page }) => {

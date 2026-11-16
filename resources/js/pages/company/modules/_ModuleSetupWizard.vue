@@ -1,0 +1,289 @@
+<script setup>
+// ADR-803 — assistant commun de configuration d'un module : Accès → Réglages du module → Confirmation.
+// Toutes les règles sont serveur (`/modules/{key}/setup`) : aperçu obligatoire avant d'appliquer les accès,
+// empreinte de concurrence, révision pour la confirmation. Les réglages réutilisent les composants
+// spécialisés du module (registre moduleSetupSteps). Sous-composant — pas de definePage.
+import { defineAsyncComponent } from 'vue'
+import AppStepper from '@core/components/AppStepper.vue'
+import ModuleCapabilityAccess from '@/components/modules/ModuleCapabilityAccess.vue'
+import { resolveSetupStep } from '@/core/registries/moduleSetupSteps'
+import { $api } from '@/utils/api'
+import { useAppToast } from '@/composables/useAppToast'
+
+const props = defineProps({ moduleKey: { type: String, required: true } })
+const emit = defineEmits(['changed'])
+const { t } = useI18n()
+const { toast } = useAppToast()
+
+const data = ref(null)
+const step = ref(0)
+const changes = ref([])
+const preview = ref(null)
+const busy = ref(false)
+const accessRef = ref(null)
+
+const settingSteps = computed(() => (data.value?.steps || []).filter(s => s !== 'access'))
+const stepComponents = computed(() => Object.fromEntries(settingSteps.value.map(s => {
+  const loader = resolveSetupStep(s)
+
+  return [s, loader ? defineAsyncComponent(loader) : null]
+})))
+const items = computed(() => [
+  { title: t('moduleSetup.steps.access'), subtitle: t('moduleSetup.steps.accessHint') },
+  ...settingSteps.value.map(s => ({ title: t(`moduleSetup.steps.${s}`), subtitle: t(`moduleSetup.steps.${s}Hint`) })),
+  { title: t('moduleSetup.steps.confirm'), subtitle: t('moduleSetup.steps.confirmHint') },
+])
+const lastIndex = computed(() => items.value.length - 1)
+const done = s => (data.value?.completed_steps || []).includes(s)
+
+const load = async () => { data.value = await $api(`/modules/${props.moduleKey}/setup`) }
+onMounted(async () => {
+  await load()
+  // Reprise : première étape non terminée.
+  const order = ['access', ...settingSteps.value]
+  const next = order.findIndex(s => !done(s))
+  step.value = next === -1 ? lastIndex.value : next
+})
+
+const err = e => e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('common.error')
+
+// ── Étape Accès ─────────────────────────────────────────────
+const askPreview = async () => {
+  busy.value = true
+  try { preview.value = await $api(`/modules/${props.moduleKey}/setup/access/preview`, { method: 'POST', body: { changes: changes.value } }) }
+  catch (e) { toast(err(e), 'error') }
+  finally { busy.value = false }
+}
+const applyAccess = async () => {
+  busy.value = true
+  try {
+    data.value = await $api(`/modules/${props.moduleKey}/setup/access`, { method: 'PUT', body: { changes: changes.value, fingerprint: preview.value.fingerprint } })
+    preview.value = null
+    changes.value = []
+    accessRef.value?.reset()
+    toast(t('moduleSetup.accessSaved'), 'success')
+    step.value = 1
+    emit('changed')
+  }
+  catch (e) {
+    toast(e?.data?.code === 'stale_preview' ? t('moduleSetup.stale') : err(e), 'error')
+    if (e?.data?.code === 'stale_preview') { preview.value = null; await load() }
+  }
+  finally { busy.value = false }
+}
+
+// ── Étapes de réglage ───────────────────────────────────────
+const markStep = async s => {
+  try { data.value = await $api(`/modules/${props.moduleKey}/setup/steps`, { method: 'POST', body: { step: s } }); step.value += 1 }
+  catch (e) { toast(err(e), 'error') }
+}
+
+// ── Confirmation ────────────────────────────────────────────
+const holders = c => (data.value?.roles || []).filter(r => r.holds?.[c.key] === 'full').map(r => r.name)
+const missing = computed(() => (data.value?.readiness || []).filter(r => !r.ok))
+const confirm = async () => {
+  busy.value = true
+  try {
+    data.value = await $api(`/modules/${props.moduleKey}/setup/confirm`, { method: 'POST', body: { revision: data.value.revision } })
+    toast(t('moduleSetup.readyToast'), 'success')
+    emit('changed')
+  }
+  catch (e) {
+    if (e?.data?.code === 'stale_revision') { toast(t('moduleSetup.stale'), 'warning'); await load() }
+    else toast(err(e), 'error')
+  }
+  finally { busy.value = false }
+}
+const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure: 'warning', legacy: 'secondary', suspended: 'secondary' }[s] || 'secondary')
+</script>
+
+<template>
+  <VCard
+    v-if="data"
+    class="mb-4"
+    data-test="module-setup"
+  >
+    <VCardItem>
+      <VCardTitle class="d-flex align-center flex-wrap gap-2">
+        {{ t('moduleSetup.title') }}
+        <VChip
+          size="small"
+          :color="statusColor(data.status)"
+          data-test="module-setup-status"
+        >
+          {{ t(`moduleSetup.status.${data.status}`) }}
+        </VChip>
+      </VCardTitle>
+      <VCardSubtitle class="text-wrap">
+        {{ data.status === 'legacy' ? t('moduleSetup.legacyHint') : t('moduleSetup.intro') }}
+      </VCardSubtitle>
+    </VCardItem>
+    <VCardText>
+      <AppStepper
+        v-model:current-step="step"
+        :items="items"
+        class="mb-6"
+      />
+
+      <!-- 1. Accès -->
+      <div
+        v-if="step === 0"
+        data-test="module-setup-access"
+      >
+        <VAlert
+          v-if="!data.can.configure_access"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ t('moduleSetup.accessNeedsRoles') }}
+        </VAlert>
+        <ModuleCapabilityAccess
+          ref="accessRef"
+          :capabilities="data.capabilities"
+          :roles="data.roles"
+          :suggestion="data.suggestion"
+          :readonly="!data.can.configure_access"
+          @update:changes="v => { changes = v; preview = null }"
+        />
+        <div
+          v-if="data.can.configure_access"
+          class="d-flex flex-wrap gap-2 mt-2"
+        >
+          <VBtn
+            color="primary"
+            :loading="busy"
+            data-test="module-setup-preview"
+            @click="askPreview"
+          >
+            {{ changes.length ? t('moduleSetup.preview') : t('moduleSetup.keepAccess') }}
+          </VBtn>
+        </div>
+        <VCard
+          v-if="preview"
+          variant="tonal"
+          class="mt-4"
+          data-test="module-setup-preview-result"
+        >
+          <VCardText>
+            <div
+              v-if="!preview.plan.length"
+              class="text-body-2"
+            >
+              {{ t('moduleSetup.noChange') }}
+            </div>
+            <div
+              v-for="p in preview.plan"
+              :key="p.role_id"
+              class="mb-2"
+            >
+              <strong>{{ p.role }}</strong> —
+              {{ t('moduleSetup.diff', { adds: p.adds, removes: p.removes }) }}
+              <span
+                v-if="p.blocked"
+                class="text-error"
+              > · {{ t(`moduleSetup.blocked.${p.blocked}`) }}</span>
+            </div>
+            <VBtn
+              class="mt-2"
+              color="primary"
+              :disabled="preview.blocked"
+              :loading="busy"
+              data-test="module-setup-apply"
+              @click="applyAccess"
+            >
+              {{ t('moduleSetup.apply') }}
+            </VBtn>
+          </VCardText>
+        </VCard>
+      </div>
+
+      <!-- 2..n-1. Réglages spécialisés du module -->
+      <template
+        v-for="(s, i) in settingSteps"
+        :key="s"
+      >
+        <div
+          v-if="step === i + 1"
+          :data-test="`module-setup-step-${s}`"
+        >
+          <component
+            :is="stepComponents[s]"
+            v-if="stepComponents[s]"
+            @saved="markStep(s)"
+          />
+          <div class="d-flex gap-2 mt-4">
+            <VBtn
+              variant="tonal"
+              :data-test="`module-setup-step-${s}-done`"
+              @click="markStep(s)"
+            >
+              {{ t('moduleSetup.stepDone') }}
+            </VBtn>
+          </div>
+        </div>
+      </template>
+
+      <!-- Confirmation -->
+      <div
+        v-if="step === lastIndex"
+        data-test="module-setup-confirm"
+      >
+        <h6 class="text-h6 mb-2">
+          {{ t('moduleSetup.summaryAccess') }}
+        </h6>
+        <div
+          v-for="c in data.capabilities.filter(x => holders(x).length)"
+          :key="c.key"
+          class="text-body-2 mb-1"
+        >
+          {{ $te(`permissionCatalog.bundles.${c.key}.label`) ? $t(`permissionCatalog.bundles.${c.key}.label`) : c.label }} :
+          {{ holders(c).join(', ') }}
+        </div>
+        <div
+          v-if="data.module.requires.length"
+          class="text-body-2 mt-3"
+        >
+          {{ t('moduleSetup.dependencies') }} :
+          {{ data.module.requires.map(r => r.key + (r.active ? '' : ` (${t('moduleSetup.inactive')})`)).join(', ') }}
+        </div>
+        <h6 class="text-h6 mt-4 mb-2">
+          {{ t('moduleSetup.summaryReady') }}
+        </h6>
+        <div
+          v-for="r in data.readiness"
+          :key="r.key"
+          class="d-flex align-center gap-2 text-body-2 mb-1"
+          :data-test="`readiness-${r.key}`"
+        >
+          <VIcon
+            :icon="r.ok ? 'tabler-circle-check' : 'tabler-alert-circle'"
+            :color="r.ok ? 'success' : 'warning'"
+            size="18"
+          />
+          {{ t(`moduleSetup.readiness.${r.key}`) }}
+        </div>
+        <VAlert
+          v-if="missing.length"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mt-3"
+        >
+          {{ t('moduleSetup.notReady') }}
+        </VAlert>
+        <VBtn
+          class="mt-4"
+          color="primary"
+          :disabled="!!missing.length || data.status === 'ready'"
+          :loading="busy"
+          data-test="module-setup-confirm-btn"
+          @click="confirm"
+        >
+          {{ data.status === 'ready' ? t('moduleSetup.isReady') : t('moduleSetup.confirm') }}
+        </VBtn>
+      </div>
+    </VCardText>
+  </VCard>
+</template>

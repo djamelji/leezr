@@ -10390,7 +10390,12 @@
       "legal_representative": "Demandé au représentant légal"
     },
     "useShared": "Utiliser un modèle partagé",
-    "useSharedApply": "Associer"
+    "useSharedApply": "Associer",
+    "sharedPublishTitle": "Modèle partagé",
+    "sharedPublishText": "Ce modèle est aussi suivi par : {list}. Publier le modifiera pour ces domaines. Vous pouvez aussi en faire une variante propre à ce domaine, sans effet sur les autres.",
+    "publishVariant": "Créer une variante pour ce domaine",
+    "publishShared": "Publier pour tous",
+    "cancel": "Annuler"
   },
   "workingTime": {
     "section": {
@@ -10471,5 +10476,66 @@
     "save": "Enregistrer",
     "saved": "Organisation du temps de travail enregistrée.",
     "error": "Enregistrement impossible."
+  },
+  "moduleSetup": {
+    "title": "Configuration du module",
+    "intro": "Trois étapes : qui peut utiliser le module, ses réglages, puis la confirmation. Rien n'est appliqué sans votre validation.",
+    "legacyHint": "Module activé avant l'assistant : il fonctionne avec sa configuration actuelle. Vous pouvez la revoir ici ; rien ne change sans votre confirmation.",
+    "status": {
+      "available": "Disponible",
+      "to_configure": "À configurer",
+      "in_progress": "Configuration en cours",
+      "ready": "Prêt",
+      "suspended": "Suspendu",
+      "legacy": "Configuration historique"
+    },
+    "steps": {
+      "access": "Accès",
+      "accessHint": "Qui peut faire quoi",
+      "working_time": "Temps de travail",
+      "working_timeHint": "Cadre, rythme, repos, horaires",
+      "confirm": "Confirmation",
+      "confirmHint": "Vérifier et terminer"
+    },
+    "groups": {
+      "collective": "Accès à l'équipe ou à l'entreprise",
+      "own": "Accès à ses propres données ou à son équipe directe",
+      "sensitive": "Droits sensibles"
+    },
+    "sensitiveHint": "Rémunération, contrats et données personnelles : à n'attribuer qu'aux rôles qui en ont réellement besoin. Réservé aux rôles de gestion.",
+    "applySuggestion": "Appliquer la proposition « {name} »",
+    "noSuggestion": "Aucune proposition disponible pour votre activité : choisissez vous-même.",
+    "advanced": "Mode avancé",
+    "ownerNote": "{list} : accès complet en permanence (non modifiable ici).",
+    "partial": "partiel",
+    "permissionCount": "{n} droit(s) technique(s)",
+    "undo": "Annuler mes changements",
+    "accessNeedsRoles": "Seul un utilisateur autorisé à gérer les rôles peut attribuer ces accès. Vous pouvez consulter et compléter les réglages.",
+    "preview": "Voir les changements",
+    "keepAccess": "Conserver les accès actuels",
+    "noChange": "Aucun changement : les accès actuels sont conservés.",
+    "diff": "+{adds} droit(s), −{removes} droit(s)",
+    "apply": "Appliquer",
+    "accessSaved": "Accès enregistrés.",
+    "stale": "Les accès ont changé entre-temps : la page a été rechargée.",
+    "blocked": {
+      "operational_role": "capacité de gestion impossible sur un rôle opérationnel",
+      "beyond_your_rights": "vous ne pouvez pas attribuer des droits que vous n'avez pas",
+      "owner_role": "rôle propriétaire non modifiable"
+    },
+    "stepDone": "Ces réglages me conviennent",
+    "summaryAccess": "Accès attribués",
+    "summaryReady": "Prérequis",
+    "dependencies": "Dépendances",
+    "inactive": "inactif",
+    "readiness": {
+      "access_decided": "Les accès ont été décidés",
+      "framework_confirmed": "Le cadre conventionnel est confirmé",
+      "weekly_reference": "Une durée hebdomadaire de référence s'applique"
+    },
+    "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
+    "confirm": "Confirmer : le module est prêt",
+    "isReady": "Module prêt",
+    "readyToast": "Le module est prêt."
   }
 }

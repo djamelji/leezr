@@ -184,6 +184,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Core\Events\ModuleEnabled::class,
             \App\Modules\Workforce\Listeners\SeedLeaveTypesOnModuleEnabled::class,
         );
+        // ADR-803 — nouvelle activation d'un module configurable → état « à configurer » (aucun droit attribué).
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Core\Events\ModuleEnabled::class,
+            \App\Core\Modules\Setup\CreateSetupOnModuleEnabled::class,
+        );
         \Illuminate\Support\Facades\Event::listen(
             \App\Core\Events\ModuleDisabled::class,
             \App\Core\Billing\Listeners\AddonCreditListener::class,

@@ -74,10 +74,11 @@ test('drawer mobile : ouverture, fermeture après navigation, Escape + focus', a
   // Réouvre puis navigue : le drawer se ferme après navigation.
   await hamburger.click()
   await page.waitForTimeout(400)
-  await page.locator('.layout-vertical-nav a[href*="/company/workforce/employees"]').first().click()
+  // ADR-766/802 : l'entrée de menu des personnes est Équipe (/company/people).
+  await page.locator('.layout-vertical-nav a[href*="/company/people"]').first().click()
   await page.waitForTimeout(800)
   await expect(page.locator('.layout-overlay.visible')).toHaveCount(0)
-  await expect(page).toHaveURL(/employees/)
+  await expect(page).toHaveURL(/people/)
 })
 
 test('non-Workforce (Membres) : pas de débordement mobile', async ({ page }) => {

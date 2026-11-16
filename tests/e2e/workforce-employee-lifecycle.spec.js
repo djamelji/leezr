@@ -1,6 +1,6 @@
 // @ts-check
 import { expect, test } from '@playwright/test'
-import { loginCompany, clickAndExpectApi } from './helpers'
+import { loginCompany, clickAndExpectApi, createEmployeeViaTeam } from './helpers'
 
 // Full HR lifecycle driven by a manager (owner@leezr.test) on the isolated local base:
 //   create employee → add contract → schedule a shift in planning.
@@ -31,16 +31,8 @@ test('manager: create employee → add contract → schedule shift (persisted)',
   await loginCompany(page, 'owner@leezr.test')
 
   // ─── Step 1: create the employee ──────────────────────────────────────────
-  await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
-  await page.waitForTimeout(1200)
-  await page.locator('[data-test="emp-add"]').click()
-  await expect(page.getByText('Ajouter un employé').first()).toBeVisible({ timeout: 10000 })
-  await page.locator('[data-test="emp-first-name"] input').fill(firstName)
-  await page.locator('[data-test="emp-last-name"] input').fill(lastName)
-  await setPickerDate(page, 'emp-hire-date', '2026-01-06')
-
-  const created = await clickAndExpectApi(page, { urlIncludes: '/workforce/employees', method: 'POST' },
-    () => page.locator('[data-test="emp-submit"]').click())
+  // ADR-802 : tiroir unique d'Équipe (date d'embauche par défaut : aujourd'hui).
+  const created = await createEmployeeViaTeam(page, { firstName, lastName })
   expect(created.status()).toBe(201)
   const employee = await created.json()
   expect(employee.id, 'created employee id').toBeTruthy()

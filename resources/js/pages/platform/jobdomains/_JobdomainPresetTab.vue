@@ -43,14 +43,21 @@ const edit = async () => {
   catch (e) { toast(e?.data?.message || t('jobdomainProfile.error'), 'error') }
   finally { busy.value = false }
 }
-const publish = async () => {
+// ADR-803 — un preset SUIVI par d'autres domaines n'est jamais modifié pour eux en silence : le serveur
+// refuse (409 `shared_preset`) et l'administrateur choisit explicitement.
+const sharedWith = ref(null)
+const publish = async (mode = null) => {
   busy.value = true
   try {
-    await $platformApi(`/jobdomains/${props.jobdomainId}/presets/${props.kind}/${props.state.draft.id}/publish`, { method: 'POST' })
+    await $platformApi(`/jobdomains/${props.jobdomainId}/presets/${props.kind}/${props.state.draft.id}/publish`, { method: 'POST', body: mode ? { mode } : {} })
+    sharedWith.value = null
     toast(t('jobdomainTabs.publishedOk'), 'success')
     emit('changed')
   }
-  catch (e) { toast(e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('jobdomainProfile.error'), 'error') }
+  catch (e) {
+    if (e?.data?.code === 'shared_preset') sharedWith.value = e.data.shared_with
+    else toast(e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('jobdomainProfile.error'), 'error')
+  }
   finally { busy.value = false }
 }
 const DAY = d => t(`presetEditor.day.${d}`)
@@ -104,7 +111,7 @@ onMounted(async () => {
         color="primary"
         :loading="busy"
         :data-test="`jd-publish-${kind}`"
-        @click="publish"
+        @click="publish()"
       >
         {{ t('jobdomainTabs.publish') }}
       </VBtn>
@@ -227,6 +234,43 @@ onMounted(async () => {
       {{ t('jobdomainTabs.history', { n: state.history.length }) }}
     </div>
 
+    <VDialog
+      :model-value="!!sharedWith"
+      max-width="520"
+      @update:model-value="v => { if (!v) sharedWith = null }"
+    >
+      <VCard
+        :title="t('jobdomainTabs.sharedPublishTitle')"
+        data-test="jd-shared-publish"
+      >
+        <VCardText>{{ t('jobdomainTabs.sharedPublishText', { list: (sharedWith || []).join(', ') }) }}</VCardText>
+        <VCardActions class="flex-wrap gap-2">
+          <VBtn
+            variant="text"
+            @click="sharedWith = null"
+          >
+            {{ t('jobdomainTabs.cancel') }}
+          </VBtn>
+          <VSpacer />
+          <VBtn
+            variant="tonal"
+            :loading="busy"
+            data-test="jd-publish-variant"
+            @click="publish('variant')"
+          >
+            {{ t('jobdomainTabs.publishVariant') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="busy"
+            data-test="jd-publish-shared"
+            @click="publish('shared')"
+          >
+            {{ t('jobdomainTabs.publishShared') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
     <PresetEditorDialog
       v-model:is-dialog-visible="editor"
       :preset="editing"

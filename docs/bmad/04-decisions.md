@@ -28667,3 +28667,25 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - 0 endpoint, service ou moteur ajouté ; 0 route retirée (98) ; 5 routes redirigées.
   - 1 composant supprimé sur preuve (`AddMemberDrawer`) ; aucune donnée modifiée (instantané de 11 tables identique).
   - Des E2E historiques ciblent encore les anciennes listes, à mettre à jour.
+
+## ADR-803 — Assistant commun de configuration des modules (pilote Workforce)
+
+- **Date** : 2026-11-16, DEV uniquement, base `6e4368f3`. Rapport : `docs/bmad/ADR-803-MODULE-SETUP-ASSISTANT.md`.
+- **Prérequis** :
+  - Les E2E touchés par ADR-802 sont actualisés (tiroir unique d'Équipe) ; les specs en lecture seule sont rejoués.
+  - Un preset suivi par d'autres domaines n'est plus jamais publié silencieusement : 409 `shared_preset` côté serveur (fiche JobDomain **et** catalogue), puis choix explicite `shared` ou `variant`. Les versions épinglées ne sont pas concernées.
+- **Décisions** :
+  - Contrat optionnel `setup` dans le manifest : étapes et classe `ModuleReadiness`. Les capacités sont les bundles du module, seule source des permissions ; un bundle peut préciser `sensitive` et `scope` (`own` / `team`).
+  - `ModuleSetupService` orchestre l'existant : `syncPermissionsSafe`, `PresetService::recommendationsFor`, `ModuleGate`, `AuditLogger`.
+    - Aperçu obligatoire avec empreinte de concurrence ; changements explicites seulement.
+    - Pas d'auto-élévation ; sensible réservé aux rôles de gestion ; rôles de la société uniquement ; idempotent.
+    - Écrire les accès exige `roles.manage`, en plus de `modules.manage`.
+  - États :
+    - `to_configure`, `in_progress` et `ready` sont enregistrés dans la table additive `company_module_setups` ;
+    - `suspended` et `legacy` sont calculés : `legacy` désigne un module activé avant ADR-803, jamais bloqué.
+    - `ready` n'est accordé qu'après vérification serveur des prérequis.
+  - Interface : `ModuleCapabilityAccess.vue` (réutilisable) et `_ModuleSetupWizard.vue` sur la page module existante, avec le formulaire temps de travail d'ADR-799 réutilisé. Redirection vers l'assistant après une activation.
+- **Conséquences** :
+  - Pilote : Workforce ; les 24 autres modules Company gardent leur parcours.
+  - Aucun rôle existant modifié, aucune société réelle modifiée.
+  - L'éditeur de rôles historique n'a pas encore l'interdit d'auto-élévation (lot suivant).

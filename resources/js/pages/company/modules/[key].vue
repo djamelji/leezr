@@ -6,6 +6,7 @@ import { useAuthStore } from '@/core/stores/auth'
 import { useModuleStore } from '@/core/stores/module'
 import { useAppToast } from '@/composables/useAppToast'
 import { resolveSettingsPanel } from '@/core/registries/settingsPanelRegistry'
+import ModuleSetupWizard from './_ModuleSetupWizard.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -204,6 +205,13 @@ const displayStateChip = computed(() => {
       </VCard>
 
       <!-- Overview -->
+      <!-- ADR-803 : configuration guidée (modules déclarant un contrat `setup`) -->
+      <ModuleSetupWizard
+        v-if="mod.setup_status && mod.is_active"
+        :module-key="mod.key"
+        @changed="moduleStore.fetchModules?.()"
+      />
+
       <VCard class="mb-4">
         <VCardTitle>
           <VIcon
@@ -265,7 +273,7 @@ const displayStateChip = computed(() => {
 
       <!-- No configurable settings -->
       <VCard
-        v-if="!settingsPanels.length"
+        v-if="!settingsPanels.length && !mod.setup_status"
         class="mb-4"
       >
         <VCardText class="text-center pa-8 text-medium-emphasis">

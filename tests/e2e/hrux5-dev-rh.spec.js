@@ -1,7 +1,7 @@
 // @ts-check
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { loginCompany, apiRequest } from './helpers'
+import { loginCompany, apiRequest, createEmployeeViaTeam } from './helpers'
 
 /**
  * W-HR-UX-5 (P2/P6) — parcours RH sur le DEV RÉELLEMENT servi (dev.leezr.com), en VRAIE UI.
@@ -53,17 +53,8 @@ test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → c
   })
 
   await step(page, 'create-employee', async () => {
-    await page.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
-    await page.waitForTimeout(1200)
-    await page.locator('[data-test="emp-add"]').click()
-    await expect(page.getByText('Ajouter un employé').first()).toBeVisible({ timeout: 10000 })
-    await page.locator('[data-test="emp-first-name"] input').fill(firstName)
-    await page.locator('[data-test="emp-last-name"] input').fill(lastName)
-    await page.locator('.v-navigation-drawer input[type="email"], [role="dialog"] input[type="email"]').first().fill(email)
-    const [resp] = await Promise.all([
-      page.waitForResponse(r => r.url().includes('/workforce/employees') && r.request().method() === 'POST', { timeout: 20000 }),
-      page.locator('[data-test="emp-submit"]').click(),
-    ])
+    // ADR-802 : tiroir unique d'Équipe (l'ancien dialogue de /company/workforce/employees n'existe plus).
+    const resp = await createEmployeeViaTeam(page, { firstName, lastName, email })
     expect(resp.status()).toBe(201)
     employeeId = (await resp.json()).id
   })

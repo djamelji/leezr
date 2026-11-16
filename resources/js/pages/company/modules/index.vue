@@ -440,6 +440,9 @@ const doToggle = async (key, isCurrentlyEnabled) => {
     else {
       await moduleStore.enableModule(key)
       toast(t('companyModules.activatedSuccess', { module: label }), 'success')
+      // ADR-803 : un module configurable enchaîne sur son assistant (qui peut faire quoi, réglages, confirmation).
+      const enabled = moduleStore.modules.find(m => m.key === key)
+      if (enabled?.setup_status && enabled.setup_status !== 'legacy') router.push(`/company/modules/${key}`)
     }
   }
   catch (error) {
@@ -806,6 +809,28 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <h6 class="text-h6 mb-1">
                         {{ modName(mod) }}
                       </h6>
+
+                      <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
+
+                      <VChip
+
+                        v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
+
+                        size="small"
+
+                        class="mb-2"
+
+                        :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
+
+                        :to="`/company/modules/${mod.key}`"
+
+                        :data-test="`module-setup-chip-${mod.key}`"
+
+                      >
+
+                        {{ t(`moduleSetup.status.${mod.setup_status}`) }}
+
+                      </VChip>
                       <p class="text-body-2 text-medium-emphasis mb-3">
                         {{ modDesc(mod) || '—' }}
                       </p>
@@ -925,6 +950,28 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <h6 class="text-h6 mb-1">
                         {{ modName(mod) }}
                       </h6>
+
+                      <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
+
+                      <VChip
+
+                        v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
+
+                        size="small"
+
+                        class="mb-2"
+
+                        :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
+
+                        :to="`/company/modules/${mod.key}`"
+
+                        :data-test="`module-setup-chip-${mod.key}`"
+
+                      >
+
+                        {{ t(`moduleSetup.status.${mod.setup_status}`) }}
+
+                      </VChip>
                       <p class="text-body-2 text-medium-emphasis mb-3">
                         {{ modDesc(mod) || '—' }}
                       </p>

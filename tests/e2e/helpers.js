@@ -239,3 +239,25 @@ export function watchNetwork(page, { expectedRefusals = [] } = {}) {
     },
   }
 }
+
+// ADR-802/803 — créer un salarié SANS compte par le tiroir unique d'Équipe (remplace l'ancien bouton `emp-add`
+// de /company/workforce/employees, supprimé par ADR-802). Renvoie la réponse POST /workforce/employees.
+export async function createEmployeeViaTeam(page, { firstName, lastName, email = null }) {
+  await page.goto('/company/people', { waitUntil: 'domcontentloaded' })
+  await page.locator('[data-test="people-add"]').click()
+  await page.locator('[data-test="person-add-drawer"]').waitFor({ state: 'visible', timeout: 15000 })
+  await page.locator('[data-test="person-add-first-name"] input').fill(firstName)
+  await page.locator('[data-test="person-add-last-name"] input').fill(lastName)
+  const no = page.locator('[data-test="person-add-access-no"]')
+  if (await no.count()) await no.click()
+  if (email) {
+    await page.locator('[data-test="person-add-more"]').click()
+    await page.locator('[data-test="person-add-drawer"] input[type="email"]').first().fill(email)
+  }
+  const [resp] = await Promise.all([
+    page.waitForResponse(r => r.url().includes('/workforce/employees') && r.request().method() === 'POST', { timeout: 20000 }),
+    page.locator('[data-test="person-add-submit"]').click(),
+  ])
+
+  return resp
+}

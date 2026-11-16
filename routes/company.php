@@ -478,6 +478,17 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
     Route::get('/modules/{key}/settings', [CompanyModuleController::class, 'getSettings']);
     Route::put('/modules/{key}/settings', [CompanyModuleController::class, 'updateSettings'])
         ->middleware('company.access:use-permission,modules.manage');
+
+    // ADR-803 — configuration guidée d'un module (Accès → Réglages → Confirmation). modules.manage pour
+    // l'assistant ; écrire les ACCÈS exige EN PLUS roles.manage (gestion des modules ≠ gestion du RBAC).
+    $ms = \App\Modules\Core\Modules\Http\ModuleSetupController::class;
+    Route::middleware('company.access:use-permission,modules.manage')->group(function () use ($ms) {
+        Route::get('/modules/{key}/setup', [$ms, 'show']);
+        Route::post('/modules/{key}/setup/access/preview', [$ms, 'preview']);
+        Route::put('/modules/{key}/setup/access', [$ms, 'applyAccess'])->middleware('company.access:use-permission,roles.manage');
+        Route::post('/modules/{key}/setup/steps', [$ms, 'step']);
+        Route::post('/modules/{key}/setup/confirm', [$ms, 'confirm']);
+    });
     Route::get('/modules/quote', ModuleQuoteController::class);
     Route::get('/modules/{key}/deactivation-preview', ModuleDeactivationPreviewController::class);
 });

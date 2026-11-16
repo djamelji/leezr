@@ -48,5 +48,9 @@ final class ModuleManifest
         // ADR-794 (L4) — contributions déclarées (champs, documents, exigences PROPOSÉES), validées par
         // ModuleContributionSchema. Une contribution n'impose jamais rien : elle est proposée puis adoptée.
         public readonly array $contributions = [],
+        // ADR-803 — contrat OPTIONNEL de configuration guidée : ['steps' => ['access', ...], 'readiness' => Class].
+        // Les capacités affichées sont les `bundles` du module (source unique des permissions) ; un bundle peut
+        // préciser 'scope' => 'own' (ses propres données) et 'sensitive' => true. Sans contrat : parcours historique.
+        public readonly array $setup = [],
     ) {}
 }

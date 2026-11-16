@@ -16,7 +16,8 @@ test('annuaire refondu : en-tête, compteur, recherche, filtres repliables', asy
   await expect(page.locator('[data-test="emp-count"]')).toBeVisible({ timeout: 10000 })
 
   // Action primaire + overflow (export/import regroupés).
-  await expect(page.locator('[data-test="emp-add"]')).toBeVisible()
+  // ADR-802 : la création passe par « Ajouter » d'Équipe (vue Gestion RH = /company/people?tab=hr)
+  await expect(page.locator('[data-test="people-add"]')).toBeVisible()
   await expect(page.locator('[data-test="emp-more"]')).toBeVisible()
 
   // Filtres avancés (AppFilterPanel) repliés par défaut, révélés au clic (« Département » = filtres).
@@ -33,9 +34,9 @@ test('annuaire refondu : en-tête, compteur, recherche, filtres repliables', asy
   ])
   expect(resp, 'la recherche déclenche un appel serveur').not.toBeNull()
 
-  // Drawer de création s'ouvre.
-  await page.locator('[data-test="emp-add"]').click()
-  await expect(page.locator('[data-test="emp-first-name"]')).toBeVisible({ timeout: 8000 })
+  // Drawer de création s'ouvre — ADR-802 : tiroir unique d'Équipe.
+  await page.locator('[data-test="people-add"]').click()
+  await expect(page.locator('[data-test="person-add-first-name"]')).toBeVisible({ timeout: 8000 })
 
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
