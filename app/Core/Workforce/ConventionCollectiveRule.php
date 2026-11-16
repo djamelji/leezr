@@ -34,12 +34,14 @@ class ConventionCollectiveRule extends Model
         'override_mode',
         'source',
         'reference',
+        'verified_at', 'population', 'derogation', // ADR-799
     ];
 
     protected $casts = [
         'value' => 'array',
         'effective_from' => 'date',
         'effective_until' => 'date',
+        'verified_at' => 'datetime', 'population' => 'array', 'derogation' => 'array',
     ];
 
     // ── Relationships ──

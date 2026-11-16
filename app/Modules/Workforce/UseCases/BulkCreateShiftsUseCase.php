@@ -155,7 +155,7 @@ class BulkCreateShiftsUseCase
                         'end_at' => $endAt,
                         'timezone' => $timezone,
                         'status' => Shift::STATUS_DRAFT,
-                        'metadata' => ['night_work' => $ruleCheck['night_work']],
+                        'metadata' => array_filter(['night_work' => $ruleCheck['night_work'], 'rule_warnings' => $ruleCheck['warnings'] ?: null], fn ($v) => $v !== null),
                     ]);
 
                     // M1.b (ADR-724) — ce chemin applique TOUJOURS un modèle : matérialise ses activités

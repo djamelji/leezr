@@ -635,6 +635,10 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::put('config/work-time/{rule}', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'setWorkTime'])->middleware($perm('workforce.manage'));
     // W-G4B : premier jour de semaine (préférence Company explicite).
     Route::get('config/week-start', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'weekStart'])->middleware($perm('workforce.view'));
+    // ADR-799 — assistant « Temps de travail » : cadre confirmé par la société, rythme, repos, horaires, comportement
+    Route::get('working-time-setup', [\App\Modules\Workforce\Settings\Http\WorkingTimeSetupController::class, 'show'])->middleware($perm('workforce.view'));
+    Route::put('working-time-setup', [\App\Modules\Workforce\Settings\Http\WorkingTimeSetupController::class, 'save'])->middleware($perm('workforce.manage'));
+    Route::post('working-time-setup/convention', [\App\Modules\Workforce\Settings\Http\WorkingTimeSetupController::class, 'confirmConvention'])->middleware($perm('workforce.manage'));
     Route::put('config/week-start', [\App\Modules\Workforce\Employees\Http\WorkforceConfigController::class, 'setWeekStart'])->middleware($perm('workforce.manage'));
 
     Route::get('employees/summary', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'summary'])->middleware($perm('workforce.view'));

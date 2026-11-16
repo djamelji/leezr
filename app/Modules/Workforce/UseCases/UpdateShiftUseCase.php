@@ -115,7 +115,7 @@ class UpdateShiftUseCase
                 'timezone', 'notes', 'metadata',
             ])->toArray());
 
-            $shift->metadata = array_merge($shift->metadata ?? [], ['night_work' => $ruleCheck['night_work']]);
+            $shift->metadata = array_merge($shift->metadata ?? [], ['night_work' => $ruleCheck['night_work'], 'rule_warnings' => $ruleCheck['warnings'] ?: null]);
 
             $shift->save();
 

@@ -72,7 +72,15 @@ class JobdomainController extends Controller
             'sector' => ['nullable', 'string', 'max:100'],
             'terminology' => ['nullable', 'array', 'max:30'],
             'terminology.*' => ['nullable', 'string', 'max:60'],
+            // ADR-799 — cadre conventionnel recommandé : références aux conventions existantes, par marché
+            'convention_refs' => ['nullable', 'array', 'max:20'],
+            'convention_refs.*.market_key' => ['required', 'string', 'exists:markets,key'],
+            'convention_refs.*.convention_collective_id' => ['required', 'integer', 'exists:convention_collectives,id'],
         ]);
+        foreach ($validated['convention_refs'] ?? [] as $i => $ref) {
+            abort_if(\App\Core\Workforce\ConventionCollective::whereKey($ref['convention_collective_id'])->value('market_key') !== $ref['market_key'],
+                response()->json(['message' => 'The convention does not belong to this market.', 'errors' => ["convention_refs.{$i}" => ['market mismatch']]], 422));
+        }
         self::assertLegacyEditable($validated, ['default_fields', 'default_roles', 'default_documents']);
 
         $result = $useCase->execute(UpdateJobdomainData::fromValidated($id, $validated));

@@ -28557,3 +28557,27 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - pas de bascule de la conformité opérationnelle ;
   - colonnes historiques conservées et en lecture seule ;
   - recommander un brouillon n'est plus possible (test ADR-793 mis à jour).
+
+## ADR-799 — JobDomain simple ; cadre conventionnel confirmé par la société ; assistant « Temps de travail »
+
+- **Date** : 2026-11-16 — DEV uniquement (base `a3808c42`). Rapport : `docs/bmad/ADR-799-JOBDOMAIN-SIMPLE-WORKING-TIME.md`.
+- **Contexte** : le propriétaire rejette la complexité du JobDomain et fixe la règle : **le JobDomain ne configure pas l'organisation du temps de travail d'une société.**
+- **Décisions** :
+  - **Responsabilités**.
+    - Platform / Market : référentiel légal et conventionnel.
+    - JobDomain : métier, modules, presets, références aux conventions pertinentes par marché.
+    - Company : confirme sa convention et règle son rythme, ses repos, ses horaires et son comportement.
+    - Contrat : il prévaut pour son titulaire.
+    - Workforce : seul point de contrôle.
+    - La couche JobDomain du `WorkforceRuleResolver` est retirée ; elle était vide.
+  - **Page JobDomain en six onglets** (Général, Modules, Rôles, Organisation, Champs & documents, Modèles de planning).
+    - Les presets s'éditent et se publient depuis leur onglet ; publier les associe au domaine (`JobdomainPresetWorkspace`).
+    - Versions, historique, concurrence et audit sont conservés en interne.
+    - Les diagnostics passent dans une section avancée repliée.
+  - **Référentiel conventionnel prolongé** (migration additive) : traçabilité des conventions et de leurs règles (vérification, population, dérogation), `jobdomains.convention_refs`, `companies.convention_confirmed_*`. Une convention suggérée est sans effet tant qu'elle n'est pas confirmée ; aucun seuil inventé.
+  - **Assistant Company** (étape existante « Temps de travail ») : sections A à E. Enregistrement tout ou rien via les garde-fous du résolveur ; valeur moins favorable qu'un minimum légal vérifié refusée ; statut honnête de chaque réglage (contrôlé, enregistré, contrôle juridique indisponible).
+  - **Un seul moteur** : `ShiftRuleValidator` contrôle en plus les jours consécutifs selon le comportement choisi par la société, avec une dérogation motivée tracée pour la politique société uniquement, jamais pour une règle légale. Aucune contrainte nouvelle pour une société qui n'a rien réglé.
+- **Conséquences** :
+  - aucune société réelle modifiée, aucune réapplication, pas de bascule des exigences, pas de changement Billing ou paie ;
+  - correction de `CompanyPolicyResolver::set` (recherche par date, sans doublon le même jour) ;
+  - rotations, règles par établissement et contrôle des jours par semaine préparés pour un prochain lot.

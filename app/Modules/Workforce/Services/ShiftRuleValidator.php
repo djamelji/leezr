@@ -43,6 +43,7 @@ class ShiftRuleValidator
         int $breakMinutes = 0,
         ?int $excludeShiftId = null,
         array $excludeIds = [],
+        ?string $derogationReason = null,
     ): array {
         $company = Company::withoutGlobalScopes()->find($companyId);
         if (! $company) {
@@ -56,8 +57,11 @@ class ShiftRuleValidator
         $this->checkDailyRest($rules, $companyId, $employeeId, $startAt, $endAt, $date, $excludeShiftId, $excludeIds);
         $dailyMinutes = $this->checkDailyMax($rules, $companyId, $employeeId, $date, $workedMinutes, $excludeShiftId, $excludeIds);
         $weeklyMinutes = $this->checkWeeklyMax($rules, $companyId, $employeeId, $startAt, $workedMinutes, $excludeShiftId, $excludeIds);
+        // ADR-799 — politique de la SOCIÉTÉ (jamais une valeur légale inventée) : jours travaillés consécutifs.
+        $org = $this->resolver->resolveOrganizationRules($company, $startAt, $contract);
+        $policy = $this->checkConsecutiveDays($org, $companyId, $employeeId, $date, $excludeShiftId, $excludeIds, $derogationReason);
 
-        return [
+        return $policy + [
             'night_work' => $this->isNightWork($rules, $startAt, $endAt),
             'worked_minutes' => $workedMinutes,
             'daily_minutes' => $dailyMinutes,
@@ -141,6 +145,53 @@ class ShiftRuleValidator
     }
 
     /** Non-cancelled shifts of the employee, excluding self and/or a batch. */
+    /**
+     * ADR-799 — max consecutive worked days (company policy). Counts the run of calendar days with a shift
+     * around the candidate date, ACROSS week boundaries (a shift is attached to its `date`, so a shift
+     * crossing midnight counts once). Behaviour chosen by the company : inform | warn | block | approve
+     * (approve = derogation with a written reason, recorded). Unset → no control (existing companies
+     * unaffected). A LEGAL rule is never derogated here (legal checks above throw before).
+     *
+     * @return array{warnings: list<array>, derogation: ?array}
+     */
+    private function checkConsecutiveDays(array $org, int $companyId, int $employeeId, string $date, ?int $excludeShiftId, array $excludeIds, ?string $reason): array
+    {
+        $max = $org['max_consecutive_work_days']['value'] ?? null;
+        if ($max === null) {
+            return ['warnings' => [], 'derogation' => null];
+        }
+        $max = (int) $max;
+        $day = Carbon::parse($date)->startOfDay();
+        $dates = $this->neighbourQuery($companyId, $employeeId, $excludeShiftId, $excludeIds)
+            ->whereBetween('date', [$day->copy()->subDays($max + 1)->toDateString(), $day->copy()->addDays($max + 1)->toDateString()])
+            ->pluck('date')->map(fn ($d) => Carbon::parse($d)->toDateString())->flip();
+        $dates[$day->toDateString()] = true;
+        $run = 1;
+        for ($d = $day->copy()->subDay(); isset($dates[$d->toDateString()]); $d->subDay()) {
+            $run++;
+        }
+        for ($d = $day->copy()->addDay(); isset($dates[$d->toDateString()]); $d->addDay()) {
+            $run++;
+        }
+        if ($run <= $max) {
+            return ['warnings' => [], 'derogation' => null];
+        }
+        $behavior = $org['consecutive_days_behavior']['value'] ?? 'warn';
+        $finding = ['rule' => 'max_consecutive_work_days', 'limit' => $max, 'observed' => $run, 'source' => $org['max_consecutive_work_days']['source'] ?? 'company'];
+        if ($behavior === 'block') {
+            throw new \DomainException("Consecutive worked days ({$run}) exceed the company limit ({$max}).");
+        }
+        if ($behavior === 'approve') {
+            if (trim((string) $reason) === '') {
+                throw new \DomainException("Consecutive worked days ({$run}) exceed the company limit ({$max}) : a derogation reason is required.");
+            }
+
+            return ['warnings' => [], 'derogation' => $finding + ['reason' => mb_substr(trim($reason), 0, 500)]];
+        }
+
+        return ['warnings' => [$finding + ['level' => $behavior]], 'derogation' => null];
+    }
+
     private function neighbourQuery(int $companyId, int $employeeId, ?int $excludeShiftId, array $excludeIds)
     {
         $q = Shift::withoutGlobalScopes()

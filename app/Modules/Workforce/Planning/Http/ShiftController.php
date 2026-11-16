@@ -179,6 +179,7 @@ class ShiftController extends Controller
             'notes' => 'nullable|string|max:500',
             'overstaffing_ack' => 'nullable|string',               // ADR-719 : confirmation serveur
             'overstaffing_reason' => 'nullable|string|max:500',
+            'derogation_reason' => 'nullable|string|max:500', // ADR-799 : dérogation à une politique société « approbation »
         ]);
 
         try {
@@ -196,6 +197,7 @@ class ShiftController extends Controller
                 overstaffingAck: $validated['overstaffing_ack'] ?? null,
                 overstaffingReason: $validated['overstaffing_reason'] ?? null,
                 actorId: $request->user()?->id,
+                derogationReason: $validated['derogation_reason'] ?? null,
                 // M1 (ADR-724) : application d'un modèle = matérialise ses activités préconfigurées.
                 // Création manuelle (sans modèle) ⇒ pas de composition à matérialiser.
                 materializeComposition: ($validated['schedule_template_id'] ?? null) !== null,

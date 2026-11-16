@@ -594,6 +594,8 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
         Route::get('/jobdomains/{id}/profile', [$jm, 'profile'])->whereNumber('id');
         Route::get('/jobdomains/{id}/initialization-plan', [$jm, 'initializationPlan'])->whereNumber('id');
+        Route::post('/jobdomains/{id}/presets/{kind}/draft', [$jm, 'presetDraft'])->whereNumber('id'); // ADR-799
+        Route::post('/jobdomains/{id}/presets/{kind}/{presetId}/publish', [$jm, 'presetPublish'])->whereNumber('id')->whereNumber('presetId');
         Route::get('/companies/{companyId}/jobdomain-compatibility', [$jm, 'companyCompatibility'])->whereNumber('companyId');
         Route::get('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'recommendations']);
         Route::put('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'setRecommendations']);

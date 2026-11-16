@@ -126,18 +126,19 @@ class CompanyPolicyResolver
 
         // Idempotent on (company_id, domain, policy_key, effective_from): a re-set on the same
         // effective date updates the value in place rather than duplicating the row.
-        return CompanyPolicy::withoutCompanyScope()->updateOrCreate(
-            [
-                'company_id' => $companyId,
-                'domain' => $domain,
-                'policy_key' => $policyKey,
-                'effective_from' => $fromDate,
-            ],
-            [
-                'value' => $value,
-                'effective_until' => null,
-                'source' => $source,
-            ],
-        );
+        // ADR-799 : recherche par DATE (portable : une colonne `date` relue en datetime ne doit pas
+        // provoquer de doublon sur la clé unique lors d'un nouveau réglage le même jour).
+        $existing = CompanyPolicy::withoutCompanyScope()->where('company_id', $companyId)->domain($domain)->forKey($policyKey)
+            ->whereDate('effective_from', $fromDate)->first();
+        if ($existing) {
+            $existing->fill(['value' => $value, 'effective_until' => null, 'source' => $source])->save();
+
+            return $existing;
+        }
+
+        return CompanyPolicy::withoutCompanyScope()->create([
+            'company_id' => $companyId, 'domain' => $domain, 'policy_key' => $policyKey, 'effective_from' => $fromDate,
+            'value' => $value, 'effective_until' => null, 'source' => $source,
+        ]);
     }
 }

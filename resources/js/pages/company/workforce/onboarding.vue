@@ -6,6 +6,7 @@ definePage({
 })
 
 import OrganizationPresetCard from './organization/_OrganizationPresetCard.vue'
+import WorkingTimeSetup from './_WorkingTimeSetup.vue'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -237,13 +238,8 @@ onMounted(load)
           <p class="text-body-2 text-medium-emphasis">
             {{ t('workforceOnboarding.worktimeIntro') }}
           </p>
-          <VBtn
-            variant="tonal"
-            class="mt-2"
-            @click="go('/company/workforce/configuration')"
-          >
-            {{ t('workforceOnboarding.openSettings') }}
-          </VBtn>
+          <!-- ADR-799 : la société configure ici son organisation du temps de travail (jamais le JobDomain). -->
+          <WorkingTimeSetup class="mt-4" />
         </div>
 
         <!-- ── Étape : Premier collaborateur ── -->

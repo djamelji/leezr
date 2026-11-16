@@ -123,7 +123,14 @@ class WorkforceNormativeResolutionTest extends TestCase
 
         $this->assertSame(35, $spec['weekly_hours_reference']['value'], 'FR legal weekly reference 35h');
         $this->assertSame(11, $spec['daily_rest_min_hours']['value'], 'FR daily rest 11h (legal_min)');
-        $this->assertSame('mandatory', $spec['daily_rest_min_hours']['mutability']);
+        // ADR-799 : minimum légal RENFORÇABLE par la société (jamais réductible sous la valeur légale vérifiée).
+        $this->assertSame('configurable', $spec['daily_rest_min_hours']['mutability']);
+        try {
+            $this->resolver->setWorkTimeRule($company, 'daily_rest_min_hours', 9);
+            $this->fail('moins favorable que le minimum légal');
+        } catch (\DomainException) {
+        }
+        $this->assertSame(11, $this->resolver->resolveWorkTimeRules($company->fresh())['daily_rest_min_hours']['value']);
 
         // Company can configure the reference down to e.g. 32h (config nature).
         $this->resolver->setWorkTimeRule($company, 'weekly_hours_reference', 32);

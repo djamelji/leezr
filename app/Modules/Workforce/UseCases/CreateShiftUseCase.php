@@ -32,10 +32,11 @@ class CreateShiftUseCase
         bool $skipOverstaffing = false,
         ?array $snapshotOverride = null,
         bool $materializeComposition = false,
+        ?string $derogationReason = null,
     ): Shift {
         return DB::transaction(function () use (
             $companyId, $employeeId, $date, $startAt, $endAt, $timezone,
-            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing, $snapshotOverride, $materializeComposition
+            $scheduleTemplateId, $workLocationId, $notes, $overstaffingAck, $overstaffingReason, $actorId, $skipOverstaffing, $snapshotOverride, $materializeComposition, $derogationReason
         ) {
             $startAtCarbon = Carbon::parse($startAt);
             $endAtCarbon = Carbon::parse($endAt);
@@ -127,6 +128,7 @@ class CreateShiftUseCase
                 endAt: $endAtCarbon,
                 date: $date,
                 breakMinutes: $breakMinutes,
+                derogationReason: $derogationReason,
             );
 
             // ADR-719 — contrôle de SUREFFECTIF (après le réglementaire, dans la transaction = pas de
@@ -149,8 +151,14 @@ class CreateShiftUseCase
                 'end_at' => $endAtCarbon,
                 'timezone' => $timezone,
                 'status' => Shift::STATUS_DRAFT,
-                'metadata' => ['night_work' => $ruleCheck['night_work']],
+                'metadata' => array_filter(['night_work' => $ruleCheck['night_work'],
+                    // ADR-799 : constats de politique société et dérogation motivée, tracés sur le créneau.
+                    'rule_warnings' => $ruleCheck['warnings'] ?: null, 'rule_derogation' => $ruleCheck['derogation']], fn ($v) => $v !== null),
             ]);
+            if ($ruleCheck['derogation']) {
+                app(\App\Core\Audit\AuditLogger::class)->logCompany($companyId, 'planning.rule_derogation', 'shift', (string) $shift->id,
+                    ['actorId' => $actorId, 'metadata' => $ruleCheck['derogation']]);
+            }
 
             if ($notes) {
                 $shift->notes = $notes;

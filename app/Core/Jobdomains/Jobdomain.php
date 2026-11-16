@@ -15,6 +15,7 @@ class Jobdomain extends Model
         'description',
         'sector',       // ADR-797 — identité métier
         'terminology',  // ADR-797 — vocabulaire métier (ex. « collaborateur » → « livreur »)
+        'convention_refs', // ADR-799 — conventions pertinentes par marché (référence, jamais un lien juridique)
         'is_active',
         'default_modules',
         'default_fields',
@@ -29,6 +30,7 @@ class Jobdomain extends Model
         return [
             'is_active' => 'boolean',
             'terminology' => 'array',
+            'convention_refs' => 'array',
             'default_modules' => 'array',
             'default_fields' => 'array',
             'default_documents' => 'array',

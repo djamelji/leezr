@@ -27,7 +27,9 @@ use Carbon\Carbon;
  *                  (Company > CC > JobDomain > default), clamped to any legal bound.
  *
  * Dimensions (one Company has exactly one JobDomain; a JobDomain does NOT impose a single CC):
- *   Market(legal) → Convention Collective → JobDomain → Company → Contract → Individual, by date.
+ *   Market(legal) → Convention Collective → Company → Contract → Individual, by date.
+ * ADR-799 : the JobDomain is NOT a layer of work-time rules any more (it never configures how a company
+ * organises working time ; the layer was empty — no `jobdomain_preset` policy ever existed).
  *
  * Every resolved rule returns value, source (market_law|convention|jobdomain|company|default|
  * to_complete), legal reference, mutability, status, effective_from, and the full resolution
@@ -66,13 +68,54 @@ class WorkforceRuleResolver
             'weekly_hours_reference' => ['nature' => 'config', 'type' => 'hours', 'market' => ['rule' => 'weekly_hours_legal', 'path' => 'amount'], 'cc' => 'weekly_hours_reference', 'policy' => 'weekly_hours_reference'],
             'daily_hours_max' => ['nature' => 'legal_max', 'type' => 'hours', 'market' => ['rule' => 'daily_hours_max', 'path' => 'amount'], 'cc' => 'daily_hours_max', 'policy' => 'daily_hours_max'],
             'weekly_hours_max' => ['nature' => 'legal_max', 'type' => 'hours', 'market' => ['rule' => 'weekly_hours_max', 'path' => 'amount'], 'cc' => 'weekly_hours_max', 'policy' => 'weekly_hours_max'],
-            'daily_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_daily_min', 'path' => 'amount'], 'cc' => 'daily_rest_min_hours', 'policy' => null],
-            'weekly_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_weekly_min', 'path' => 'amount'], 'cc' => 'weekly_rest_min_hours', 'policy' => null],
+            // ADR-799 : la société peut RENFORCER ces repos (jamais les réduire sous un minimum vérifié).
+            'daily_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_daily_min', 'path' => 'amount'], 'cc' => 'daily_rest_min_hours', 'policy' => 'daily_rest_min_hours'],
+            'weekly_rest_min_hours' => ['nature' => 'legal_min', 'type' => 'hours', 'market' => ['rule' => 'rest_weekly_min', 'path' => 'amount'], 'cc' => 'weekly_rest_min_hours', 'policy' => 'weekly_rest_min_hours'],
             'overtime_daily_threshold_hours' => ['nature' => 'config', 'type' => 'hours', 'market' => null, 'cc' => 'overtime_daily_threshold_hours', 'policy' => 'overtime_daily_threshold_hours', 'default' => null],
             'night_work_start' => ['nature' => 'config', 'type' => 'enum', 'enum' => null, 'market' => null, 'cc' => 'night_work_start', 'policy' => 'night_work_start', 'default' => null],
             'night_work_end' => ['nature' => 'config', 'type' => 'enum', 'enum' => null, 'market' => null, 'cc' => 'night_work_end', 'policy' => 'night_work_end', 'default' => null],
         ];
     }
+
+    /**
+     * ADR-799 — how THE COMPANY organises working time (its own policy ; never set by a JobDomain). No
+     * legal value is invented : none of these has a market rule today, so the legal check of the
+     * consecutive-days limit is reported as unavailable.
+     */
+    private function organizationCatalog(): array
+    {
+        return [
+            'work_days_per_week' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => null, 'policy' => 'work_days_per_week', 'default' => null, 'range' => [1, 7]],
+            'fixed_work_days' => ['nature' => 'config', 'type' => 'list', 'market' => null, 'cc' => null, 'policy' => 'fixed_work_days', 'default' => null],
+            'shift_target_hours' => ['nature' => 'config', 'type' => 'hours', 'market' => null, 'cc' => null, 'policy' => 'shift_target_hours', 'default' => null, 'range' => [1, 24]],
+            'weekly_rest_days' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => null, 'policy' => 'weekly_rest_days', 'default' => null, 'range' => [0, 7]],
+            'consecutive_rest_days' => ['nature' => 'config', 'type' => 'bool', 'market' => null, 'cc' => null, 'policy' => 'consecutive_rest_days', 'default' => null],
+            'max_consecutive_work_days' => ['nature' => 'config', 'type' => 'int', 'market' => null, 'cc' => 'max_consecutive_work_days', 'policy' => 'max_consecutive_work_days', 'default' => null, 'range' => [1, 13]],
+            'consecutive_days_behavior' => ['nature' => 'config', 'type' => 'enum', 'enum' => ['inform', 'warn', 'block', 'approve'], 'market' => null, 'cc' => null, 'policy' => 'consecutive_days_behavior', 'default' => 'warn'],
+        ];
+    }
+
+    /** @return array<string, array> keyed by rule — the company's own working-time organisation. */
+    public function resolveOrganizationRules(Company $company, ?Carbon $at = null, ?EmploymentContract $contract = null): array
+    {
+        return $this->resolveCatalog($company, $this->organizationCatalog(), $at, $contract);
+    }
+
+    public function setOrganizationRule(Company $company, string $ruleKey, mixed $value, ?Carbon $at = null): CompanyPolicy
+    {
+        return $this->setRule($company, $this->organizationCatalog(), $ruleKey, $value, $at);
+    }
+
+    /** ADR-799 — what the single Workforce engine actually CONTROLS today (no false « compliant »). */
+    public const CONTROLS = [
+        'daily_rest_min_hours' => ['engine' => 'ShiftRuleValidator', 'when' => 'planning', 'effect' => 'block'],
+        'daily_hours_max' => ['engine' => 'ShiftRuleValidator', 'when' => 'planning', 'effect' => 'block'],
+        'weekly_hours_max' => ['engine' => 'ShiftRuleValidator', 'when' => 'planning', 'effect' => 'block'],
+        'night_work_start' => ['engine' => 'ShiftRuleValidator', 'when' => 'planning', 'effect' => 'inform'],
+        'max_consecutive_work_days' => ['engine' => 'ShiftRuleValidator', 'when' => 'planning', 'effect' => 'company_behavior'],
+        'weekly_rest_min_hours' => ['engine' => 'WorkTimeComplianceChecker', 'when' => 'timesheet', 'effect' => 'report'],
+        'min_duration_minutes' => ['engine' => 'clock_in', 'when' => 'clock', 'effect' => 'break_enforcement'],
+    ];
 
     // ── Public API ─────────────────────────────────────────────────────────────────────────
 
@@ -157,11 +200,8 @@ class WorkforceRuleResolver
             $chain[] = ['layer' => 'convention', 'value' => $cc['value'], 'reference' => $cc['reference'], 'override_mode' => $cc['override_mode']];
         }
 
-        // Layer 3 — JobDomain (via CompanyPolicy source=jobdomain_preset); none seeded today.
-        $jobdomain = $this->readCompanyPolicy($company, $spec, $at, 'jobdomain_preset');
-        if ($jobdomain !== null) {
-            $chain[] = ['layer' => 'jobdomain', 'value' => $jobdomain['value']];
-        }
+        // (ADR-799 : plus de couche JobDomain — le métier ne fixe pas l'organisation du temps de travail.)
+        $jobdomain = null;
 
         // Layer 4 — Company configurable override.
         $companyVal = $this->readCompanyPolicy($company, $spec, $at, 'admin_manual');
@@ -369,6 +409,23 @@ class WorkforceRuleResolver
 
         if (($resolved[$ruleKey]['mutability'] ?? null) === 'mandatory' || empty($spec['policy'])) {
             throw new \DomainException("Rule '{$ruleKey}' is mandatory (legal) and cannot be overridden.");
+        }
+        // ADR-799 : une valeur moins favorable qu'un minimum / maximum LÉGAL VÉRIFIÉ est refusée (jamais
+        // présentée comme conforme) ; sans référence légale vérifiée, elle est acceptée mais signalée.
+        if ($value !== null && in_array($spec['nature'], ['legal_min', 'legal_max'], true)) {
+            $legal = $this->readMarket($company, $spec, $at);
+            if ($legal !== null && $legal['value'] !== null && ($legal['reference'] ?? null)) {
+                $worse = $spec['nature'] === 'legal_min' ? ((float) $value < (float) $legal['value']) : ((float) $value > (float) $legal['value']);
+                if ($worse) {
+                    throw new \DomainException("'{$ruleKey}' ({$value}) is less favorable than the applicable legal rule ({$legal['value']}, {$legal['reference']}).");
+                }
+            }
+        }
+        if ($value !== null && isset($spec['range']) && ((float) $value < $spec['range'][0] || (float) $value > $spec['range'][1])) {
+            throw new \DomainException("'{$ruleKey}' must be between {$spec['range'][0]} and {$spec['range'][1]}.");
+        }
+        if ($value !== null && ($spec['type'] ?? null) === 'enum' && ! empty($spec['enum']) && ! in_array($value, $spec['enum'], true)) {
+            throw new \DomainException("'{$ruleKey}' must be one of ".implode(', ', $spec['enum']).'.');
         }
         // legal floor / ceiling bounds.
         if ($value !== null && isset($spec['clamp_min'])) {

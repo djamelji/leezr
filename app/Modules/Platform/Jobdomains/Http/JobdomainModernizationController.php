@@ -29,13 +29,16 @@ class JobdomainModernizationController extends Controller
         $jd = Jobdomain::findOrFail($id);
 
         return response()->json([
-            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'is_active', 'allow_custom_fields']),
+            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'convention_refs', 'is_active', 'allow_custom_fields']),
             'markets' => Market::orderBy('key')->get(['key', 'name', 'is_active'])->map(fn ($m) => $m->only(['key', 'name', 'is_active'])
                 + ['has_override' => $jd->overlays()->where('market_key', $m->key)->exists()])->values(),
             'modules' => VersionedCompanyInitializer::classifyModules((array) $jd->default_modules, $jd->key),
             'available_modules' => collect(ModuleRegistry::forScope('company'))->map(fn ($m) => ['key' => $m->key, 'name' => $m->name, 'type' => $m->type,
                 'min_plan' => $m->minPlan, 'requires' => $m->requires, 'core' => str_starts_with($m->key, 'core.')])->values(),
             'recommendations' => PresetService::recommendationsFor($jd->key),
+            'workspace' => \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::state($jd), // ADR-799 : onglets
+            'conventions' => \App\Core\Workforce\ConventionCollective::active()->orderBy('market_key')->orderBy('short_name')->get(['id', 'idcc', 'short_name', 'market_key', 'verified_at'])
+                ->map(fn ($c) => ['id' => $c->id, 'idcc' => $c->idcc, 'name' => $c->short_name, 'market_key' => $c->market_key, 'verified' => $c->verified_at !== null])->values(),
             'company_list' => Company::where('jobdomain_key', $jd->key)->orderBy('name')->limit(500)->get(['id', 'name'])->map->only(['id', 'name'])->values(),
             'compatibility' => JobdomainLegacyFootprint::for($jd),
             'legacy' => ['roles' => (array) $jd->default_roles, 'documents' => (array) $jd->default_documents, 'fields' => (array) $jd->default_fields,
@@ -87,5 +90,21 @@ class JobdomainModernizationController extends Controller
             'requirements' => ($i['level'] ?? '').(($i['job_role_keys'] ?? []) ? ' · '.implode(', ', $i['job_role_keys']) : ''),
             default => null,
         };
+    }
+
+    // ── ADR-799 : presets édités dans leur onglet, sans association manuelle ni choix de version ──
+
+    public function presetDraft(Request $request, int $id, string $kind): JsonResponse
+    {
+        abort_unless(in_array($kind, ['rbac', 'requirements', 'planning'], true), 404);
+
+        return response()->json(['draft' => \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::draft(Jobdomain::findOrFail($id), $kind, $request->user()?->id)]);
+    }
+
+    public function presetPublish(Request $request, int $id, string $kind, int $presetId): JsonResponse
+    {
+        abort_unless(in_array($kind, \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::KINDS, true), 404);
+
+        return response()->json(\App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::publish(Jobdomain::findOrFail($id), $kind, $presetId, $request->user()?->id));
     }
 }

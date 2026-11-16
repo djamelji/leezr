@@ -19,11 +19,13 @@ class ConventionCollective extends Model
         'brochure_number',
         'is_active',
         'metadata',
+        'scope_description', 'legal_source_url', 'version_label', 'effective_from', 'effective_until', 'verified_at', // ADR-799
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'metadata' => 'array',
+        'effective_from' => 'date', 'effective_until' => 'date', 'verified_at' => 'datetime',
     ];
 
     // ── Relationships ──

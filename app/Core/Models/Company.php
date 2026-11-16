@@ -41,6 +41,7 @@ class Company extends Model
         'plan_key',
         'market_key',
         'default_convention_collective_id',
+        'convention_confirmed_at', 'convention_confirmed_by', // ADR-799 : cadre confirmé par la société
         'jobdomain_key',
         'org_profile_key', // ADR-636 (W-E): profil organisationnel (presets)
         'week_start_day',  // ADR-645 (W-G4B): premier jour de semaine (0=dim..6=sam), null = repli Market/locale
@@ -53,6 +54,7 @@ class Company extends Model
         return [
             'financial_freeze' => 'boolean',
             'onboarding_dismissed_at' => 'datetime',
+            'convention_confirmed_at' => 'datetime',
         ];
     }
 
