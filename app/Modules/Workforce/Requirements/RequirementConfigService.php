@@ -148,11 +148,11 @@ final class RequirementConfigService
         $changes = ['added' => [], 'modified' => [], 'removed' => [], 'unchanged' => []];
 
         // Verrou : toutes les lignes Company de la société, pour sérialiser les enregistrements concurrents.
-        $companyRows = Requirement::where('company_id', $this->company->id)->where('source', 'company')
+        $companyRows = Requirement::where('company_id', $this->company->id)->where('subject_scope', Requirement::SUBJECT_PERSON)->where('source', 'company')
             ->where('status', Requirement::STATUS_ACTIVE)->lockForUpdate()->get()
             ->filter(fn (Requirement $r) => $this->scopeKeyOf($r) === $scope);
         // ADR-794 : copies ADOPTÉES (module, preset) du même périmètre — la Company peut les personnaliser ou les retirer.
-        $copies = Requirement::where('company_id', $this->company->id)->whereIn('source', ['module', 'preset'])->where('status', Requirement::STATUS_ACTIVE)
+        $copies = Requirement::where('company_id', $this->company->id)->where('subject_scope', Requirement::SUBJECT_PERSON)->whereIn('source', ['module', 'preset'])->where('status', Requirement::STATUS_ACTIVE)
             ->lockForUpdate()->get()->filter(fn (Requirement $r) => $this->scopeKeyOf($r) === $scope && ($r->effect ?? 'require') === 'require');
 
         foreach ($items as $item) {
@@ -278,7 +278,7 @@ final class RequirementConfigService
             return false;
         }
 
-        return Requirement::where('company_id', $this->company->id)->where('status', Requirement::STATUS_ACTIVE)->where($column, $id)
+        return Requirement::where('company_id', $this->company->id)->where('subject_scope', Requirement::SUBJECT_PERSON)->where('status', Requirement::STATUS_ACTIVE)->where($column, $id)
             ->get()->contains(fn (Requirement $r) => in_array($jobRoleId, $r->applicability['job_role_ids'] ?? [], true));
     }
 

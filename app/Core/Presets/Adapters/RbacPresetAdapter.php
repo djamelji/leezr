@@ -9,7 +9,8 @@ use App\Core\Modules\ModuleRegistry;
 use Illuminate\Validation\ValidationException;
 
 /**
- * ADR-793 (L3) — RBAC family. Content : {roles: [{key, name, is_administrative?, bundles: [..]}]} —
+ * ADR-793 (L3) — RBAC family. Content : {roles: [{key, name, is_administrative?, bundles: [..],
+ *   archetype?, dashboard_widgets?: [..] (ADR-798 business properties)}]} —
  * permissions only through EXISTING bundles (module manifests), never free keys.
  *
  * Security (ADR-752, ADR-788) : an EXISTING company role is NEVER modified (difference reported only) ;
@@ -27,6 +28,7 @@ final class RbacPresetAdapter implements PresetFamilyAdapter
     public function validate(array $content, ?string $marketKey = null): void
     {
         $errors = [];
+        $keys = [];
         $known = collect(ModuleRegistry::forScope('company'))->flatMap(fn ($m) => array_column($m->bundles, 'key'))->all();
         foreach ($content['roles'] ?? [] as $i => $role) {
             if (! preg_match('/^[a-z0-9_]{2,60}$/', (string) ($role['key'] ?? ''))) {
@@ -35,6 +37,16 @@ final class RbacPresetAdapter implements PresetFamilyAdapter
             if (blank($role['name'] ?? null)) {
                 $errors["roles.{$i}.name"] = 'A role needs a name.';
             }
+            if (isset($role['archetype']) && ! preg_match('/^[a-z0-9_]{1,60}$/', (string) $role['archetype'])) {
+                $errors["roles.{$i}.archetype"] = 'Invalid archetype.';
+            }
+            if (isset($role['dashboard_widgets']) && (! is_array($role['dashboard_widgets']) || array_filter($role['dashboard_widgets'], fn ($w) => ! is_string($w)))) {
+                $errors["roles.{$i}.dashboard_widgets"] = 'Invalid dashboard widgets.';
+            }
+            if (isset($keys[$role['key'] ?? ''])) {
+                $errors["roles.{$i}.key"] = 'Duplicate role key.';
+            }
+            $keys[$role['key'] ?? ''] = true;
             if ($unknown = array_diff($role['bundles'] ?? [], $known)) {
                 $errors["roles.{$i}.bundles"] = 'Unknown bundles: '.implode(', ', $unknown);
             }
@@ -100,8 +112,11 @@ final class RbacPresetAdapter implements PresetFamilyAdapter
                 continue;
             }
             $role = $items[$p['key']];
+            $archetype = $role['archetype'] ?? null;
             $created = CompanyRole::create(['company_id' => $company->id, 'key' => $role['key'], 'name' => $role['name'], 'is_system' => false,
-                'is_administrative' => (bool) ($role['is_administrative'] ?? false)]);
+                'is_administrative' => (bool) ($role['is_administrative'] ?? false), 'archetype' => $archetype,
+                // ADR-798 : étiquettes de l'archétype résolues comme à la création historique (ADR-170)
+                'required_tags' => $archetype ? (\App\Core\Jobdomains\JobdomainRegistry::get((string) $company->jobdomain_key)['archetypes'][$archetype]['default_tags'] ?? null) : null]);
             $created->permissions()->sync(CompanyPermission::whereIn('key', $role['permissions'])->pluck('id')->all());
             $done['created'][] = $p['key'];
         }

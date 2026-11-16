@@ -6,10 +6,18 @@
 // historique d'un JobDomain. Sub-component — hub : platform/catalog/[tab].vue.
 import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import PresetEditorDialog from './_PresetEditorDialog.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const { toast } = useAppToast()
+const auth = usePlatformAuthStore()
+// ADR-798 : actions affichées selon les droits réels (l'API les vérifie de toute façon).
+const can = p => auth.hasPermission('manage_jobdomains') || auth.hasPermission(p)
+const editor = ref(false)
+const editing = ref(null)
+const blocked = ref(null)
 
 const KINDS = ['rbac', 'requirements', 'planning']
 const kind = ref(KINDS.includes(route.query.kind) ? route.query.kind : null)
@@ -42,6 +50,7 @@ const tone = s => ({ published: 'success', draft: 'warning', archived: 'info' }[
 const open = async p => {
   drawer.value = true
   diff.value = null
+  blocked.value = null
   preview.value = null
   detail.value = await $platformApi(`/presets/${p.kind}/${p.id}`)
 }
@@ -73,7 +82,29 @@ const newVersion = async () => {
 }
 const archive = async () => {
   const p = detail.value.preset
-  if (await act(() => $platformApi(`/presets/${p.id}/archive`, { method: 'POST' }), t('presetAdmin.archived'))) await reopen(p.id)
+
+  blocked.value = null
+  busy.value = true
+  try {
+    await $platformApi(`/presets/${p.id}/archive`, { method: 'POST' })
+    toast(t('presetAdmin.archived'), 'success')
+    await reopen(p.id)
+  }
+  catch (e) {
+    if (e?.data?.code === 'recommendation_would_break') blocked.value = e.data
+    else toast(e?.data?.message || t('presetAdmin.error'), 'error')
+  }
+  finally { busy.value = false }
+}
+const openEditor = preset => {
+  editing.value = preset
+  editor.value = true
+}
+const onSaved = async saved => {
+  await reopen(saved.id)
+  // Prévisualisation des changements : comparaison avec la version précédente de la famille.
+  const prev = detail.value?.versions.find(v => v.version === saved.version - 1)
+  if (prev) diff.value = await $platformApi(`/presets/${saved.kind}/${prev.id}/diff/${saved.id}`)
 }
 const compare = async other => {
   const p = detail.value.preset
@@ -109,6 +140,28 @@ const runPreview = async () => {
         {{ t(`jobdomainProfile.family.${k}`) }}
       </VChip>
       <VSpacer />
+      <VMenu v-if="can('presets.edit')">
+        <template #activator="{ props: menu }">
+          <VBtn
+            v-bind="menu"
+            size="small"
+            color="primary"
+            prepend-icon="tabler-plus"
+            data-test="preset-new"
+          >
+            {{ t('presetEditor.newPreset') }}
+          </VBtn>
+        </template>
+        <VList density="compact">
+          <VListItem
+            v-for="k in KINDS"
+            :key="k"
+            :title="t(`jobdomainProfile.family.${k}`)"
+            :data-test="`preset-new-${k}`"
+            @click="openEditor({ kind: k })"
+          />
+        </VList>
+      </VMenu>
       <RouterLink
         to="/platform/organization-presets"
         class="text-body-2"
@@ -210,7 +263,17 @@ const runPreview = async () => {
 
         <div class="d-flex flex-wrap gap-2 my-4">
           <VBtn
-            v-if="detail.preset.status === 'draft'"
+            v-if="detail.preset.status === 'draft' && can('presets.edit')"
+            variant="tonal"
+            size="small"
+            prepend-icon="tabler-edit"
+            data-test="preset-edit"
+            @click="openEditor(detail.preset)"
+          >
+            {{ t('presetEditor.edit') }}
+          </VBtn>
+          <VBtn
+            v-if="detail.preset.status === 'draft' && can('presets.publish')"
             color="primary"
             size="small"
             :loading="busy"
@@ -220,7 +283,7 @@ const runPreview = async () => {
             {{ t('presetAdmin.publish') }}
           </VBtn>
           <VBtn
-            v-if="detail.preset.status !== 'draft'"
+            v-if="detail.preset.status !== 'draft' && can('presets.edit')"
             variant="tonal"
             size="small"
             :loading="busy"
@@ -229,15 +292,26 @@ const runPreview = async () => {
             {{ t('presetAdmin.newVersion') }}
           </VBtn>
           <VBtn
-            v-if="detail.preset.status !== 'archived'"
+            v-if="detail.preset.status !== 'archived' && can('presets.publish')"
             variant="text"
             size="small"
             :loading="busy"
+            data-test="preset-archive"
             @click="archive"
           >
             {{ t('presetAdmin.archive') }}
           </VBtn>
         </div>
+        <VAlert
+          v-if="blocked"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+          data-test="preset-archive-blocked"
+        >
+          {{ t('presetEditor.archiveBlocked', { list: [...blocked.pinned_by, ...blocked.latest_for].join(', ') }) }}
+        </VAlert>
 
         <div class="text-overline">
           {{ t('presetAdmin.versions') }}
@@ -301,10 +375,16 @@ const runPreview = async () => {
           </div>
         </div>
 
-        <div class="text-overline mt-4">
+        <div
+          v-if="can('presets.preview_company')"
+          class="text-overline mt-4"
+        >
           {{ t('presetAdmin.previewTitle') }}
         </div>
-        <div class="d-flex gap-2 align-center">
+        <div
+          v-if="can('presets.preview_company')"
+          class="d-flex gap-2 align-center"
+        >
           <AppTextField
             v-model="companyId"
             type="number"
@@ -344,6 +424,11 @@ const runPreview = async () => {
         </div>
       </div>
     </VNavigationDrawer>
+    <PresetEditorDialog
+      v-model:is-dialog-visible="editor"
+      :preset="editing"
+      @saved="onSaved"
+    />
   </div>
 </template>
 

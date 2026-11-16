@@ -240,9 +240,12 @@ class Adr793PresetsTest extends TestCase
         $req = $this->draft('requirements', $this->requirementsContent());
         $this->publish('requirements', $req);
         $rbac = $this->draft('rbac', ['roles' => [['key' => 'planner', 'name' => 'P', 'bundles' => ['shipments.delivery']]]], 'livraison_rbac');
+        // ADR-798 : une recommandation sans version publiée est refusée (jamais de recommandation inutilisable).
+        $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'requirements', 'family_key' => 'livraison_req'], ['kind' => 'rbac', 'family_key' => 'livraison_rbac']]])->assertStatus(422);
+        $this->publish('rbac', $rbac);
         $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'requirements', 'family_key' => 'livraison_req'], ['kind' => 'rbac', 'family_key' => 'livraison_rbac']]])->assertOk();
         $recs = $this->api()->getJson('/api/platform/jobdomains/logistique/preset-recommendations')->json('recommendations');
-        $this->assertSame([['requirements', 1], ['rbac', null]], array_map(fn ($r) => [$r['kind'], $r['published_version']], $recs), 'plusieurs presets recommandés ; brouillon non publié signalé');
+        $this->assertSame([['requirements', 1], ['rbac', 1]], array_map(fn ($r) => [$r['kind'], $r['published_version']], $recs), 'plusieurs presets recommandés');
         $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'requirements', 'family_key' => 'ghost']]])->assertStatus(422);
         $this->assertSame(0, Requirement::whereNotNull('company_id')->count(), 'recommander n\'applique rien');
 
@@ -251,7 +254,8 @@ class Adr793PresetsTest extends TestCase
         $this->assertSame(['logistics_fleet'], PresetService::preview($this->a, Preset::find($mod))['missing_modules']);
         $this->api()->postJson("/api/platform/presets/requirements/{$mod}/companies/{$this->a->id}/apply")->assertStatus(422);
         $this->api()->postJson("/api/platform/presets/requirements/{$rbac}/companies/{$this->a->id}/apply")->assertStatus(404); // famille rbac, id inexistant pour requirements
-        $this->api()->postJson("/api/platform/presets/rbac/{$rbac}/companies/{$this->a->id}/apply")->assertStatus(422); // brouillon : jamais appliqué
+        $draftRbac = $this->draft('rbac', ['roles' => [['key' => 'draft_role', 'name' => 'D', 'bundles' => ['shipments.delivery']]]], 'draft_rbac');
+        $this->api()->postJson("/api/platform/presets/rbac/{$draftRbac}/companies/{$this->a->id}/apply")->assertStatus(422); // brouillon : jamais appliqué
 
         $this->api()->postJson("/api/platform/presets/requirements/{$req}/companies/{$this->a->id}/apply")->assertOk();
         $this->assertSame(0, Requirement::where('company_id', $this->b->id)->count(), 'autre société intacte');

@@ -33,8 +33,14 @@ class Requirement extends Model
     public const STATUS_INACTIVE = 'inactive';
     public const STATUS_SUPERSEDED = 'superseded';
 
+    /** ADR-798 — WHO the requirement is asked to. */
+    public const SUBJECT_PERSON = 'person';
+    public const SUBJECT_COMPANY = 'company';                       // l'organisation elle-même (Kbis, assurance, SIRET…)
+    public const SUBJECT_LEGAL_REPRESENTATIVE = 'legal_representative'; // pièce personnelle demandée au représentant légal
+    public const SUBJECTS = [self::SUBJECT_PERSON, self::SUBJECT_COMPANY, self::SUBJECT_LEGAL_REPRESENTATIVE];
+
     protected $fillable = [
-        'company_id', 'target_kind', 'field_definition_id', 'document_type_id', 'effect', 'level', 'applicability', 'stage',
+        'company_id', 'target_kind', 'subject_scope', 'field_definition_id', 'document_type_id', 'effect', 'level', 'applicability', 'stage',
         'source', 'source_ref', 'source_version', 'derived_from_id', 'is_template', 'legal_reference', 'verified_at', 'status',
         'effective_from', 'effective_until', 'customized_at', 'reason', 'created_by',
     ];

@@ -27,6 +27,11 @@ class JobdomainsModule implements ModuleDefinition
             ),
             permissions: [
                 ['key' => 'manage_jobdomains', 'label' => 'Manage Job Domains'],
+                // ADR-798 — droits fins sur les presets versionnés (manage_jobdomains reste le droit complet)
+                ['key' => 'presets.view', 'label' => 'View versioned presets'],
+                ['key' => 'presets.edit', 'label' => 'Edit preset drafts'],
+                ['key' => 'presets.publish', 'label' => 'Publish or archive preset versions'],
+                ['key' => 'presets.preview_company', 'label' => 'Preview a preset on a company (read only)'],
             ],
             bundles: [
                 [
@@ -34,6 +39,24 @@ class JobdomainsModule implements ModuleDefinition
                     'label' => 'Job Domain Catalog',
                     'hint' => 'Configure job domain templates and permission bundles.',
                     'permissions' => ['manage_jobdomains'],
+                ],
+                [
+                    'key' => 'presets.reader',
+                    'label' => 'Preset Reader',
+                    'hint' => 'View versioned presets and preview them on a company (read only).',
+                    'permissions' => ['presets.view', 'presets.preview_company'],
+                ],
+                [
+                    'key' => 'presets.editor',
+                    'label' => 'Preset Editor',
+                    'hint' => 'Edit preset drafts and create new versions.',
+                    'permissions' => ['presets.view', 'presets.edit'],
+                ],
+                [
+                    'key' => 'presets.publisher',
+                    'label' => 'Preset Publisher',
+                    'hint' => 'Publish or archive preset versions.',
+                    'permissions' => ['presets.view', 'presets.publish'],
                 ],
             ],
             scope: 'admin',

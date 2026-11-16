@@ -10164,7 +10164,48 @@
     },
     "parityLegacyOnly": "{n} seulement dans l’historique",
     "parityDifferent": "{n} différents",
-    "noParity": "La parité n’est jamais déclarée automatiquement : la création historique reste le seul chemin opérationnel."
+    "noParity": "La parité n’est jamais déclarée automatiquement : la création historique reste le seul chemin opérationnel.",
+    "moduleClass": {
+      "core": "Inclus (socle)",
+      "included": "Inclus par le domaine",
+      "paid_optional": "Optionnel payant — jamais activé",
+      "incompatible": "Incompatible",
+      "unavailable": "Indisponible"
+    },
+    "parityClass": {
+      "bugs": "écarts techniques",
+      "voluntary": "différences volontaires",
+      "configuration": "différences de configuration"
+    },
+    "parityRecs": "Presets comparés :",
+    "fromLegacy": "Depuis la configuration historique (simulation)",
+    "dimension": {
+      "roles": "Rôle",
+      "modules": "Module",
+      "field_activations": "Champ",
+      "document_activations": "Document",
+      "dashboards": "Tableau de bord",
+      "requirements_registry": "Registre des exigences",
+      "owner_role": "Rôle du propriétaire",
+      "settings": "Paramètres",
+      "planning": "Planning"
+    },
+    "companyReqTitle": "Exigences de l’entreprise (et non de ses collaborateurs)",
+    "legalRep": "Représentant légal : {name} (propriétaire)",
+    "legalRepNone": "Représentant légal non désigné",
+    "why": "Pourquoi :",
+    "historicalActivation": "activation historique de la société",
+    "reqState": {
+      "provided": "Fourni",
+      "missing": "Manquant",
+      "asked_to_representative": "Demandé au représentant légal"
+    },
+    "voluntary": {
+      "roles_field_config": "Les champs prescrits par rôle ne sont pas repris : un rôle n’est pas un poste.",
+      "roles_doc_config": "Les documents prescrits par rôle ne sont pas repris : un rôle n’est pas un poste.",
+      "requirements_registry": "La création versionnée enregistre aussi les exigences dans le registre (parallèle, non opérationnel).",
+      "modules_not_entitled": "Les modules recommandés non couverts par l’offre ne sont pas activés (aucun achat implicite, aucun drapeau ambigu)."
+    }
   },
   "presetAdmin": {
     "all": "Toutes",
@@ -10204,5 +10245,90 @@
       "not_applicable": "Non applicable",
       "requires_confirmation": "Confirmation requise"
     }
+  },
+  "presetEditor": {
+    "newPreset": "Nouveau preset",
+    "edit": "Modifier le contenu",
+    "newTitle": "Nouveau preset — {family}",
+    "editTitle": "{name} — v{version} (brouillon)",
+    "subtitle": "Seul un brouillon se modifie. Rien n’est appliqué aux sociétés : la publication puis l’application restent des actions séparées.",
+    "label": "Nom",
+    "familyKey": "Identifiant de la famille",
+    "familyKeyHint": "Stable : il désigne toutes les versions de ce preset.",
+    "description": "Description",
+    "save": "Enregistrer le brouillon",
+    "create": "Créer le brouillon",
+    "saved": "Brouillon enregistré.",
+    "invalid": "Le contenu n’est pas valide : voir les champs signalés.",
+    "conflict": "Ce brouillon a été modifié entre-temps par quelqu’un d’autre. Fermez puis rouvrez-le pour repartir de sa dernière version : vos changements n’ont pas été enregistrés.",
+    "remove": "Retirer",
+    "roles": "Rôles ({n})",
+    "addRole": "Ajouter un rôle",
+    "roleName": "Libellé du rôle",
+    "roleKey": "Identifiant",
+    "archetypeLabel": "Profil métier",
+    "administrative": "Administratif",
+    "archetype": {
+      "management": "Encadrement",
+      "field_worker": "Terrain",
+      "operations_center": "Exploitation"
+    },
+    "bundles": "Lots de permissions (⚠ = sensible)",
+    "sensitiveRole": "Rôle sensible : il ne sera jamais créé dans une société sans confirmation explicite.",
+    "requirementsHint": "Un preset propose, il n’impose pas : « obligatoire » signifie « obligatoire configurable » par la société. Aucune obligation légale impérative ne peut être créée ici.",
+    "items": "Exigences ({n})",
+    "addItem": "Ajouter une exigence",
+    "subjectLabel": "Demandé à",
+    "subject": {
+      "person": "Collaborateur",
+      "company": "Entreprise",
+      "legal_representative": "Représentant légal"
+    },
+    "kind": "Type",
+    "document": "Document",
+    "field": "Information",
+    "target": "Élément du catalogue",
+    "levelLabel": "Niveau",
+    "level": {
+      "recommended": "Recommandé",
+      "default": "Facultatif (activé)",
+      "configurable_required": "Obligatoire configurable"
+    },
+    "positions": "Postes concernés",
+    "positionsHint": "Vide = toute la population",
+    "stageLabel": "Étape",
+    "stage": {
+      "hire": "Embauche",
+      "onboarding": "Intégration",
+      "ongoing": "En continu"
+    },
+    "origin": "Provenance",
+    "originLegacy": "configuration historique du domaine « {jd} »",
+    "originManual": "saisie Platform",
+    "planningHint": "{categories} catégorie(s) de couverture et {activities} activité(s) sont conservées telles quelles. Le format est validé par le moteur de planning existant.",
+    "schedules": "Modèles d’horaires ({n})",
+    "addSchedule": "Ajouter un horaire",
+    "scheduleName": "Nom de l’horaire",
+    "start": "Début",
+    "end": "Fin",
+    "category": "Catégorie de couverture",
+    "composition": "Composition : {n} activité(s) conservée(s)",
+    "weeks": "Semaines types ({n})",
+    "addWeek": "Ajouter une semaine type",
+    "weekName": "Nom de la semaine type",
+    "dayLabel": "Jour",
+    "day": {
+      "0": "Lundi",
+      "1": "Mardi",
+      "2": "Mercredi",
+      "3": "Jeudi",
+      "4": "Vendredi",
+      "5": "Samedi",
+      "6": "Dimanche"
+    },
+    "schedule": "Horaire",
+    "headcount": "Effectif",
+    "addLine": "+ Ajouter un besoin",
+    "archiveBlocked": "Archivage refusé : cette version est utilisée par la recommandation de {list}. Publiez d’abord une version de remplacement, ou modifiez la recommandation du domaine."
   }
 }

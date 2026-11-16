@@ -345,7 +345,7 @@ class JobdomainGate
      * @param  string[]  $widgetKeys
      * @return array<array{key: string, x: int, y: int, w: int, h: int, scope: string, config: array}>
      */
-    private static function buildLayoutFromWidgetKeys(array $widgetKeys): array
+    public static function buildLayoutFromWidgetKeys(array $widgetKeys): array // ADR-798 : réutilisé par l’initialisation versionnée
     {
         $tiles = [];
         $y = 0;

@@ -62,9 +62,11 @@ final class EffectiveRequirementResolver
         if ($rows === null) {
             $all = Requirement::query()
                 ->where(fn ($q) => $q->where('company_id', $company->id)->orWhereNull('company_id'))
+                ->where('subject_scope', Requirement::SUBJECT_PERSON) // ADR-798 : exigences de PERSONNE uniquement
                 ->get();
         } else {
-            $all = collect($rows)->filter(fn (Requirement $r) => $r->company_id === null || (int) $r->company_id === (int) $company->id)->values();
+            $all = collect($rows)->filter(fn (Requirement $r) => ($r->company_id === null || (int) $r->company_id === (int) $company->id)
+                && ($r->subject_scope ?? Requirement::SUBJECT_PERSON) === Requirement::SUBJECT_PERSON)->values();
         }
 
         // Preset rows without company and module PROPOSALS (is_template, ADR-794) are templates : they

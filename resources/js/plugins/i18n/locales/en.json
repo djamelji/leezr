@@ -10164,7 +10164,48 @@
     },
     "parityLegacyOnly": "{n} only in legacy",
     "parityDifferent": "{n} different",
-    "noParity": "Parity is never declared automatically: legacy creation remains the only operational path."
+    "noParity": "Parity is never declared automatically: legacy creation remains the only operational path.",
+    "moduleClass": {
+      "core": "Included (core)",
+      "included": "Included by the domain",
+      "paid_optional": "Paid option — never activated",
+      "incompatible": "Incompatible",
+      "unavailable": "Unavailable"
+    },
+    "parityClass": {
+      "bugs": "technical gaps",
+      "voluntary": "voluntary differences",
+      "configuration": "configuration differences"
+    },
+    "parityRecs": "Compared presets:",
+    "fromLegacy": "From the legacy configuration (simulation)",
+    "dimension": {
+      "roles": "Role",
+      "modules": "Module",
+      "field_activations": "Field",
+      "document_activations": "Document",
+      "dashboards": "Dashboard",
+      "requirements_registry": "Requirements registry",
+      "owner_role": "Owner role",
+      "settings": "Settings",
+      "planning": "Planning"
+    },
+    "companyReqTitle": "Requirements of the company (not of its employees)",
+    "legalRep": "Legal representative: {name} (owner)",
+    "legalRepNone": "No legal representative designated",
+    "why": "Why:",
+    "historicalActivation": "historical company activation",
+    "reqState": {
+      "provided": "Provided",
+      "missing": "Missing",
+      "asked_to_representative": "Asked to the legal representative"
+    },
+    "voluntary": {
+      "roles_field_config": "Per-role field prescriptions are not carried: a role is not a position.",
+      "roles_doc_config": "Per-role document prescriptions are not carried: a role is not a position.",
+      "requirements_registry": "The versioned creation also records the requirements in the registry (parallel, non operational).",
+      "modules_not_entitled": "Recommended modules not covered by the offer are not activated (no implicit purchase, no ambiguous flag)."
+    }
   },
   "presetAdmin": {
     "all": "All",
@@ -10204,5 +10245,90 @@
       "not_applicable": "Not applicable",
       "requires_confirmation": "Confirmation required"
     }
+  },
+  "presetEditor": {
+    "newPreset": "New preset",
+    "edit": "Edit content",
+    "newTitle": "New preset — {family}",
+    "editTitle": "{name} — v{version} (draft)",
+    "subtitle": "Only a draft can be edited. Nothing is applied to companies: publishing and applying remain separate actions.",
+    "label": "Name",
+    "familyKey": "Family identifier",
+    "familyKeyHint": "Stable: it names every version of this preset.",
+    "description": "Description",
+    "save": "Save draft",
+    "create": "Create draft",
+    "saved": "Draft saved.",
+    "invalid": "The content is not valid: see the highlighted fields.",
+    "conflict": "This draft was changed meanwhile by someone else. Close and reopen it to start from its latest version: your changes were not saved.",
+    "remove": "Remove",
+    "roles": "Roles ({n})",
+    "addRole": "Add a role",
+    "roleName": "Role label",
+    "roleKey": "Identifier",
+    "archetypeLabel": "Business profile",
+    "administrative": "Administrative",
+    "archetype": {
+      "management": "Management",
+      "field_worker": "Field",
+      "operations_center": "Operations"
+    },
+    "bundles": "Permission bundles (⚠ = sensitive)",
+    "sensitiveRole": "Sensitive role: it is never created in a company without explicit confirmation.",
+    "requirementsHint": "A preset proposes, it does not impose: \"mandatory\" means \"mandatory, configurable\" by the company. No imperative legal obligation can be created here.",
+    "items": "Requirements ({n})",
+    "addItem": "Add a requirement",
+    "subjectLabel": "Asked to",
+    "subject": {
+      "person": "Employee",
+      "company": "Company",
+      "legal_representative": "Legal representative"
+    },
+    "kind": "Type",
+    "document": "Document",
+    "field": "Information",
+    "target": "Catalogue item",
+    "levelLabel": "Level",
+    "level": {
+      "recommended": "Recommended",
+      "default": "Optional (enabled)",
+      "configurable_required": "Mandatory, configurable"
+    },
+    "positions": "Positions concerned",
+    "positionsHint": "Empty = whole population",
+    "stageLabel": "Stage",
+    "stage": {
+      "hire": "Hiring",
+      "onboarding": "Onboarding",
+      "ongoing": "Ongoing"
+    },
+    "origin": "Origin",
+    "originLegacy": "legacy configuration of domain \"{jd}\"",
+    "originManual": "entered on Platform",
+    "planningHint": "{categories} coverage categor(ies) and {activities} activit(ies) are kept as is. The format is validated by the existing planning engine.",
+    "schedules": "Schedule templates ({n})",
+    "addSchedule": "Add a schedule",
+    "scheduleName": "Schedule name",
+    "start": "Start",
+    "end": "End",
+    "category": "Coverage category",
+    "composition": "Composition: {n} activit(ies) kept",
+    "weeks": "Week templates ({n})",
+    "addWeek": "Add a week template",
+    "weekName": "Week template name",
+    "dayLabel": "Day",
+    "day": {
+      "0": "Monday",
+      "1": "Tuesday",
+      "2": "Wednesday",
+      "3": "Thursday",
+      "4": "Friday",
+      "5": "Saturday",
+      "6": "Sunday"
+    },
+    "schedule": "Schedule",
+    "headcount": "Headcount",
+    "addLine": "+ Add a need",
+    "archiveBlocked": "Archiving refused: this version is used by the recommendation of {list}. First publish a replacement version, or change the domain recommendation."
   }
 }

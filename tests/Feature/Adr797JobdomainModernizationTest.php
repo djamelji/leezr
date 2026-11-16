@@ -215,21 +215,29 @@ class Adr797JobdomainModernizationTest extends TestCase
         $res = $this->api()->getJson("/api/platform/jobdomains/{$this->jd->id}/initialization-plan?market=FR")->assertOk()->json();
         $this->assertFalse($res['plan']['operational']);
         $this->assertFalse($res['parity']['parity_proven'], 'jamais de parité déclarée automatiquement');
-        $this->assertSame('differs', $res['parity']['families']['rbac']['status']);
-        $this->assertSame('behaviour_differs', $res['parity']['families']['modules']['status']);
+        $this->assertNull($res['parity']['technical_parity'], 'entrée différente de l’historique : écarts de configuration, pas de verdict technique');
+        $this->assertGreaterThan(0, $res['parity']['configuration']);
         $this->assertSame(['livreur', 'admin_x'], array_map(fn ($i) => substr($i['key'], 5), $res['plan']['presets'][0]['items']));
-        $this->assertSame($before, $counts(), 'aperçu sans écriture');
+        $this->assertSame(['automatic', 'explicit_decision'], array_column($res['plan']['presets'][0]['items'], 'decision'));
+        $this->assertSame($before, $counts(), 'aperçu et mesure de parité sans écriture (transaction annulée)');
 
         $c = $this->company('N');
         try {
-            VersionedCompanyInitializer::initialize($c, ['rbac' => null], null);
+            VersionedCompanyInitializer::initializeNew($c, 'logistique', [], null);
             $this->fail('non opérationnel');
         } catch (ValidationException) {
         }
         config(['jobdomains.versioned_init.enabled' => true]);
-        $out = VersionedCompanyInitializer::initialize($c, ['rbac' => null], null);
-        $this->assertSame(['role:livreur'], $out['rbac']['created'], 'rôle administratif jamais créé sans sélection explicite');
-        $this->assertSame(0, DB::table('company_modules')->where('company_id', $c->id)->count(), 'aucun module activé');
+        $out = VersionedCompanyInitializer::initializeNew($c, 'logistique', [], null);
+        $this->assertSame(['role:livreur'], $out['presets']['rbac']['created'], 'rôle administratif jamais créé sans sélection explicite');
+        $classes = collect(VersionedCompanyInitializer::classifyModules((array) $this->jd->default_modules, 'logistique', $c->plan_key))->keyBy('key');
+        foreach ($out['modules']['activated'] as $m) {
+            $this->assertTrue(! $classes->has($m) || $classes[$m]['activated_at_creation'], "{$m} : seulement des modules inclus (aucun achat)");
+        }
+        $existing = $this->company('Existante');
+        JobdomainGate::assignToCompany($existing, 'logistique');
+        $this->expectException(ValidationException::class); // jamais une société existante
+        VersionedCompanyInitializer::initializeNew($existing, 'logistique', [], null);
     }
 
     // 11, 12, 13 — permissions Platform réelles ; utilisateur non superadmin ; aucun accès Company.

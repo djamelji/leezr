@@ -37,7 +37,7 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
     await page.locator('[data-test="jd-legacy"] button').first().click()
     await expect(page.locator('[data-test="jd-legacy"]')).toContainText('Rôles')
     await page.locator('[data-test="jd-load-plan"]').click()
-    await expect(page.locator('[data-test="jd-init"]')).toContainText('Décision requise', { timeout: 20000 })
+    await expect(page.locator('[data-test="jd-init"]')).toContainText('écarts techniques', { timeout: 60000 })
     await page.locator('[data-test="jd-report-company"]').click()
     await page.getByRole('option').first().click()
     await expect(page.locator('[data-test="jd-company-report"]')).toContainText('sans poste', { timeout: 30000 })

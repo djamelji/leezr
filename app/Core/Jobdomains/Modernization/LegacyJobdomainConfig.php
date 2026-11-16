@@ -6,6 +6,7 @@ use App\Core\Documents\DocumentType;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Modules\ModuleRegistry;
+use App\Core\Requirements\Requirement;
 use App\Core\Requirements\RequirementLevel;
 
 /**
@@ -21,8 +22,10 @@ final class LegacyJobdomainConfig
     {
         $roles = [];
         foreach ((array) $jd->default_roles as $key => $def) {
+            // ADR-798 : propriétés métier conservées (archétype, widgets) ; prescriptions par rôle exclues.
             $roles[] = array_filter(['key' => (string) $key, 'name' => $def['name'] ?? (string) $key, 'bundles' => array_values($def['bundles'] ?? []),
-                'is_administrative' => (bool) ($def['is_administrative'] ?? (($def['archetype'] ?? null) === 'management'))], fn ($v) => $v !== null);
+                'is_administrative' => (bool) ($def['is_administrative'] ?? (($def['archetype'] ?? null) === 'management')),
+                'archetype' => $def['archetype'] ?? null, 'dashboard_widgets' => $def['dashboard_widgets'] ?? null], fn ($v) => $v !== null);
         }
         $items = [];
         foreach ($roles as $r) {
@@ -34,35 +37,45 @@ final class LegacyJobdomainConfig
         return ['content' => ['roles' => $roles], 'items' => $items];
     }
 
-    /** @return array{content: array, items: array<string, array>, skipped: list<string>} REQUIREMENTS family (company-wide only) */
+    /**
+     * @return array{content: array, items: array<string, array>, skipped: list<string>} REQUIREMENTS family. ADR-798 : the
+     * company-level items (SIRET, Kbis…) are carried with subject `company` ; person items keep subject `person`.
+     */
     public static function requirements(Jobdomain $jd): array
     {
         $items = [];
         $skipped = [];
-        // Les exigences portent sur des PERSONNES : les éléments de niveau société (SIRET, Kbis…) restent sur
-        // le moteur historique (activés à la création), sans équivalent versionné.
-        $docCodes = DocumentType::where('is_system', true)->where('scope', DocumentType::SCOPE_COMPANY_USER)->pluck('code')->flip();
-        $fieldCodes = FieldDefinition::whereNull('company_id')->where('scope', FieldDefinition::SCOPE_COMPANY_USER)->pluck('code')->flip();
+        $docScopes = DocumentType::where('is_system', true)->pluck('scope', 'code');
+        $fieldScopes = FieldDefinition::whereNull('company_id')->pluck('scope', 'code');
+        $subjectOf = fn (?string $scope) => match ($scope) {
+            DocumentType::SCOPE_COMPANY_USER => Requirement::SUBJECT_PERSON,
+            DocumentType::SCOPE_COMPANY => Requirement::SUBJECT_COMPANY,
+            default => null,
+        };
         foreach ((array) $jd->default_documents as $d) {
-            if (! isset($docCodes[$d['code'] ?? ''])) {
+            $subject = $subjectOf($docScopes[$d['code'] ?? ''] ?? null);
+            if (! $subject) {
                 $skipped[] = 'document:'.($d['code'] ?? '?');
 
                 continue;
             }
             // Historique : « required » au niveau du JobDomain → exigence CONFIGURABLE (jamais impérative).
-            $items[] = ['kind' => 'document', 'code' => $d['code'], 'level' => ($d['required'] ?? false) ? RequirementLevel::CONFIGURABLE_REQUIRED : RequirementLevel::DEFAULT];
+            $items[] = array_filter(['subject' => $subject, 'kind' => 'document', 'code' => $d['code'], 'order' => isset($d['order']) ? (int) $d['order'] : null,
+                'level' => ($d['required'] ?? false) ? RequirementLevel::CONFIGURABLE_REQUIRED : RequirementLevel::DEFAULT, 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null);
         }
         foreach ((array) $jd->default_fields as $f) {
-            if (! isset($fieldCodes[$f['code'] ?? ''])) {
+            $subject = $subjectOf($fieldScopes[$f['code'] ?? ''] ?? null);
+            if (! $subject) {
                 $skipped[] = 'field:'.($f['code'] ?? '?');
 
                 continue;
             }
-            $items[] = ['kind' => 'field', 'code' => $f['code'], 'level' => RequirementLevel::DEFAULT]; // activation historique (l'obligation vit au catalogue)
+            $items[] = array_filter(['subject' => $subject, 'kind' => 'field', 'code' => $f['code'], 'order' => isset($f['order']) ? (int) $f['order'] : null,
+                'level' => RequirementLevel::DEFAULT, 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null); // activation historique (l'obligation vit au catalogue)
         }
         $keyed = [];
         foreach ($items as $i) {
-            $keyed[$i['kind'].':'.$i['code'].'@all'] = $i;
+            $keyed[\App\Core\Presets\Adapters\RequirementsPresetAdapter::key($i)] = $i;
         }
 
         return ['content' => ['items' => $items], 'items' => $keyed, 'skipped' => $skipped];

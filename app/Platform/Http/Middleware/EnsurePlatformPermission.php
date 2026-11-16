@@ -12,7 +12,9 @@ class EnsurePlatformPermission
     {
         $user = $request->user('platform');
 
-        if (!$user || !$user->hasPermission($permission)) {
+        // ADR-798 : « a|b » = l'une des permissions suffit (droit complet historique OU droit fin).
+        $any = explode('|', $permission);
+        if (!$user || !collect($any)->contains(fn ($p) => $user->hasPermission($p))) {
             return response()->json([
                 'message' => 'Permission required: ' . $permission,
             ], 403);

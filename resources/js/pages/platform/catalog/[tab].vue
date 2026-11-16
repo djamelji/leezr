@@ -26,11 +26,11 @@ const auth = usePlatformAuthStore()
 const tabs = computed(() => [
   { title: t('platformCatalog.tabs.modules'), icon: 'tabler-puzzle', tab: 'modules', permission: 'manage_modules' },
   { title: t('platformCatalog.tabs.jobdomains'), icon: 'tabler-briefcase', tab: 'jobdomains', permission: 'manage_jobdomains' },
-  { title: t('platformCatalog.tabs.presets'), icon: 'tabler-stack-2', tab: 'presets', permission: 'manage_jobdomains' }, // ADR-797
+  { title: t('platformCatalog.tabs.presets'), icon: 'tabler-stack-2', tab: 'presets', permission: ['manage_jobdomains', 'presets.view'] }, // ADR-797/798 : droit complet ou droit fin
   { title: t('platformCatalog.tabs.fields'), icon: 'tabler-forms', tab: 'fields', permission: 'manage_field_definitions' },
   { title: t('platformCatalog.tabs.documents'), icon: 'tabler-file-text', tab: 'documents', permission: 'manage_document_catalog' },
   { title: t('platformCatalog.tabs.plans'), icon: 'tabler-chart-bar', tab: 'plans', permission: 'manage_plans' },
-].filter(item => !item.permission || auth.hasPermission(item.permission)))
+].filter(item => !item.permission || [].concat(item.permission).some(p => auth.hasPermission(p))))
 
 // If the current tab is not among the authorized tabs, fall back to the first allowed one.
 const activeTab = computed({

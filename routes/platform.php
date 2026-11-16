@@ -587,24 +587,14 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
 
         // Market Overlays
         // ADR-636 (W-E) — administration minimale des presets organisationnels (gardée manage_jobdomains)
-        // ADR-793 (L3) — presets versionnés (RBAC, Exigences, Planning) + diff / aperçu / application explicite (4 familles)
         $pp = \App\Modules\Platform\Presets\Http\PlatformPresetController::class;
-        Route::get('/presets', [$pp, 'index']);
-        Route::post('/presets', [$pp, 'store']);
-        Route::put('/presets/{id}', [$pp, 'update'])->whereNumber('id');
-        Route::post('/presets/{id}/archive', [$pp, 'archive'])->whereNumber('id');
-        Route::post('/presets/{id}/new-version', [$pp, 'newVersion'])->whereNumber('id');
-        Route::post('/presets/{kind}/{id}/publish', [$pp, 'publish'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization'])->whereNumber('id');
-        Route::get('/presets/{kind}/{from}/diff/{to}', [$pp, 'diff'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
-        Route::get('/presets/{kind}/{id}/companies/{companyId}/preview', [$pp, 'preview'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
+        // ADR-793 — application explicite d'un preset à une société : droit complet uniquement
         Route::post('/presets/{kind}/{id}/companies/{companyId}/apply', [$pp, 'apply'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization']);
         // ADR-797 (L7) — JobDomain = contexte métier + recommandations ; diagnostic, brouillons depuis l'historique, initialisation préparée
         $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
         Route::get('/jobdomains/{id}/profile', [$jm, 'profile'])->whereNumber('id');
-        Route::post('/jobdomains/{id}/legacy-drafts', [$jm, 'legacyDraft'])->whereNumber('id');
         Route::get('/jobdomains/{id}/initialization-plan', [$jm, 'initializationPlan'])->whereNumber('id');
         Route::get('/companies/{companyId}/jobdomain-compatibility', [$jm, 'companyCompatibility'])->whereNumber('companyId');
-        Route::get('/presets/{kind}/{id}', [$jm, 'presetDetail'])->whereIn('kind', ['rbac', 'requirements', 'planning', 'organization'])->whereNumber('id');
         Route::get('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'recommendations']);
         Route::put('/jobdomains/{jobdomain}/preset-recommendations', [$pp, 'setRecommendations']);
         Route::get('/organization-presets/meta', [\App\Modules\Platform\Organization\Http\PlatformOrganizationPresetController::class, 'meta']); // W-E2 référentiels
@@ -633,6 +623,34 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/jobdomains/{jobdomainKey}/overlays', [JobdomainOverlayController::class, 'index']);
         Route::put('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'upsert']);
         Route::delete('/jobdomains/{jobdomainKey}/overlays/{marketKey}', [JobdomainOverlayController::class, 'destroy']);
+    });
+
+    // ── Presets versionnés (ADR-793 / ADR-798) — droits fins, manage_jobdomains reste le droit complet ──
+    Route::middleware(['module.active:platform.jobdomains'])->group(function () {
+        $pp = \App\Modules\Platform\Presets\Http\PlatformPresetController::class;
+        $pe = \App\Modules\Platform\Presets\Http\PlatformPresetEditorController::class;
+        $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
+        $kinds = ['rbac', 'requirements', 'planning', 'organization'];
+        Route::middleware('platform.permission:manage_jobdomains|presets.view')->group(function () use ($pp, $pe, $jm, $kinds) {
+            Route::get('/presets', [$pp, 'index']);
+            Route::get('/presets/meta', [$pe, 'meta']);
+            Route::get('/presets/{kind}/{from}/diff/{to}', [$pp, 'diff'])->whereIn('kind', $kinds);
+            Route::get('/presets/{kind}/{id}', [$jm, 'presetDetail'])->whereIn('kind', $kinds)->whereNumber('id');
+        });
+        Route::middleware('platform.permission:manage_jobdomains|presets.edit')->group(function () use ($pp, $pe, $jm) {
+            Route::post('/presets', [$pp, 'store']);
+            Route::put('/presets/{id}', [$pe, 'update'])->whereNumber('id');
+            Route::post('/presets/{id}/new-version', [$pp, 'newVersion'])->whereNumber('id');
+            Route::post('/jobdomains/{id}/legacy-drafts', [$jm, 'legacyDraft'])->whereNumber('id');
+        });
+        Route::middleware('platform.permission:manage_jobdomains|presets.publish')->group(function () use ($pp, $pe, $kinds) {
+            Route::post('/presets/{kind}/{id}/publish', [$pp, 'publish'])->whereIn('kind', $kinds)->whereNumber('id');
+            Route::post('/presets/{id}/archive', [$pe, 'archive'])->whereNumber('id');
+        });
+        Route::middleware('platform.permission:manage_jobdomains|presets.preview_company')->group(function () use ($pp, $pe, $kinds) {
+            Route::get('/presets/{kind}/{id}/companies/{companyId}/preview', [$pp, 'preview'])->whereIn('kind', $kinds);
+            Route::get('/companies/{companyId}/company-requirements', [$pe, 'companyRequirements'])->whereNumber('companyId');
+        });
     });
 
     // ── Support Tickets ─────────────────────────────────────────

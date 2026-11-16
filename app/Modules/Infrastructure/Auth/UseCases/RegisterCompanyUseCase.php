@@ -80,7 +80,14 @@ class RegisterCompanyUseCase
             ]);
 
             // ADR-100: Assign jobdomain + activate defaults (modules, fields, roles, dashboard)
-            JobdomainGate::assignToCompany($company, $data->jobdomainKey);
+            // ADR-798 : initialisation versionnée derrière drapeau (désactivé). Désactiver le drapeau = retour au
+            // chemin historique pour les créations futures. À l'inscription, seul le rôle « owner » (sensible) est
+            // confirmé explicitement par le créateur ; les autres rôles sensibles restent une décision ultérieure.
+            if (config('jobdomains.versioned_init.enabled')) {
+                \App\Core\Jobdomains\Modernization\VersionedCompanyInitializer::initializeNew($company, $data->jobdomainKey, ['rbac' => ['owner']], $user->id);
+            } else {
+                JobdomainGate::assignToCompany($company, $data->jobdomainKey);
+            }
 
             // ADR-290: Set legal_status_key if provided
             if ($data->legalStatusKey) {

@@ -32,7 +32,7 @@ class JobdomainModernizationController extends Controller
             'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'is_active', 'allow_custom_fields']),
             'markets' => Market::orderBy('key')->get(['key', 'name', 'is_active'])->map(fn ($m) => $m->only(['key', 'name', 'is_active'])
                 + ['has_override' => $jd->overlays()->where('market_key', $m->key)->exists()])->values(),
-            'modules' => VersionedCompanyInitializer::modules((array) $jd->default_modules),
+            'modules' => VersionedCompanyInitializer::classifyModules((array) $jd->default_modules, $jd->key),
             'available_modules' => collect(ModuleRegistry::forScope('company'))->map(fn ($m) => ['key' => $m->key, 'name' => $m->name, 'type' => $m->type,
                 'min_plan' => $m->minPlan, 'requires' => $m->requires, 'core' => str_starts_with($m->key, 'core.')])->values(),
             'recommendations' => PresetService::recommendationsFor($jd->key),
@@ -53,11 +53,12 @@ class JobdomainModernizationController extends Controller
 
     public function initializationPlan(Request $request, int $id): JsonResponse
     {
-        $request->validate(['market' => 'nullable|exists:markets,key']);
+        $data = $request->validate(['market' => 'nullable|exists:markets,key', 'plan' => 'nullable|string|max:50', 'from_legacy' => 'nullable|boolean']);
         $jd = Jobdomain::findOrFail($id);
 
-        return response()->json(['plan' => VersionedCompanyInitializer::plan($jd->key, $request->query('market')),
-            'parity' => VersionedCompanyInitializer::parity($jd->key, $request->query('market'))]);
+        // ADR-798 : parité MESURÉE sur deux sociétés fictives dans une transaction annulée (aucun résidu).
+        return response()->json(['plan' => VersionedCompanyInitializer::plan($jd->key, $data['market'] ?? null, $data['plan'] ?? null),
+            'parity' => \App\Core\Jobdomains\Modernization\CreationParity::measure($jd->key, $data['market'] ?? null, $data['plan'] ?? null, (bool) ($data['from_legacy'] ?? false))]);
     }
 
     public function companyCompatibility(int $companyId): JsonResponse

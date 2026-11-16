@@ -11,9 +11,9 @@ class Preset extends Model
 
     public const KINDS = ['rbac', 'requirements', 'planning'];
 
-    protected $fillable = ['key', 'family_key', 'kind', 'label', 'description', 'jobdomain_key', 'market_key', 'version', 'status', 'content', 'requires_modules', 'created_by', 'updated_by', 'published_at'];
+    protected $fillable = ['key', 'family_key', 'kind', 'label', 'description', 'jobdomain_key', 'market_key', 'version', 'status', 'revision', 'content', 'requires_modules', 'created_by', 'updated_by', 'published_at'];
 
-    protected $casts = ['content' => 'array', 'requires_modules' => 'array', 'version' => 'integer', 'published_at' => 'datetime'];
+    protected $casts = ['content' => 'array', 'requires_modules' => 'array', 'version' => 'integer', 'revision' => 'integer', 'published_at' => 'datetime'];
 
     public function contentAttributes(): array
     {

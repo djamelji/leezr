@@ -57,18 +57,66 @@ final class PresetService
         $family = $attrs['family_key'];
         $version = (int) Preset::where('family_key', $family)->max('version') + 1;
 
-        return Preset::create($attrs + ['kind' => $kind, 'version' => $version, 'key' => $family.'_v'.$version, 'status' => 'draft', 'created_by' => $by, 'updated_by' => $by]);
+        return Preset::create($attrs + ['kind' => $kind, 'version' => $version, 'key' => $family.'_v'.$version, 'status' => 'draft', 'revision' => 0, 'created_by' => $by, 'updated_by' => $by]);
     }
 
-    public static function updateDraft(Preset $preset, array $attrs, ?int $by): Preset
+    /**
+     * ADR-798 — draft editing : only a DRAFT is editable (a published version is immutable), validated by the
+     * family adapter, with optimistic concurrency (`revision` : a stale editor gets a conflict, never
+     * overwrites), audited. No company is touched.
+     */
+    public static function updateDraft(Preset $preset, array $attrs, ?int $by, ?int $expectedRevision = null): Preset
     {
-        if (! $preset->isEditable()) {
-            throw ValidationException::withMessages(['status' => 'A published version is immutable : create a new version.']);
-        }
-        self::adapter($preset->kind)->validate($attrs['content'] ?? $preset->content, $attrs['market_key'] ?? $preset->market_key);
-        $preset->fill($attrs + ['updated_by' => $by])->save();
+        return DB::transaction(function () use ($preset, $attrs, $by, $expectedRevision) {
+            $locked = Preset::whereKey($preset->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->isEditable()) {
+                throw ValidationException::withMessages(['status' => 'A published version is immutable : create a new version.']);
+            }
+            if ($expectedRevision !== null && (int) $locked->revision !== $expectedRevision) {
+                abort(response()->json(['message' => 'This draft was changed by someone else : reload it before saving.', 'code' => 'stale_revision',
+                    'revision' => (int) $locked->revision], 409));
+            }
+            self::adapter($locked->kind)->validate($attrs['content'] ?? $locked->content, $attrs['market_key'] ?? $locked->market_key);
+            $locked->fill($attrs + ['updated_by' => $by]);
+            $locked->revision = (int) $locked->revision + 1;
+            $locked->save();
+            app(AuditLogger::class)->logPlatform('preset.draft_updated', 'preset', $locked->key, ['actorId' => $by,
+                'metadata' => ['kind' => $locked->kind, 'version' => $locked->version, 'revision' => $locked->revision, 'items' => count(self::adapter($locked->kind)->items((array) $locked->content))]]);
 
-        return $preset;
+            return $locked;
+        });
+    }
+
+    /**
+     * ADR-798 — archiving never leaves a JobDomain recommendation without a usable version : refused when the
+     * version is PINNED by a recommendation, or when it is the last published version of a family recommended
+     * without pin. Publishing a replacement (which archives the previous one) stays possible. Family rows are
+     * locked (serialised with setRecommendations). Applications already made are history and stay untouched.
+     */
+    public static function archive(Model $preset, ?int $by): void
+    {
+        $kind = $preset instanceof OrganizationPreset ? 'organization' : $preset->kind;
+        DB::transaction(function () use ($preset, $kind, $by) {
+            self::familyVersionsLocked($kind, $preset->family_key);
+            $fresh = $preset->fresh();
+            $links = JobdomainPresetLink::where('kind', $kind)->where('family_key', $fresh->family_key)->lockForUpdate()->get();
+            $pinnedBy = $links->where('pinned_version', $fresh->version)->pluck('jobdomain_key')->unique()->values()->all();
+            $otherPublished = self::familyVersions($kind, $fresh->family_key)->where('status', 'published')->where('id', '!=', $fresh->id)->isNotEmpty();
+            $latestBy = $fresh->status === 'published' && ! $otherPublished ? $links->whereNull('pinned_version')->pluck('jobdomain_key')->unique()->values()->all() : [];
+            if ($pinnedBy || $latestBy) {
+                abort(response()->json([
+                    'message' => 'This version is used by a JobDomain recommendation : publish a replacement version or change the recommendation first.',
+                    'code' => 'recommendation_would_break', 'pinned_by' => $pinnedBy, 'latest_for' => $latestBy,
+                ], 422));
+            }
+            $fresh->archiveVersion($by);
+            app(AuditLogger::class)->logPlatform('preset.archived', 'preset', (string) ($fresh->key ?? $fresh->id), ['actorId' => $by, 'metadata' => ['kind' => $kind, 'version' => $fresh->version]]);
+        });
+    }
+
+    private static function familyVersionsLocked(string $kind, string $family): void
+    {
+        ($kind === 'organization' ? OrganizationPreset::query() : Preset::where('kind', $kind))->where('family_key', $family)->lockForUpdate()->get();
     }
 
     public static function publish(Model $preset, ?int $by): void
@@ -187,6 +235,14 @@ final class PresetService
             }
         }
         DB::transaction(function () use ($jobdomainKey, $links) {
+            foreach ($links as $l) {
+                self::familyVersionsLocked($l['kind'], $l['family_key']); // sérialisé avec l'archivage
+                $usable = self::familyVersions($l['kind'], $l['family_key'])->contains(fn ($v) => empty($l['pinned_version'])
+                    ? $v->status === 'published' : ((int) $v->version === (int) $l['pinned_version'] && $v->published_at !== null));
+                if (! $usable) {
+                    throw ValidationException::withMessages(['links' => "{$l['family_key']} has no usable published version."]);
+                }
+            }
             JobdomainPresetLink::where('jobdomain_key', $jobdomainKey)->delete(); // liens de recommandation uniquement (aucune donnée métier)
             foreach (array_values($links) as $i => $l) {
                 JobdomainPresetLink::create(['jobdomain_key' => $jobdomainKey, 'market_key' => $l['market_key'] ?? null, 'kind' => $l['kind'],

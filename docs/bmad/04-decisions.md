@@ -28534,3 +28534,26 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - Page Platform JobDomain refondue en une seule page sans onglets ; onglet « Presets » dans le catalogue (consulter, versions, comparer, publier, archiver, nouvelle version, aperçu sur une société), sans éditeur JSON.
   - Six fixtures DEV ADR-796 (1771→1776) supprimées sur autorisation explicite, après vérification de la simulation.
 - **Conséquences** : migration additive `2026_11_29_000001` ; aucune société modifiée (empreintes avant/après) ; resolver non basculé ; aucun changement Billing, paie ni RBAC ; conditions de désactivation des anciens moteurs et de bascule documentées.
+
+## ADR-798 — Finalisation JobDomain / Presets : éditeurs, exigences de niveau entreprise, initialisation versionnée
+
+- **Date** : 2026-11-16 — DEV uniquement (base `7df6b82d`). Rapport : `docs/bmad/ADR-798-JOBDOMAIN-PRESETS-FINALIZATION.md`.
+- **Contexte** : ADR-797 laissait trois lacunes :
+  - contenu des presets non éditable depuis la Platform ;
+  - archivage pouvant casser une recommandation ;
+  - documents de niveau société (Kbis, assurance) sans place dans les presets d'exigences ;
+  - et une initialisation versionnée non vérifiée.
+- **Décisions** :
+  - **Éditeurs spécialisés** RBAC, Exigences et Planning (brouillons uniquement, validation par l'adaptateur, concurrence optimiste `presets.revision` → 409, audit, comparaison automatique avec la version précédente). L'Organisation garde son éditeur ; aucun éditeur JSON.
+  - **Invariant de cycle de vie** : jamais de recommandation sans version utilisable. Archivage refusé si la version est épinglée, ou si c'est la dernière publiée recommandée sans épinglage ; recommandation d'une famille non publiée refusée ; verrous de famille ; remplacement par publication.
+  - **Sujet d'exigence** `requirements.subject_scope` : `person` (par défaut), `company` ou `legal_representative`. Catalogues existants réutilisés ; le résolveur des collaborateurs ne lit que `person` ; `CompanyRequirementResolver` répond « quoi et pourquoi » pour une entreprise, en lecture seule.
+  - **Modules à la création** classés par `EntitlementResolver` (socle, inclus, dépendance, payant, incompatible). Seuls les modules inclus sont activés ; jamais d'achat.
+  - **Initialisation versionnée complète** (`initializeNew`) : RBAC sensible sur confirmation explicite, projection opérationnelle des exigences, planning et organisation en décision explicite, sociétés existantes refusées. Elle est branchée à l'inscription derrière `JOBDOMAIN_VERSIONED_INIT`, **désactivé**. Retour arrière par le drapeau.
+  - **Parité mesurée** (`CreationParity`, `jobdomains:creation-parity`) sur sociétés fictives, dans une transaction annulée : sur DEV « logistique », 0 écart technique et 11 différences volontaires documentées. Parité jamais déclarée automatiquement.
+  - **Droits Platform fins** `presets.view`, `presets.edit`, `presets.publish` et `presets.preview_company`. `manage_jobdomains` reste le droit complet et le seul à recommander ou appliquer. Les droits fins ont été accordés uniquement aux détenteurs de `manage_jobdomains`. Le middleware accepte « a|b ».
+- **Conséquences** :
+  - migration additive `2026_11_30_000001` ;
+  - aucune société réelle modifiée ;
+  - pas de bascule de la conformité opérationnelle ;
+  - colonnes historiques conservées et en lecture seule ;
+  - recommander un brouillon n'est plus possible (test ADR-793 mis à jour).

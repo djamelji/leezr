@@ -105,17 +105,24 @@ const draftFromLegacy = async kind => {
   finally { drafting.value = null }
 }
 
+const fromLegacy = ref(false)
 const loadPlan = async () => {
   planLoading.value = true
-  try { plan.value = await $platformApi(`/jobdomains/${id.value}/initialization-plan`) }
+  try { plan.value = await $platformApi(`/jobdomains/${id.value}/initialization-plan?from_legacy=${fromLegacy.value ? 1 : 0}`) }
   finally { planLoading.value = false }
 }
+const companyReq = ref(null)
 
 const loadReport = async cid => {
   report.value = null
   if (!cid) return
   reportLoading.value = true
-  try { report.value = await $platformApi(`/companies/${cid}/jobdomain-compatibility`) }
+  try {
+    [report.value, companyReq.value] = await Promise.all([
+      $platformApi(`/companies/${cid}/jobdomain-compatibility`),
+      $platformApi(`/companies/${cid}/company-requirements`).catch(() => null),
+    ])
+  }
   finally { reportLoading.value = false }
 }
 watch(reportCompany, loadReport)
@@ -287,14 +294,8 @@ const classTone = { certain: 'text-success', partial: 'text-warning', legacy_onl
             </div>
           </div>
           <AppStatusText
-            v-if="!m.exists || !m.globally_enabled"
-            tone="warning"
-            :text="!m.exists ? t('jobdomainProfile.moduleUnknown') : t('jobdomainProfile.moduleDisabled')"
-          />
-          <AppStatusText
-            v-else-if="m.min_plan"
-            tone="info"
-            :text="t('jobdomainProfile.minPlan', { plan: m.min_plan })"
+            :tone="{ core: 'success', included: 'success', paid_optional: 'info', incompatible: 'error', unavailable: 'warning' }[m.class] || 'info'"
+            :text="t(`jobdomainProfile.moduleClass.${m.class}`) + (m.class === 'paid_optional' && m.min_plan ? ` · ${m.min_plan}` : '')"
           />
         </div>
       </VCardText>
@@ -518,6 +519,38 @@ const classTone = { certain: 'text-success', partial: 'text-warning', legacy_onl
           >
             {{ t('jobdomainProfile.reportGuarantee') }}
           </VAlert>
+          <template v-if="companyReq">
+            <div
+              class="text-overline mt-4"
+              data-test="jd-company-requirements"
+            >
+              {{ t('jobdomainProfile.companyReqTitle') }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis mb-1">
+              {{ companyReq.legal_representative ? t('jobdomainProfile.legalRep', { name: companyReq.legal_representative.name }) : t('jobdomainProfile.legalRepNone') }}
+            </div>
+            <div
+              v-for="it in companyReq.items"
+              :key="it.subject + it.kind + it.code"
+              class="jd-row"
+            >
+              <div class="flex-grow-1">
+                <div class="text-body-2">
+                  {{ it.label }}<span
+                    v-if="it.required"
+                    class="text-error"
+                  > *</span> · {{ t(`presetEditor.subject.${it.subject}`) }} · {{ it.kind === 'document' ? t('presetEditor.document') : t('presetEditor.field') }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  {{ t('jobdomainProfile.why') }} {{ it.sources.map(src => src.type === 'registry' ? `${src.source} ${src.ref || ''} ${src.version ? 'v' + src.version : ''}`.trim() : t('jobdomainProfile.historicalActivation')).join(' · ') }}
+                </div>
+              </div>
+              <AppStatusText
+                :tone="it.state === 'provided' ? 'success' : (it.required ? 'warning' : 'info')"
+                :text="t(`jobdomainProfile.reqState.${it.state}`)"
+              />
+            </div>
+          </template>
         </template>
       </VCardText>
     </VCard>
@@ -590,41 +623,54 @@ const classTone = { certain: 'text-success', partial: 'text-warning', legacy_onl
         :subtitle="t('jobdomainProfile.initHint')"
       />
       <VCardText v-if="plan">
+        <div class="d-flex flex-wrap gap-4 mb-3">
+          <div
+            v-for="c in ['bugs', 'voluntary', 'configuration']"
+            :key="c"
+            class="jd-stat"
+          >
+            <div
+              class="text-h5"
+              :class="c === 'bugs' && plan.parity.bugs ? 'text-error' : ''"
+            >
+              {{ plan.parity[c] }}
+            </div>
+            <div class="text-body-2 text-medium-emphasis">
+              {{ t(`jobdomainProfile.parityClass.${c}`) }}
+            </div>
+          </div>
+        </div>
+        <div class="text-body-2 text-medium-emphasis mb-2">
+          {{ t('jobdomainProfile.parityRecs') }} {{ plan.parity.recommendations.join(', ') || '—' }}
+        </div>
         <div
-          v-for="kind in ['rbac', 'requirements']"
-          :key="kind"
+          v-for="(d, i) in plan.parity.differences.slice(0, 40)"
+          :key="i"
           class="jd-row"
         >
-          <div class="flex-grow-1">
-            <div class="text-body-1">
-              {{ t(`jobdomainProfile.family.${kind}`) }}
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              {{ t(`jobdomainProfile.parity.${plan.parity.families[kind].status}`) }}<template v-if="plan.parity.families[kind].legacy_only?.length">
-                · {{ t('jobdomainProfile.parityLegacyOnly', { n: plan.parity.families[kind].legacy_only.length }) }}
-              </template><template v-if="plan.parity.families[kind].different?.length">
-                · {{ t('jobdomainProfile.parityDifferent', { n: plan.parity.families[kind].different.length }) }}
-              </template>
+          <div class="flex-grow-1 text-body-2">
+            <span class="font-weight-medium">{{ t(`jobdomainProfile.dimension.${d.dimension}`, d.dimension) }}</span> · {{ d.item }}
+            <div
+              v-if="d.reason"
+              class="text-medium-emphasis"
+            >
+              {{ t(`jobdomainProfile.voluntary.${d.reason}`, d.explanation) }}
             </div>
           </div>
           <AppStatusText
-            :tone="plan.parity.families[kind].status === 'equivalent' ? 'success' : 'warning'"
-            :text="plan.parity.families[kind].status === 'equivalent' ? t('jobdomainProfile.ok') : t('jobdomainProfile.gap')"
+            :tone="d.class === 'bug' ? 'error' : (d.class === 'voluntary' ? 'info' : 'warning')"
+            :text="t(`jobdomainProfile.parityClass.${d.class === 'bug' ? 'bugs' : d.class}`)"
           />
         </div>
-        <div class="jd-row">
-          <div class="flex-grow-1">
-            <div class="text-body-1">
-              {{ t('jobdomainProfile.modulesTitle') }}
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              {{ t('jobdomainProfile.parity.behaviour_differs') }}
-            </div>
-          </div>
-          <AppStatusText
-            tone="warning"
-            :text="t('jobdomainProfile.decisionRequired')"
-          />
+        <div class="text-overline mt-4">
+          {{ t('jobdomainProfile.modulesTitle') }}
+        </div>
+        <div class="text-body-2">
+          <span
+            v-for="m in plan.plan.modules"
+            :key="m.key"
+            class="me-3"
+          >{{ m.name }} — {{ t(`jobdomainProfile.moduleClass.${m.class}`) }}</span>
         </div>
         <VAlert
           type="warning"
@@ -635,7 +681,15 @@ const classTone = { certain: 'text-success', partial: 'text-warning', legacy_onl
           {{ t('jobdomainProfile.noParity') }}
         </VAlert>
       </VCardText>
-      <VCardActions class="justify-end">
+      <VCardActions class="justify-end flex-wrap">
+        <VSwitch
+          v-model="fromLegacy"
+          hide-details
+          density="compact"
+          :label="t('jobdomainProfile.fromLegacy')"
+          class="me-4"
+          data-test="jd-from-legacy"
+        />
         <VBtn
           variant="tonal"
           :loading="planLoading"

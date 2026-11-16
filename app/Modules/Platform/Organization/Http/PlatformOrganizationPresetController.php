@@ -115,7 +115,9 @@ class PlatformOrganizationPresetController extends Controller
     public function archive(Request $request, int $id): JsonResponse
     {
         $preset = OrganizationPreset::findOrFail($id);
-        $preset->update(['status' => 'archived', 'updated_by' => $request->user()?->id]);
+        // ADR-798 : même règle que les autres familles — jamais une recommandation JobDomain sans version utilisable.
+        \App\Core\Presets\PresetService::archive($preset, $request->user()?->id);
+        $preset = $preset->fresh();
         $this->audit('organization_preset.archived', $preset);
 
         return response()->json($preset);
