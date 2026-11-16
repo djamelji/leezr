@@ -1,5 +1,10 @@
 # ADR-800 — Inventaire frontend
 
+> **Erratum ADR-801.**
+> - L'extracteur de `definePage` ratait les déclarations écrites sur une seule ligne. Six lignes de la colonne *Garde* étaient fausses ; elles sont corrigées ci-dessous (marquées « corrigé ADR-801 »).
+> - Conséquence : `platform/billing/consolidated-preview` **était bien gardée** (`view_billing`). Le nombre réel de pages Platform sans permission était de **12**, et non de 13.
+> - Les statuts des pages ne changent pas.
+
 > Généré depuis `typed-router.d.ts` (routes produites par unplugin-vue-router), les `definePage`, les manifests de modules (`ModuleRegistry::definitions()`) et une analyse des littéraux d'API. SHA `c3f468fa`. Exhaustif pour les fichiers de `resources/js/pages` (290) ; les appels d'API construits dynamiquement peuvent manquer (colonne API = littéraux trouvés dans la page et ses imports directs).
 
 Légende des colonnes : **Nav** = entrée de menu déclarée par un module ; **Liens** = références au nom de route (n) / au chemin (p) dans `resources/js`, **php** = cité côté serveur (notifications, e-mails, nav) ; **Garde** = module · permission vérifiés par `guards.js`.
@@ -14,19 +19,19 @@ Légende des colonnes : **Nav** = entrée de menu déclarée par un module ; **L
 | `/audience/confirm` | audience/confirm.vue | — · — | — | 0/0/non | — | TECHNIQUE légitime |
 | `/audience/unsubscribe` | audience/unsubscribe.vue | — · — | — | 0/0/non | — | TECHNIQUE légitime |
 | `/company/403` | company/403.vue | — · — | — | 1/0/non | — | TECHNIQUE légitime |
-| `/company/audit` | company/audit/index.vue | — · — | core.audit:audit(audit.view) | 0/1/oui | — | ACTIVE utile |
+| `/company/audit` | company/audit/index.vue | core.audit · audit.view (corrigé ADR-801) | core.audit:audit(audit.view) | 0/1/oui | — | ACTIVE utile |
 | `/company/billing` | company/billing/index.vue | core.billing · billing.manage | — | 0/6/non | — | REMPLACÉE : redirection → billing/:tab |
 | `/company/billing/:tab` | company/billing/[tab].vue | core.billing · billing.manage | core.billing:billing(billing.manage) | 8/6/oui | /billing/invoices/{}/pdf<br>/billing/subscription/cancel-preview | ACTIVE utile |
 | `/company/billing/consolidated-preview` | company/billing/consolidated-preview.vue | core.billing · billing.manage | — | 0/1/non | — | ACTIVE utile |
 | `/company/billing/invoices/:id` | company/billing/invoices/[id].vue | core.billing · billing.manage | — | 0/2/non | /billing/invoices/{}/pdf | ACTIVE utile |
 | `/company/billing/pay` | company/billing/pay.vue | core.billing · billing.manage | — | 0/3/non | — | ACTIVE utile |
 | `/company/dev-lab` | company/dev-lab.vue | workforce · workforce.view | — | 0/0/non | — | HORS PARCOURS : laboratoire design (ADR-694), routable en PROD |
-| `/company/documents/:tab` | company/documents/[tab].vue | — · — | core.documents:settings-documents(documents.configure),core.documents:documents,workforce_contract:settings-templates(workforce_contract.view) | 3/11/oui | /dashboard/priorities<br>/company/documents/search<br>/company/members/{}/documents/{}/review<br>/company/members/{}/documents/{}/apply-suggestions<br>/company/members/{}/documents/{}/retry-ai<br>/company/members/{}/documents/{}<br>+13 | ACTIVE utile |
+| `/company/documents/:tab` | company/documents/[tab].vue | core.documents · ['documents.view', 'workforce_documents.view', 'workforce_signature.view'] (corrigé ADR-801) | core.documents:settings-documents(documents.configure),core.documents:documents,workforce_contract:settings-templates(workforce_contract.view) | 3/11/oui | /dashboard/priorities<br>/company/documents/search<br>/company/members/{}/documents/{}/review<br>/company/members/{}/documents/{}/apply-suggestions<br>/company/members/{}/documents/{}/retry-ai<br>/company/members/{}/documents/{}<br>+13 | ACTIVE utile |
 | `/company/members` | company/members/index.vue | core.members · members.view | — | 0/6/oui | — | REDONDANTE : liste historique complète (1 224 l.) doublon de /company/people (ADR-768 « listes en alias ») |
 | `/company/members/:id` | company/members/[id].vue | core.members · members.view | — | 0/6/oui | /company/people/resolve | REMPLACÉE : redirection → people/:personRef (ADR-768) |
 | `/company/modules` | company/modules/index.vue | core.modules · modules.manage | core.modules:modules(modules.manage) | 1/1/oui | — | ACTIVE utile |
 | `/company/modules/:key` | company/modules/[key].vue | core.modules · modules.manage | — | 1/1/non | — | ACTIVE utile |
-| `/company/my-deliveries` | company/my-deliveries/index.vue | — · — | logistics_shipments:my-deliveries(shipments.view_own) | 2/1/oui | — | ACTIVE utile |
+| `/company/my-deliveries` | company/my-deliveries/index.vue | logistics_shipments · shipments.view_own (corrigé ADR-801) | logistics_shipments:my-deliveries(shipments.view_own) | 2/1/oui | — | ACTIVE utile |
 | `/company/my-deliveries/:id` | company/my-deliveries/[id].vue | logistics_shipments · shipments.view_own | — | 1/1/oui | — | ACTIVE utile |
 | `/company/my-space/:tab` | company/my-space/[tab].vue | — · — | core.settings:my-space | 3/1/oui | /profile/documents | ACTIVE utile |
 | `/company/notifications` | company/notifications/index.vue | core.notifications · — | — | 2/0/non | — | ACTIVE utile |
@@ -36,14 +41,14 @@ Légende des colonnes : **Nav** = entrée de menu déclarée par un module ; **L
 | `/company/profile/:tab` | company/profile/[tab].vue | core.settings · settings.view | core.settings:company-profile(settings.view) | 1/2/oui | — | ACTIVE utile |
 | `/company/roles` | company/roles.vue | core.roles · roles.view | — | 0/1/oui | — | REMPLACÉE : alias : redirigé vers people?tab=roles en standalone, embarqué dans people (ADR-766) |
 | `/company/settings` | company/settings/index.vue | — · — | — | 1/0/oui | /workforce/signature/options | ACTIVE utile |
-| `/company/shipments` | company/shipments/index.vue | — · — | logistics_shipments:shipments(shipments.view) | 2/0/oui | — | ACTIVE utile |
+| `/company/shipments` | company/shipments/index.vue | logistics_shipments · shipments.view (corrigé ADR-801) | logistics_shipments:shipments(shipments.view) | 2/0/oui | — | ACTIVE utile |
 | `/company/shipments/:id` | company/shipments/[id].vue | logistics_shipments · shipments.view | — | 2/0/oui | — | ACTIVE utile |
 | `/company/shipments/create` | company/shipments/create.vue | logistics_shipments · shipments.create | — | 1/0/oui | — | ACTIVE utile |
 | `/company/support` | company/support/index.vue | core.support · support.view | — | 6/0/oui | — | ACTIVE utile |
 | `/company/support/:id` | company/support/[id].vue | core.support · support.view | — | 1/0/oui | — | ACTIVE utile |
 | `/company/workflows` | company/workflows/index.vue | core.workflows · automations.view | core.workflows:workflows(automations.view) | 1/0/oui | — | ACTIVE utile |
 | `/company/workflows/:id` | company/workflows/[id].vue | core.workflows · automations.view | — | 1/0/oui | — | ACTIVE utile |
-| `/company/workforce` | company/workforce/index.vue | — · — | — | 0/14/oui | — | REMPLACÉE : redirection → /dashboard (ADR-687) |
+| `/company/workforce` | company/workforce/index.vue | workforce · workforce.view (corrigé ADR-801) | — | 0/14/oui | — | REMPLACÉE : redirection → /dashboard (ADR-687) |
 | `/company/workforce/configuration` | company/workforce/configuration.vue | workforce · workforce.view | — | 0/0/non | — | REMPLACÉE : redirection → settings/worktime (ADR-639) |
 | `/company/workforce/contract/templates` | company/workforce/contract/templates.vue | workforce_contract · workforce_contract.view | — | 0/1/non | — | REDONDANTE : doublon de documents/:tab?tab=templates (aucun lien de nav) |
 | `/company/workforce/documents` | company/workforce/documents/index.vue | workforce_documents · workforce_documents.view | — | 0/0/oui | /workforce/employees/{} | REDONDANTE : page embarquée dans documents/:tab (onglet RH) ET routable seule |
@@ -77,7 +82,7 @@ Légende des colonnes : **Nav** = entrée de menu déclarée par un module ; **L
 | `/platform/access/:tab` | platform/access/[tab].vue | platform.users · — | platform.users:platform-access(manage_platform_users) | 2/2/oui | — | ACTIVE utile |
 | `/platform/account/:tab` | platform/account/[tab].vue | platform.settings · — | — | 1/0/oui | /platform/me/profile<br>/platform/me/password<br>/platform/2fa/status<br>/platform/2fa/enable<br>/platform/2fa/confirm<br>/platform/2fa<br>+2 | ACTIVE utile |
 | `/platform/billing/:tab` | platform/billing/[tab].vue | platform.billing · view_billing | platform.billing:platform-billing(view_billing) | 1/7/oui | /platform/billing/drilldown/receivables<br>/platform/billing/drilldown/revenue<br>/platform/billing/scheduled-debits<br>/platform/billing/coupons<br>/platform/billing/coupons/{}<br>/platform/companies<br>+2 | ACTIVE utile |
-| `/platform/billing/consolidated-preview` | platform/billing/consolidated-preview.vue | — · — | — | 0/1/non | — | ACTIVE utile |
+| `/platform/billing/consolidated-preview` | platform/billing/consolidated-preview.vue | platform.billing · view_billing (corrigé ADR-801) | — | 0/1/non | — | ACTIVE utile |
 | `/platform/billing/invoices/:id` | platform/billing/invoices/[id].vue | platform.billing · view_billing | — | 3/3/oui | — | ACTIVE utile |
 | `/platform/catalog/:tab` | platform/catalog/[tab].vue | platform.modules · — | platform.modules:catalog(manage_modules) | 3/0/oui | /platform/documents<br>/platform/documents/sync<br>/platform/documents/{}/archive<br>/platform/documents/{}/restore<br>/platform/presets<br>/platform/presets/{}/{}<br>+5 | ACTIVE utile |
 | `/platform/communications/:tab` | platform/communications/[tab].vue | platform.support · — | platform.support:communications(manage_support) | 2/0/oui | — | ACTIVE utile |

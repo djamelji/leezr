@@ -12,6 +12,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.modules',
+    anyPermission: ['manage_modules', 'manage_jobdomains', 'presets.view', 'manage_field_definitions', 'manage_document_catalog', 'manage_plans'], // ADR-801
     navActiveLink: 'platform-catalog-tab',
   },
 })

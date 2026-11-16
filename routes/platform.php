@@ -660,7 +660,6 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/support/metrics', [PlatformSupportTicketController::class, 'metrics']);
         Route::get('/support/tickets', [PlatformSupportTicketController::class, 'index']);
         Route::get('/support/tickets/{id}', [PlatformSupportTicketController::class, 'show']);
-        Route::put('/support/tickets/{id}/assign', [PlatformSupportTicketController::class, 'assign']);
         Route::put('/support/tickets/{id}/resolve', [PlatformSupportTicketController::class, 'resolve']);
         Route::put('/support/tickets/{id}/close', [PlatformSupportTicketController::class, 'close']);
         Route::put('/support/tickets/{id}/priority', [PlatformSupportTicketController::class, 'updatePriority']);
@@ -668,6 +667,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::post('/support/tickets/{id}/messages', [PlatformSupportMessageController::class, 'store']);
         Route::post('/support/tickets/{id}/internal-notes', [PlatformSupportMessageController::class, 'storeInternal']);
     });
+    // ADR-801 (P0-3) — assignment is the `assign_support` capability. `manage_support` keeps it
+    // (compatibility : no holder loses access). assign_support alone opens NOTHING else (list, read,
+    // resolve, close, priority, messages stay manage_support).
+    Route::put('/support/tickets/{id}/assign', [PlatformSupportTicketController::class, 'assign'])
+        ->middleware(['module.active:platform.support', 'platform.permission:assign_support|manage_support']);
 
     // ── Documentation ───────────────────────────────────────────
     Route::middleware(['module.active:platform.documentation', 'platform.permission:manage_documentation'])->group(function () {

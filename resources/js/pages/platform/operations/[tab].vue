@@ -13,6 +13,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.alerts',
+    anyPermission: ['view_system_health', 'view_alerts', 'security.alerts.view', 'view_ai', 'view_usage_monitoring', 'manage_automations', 'realtime.metrics.view'], // ADR-801
     navActiveLink: 'platform-operations-tab',
   },
 })

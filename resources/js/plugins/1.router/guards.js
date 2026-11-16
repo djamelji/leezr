@@ -66,7 +66,8 @@ export const setupGuards = router => {
       }
 
       // Module guard — block if module is disabled globally
-      if (to.meta.module && platformAuth.isModuleInactive(to.meta.module)) {
+      // ADR-801 : `/platform` is the dispatcher (fallback of every refusal) — never bounce it onto itself.
+      if (to.meta.module && to.path !== '/platform' && platformAuth.isModuleInactive(to.meta.module)) {
         const { toast } = useAppToast()
 
         toast('This module is currently disabled.', 'warning')
@@ -74,12 +75,17 @@ export const setupGuards = router => {
         return '/platform'
       }
 
-      if (to.meta.permission && !platformAuth.hasPermission(to.meta.permission)) {
+      // ADR-801 (P0-2) — tabbed hubs declare `anyPermission` (union of their tabs' permissions), same
+      // contract as the company branch. A forbidden page sends back to `/platform`, which dispatches to
+      // the first accessible entry (never assumed super-admin).
+      const deniedPermission = to.meta.permission && !platformAuth.hasPermission(to.meta.permission)
+      const deniedAny = Array.isArray(to.meta.anyPermission) && !to.meta.anyPermission.some(p => platformAuth.hasPermission(p))
+      if (deniedPermission || deniedAny) {
         const { toast } = useAppToast()
 
         toast('You do not have permission to access this page.', 'error')
 
-        return '/platform'
+        return to.path === '/platform' ? false : '/platform'
       }
 
       return

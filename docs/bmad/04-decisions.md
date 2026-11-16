@@ -28607,3 +28607,22 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - aucun code, aucune donnée ni aucune migration modifiés ;
   - 8 arbitrages demandés au propriétaire ;
   - ADR-801 n'est pas commencé.
+
+## ADR-801 — Rationalisation P0 : routes `_*.vue`, gardes Platform, `assign_support`
+
+- **Date** : 2026-11-16, DEV uniquement, base `99692bd4`. Rapport : `docs/bmad/ADR-801-RATIONALIZATION-P0.md`.
+- **Contexte** : ADR-800 validé, GO limité aux trois P0.
+- **Décisions** :
+  - **P0-1.** `VueRouter({ exclude: ['**/_*.vue'] })` : 290 → 98 routes générées. Les 192 sous-composants ne sont plus routables, aucune page métier ne disparaît, aucun import n'est cassé.
+  - **P0-2.**
+    - La branche Platform du guard central accepte `meta.anyPermission`, comme la branche Company.
+    - Les 12 pages Platform concernées déclarent la permission que leur API exige ; l'onglet Paramètres filtre désormais ses sous-onglets.
+    - `/platform` devient un répartiteur sans boucle : tableau de bord, sinon première entrée de menu accessible, sinon le compte.
+    - Un invariant testé l'impose. Le compte personnel, le répartiteur et le labo DEV restent sans permission, chacun pour une raison documentée.
+  - **P0-3.** `PUT support/tickets/{id}/assign` est gardée par `assign_support|manage_support`. Aucun pivot n'est modifié, aucun détenteur actuel ne perd ni ne gagne de droit, et `assign_support` seul n'ouvre aucune autre action.
+- **Conséquences** :
+  - Errata ADR-800 : `consolidated-preview` était déjà gardée (12 pages à traiter, pas 13), et 6 lignes de garde avaient été mal extraites.
+  - Résidus :
+    - en DEV, les comptes Platform limités dont l'id n'existe pas dans `users` ne peuvent pas se connecter (clé étrangère `sessions.user_id`, antérieure au lot) ;
+    - 6 noms de route cassés déjà avant le lot ;
+    - un rôle `assign_support` seul n'a pas d'écran pour assigner.

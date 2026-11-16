@@ -22,7 +22,7 @@
   - **Écart** :
     - les 192 routes `_*.vue` n'ont aucune méta : voir P0-1 ;
     - 12 pages Platform ont `meta.module` sans `meta.permission`, l'API restant gardée : `access/:tab`, `account/:tab`, `catalog/:tab`, `communications/:tab`, `companies`, `dashboard/:tab`, `documents/:id`, `markets/:key`, `messaging/:tab`, `operations/:tab`, `settings/:tab`, `support/:id` ;
-    - `platform/billing/consolidated-preview` n'a **aucune garde** (ni module ni permission).
+    - ~~`platform/billing/consolidated-preview` n'a aucune garde~~ : **faux positif**, corrigé par ADR-801 (la page déclare `view_billing`).
 
 ## 2. Permissions qui ne protègent rien (prouvé : 0 vérification hors manifest, en API comme en UI)
 

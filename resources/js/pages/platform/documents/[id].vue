@@ -7,6 +7,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.documents',
+    permission: 'manage_document_catalog', // ADR-801
     navActiveLink: 'platform-documents',
   },
 })

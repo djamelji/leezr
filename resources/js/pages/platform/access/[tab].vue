@@ -14,6 +14,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.users',
+    anyPermission: ['manage_platform_users', 'manage_roles', 'view_audit_logs'], // ADR-801 : union des onglets
     navActiveLink: 'platform-access-tab',
   },
 })

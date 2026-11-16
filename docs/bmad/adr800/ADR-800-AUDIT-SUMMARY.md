@@ -52,7 +52,7 @@ L'écart **« module activé ≠ module prêt »** est structurel : rien n'attri
 
 ## Arbitrages demandés au propriétaire
 
-1. **P0** : GO pour P0-1 (exclusion des `_*.vue`), P0-2 (gardes Platform) et P0-3 (`assign_support`).
+1. **P0** : GO pour P0-1 (exclusion des `_*.vue`), P0-2 (gardes Platform) et P0-3 (`assign_support`). → **livré par ADR-801**. Erratum : `consolidated-preview` était déjà gardée ; il y avait donc 12 pages Platform à traiter, et non 13.
 2. **Overlays de marché** : réintégrer comme variante de preset, ou déprécier ?
 3. **Les 9 permissions inertes** : retirer, ou brancher (liste dans MODULE-RBAC-MAP §2) ? Le nettoyage des pivots touche des données Company.
 4. **Fonctions construites sans écran** (revue des bulletins, campagnes, relance antivirus, `reset-key`, partage de champs) : exposer ou déprécier ?

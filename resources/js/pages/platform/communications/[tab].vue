@@ -8,6 +8,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.support',
+    anyPermission: ['manage_support', 'manage_documentation'], // ADR-801
     navActiveLink: 'platform-communications-tab',
   },
 })

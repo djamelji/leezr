@@ -15,7 +15,7 @@
 | Lot | Priorité | Action | Objet | Effort estimé |
 |---|---|---|---|---|
 | P0-1 | P0 | RETIRER (routes) | 192 routes `_*.vue` sans garde | Petit |
-| P0-2 | P0 | FUSIONNER (gardes) | Pages Platform sans `meta.permission`, dont une sans aucune garde | Petit |
+| P0-2 | P0 | FUSIONNER (gardes) | 12 pages Platform sans `meta.permission` (le « sans aucune garde » était un faux positif, voir ADR-801) | Petit |
 | P0-3 | P0 | REMPLACER | `assign_support` non vérifiée ; l'assignation exige `manage_support` | Petit |
 | P1-1 | P1 | FUSIONNER | Listes `members` / `workforce/employees` → `people` | Petit |
 | P1-2 | P1 | FUSIONNER | Routes Documents RH, Signatures, Modèles → `documents/:tab` | Petit |
@@ -62,7 +62,7 @@
 ### P0-2 : gardes UI incomplètes sur des pages Platform
 
 - **Problème.**
-  - `platform/billing/consolidated-preview` n'a ni `module` ni `permission`.
+  - ~~`platform/billing/consolidated-preview` n'a ni `module` ni `permission`~~ : **faux positif**, corrigé par ADR-801.
   - 12 pages Platform n'ont que `meta.module` : `access/:tab`, `account/:tab`, `catalog/:tab`, `communications/:tab`, `companies`, `dashboard/:tab`, `documents/:id`, `markets/:key`, `messaging/:tab`, `operations/:tab`, `settings/:tab`, `support/:id`.
   - L'API est gardée (`EnsurePlatformPermission`). L'écran s'affiche puis échoue en 403.
 - **Solution.**

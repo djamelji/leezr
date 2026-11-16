@@ -7,6 +7,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.markets',
+    permission: 'manage_markets', // ADR-801
     navActiveLink: 'platform-settings-tab',
   },
 })

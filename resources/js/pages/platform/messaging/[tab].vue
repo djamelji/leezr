@@ -12,6 +12,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.email',
+    permission: 'manage_email', // ADR-801 : tous les onglets
     navActiveLink: 'platform-messaging-tab',
   },
 })

@@ -8,6 +8,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.dashboard',
+    permission: 'view_dashboard', // ADR-801 : = entrée de menu et API du cockpit
     navActiveLink: 'platform-dashboard-tab',
   },
 })

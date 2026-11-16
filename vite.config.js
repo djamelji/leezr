@@ -25,6 +25,10 @@ export default defineConfig({
       },
 
       routesFolder: 'resources/js/pages',
+
+      // ADR-801 (P0-1) — `_*.vue` are page-local sub-components (imported by relative path), never
+      // standalone routes. Without this exclusion each one became an unguarded route (no definePage).
+      exclude: ['**/_*.vue'],
     }),
     vue({
       template: {

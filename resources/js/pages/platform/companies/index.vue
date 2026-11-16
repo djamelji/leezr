@@ -12,6 +12,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.companies',
+    permission: 'view_companies', // ADR-801 : = GET /platform/companies
     navActiveKey: 'platform-companies',
   },
 })
