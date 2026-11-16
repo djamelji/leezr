@@ -34,7 +34,8 @@ class OnboardingInvitation extends Model
         'company_id', 'employee_id', 'job_role_id', 'status', 'token_hash', 'expires_at', 'revoked_at', 'candidate_email', 'snapshot',
         'snapshot_version', 'snapshot_history', 'purpose', 'legal_basis', 'notice_version', 'notice_text', 'retention_days', 'code_hash',
         'code_expires_at', 'code_attempts', 'open_attempts', 'hr_message', 'sent_at', 'started_at', 'submitted_at', 'validated_at',
-        'validated_by', 'created_by', 'purged_at',
+        'validated_by', 'created_by', 'purged_at', 'delivery_status', 'delivery_error', 'mailed_at', 'mail_count', 'mail_window_at',
+        'code_sends', 'code_window_at', 'code_failures', 'verification_locked_at', 'verified_at', 'expired_at',
     ];
 
     protected $hidden = ['token_hash', 'code_hash'];
@@ -42,7 +43,8 @@ class OnboardingInvitation extends Model
     protected $casts = [
         'snapshot' => 'array', 'snapshot_history' => 'array', 'expires_at' => 'datetime', 'revoked_at' => 'datetime',
         'code_expires_at' => 'datetime', 'sent_at' => 'datetime', 'started_at' => 'datetime', 'submitted_at' => 'datetime',
-        'validated_at' => 'datetime', 'purged_at' => 'datetime',
+        'validated_at' => 'datetime', 'purged_at' => 'datetime', 'mailed_at' => 'datetime', 'mail_window_at' => 'datetime',
+        'code_window_at' => 'datetime', 'verification_locked_at' => 'datetime', 'verified_at' => 'datetime', 'expired_at' => 'datetime',
     ];
 
     public function sessions(): \Illuminate\Database\Eloquent\Relations\HasMany

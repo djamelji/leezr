@@ -28497,3 +28497,26 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Tests : 8 (prérequis et parcours), tests liés verts, recette navigateur 1/1 (RH → recrue mobile sans session Company → soumission → validation RH, clair et sombre, lien masqué) ; suite 4452 réussis + 3 échecs historiques ; build propre.
 - Conditions avant usage réel : validation juridique par marché, envoi maîtrisé, antivirus, planification de la conservation, revue de sécurité externe.
 - L7 non commencé.
+
+## ADR-796.1 — Stabilisation du dossier candidat : fichiers, vérification, envoi, cycle de vie, révision
+
+- **Date** : 2026-11-16 — DEV uniquement (base `ee6fdb19`). Addendum complet : `docs/bmad/ADR-796.1-ONBOARDING-STABILIZATION.md`.
+- **Contexte** : le portail candidat est public et reçoit des données sensibles et des fichiers. ADR-796 acceptait des fichiers sans analyse, laissait contourner la vérification sur des éléments sensibles facultatifs, permettait des essais de code illimités par renvoi, écrivait lors d'une lecture RH et n'offrait ni envoi e-mail ni révision dans l'interface.
+- **Décisions** :
+  - **Quarantaine obligatoire** des dépôts du portail.
+    - Disque privé non servi.
+    - Contrat transversal `FileScanner` : `none` par défaut (fail-closed), `clamav`, ou `simulated` (tests et DEV, refusé en production).
+    - Traitement idempotent dans le contexte tenant, avec reprise planifiée.
+    - Seul un verdict sain fait entrer le fichier dans le DMS, comme demande soumise et jamais validée.
+    - Un fichier infecté est supprimé tout de suite ; un verdict indéterminé rend le fichier inutilisable, avec relance possible par les RH.
+    - La validation RH est bloquée tant qu'une pièce n'est pas analysée saine.
+  - **Vérification** : 10 échecs au total verrouillent la vérification jusqu'à un nouveau lien ; 5 codes par 24 h ; un dossier sensible n'est soumis que depuis une session vérifiée ; un changement d'adresse invalide code, lien et sessions ; le code est envoyé immédiatement, n'est jamais mis en file, jamais affiché, jamais audité, et un échec d'envoi l'annule.
+  - **Canal transactionnel** (`TransactionalMailChannel`) : les transports `log` et `array` sont refusés et, hors production, seul un SMTP local est admis. L'invitation par e-mail passe par les notifications Leezr ; chaque envoi crée un nouveau lien. Envois limités à un toutes les 2 min et 5 par jour ; statut et erreur nettoyée enregistrés ; ni jeton ni adresse dans l'audit. Le lien à copier reste disponible.
+  - **Une lecture reste une lecture** : l'expiration n'est constatée que par `OnboardingLifecycleService`, appelé chaque heure par `onboarding:expire` ; ce constat est idempotent et audité, et ne supprime aucune donnée. Un dossier soumis n'expire pas ; un dossier expiré se renouvelle. `onboarding:retention` est planifiée en **simulation** ; `--apply` n'est ajouté que par une décision explicite (`ONBOARDING_RETENTION_AUTO_APPLY`).
+  - **Révision dans l'interface RH** : prévisualisation sans écriture ; après soumission, révision traitée comme une demande de complément avec message obligatoire. Les réponses à un élément retiré sont conservées mais jamais écrites (`not_requested`). Une obligation qu'aucune règle ni proposition ne justifie est refusée.
+  - **Fiches préparatoires** : marqueur `preparatory_at` posé seulement sur les fiches du flux ADR-796, statut « Recrue en préparation », exclusion des populations documentaires et de l'impact des exigences. Paie et planning ne prenaient déjà que les fiches actives.
+  - **Fixtures** : commande `onboarding:cleanup-fixtures`, par ids explicites, en simulation par défaut, qui refuse toute fiche non fictive ou ayant une trace opérationnelle. Les 6 fiches « E2E Recrue » d'ADR-796 sont recensées mais **non supprimées** (validation requise). Les recettes suivantes nettoient leur propre fixture par id.
+- **Conséquences** :
+  - Migration additive `2026_11_28_000001`, rendue reprenable après un échec partiel du DDL MySQL.
+  - Aucun changement Billing, paie, rôles, contrats signés ni exigences opérationnelles.
+  - Antivirus réel, SMTP de production, worker de file, sauvegardes et validation juridique restent des dépendances externes.

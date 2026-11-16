@@ -4501,7 +4501,8 @@
       "inactive": "Inactive",
       "on_leave": "On leave",
       "suspended": "Suspended",
-      "terminated": "Terminated"
+      "terminated": "Terminated",
+      "preparatory": "Recruit in preparation"
     },
     "identity": {
       "sharedNotice": "This person uses the same account in another company: their name is edited from their own profile. Information specific to your company can still be edited here."
@@ -6393,7 +6394,10 @@
       "leaveAccrue": "Monthly leave accrual",
       "leaveConsumeDue": "Consume due leaves",
       "signatureExpire": "Expire overdue signature requests",
-      "membersInvitationsExpire": "Member invitations expiry"
+      "membersInvitationsExpire": "Member invitations expiry",
+      "onboardingExpire": "Onboarding files expiry",
+      "onboardingScanUploads": "Analysis of quarantined deposits",
+      "onboardingRetention": "Onboarding files retention (dry run)"
     },
     "categories": {
       "documents": "Documents",
@@ -9876,7 +9880,7 @@
     "lockedField": "available after verification",
     "saveDraft": "Save",
     "saved": "Saved",
-    "uploaded": "Document received",
+    "uploaded": "Document received — security analysis in progress",
     "documentsTitle": "Documents to provide",
     "received": "Received: {name} (awaiting review)",
     "notReceived": "Not provided yet",
@@ -9888,7 +9892,14 @@
     "submit": "Send my file",
     "invalidTitle": "Link unavailable",
     "invalidText": "This link is not valid, has expired or was disabled. Contact the company that sent it.",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "scan": {
+      "scanning": "Received: {name} — security analysis in progress, then review by the company",
+      "refused": "File refused by the security analysis: upload another file",
+      "scan_failed": "The file could not be analysed: upload it again"
+    },
+    "verificationLocked": "Too many wrong codes: verification is locked. Contact the company to receive a new link.",
+    "verifyBeforeSubmit": "First confirm your identity with the code received by e-mail to send your file."
   },
   "onboardingFile": {
     "panelTitle": "Onboarding in progress",
@@ -9978,6 +9989,58 @@
       "validated": "Validated",
       "expired": "Expired",
       "revoked": "Revoked"
-    }
+    },
+    "createMail": "Send by e-mail",
+    "mailSent": "Invitation sent.",
+    "mailSentLong": "Invitation e-mailed to the recruit. The personal link is never displayed or stored in clear; a new send or a new link invalidates the previous one.",
+    "deliveryTitle": "Invitation",
+    "deliverySent": "Sent on {date}",
+    "deliveryFailed": "Sending failed — resend or copy a link",
+    "deliveryNone": "Not e-mailed yet",
+    "linkActive": "link active",
+    "linkInactive": "no active link",
+    "channelUnavailable": "e-mail sending unavailable: copy a link",
+    "sendMail": "Send by e-mail",
+    "resend": "Resend",
+    "emailSet": "Address provided",
+    "emailUnset": "No address: no verification possible",
+    "verifiedOn": "identity confirmed by code on {date}",
+    "verificationLocked": "verification locked (too many attempts): issue a new link",
+    "changeEmail": "Change address",
+    "newEmail": "New e-mail address",
+    "emailChangeHint": "The current link, open sessions and any pending code will be invalidated: then resend the invitation.",
+    "emailChanged": "Address changed. Resend the invitation.",
+    "scan": {
+      "quarantined": "Security analysis pending",
+      "ingested": "Analysed, sent to the document vault",
+      "infected": "Refused: threat detected, file deleted",
+      "scan_failed": "Analysis impossible: file unusable"
+    },
+    "scanShort": {
+      "quarantined": "Analysing",
+      "ingested": "Analysed",
+      "infected": "Refused",
+      "scan_failed": "Analysis indeterminate"
+    },
+    "scanSimulated": "SIMULATED analysis (test environment)",
+    "rescan": "Retry analysis",
+    "blocking": "Validation impossible: at least one document has not been analysed as clean. Retry the analysis or request a complement.",
+    "revise": "Change requested items",
+    "reviseHint": "Tick what this file must ask. Only personal items are offered; an obligation is only possible when a rule justifies it.",
+    "optionalOnly": "Optional",
+    "optional": "optional",
+    "previewBtn": "Preview",
+    "confirmRevision": "Confirm revision",
+    "previewTitle": "File version {version}",
+    "previewNone": "No change.",
+    "previewAdded": "Added",
+    "previewRemoved": "Removed",
+    "previewRequired": "Obligation changed",
+    "previewKeptAnswers": "Some answers already received concern removed items: they are kept, but will not be taken into the record.",
+    "previewSensitive": "A sensitive item is added: the recruit will have to confirm a code received by e-mail.",
+    "previewCandidate": "The recruit will see the new list on the next visit; answers and documents already provided are kept.",
+    "previewAfterSubmit": "The file is already submitted: it will go back to “Complement requested” with your message.",
+    "revisionMessage": "Message to the recruit",
+    "revised": "File revised (version {version})."
   }
 }

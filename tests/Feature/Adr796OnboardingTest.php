@@ -55,8 +55,10 @@ class Adr796OnboardingTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        Storage::fake('quarantine');
         Mail::fake();
         $this->seed(\Database\Seeders\PlatformSeeder::class);
+        config(['documents.scanner.driver' => 'simulated']); // ADR-796.1 : adaptateur de test (pas une analyse)
         MarketRegistry::sync();
         FieldDefinitionCatalog::sync();
         DocumentTypeCatalog::sync();

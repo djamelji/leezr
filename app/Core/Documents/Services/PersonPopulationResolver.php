@@ -43,6 +43,7 @@ class PersonPopulationResolver
         Employee::withoutGlobalScopes()
             ->where('company_id', $company->id)
             ->when(! $includeTerminated, fn ($q) => $q->where('status', '!=', Employee::STATUS_TERMINATED))
+            ->operational() // ADR-796.1 : une recrue non intégrée n'entre ni en conformité ni en campagne
             ->get()
             ->each(function (Employee $e) use (&$persons) {
                     $subject = $e->user_id ? DocumentSubject::user((int) $e->user_id) : DocumentSubject::employee((int) $e->id);

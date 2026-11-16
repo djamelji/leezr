@@ -228,6 +228,31 @@ class ScheduledTaskRegistry
             'cron' => '0 * * * *',
             'expected_interval_minutes' => 60,
         ],
+        // ADR-796.1 — dossiers d'intégration : expiration constatée, reprise des analyses, rétention (simulation)
+        'onboarding:expire' => [
+            'command' => 'onboarding:expire',
+            'description' => 'automations.tasks.onboardingExpire',
+            'category' => 'system',
+            'frequency' => 'hourly',
+            'cron' => '15 * * * *',
+            'expected_interval_minutes' => 60,
+        ],
+        'onboarding:scan-uploads' => [
+            'command' => 'onboarding:scan-uploads',
+            'description' => 'automations.tasks.onboardingScanUploads',
+            'category' => 'system',
+            'frequency' => 'every_ten_minutes',
+            'cron' => '*/10 * * * *',
+            'expected_interval_minutes' => 10,
+        ],
+        'onboarding:retention' => [
+            'command' => 'onboarding:retention',
+            'description' => 'automations.tasks.onboardingRetention',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '30 3 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
     ];
 
     // ── Accessors ─────────────────────────────────────────

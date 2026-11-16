@@ -154,6 +154,32 @@ Schedule::command('members:invitations-expire')->hourly()->withoutOverlapping()
     ->onSuccess(SI::onSuccess('members:invitations-expire'))
     ->onFailure(SI::onFailure('members:invitations-expire'));
 
+// ── Onboarding files (ADR-796.1) ─────────────────────────
+// Expiry recorded by an explicit service (reads never write) — hourly, idempotent, audited.
+Schedule::command('onboarding:expire')->cron('15 * * * *')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/onboarding-expire.log'))
+    ->when(SI::enabled('onboarding:expire'))
+    ->before(SI::before('onboarding:expire'))
+    ->onSuccess(SI::onSuccess('onboarding:expire'))
+    ->onFailure(SI::onFailure('onboarding:expire'));
+
+// Recovery of quarantined deposits (worker down / engine unavailable) — fail-closed, idempotent.
+Schedule::command('onboarding:scan-uploads')->everyTenMinutes()->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/onboarding-scan-uploads.log'))
+    ->when(SI::enabled('onboarding:scan-uploads'))
+    ->before(SI::before('onboarding:scan-uploads'))
+    ->onSuccess(SI::onSuccess('onboarding:scan-uploads'))
+    ->onFailure(SI::onFailure('onboarding:scan-uploads'));
+
+// Retention : DRY RUN by default (report only). A real purge requires ONBOARDING_RETENTION_AUTO_APPLY=true,
+// an explicit decision after legal validation per market — never enabled automatically.
+Schedule::command('onboarding:retention'.(config('onboarding.retention.auto_apply') ? ' --apply' : ''))->dailyAt('03:30')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/onboarding-retention.log'))
+    ->when(SI::enabled('onboarding:retention'))
+    ->before(SI::before('onboarding:retention'))
+    ->onSuccess(SI::onSuccess('onboarding:retention'))
+    ->onFailure(SI::onFailure('onboarding:retention'));
+
 // ── Workflow Engine (ADR-437) ────────────────────────────
 // Reset daily execution counters at midnight
 Schedule::command('workflow:reset-daily-counters')->daily()->withoutOverlapping()

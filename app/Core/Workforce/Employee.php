@@ -48,6 +48,7 @@ class Employee extends Model
         'hire_date',
         'termination_date',
         'status',
+        'preparatory_at',
         'metadata',
         'department_id',
         'job_role_id',
@@ -58,6 +59,7 @@ class Employee extends Model
         'hire_date' => 'date',
         'termination_date' => 'date',
         'metadata' => 'array',
+        'preparatory_at' => 'datetime',
     ];
 
     // ── Relationships ──
@@ -161,6 +163,21 @@ class Employee extends Model
     public function scopeActive($query)
     {
         return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * ADR-796.1 — a PREPARATORY record (recruit not yet integrated) : inactive record created for an
+     * onboarding file. It stops being preparatory as soon as HR activates it (status leaves `inactive`).
+     */
+    public function isPreparatory(): bool
+    {
+        return $this->status === self::STATUS_INACTIVE && $this->preparatory_at !== null;
+    }
+
+    /** ADR-796.1 — excludes preparatory records from operational populations (documents, requirements). */
+    public function scopeOperational($query)
+    {
+        return $query->where(fn ($q) => $q->whereNull('preparatory_at')->orWhere('status', '!=', self::STATUS_INACTIVE));
     }
 
     public function scopeNotTerminated($query)

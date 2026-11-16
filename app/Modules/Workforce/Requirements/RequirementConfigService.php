@@ -42,7 +42,7 @@ final class RequirementConfigService
     /** @return list<array{key: string, label: string, job_role_id: ?int, people: int, accountless: int}> */
     public function scopes(): array
     {
-        $employees = Employee::withoutGlobalScopes()->where('company_id', $this->company->id)->where('status', '!=', 'terminated')->get(['id', 'user_id', 'job_role_id']);
+        $employees = Employee::withoutGlobalScopes()->where('company_id', $this->company->id)->where('status', '!=', 'terminated')->operational()->get(['id', 'user_id', 'job_role_id']);
         $out = [['key' => 'all', 'label' => null, 'job_role_id' => null, 'people' => $employees->count(), 'accountless' => $employees->whereNull('user_id')->count()]];
         foreach (JobRole::withoutGlobalScopes()->where('company_id', $this->company->id)->orderBy('title')->get(['id', 'title']) as $job) {
             $mine = $employees->where('job_role_id', $job->id);
@@ -345,7 +345,7 @@ final class RequirementConfigService
     private function peopleOf(string $scope): array
     {
         $job = $this->jobRoleOf($scope);
-        $q = Employee::withoutGlobalScopes()->where('company_id', $this->company->id)->where('status', '!=', 'terminated');
+        $q = Employee::withoutGlobalScopes()->where('company_id', $this->company->id)->where('status', '!=', 'terminated')->operational();
         $job && $q->where('job_role_id', $job->id);
         $people = $q->get(['user_id']);
 

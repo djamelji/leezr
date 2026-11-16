@@ -4501,7 +4501,8 @@
       "inactive": "Inactif",
       "on_leave": "En congé",
       "suspended": "Suspendu",
-      "terminated": "Sorti"
+      "terminated": "Sorti",
+      "preparatory": "Recrue en préparation"
     },
     "identity": {
       "sharedNotice": "Cette personne utilise le même compte dans une autre entreprise : son nom se modifie depuis son propre profil. Les informations propres à votre entreprise restent modifiables ici."
@@ -6393,7 +6394,10 @@
       "leaveAccrue": "Acquisition mensuelle des congés",
       "leaveConsumeDue": "Consommation des congés à échéance",
       "signatureExpire": "Expiration des demandes de signature échues",
-      "membersInvitationsExpire": "Expiration des invitations de membres"
+      "membersInvitationsExpire": "Expiration des invitations de membres",
+      "onboardingExpire": "Expiration des dossiers d’intégration",
+      "onboardingScanUploads": "Analyse des dépôts en quarantaine",
+      "onboardingRetention": "Conservation des dossiers d’intégration (simulation)"
     },
     "categories": {
       "documents": "Documents",
@@ -9876,7 +9880,7 @@
     "lockedField": "disponible après vérification",
     "saveDraft": "Enregistrer",
     "saved": "Enregistré",
-    "uploaded": "Document reçu",
+    "uploaded": "Document reçu — analyse de sécurité en cours",
     "documentsTitle": "Documents à fournir",
     "received": "Reçu : {name} (en attente de vérification)",
     "notReceived": "Pas encore fourni",
@@ -9888,7 +9892,14 @@
     "submit": "Envoyer mon dossier",
     "invalidTitle": "Lien indisponible",
     "invalidText": "Ce lien n'est pas valide, a expiré ou a été désactivé. Contactez l'entreprise qui vous l'a transmis.",
-    "error": "Une erreur est survenue. Réessayez."
+    "error": "Une erreur est survenue. Réessayez.",
+    "scan": {
+      "scanning": "Reçu : {name} — analyse de sécurité en cours, puis vérification par l’entreprise",
+      "refused": "Fichier refusé par l’analyse de sécurité : déposez un autre fichier",
+      "scan_failed": "Le fichier n’a pas pu être analysé : déposez-le de nouveau"
+    },
+    "verificationLocked": "Trop de codes incorrects : la vérification est bloquée. Contactez l’entreprise pour recevoir un nouveau lien.",
+    "verifyBeforeSubmit": "Confirmez d’abord votre identité avec le code reçu par e-mail pour pouvoir envoyer votre dossier."
   },
   "onboardingFile": {
     "panelTitle": "Intégrations en cours",
@@ -9978,6 +9989,58 @@
       "validated": "Validé",
       "expired": "Expiré",
       "revoked": "Révoqué"
-    }
+    },
+    "createMail": "Envoyer par e-mail",
+    "mailSent": "Invitation envoyée.",
+    "mailSentLong": "Invitation envoyée par e-mail à la recrue. Le lien personnel n’est jamais affiché ni conservé en clair ; un nouvel envoi ou un nouveau lien invalide le précédent.",
+    "deliveryTitle": "Invitation",
+    "deliverySent": "Envoyée le {date}",
+    "deliveryFailed": "Échec de l’envoi — renvoyez ou copiez un lien",
+    "deliveryNone": "Pas encore envoyée par e-mail",
+    "linkActive": "lien actif",
+    "linkInactive": "aucun lien actif",
+    "channelUnavailable": "envoi d’e-mail indisponible : copiez un lien",
+    "sendMail": "Envoyer par e-mail",
+    "resend": "Renvoyer",
+    "emailSet": "Adresse renseignée",
+    "emailUnset": "Aucune adresse : pas de vérification possible",
+    "verifiedOn": "identité confirmée par code le {date}",
+    "verificationLocked": "vérification bloquée (trop d’essais) : émettez un nouveau lien",
+    "changeEmail": "Changer l’adresse",
+    "newEmail": "Nouvelle adresse e-mail",
+    "emailChangeHint": "Le lien actuel, les sessions ouvertes et tout code en cours seront invalidés : renvoyez ensuite l’invitation.",
+    "emailChanged": "Adresse modifiée. Renvoyez l’invitation.",
+    "scan": {
+      "quarantined": "Analyse de sécurité en attente",
+      "ingested": "Analysée, transmise au coffre documentaire",
+      "infected": "Refusée : menace détectée, fichier supprimé",
+      "scan_failed": "Analyse impossible : fichier inutilisable"
+    },
+    "scanShort": {
+      "quarantined": "En analyse",
+      "ingested": "Analysée",
+      "infected": "Refusée",
+      "scan_failed": "Analyse indéterminée"
+    },
+    "scanSimulated": "analyse SIMULÉE (environnement de test)",
+    "rescan": "Relancer l’analyse",
+    "blocking": "Validation impossible : au moins une pièce n’a pas été analysée comme saine. Relancez l’analyse ou demandez un complément.",
+    "revise": "Modifier les éléments demandés",
+    "reviseHint": "Cochez ce que ce dossier doit demander. Seuls les éléments personnels sont proposés ; une obligation n’est possible que si une règle la justifie.",
+    "optionalOnly": "Facultatif",
+    "optional": "facultatif",
+    "previewBtn": "Prévisualiser",
+    "confirmRevision": "Confirmer la révision",
+    "previewTitle": "Version {version} du dossier",
+    "previewNone": "Aucun changement.",
+    "previewAdded": "Ajoutés",
+    "previewRemoved": "Retirés",
+    "previewRequired": "Obligation modifiée",
+    "previewKeptAnswers": "Des réponses déjà reçues portent sur des éléments retirés : elles sont conservées, mais ne seront pas reprises dans la fiche.",
+    "previewSensitive": "Un élément sensible est ajouté : la recrue devra confirmer un code reçu par e-mail.",
+    "previewCandidate": "La recrue verra la nouvelle liste à sa prochaine visite ; ses réponses et pièces déjà déposées sont conservées.",
+    "previewAfterSubmit": "Le dossier est déjà soumis : il repassera en « Complément demandé » avec votre message.",
+    "revisionMessage": "Message à la recrue",
+    "revised": "Dossier révisé (version {version})."
   }
 }

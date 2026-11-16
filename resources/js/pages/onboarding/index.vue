@@ -216,7 +216,7 @@ const submit = async () => {
 
       <!-- Vérification (informations sensibles) -->
       <VCard
-        v-if="lockedCount && !file.verified && file.writable"
+        v-if="(lockedCount || file.verification_required) && !file.verified && file.writable"
         class="onb__card mb-4"
         data-test="onboarding-verify"
       >
@@ -225,9 +225,9 @@ const submit = async () => {
             {{ t('onboardingPortal.verifyTitle') }}
           </h2>
           <p class="text-body-2 mb-3">
-            {{ file.verification_available ? t('onboardingPortal.verifyText', { n: lockedCount }) : t('onboardingPortal.noChannel') }}
+            {{ file.verification_locked ? t('onboardingPortal.verificationLocked') : (file.verification_available ? t('onboardingPortal.verifyText', { n: lockedCount }) : t('onboardingPortal.noChannel')) }}
           </p>
-          <template v-if="file.verification_available">
+          <template v-if="file.verification_available && !file.verification_locked">
             <VBtn
               v-if="!codeSent"
               variant="tonal"
@@ -324,12 +324,17 @@ const submit = async () => {
                 > *</span>
               </div>
               <div class="text-body-2 text-medium-emphasis">
-                {{ d.deposited ? t('onboardingPortal.received', { name: d.file_name }) : (d.locked ? t('onboardingPortal.lockedField') : t('onboardingPortal.notReceived')) }}
+                <template v-if="d.scan">
+                  <span :class="d.scan === 'scanning' ? '' : 'text-error'">{{ t(`onboardingPortal.scan.${d.scan}`, { name: d.file_name }) }}</span>
+                </template>
+                <template v-else>
+                  {{ d.deposited ? t('onboardingPortal.received', { name: d.file_name }) : (d.locked ? t('onboardingPortal.lockedField') : t('onboardingPortal.notReceived')) }}
+                </template>
               </div>
             </div>
             <VFileInput
               v-if="file.writable && !d.locked"
-              :label="d.deposited ? t('onboardingPortal.replace') : t('onboardingPortal.choose')"
+              :label="d.deposited || d.scan === 'scanning' ? t('onboardingPortal.replace') : t('onboardingPortal.choose')"
               accept=".pdf,.jpg,.jpeg,.png"
               density="compact"
               hide-details
@@ -360,6 +365,13 @@ const submit = async () => {
             {{ t('onboardingPortal.missing') }} {{ file.missing.required.map(labelOf).join(', ') }}
           </p>
           <p
+            v-else-if="file.verification_required && !file.verified"
+            class="text-body-2 mb-3"
+            data-test="onboarding-verify-needed"
+          >
+            {{ t('onboardingPortal.verifyBeforeSubmit') }}
+          </p>
+          <p
             v-else
             class="text-body-2 mb-3"
           >
@@ -369,7 +381,7 @@ const submit = async () => {
             color="primary"
             block
             size="large"
-            :disabled="file.missing.required.length > 0"
+            :disabled="file.missing.required.length > 0 || (file.verification_required && !file.verified)"
             data-test="onboarding-submit"
             @click="submit"
           >

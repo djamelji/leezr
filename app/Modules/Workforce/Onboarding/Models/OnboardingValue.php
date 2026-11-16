@@ -10,6 +10,8 @@ class OnboardingValue extends Model
     public const PENDING = 'pending';
     public const ACCEPTED = 'accepted';
     public const KEPT_EXISTING = 'kept_existing';
+    /** ADR-796.1 — answer to an item removed by a revision : kept, never written to the HR record. */
+    public const NOT_REQUESTED = 'not_requested';
 
     protected $fillable = ['onboarding_invitation_id', 'field_definition_id', 'value', 'status', 'decided_at', 'decided_by'];
 

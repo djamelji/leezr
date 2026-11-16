@@ -667,6 +667,11 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('onboarding-files/{id}/revoke', [$onb, 'revoke'])->whereNumber('id')->middleware($perm('workforce.manage'));
     Route::post('onboarding-files/{id}/request-changes', [$onb, 'requestChanges'])->whereNumber('id')->middleware($perm('workforce.manage'));
     Route::post('onboarding-files/{id}/validate', [$onb, 'validateFile'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    // ADR-796.1 — envoi par e-mail, changement d'adresse, prévisualisation de révision, nouvelle analyse
+    Route::post('onboarding-files/{id}/send', [$onb, 'send'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:10,1']);
+    Route::put('onboarding-files/{id}/contact', [$onb, 'contact'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']);
+    Route::post('onboarding-files/{id}/items/preview', [$onb, 'previewRevision'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/uploads/{upload}/rescan', [$onb, 'rescan'])->whereNumber('id')->whereNumber('upload')->middleware([$perm('workforce.manage'), 'throttle:10,1']);
 
     // ADR-795 (L5) : champs dynamiques de la fiche salarié, avec ou sans compte (facette RH)
     Route::get('employees/{id}/fields', [\App\Modules\Workforce\Employees\Http\EmployeeFieldController::class, 'show'])->whereNumber('id')->middleware([$perm('workforce.view'), $employeeScope]);

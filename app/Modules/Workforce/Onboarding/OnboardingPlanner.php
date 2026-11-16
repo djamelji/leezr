@@ -69,8 +69,13 @@ final class OnboardingPlanner
             if (! $p) {
                 throw ValidationException::withMessages(['items' => __('onboarding.unknown_item')]);
             }
+            $required = (bool) ($s['required'] ?? $p['suggested_required']);
+            if ($required && ! collect($p['sources'])->contains(fn ($src) => $src['required'])) {
+                // ADR-796.1 : jamais une obligation impérative qu'aucune règle ni proposition ne justifie.
+                throw ValidationException::withMessages(['items' => __('onboarding.required_unjustified', ['item' => $p['label']])]);
+            }
             $items[] = ['kind' => $p['kind'], 'code' => $p['code'], 'label' => $p['label'], 'sensitive' => $p['sensitive'],
-                'required' => (bool) ($s['required'] ?? $p['suggested_required']), 'sources' => $p['sources']];
+                'required' => $required, 'sources' => $p['sources']];
         }
         if ($items === []) {
             throw ValidationException::withMessages(['items' => __('onboarding.empty_selection')]);
@@ -98,6 +103,7 @@ final class OnboardingPlanner
         return ['kind' => $kind, 'code' => $code, 'label' => $label, 'sensitive' => $sensitive, 'sources' => $sources,
             // Pré-sélection : règles EN VIGUEUR seulement ; une proposition de module non adoptée reste visible, jamais cochée d'office.
             'suggested' => collect($sources)->contains(fn ($s) => $s['kind'] !== 'module_proposal'), 'suggested_required' => collect($sources)->contains(fn ($s) => $s['required'] && $s['kind'] !== 'module_proposal'),
-            'divergence' => $divergence, 'waived' => (bool) ($configured['waived'] ?? false)];
+            'divergence' => $divergence, 'waived' => (bool) ($configured['waived'] ?? false),
+            'required_allowed' => collect($sources)->contains(fn ($s) => $s['required'])];
     }
 }

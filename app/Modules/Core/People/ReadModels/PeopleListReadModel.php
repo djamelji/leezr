@@ -115,7 +115,8 @@ class PeopleListReadModel
         $out = [
             'person_ref' => (string) PersonRef::forEmployee($e->id),
             'employee_id' => $e->id,
-            'employment_status' => $e->status,
+            // ADR-796.1 : une recrue non intégrée n'est pas « inactive » comme un salarié : statut distinct.
+            'employment_status' => $e->isPreparatory() ? 'preparatory' : $e->status,
             'job_role' => $e->jobRole?->title,
             'department' => $e->department?->name,
         ];

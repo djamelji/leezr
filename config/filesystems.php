@@ -30,6 +30,16 @@ return [
 
     'disks' => [
 
+        // ADR-796.1 — QUARANTINE of files received from the public onboarding portal : private, never
+        // served, never a DMS document before a clean analysis.
+        'quarantine' => [
+            'driver' => 'local',
+            'root' => storage_path('app/quarantine'),
+            'serve' => false,
+            'throw' => true,
+            'visibility' => 'private',
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

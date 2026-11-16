@@ -17,11 +17,15 @@ const proposal = ref({ items: [], purposes: [], legal_bases: [] })
 const selected = ref({}) // « kind:code » → { required }
 const form = ref({ first_name: '', last_name: '', email: '', hire_date: '', candidate_email: '', job_role_id: null, purpose: 'hiring_onboarding', legal_basis: null, notice_text: '', days: 7 })
 const link = ref(null)
+const mailed = ref(false)
+const createdId = ref(null)
 const busy = ref(false)
 
 const reset = () => {
   step.value = 1
   link.value = null
+  mailed.value = false
+  createdId.value = null
   selected.value = {}
   form.value = { first_name: '', last_name: '', email: '', hire_date: '', candidate_email: '', job_role_id: null, purpose: 'hiring_onboarding', legal_basis: null, notice_text: t('onboardingFile.defaultNotice'), days: 7 }
 }
@@ -48,7 +52,7 @@ const toggle = item => {
   const key = `${item.kind}:${item.code}`
   const next = { ...selected.value }
 
-  next[key] ? delete next[key] : (next[key] = { required: item.suggested_required })
+  next[key] ? delete next[key] : (next[key] = { required: item.suggested_required && item.required_allowed })
   selected.value = next
 }
 const sourceText = s => t(`onboardingFile.source.${s.kind}`, { module: s.module || '' }) + (s.required ? ` · ${t('onboardingFile.required')}` : '')
@@ -59,19 +63,31 @@ const next = async () => {
   step.value++
 }
 
-const create = async () => {
+// ADR-796.1 : envoi par e-mail (canal transactionnel ; en DEV, Mailpit local) ou lien à copier (affiché une fois).
+const create = async mode => {
   busy.value = true
   try {
-    const items = Object.entries(selected.value).map(([k, v]) => ({ kind: k.split(':')[0], code: k.split(':')[1], required: v.required }))
-    const created = await $api('/workforce/onboarding-files', { method: 'POST', body: { ...form.value, items, email: form.value.email || null, candidate_email: form.value.candidate_email || form.value.email || null } })
-    const res = await $api(`/workforce/onboarding-files/${created.id}/link`, { method: 'POST', body: { days: form.value.days } })
+    if (!createdId.value) {
+      const items = Object.entries(selected.value).map(([k, v]) => ({ kind: k.split(':')[0], code: k.split(':')[1], required: v.required }))
+      const created = await $api('/workforce/onboarding-files', { method: 'POST', body: { ...form.value, items, email: form.value.email || null, candidate_email: form.value.candidate_email || form.value.email || null } })
 
-    link.value = res.url
+      createdId.value = created.id
+    }
+    if (mode === 'mail') {
+      await $api(`/workforce/onboarding-files/${createdId.value}/send`, { method: 'POST', body: { days: form.value.days } })
+      mailed.value = true
+    }
+    else {
+      const res = await $api(`/workforce/onboarding-files/${createdId.value}/link`, { method: 'POST', body: { days: form.value.days } })
+
+      link.value = res.url
+    }
     emit('created')
   }
-  catch (e) { toast(e?.data?.message || t('onboardingFile.error'), 'error') }
+  catch (e) { toast(e?.data?.message || e?.data?.error || t('onboardingFile.error'), 'error') }
   finally { busy.value = false }
 }
+const hasEmail = computed(() => !!(form.value.candidate_email || form.value.email))
 
 const copy = async () => {
   await navigator.clipboard.writeText(link.value)
@@ -88,7 +104,15 @@ const copy = async () => {
     @update:model-value="v => emit('update:isDialogVisible', v)"
   >
     <!-- Lien généré : affiché une seule fois -->
-    <template v-if="link">
+    <VAlert
+      v-if="mailed"
+      type="success"
+      variant="tonal"
+      data-test="onboarding-mailed"
+    >
+      {{ t('onboardingFile.mailSentLong') }}
+    </VAlert>
+    <template v-else-if="link">
       <VAlert
         type="success"
         variant="tonal"
@@ -111,7 +135,7 @@ const copy = async () => {
       <VRow>
         <VCol cols="12" sm="6"><AppTextField v-model="form.first_name" :label="t('onboardingFile.firstName')" data-test="onb-first-name" /></VCol>
         <VCol cols="12" sm="6"><AppTextField v-model="form.last_name" :label="t('onboardingFile.lastName')" data-test="onb-last-name" /></VCol>
-        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('onboardingFile.email')" type="email" /></VCol>
+        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('onboardingFile.email')" type="email" data-test="onb-email" /></VCol>
         <VCol cols="12" sm="6"><AppDateTimePicker v-model="form.hire_date" :label="t('onboardingFile.hireDate')" data-test="onb-hire-date" /></VCol>
         <VCol cols="12"><AppSelect v-model="form.job_role_id" :items="jobs" item-title="title" item-value="id" clearable :label="t('onboardingFile.position')" /></VCol>
       </VRow>
@@ -151,7 +175,7 @@ const copy = async () => {
           </div>
         </div>
         <VSwitch
-          v-if="selected[`${item.kind}:${item.code}`]"
+          v-if="selected[`${item.kind}:${item.code}`] && item.required_allowed"
           v-model="selected[`${item.kind}:${item.code}`].required"
           hide-details
           density="compact"
@@ -183,15 +207,22 @@ const copy = async () => {
         variant="text"
         @click="emit('update:isDialogVisible', false)"
       >
-        {{ link ? t('common.close') : t('common.cancel') }}
+        {{ link || mailed ? t('common.close') : t('common.cancel') }}
       </VBtn>
       <VBtn
-        v-if="link"
+        v-if="link && !mailed"
         color="primary"
         prepend-icon="tabler-copy"
         @click="copy"
       >
         {{ t('onboardingFile.copy') }}
+      </VBtn>
+      <VBtn
+        v-else-if="mailed"
+        color="primary"
+        @click="emit('update:isDialogVisible', false)"
+      >
+        {{ t('common.close') }}
       </VBtn>
       <VBtn
         v-else-if="step < 3"
@@ -202,16 +233,27 @@ const copy = async () => {
       >
         {{ t('onboardingFile.next') }}
       </VBtn>
-      <VBtn
-        v-else
-        color="primary"
-        :loading="busy"
-        :disabled="!form.legal_basis || !form.notice_text"
-        data-test="onb-create"
-        @click="create"
-      >
-        {{ t('onboardingFile.createLink') }}
-      </VBtn>
+      <template v-else>
+        <VBtn
+          variant="tonal"
+          :loading="busy"
+          :disabled="!form.legal_basis || !form.notice_text"
+          data-test="onb-create"
+          @click="create('link')"
+        >
+          {{ t('onboardingFile.createLink') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          prepend-icon="tabler-mail-forward"
+          :loading="busy"
+          :disabled="!form.legal_basis || !form.notice_text || !hasEmail"
+          data-test="onb-create-mail"
+          @click="create('mail')"
+        >
+          {{ t('onboardingFile.createMail') }}
+        </VBtn>
+      </template>
     </template>
   </AppDialog>
 </template>

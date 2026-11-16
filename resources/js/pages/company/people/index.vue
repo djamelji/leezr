@@ -61,7 +61,7 @@ const ACCOUNT_META = {
   suspended: { color: 'error', label: 'people.account.suspended' },
 }
 const accountStates = ['connected', 'active', 'invited', 'pending_acceptance', 'invitation_expired', 'suspended']
-const employmentStates = ['active', 'inactive', 'on_leave', 'suspended', 'terminated']
+const employmentStates = ['active', 'preparatory', 'inactive', 'on_leave', 'suspended', 'terminated'] // ADR-796.1 : recrue en préparation
 
 const headers = computed(() => {
   const h = [{ title: t('peopleList.person'), key: 'name', sortable: true }]
