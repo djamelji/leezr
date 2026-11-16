@@ -28897,7 +28897,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-810 — Documents approuvés mais invisibles au salarié
 
-- **Date** : 2026-11-16, DEV uniquement, base `28869cd4`, commit `SHA_810`. Rapport : `docs/bmad/ADR-810-APPROVED-DOCUMENT-VISIBILITY.md`.
+- **Date** : 2026-11-16, DEV uniquement, base `28869cd4`, commit `8c670c12`. Rapport : `docs/bmad/ADR-810-APPROVED-DOCUMENT-VISIBILITY.md`.
 - **Contexte** : un document demandé, transmis puis approuvé n'apparaissait ni dans la fiche de la personne ni dans Mon espace.
 - **Cause** : `DocumentResolverService::resolve` (source de la fiche et de Mon espace) écartait tout type masqué par le `doc_config` du rôle, même quand ce type faisait l'objet d'une demande adressée à la personne ou d'un document qu'elle détient. La file « À traiter » lisait les demandes : trois projections incohérentes. Le modèle ne comporte aucune politique « visible après approbation ou signature ».
 - **Décisions** :

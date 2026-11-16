@@ -110,3 +110,5 @@ Conséquences :
 3. **Fiche** : la colonne « Statut » affiche l'état du fichier (« Valide ») sans la mention « Approuvé » visible dans Mon espace.
 4. **Fiche** : le bloc « Aucun document. » (documents RH générés) suit la liste des pièces et peut prêter à confusion.
 5. **ControllerSizeInvariantTest** : 3 échecs historiques conservés.
+
+- **SHA DEV** : `8c670c12`.
