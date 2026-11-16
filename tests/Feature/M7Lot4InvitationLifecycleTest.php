@@ -121,9 +121,10 @@ class M7Lot4InvitationLifecycleTest extends TestCase
         $res->assertJsonPath('pending_acceptance', false)->assertJsonPath('invitation.kind', 'account_setup')
             ->assertJsonPath('invitation.expires_at', null)->assertJsonPath('invitation.expired', false);
         $invitee = User::where('email', $email)->firstOrFail();
-        Notification::assertSentTo($invitee, ResetPassword::class);
+        Notification::assertSentTo($invitee, \App\Notifications\Members\AccountActivationNotification::class);
+        Notification::assertNotSentTo($invitee, ResetPassword::class);
         $firstToken = null;
-        Notification::assertSentTo($invitee, ResetPassword::class, function ($n) use (&$firstToken) { $firstToken = $n->token; return true; });
+        Notification::assertSentTo($invitee, \App\Notifications\Members\AccountActivationNotification::class, function ($n) use (&$firstToken) { $firstToken = $n->token; return true; });
 
         $acc = $this->file($invitee);
         $this->assertSame('invited', $acc['state']);
@@ -141,7 +142,7 @@ class M7Lot4InvitationLifecycleTest extends TestCase
 
         // 3a. Way out for the PERSON : « forgot password » works for an account never activated.
         $this->postJson('/api/forgot-password', ['email' => $email])->assertOk();
-        Notification::assertSentToTimes($invitee, ResetPassword::class, 2);
+        Notification::assertSentToTimes($invitee, ResetPassword::class, 1);
         $selfToken = null;
         Notification::assertSentTo($invitee, ResetPassword::class, function ($n) use (&$selfToken, $firstToken) {
             if ($n->token !== $firstToken) { $selfToken = $n->token; }
@@ -154,9 +155,9 @@ class M7Lot4InvitationLifecycleTest extends TestCase
         $this->travel(2)->minutes(); // broker throttle
         $resent = $this->as($this->owner, $this->company)->postJson('/api/company/members/'.$this->membership($invitee)->id.'/resend-invitation')->assertOk();
         $resent->assertJsonPath('invitation.kind', 'account_setup')->assertJsonPath('invitation.delivery', 'sent')->assertJsonPath('invitation.link_expired', false);
-        Notification::assertSentToTimes($invitee, ResetPassword::class, 3);
+        Notification::assertSentToTimes($invitee, \App\Notifications\Members\AccountActivationNotification::class, 2);
         $adminToken = null;
-        Notification::assertSentTo($invitee, ResetPassword::class, function ($n) use (&$adminToken, $firstToken, $selfToken) {
+        Notification::assertSentTo($invitee, \App\Notifications\Members\AccountActivationNotification::class, function ($n) use (&$adminToken, $firstToken, $selfToken) {
             if (! in_array($n->token, [$firstToken, $selfToken], true)) { $adminToken = $n->token; }
 
             return true;

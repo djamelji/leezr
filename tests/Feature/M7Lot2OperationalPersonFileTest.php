@@ -332,7 +332,7 @@ class M7Lot2OperationalPersonFileTest extends TestCase
 
         $this->file($this->accessAdmin, "user-{$invited->id}")->assertJsonPath('account.state', 'invited');
         $this->as($this->accessAdmin)->postJson("/api/company/members/{$m->id}/resend-invitation")->assertOk();
-        Notification::assertSentToTimes($invited, \Illuminate\Auth\Notifications\ResetPassword::class, 2);
+        Notification::assertSentToTimes($invited, \App\Notifications\Members\AccountActivationNotification::class, 2);
 
         // An account that already defined its password has nothing to re-send.
         $this->as($this->accessAdmin)->postJson('/api/company/members/'.$this->membershipOf($this->viewer)->id.'/resend-invitation')->assertStatus(422);

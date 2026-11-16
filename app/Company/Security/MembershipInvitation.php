@@ -157,7 +157,16 @@ class MembershipInvitation
                     url: url('/invitations'),
                 ));
             } else {
-                $recipient->sendPasswordResetNotification(Password::broker('users')->createToken($recipient));
+                // ADR-812 : an activation e-mail naming the company (not the generic « password reset »).
+                $actor = $actorId ? User::find($actorId) : null;
+                $token = Password::broker('users')->createToken($recipient);
+                Notification::sendNow($recipient, new \App\Notifications\Members\AccountActivationNotification(
+                    companyName: (string) ($membership->company?->name ?? ''),
+                    inviterName: $actor ? (trim($actor->first_name.' '.$actor->last_name) ?: null) : null,
+                    token: $token,
+                    email: $recipient->getEmailForPasswordReset(),
+                    expiresInMinutes: (int) config('auth.passwords.users.expire', 60),
+                ));
             }
         } catch (\Throwable $e) {
             return self::recordFailure($membership, $actorId, $e);

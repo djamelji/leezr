@@ -146,6 +146,18 @@ class Adr803ModuleSetupTest extends TestCase
         $this->assertSame($before, $this->perms($this->manager), 'a suggestion grants nothing');
     }
 
+    /** ADR-812 (ADR-811 C3) : a recommendation granting nothing for this module is not offered (the button did nothing). */
+    public function test_preset_suggestion_granting_nothing_for_the_module_is_not_offered(): void
+    {
+        $draft = PresetService::createDraft('rbac', ['family_key' => 'logistique_rbac', 'label' => 'Logistique', 'content' => ['roles' => [
+            ['key' => 'chef', 'name' => 'Chef', 'is_administrative' => true, 'bundles' => ['shipments.operations', 'theme.full']],
+        ]]], null);
+        PresetService::publish($draft, null);
+        PresetService::setRecommendations('logistique', [['kind' => 'rbac', 'family_key' => 'logistique_rbac']]);
+        $d = $this->start();
+        $this->assertSame(['available' => false, 'label' => null, 'roles' => []], $d['suggestion']);
+    }
+
     // ── access : grant / revoke ───────────────────────────────────────────
 
     public function test_capability_with_several_permissions_is_granted_whole_after_preview(): void

@@ -220,7 +220,7 @@ class M7Lot2InvitationAcceptanceTest extends TestCase
         $m = $this->membership($user);
         $this->assertFalse($m->isPendingAcceptance());
         $this->assertFalse($m->isSuspended());
-        Notification::assertSentTo($user, ResetPassword::class);
+        Notification::assertSentTo($user, \App\Notifications\Members\AccountActivationNotification::class);
         Notification::assertNotSentTo($user, CompanyInvitationNotification::class);
     }
 

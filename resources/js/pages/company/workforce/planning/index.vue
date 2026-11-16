@@ -1973,11 +1973,18 @@ const submitShift = async () => {
     fetchWeekData()
     calRef.value?.refetch?.() // ADR-779 : la vue Jour montre aussitôt le créneau créé/modifié
   } catch (error) {
-    toast((error.data?.message || error.response?._data?.message) || t('common.error'), 'error')
+    toast(shiftErrorMessage(error.data?.message || error.response?._data?.message), 'error')
   } finally {
     shiftFormLoading.value = false
   }
 }
+
+// ADR-812 (ADR-811 D3) : refus métier connus du serveur → message traduit et action à mener.
+const SHIFT_ERRORS = {
+  'Employee must have an active contract.': 'planning.errorNoActiveContract',
+  'Employee must be active to be assigned a shift.': 'planning.errorEmployeeInactive',
+}
+const shiftErrorMessage = message => (SHIFT_ERRORS[message] ? t(SHIFT_ERRORS[message]) : (message || t('common.error')))
 
 // ── Shift delete ────────────────────────────────────────────
 const deleteShiftDialog = ref(false)

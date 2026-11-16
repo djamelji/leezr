@@ -173,7 +173,7 @@ class M7Lot3InvitationStabilizationTest extends TestCase
         $email = 'fresh-'.uniqid().'@example.test';
         $this->invite($email)->assertStatus(201)->assertJsonPath('invitation.delivery', 'sent')->assertJsonPath('invitation.kind', 'account_setup')
             ->assertJsonPath('invitation.expires_at', null);
-        Notification::assertSentTo(User::where('email', $email)->first(), ResetPassword::class);
+        Notification::assertSentTo(User::where('email', $email)->first(), \App\Notifications\Members\AccountActivationNotification::class);
     }
 
     // ═══ 2. Expiry ══════════════════════════════════════════════════════════

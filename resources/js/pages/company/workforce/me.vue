@@ -759,6 +759,17 @@ function signatureChipProps(status) {
       :title="t('workforceMe.requestLeave')"
     >
         <VForm @submit.prevent="submitSelfLeave">
+          <!-- ADR-812 (ADR-811 D4) : sans solde ouvert (contrat non actif), aucun type n'est proposé — on l'explique. -->
+          <VAlert
+            v-if="!leaveTypeOptions.length"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            data-test="me-leave-no-balance"
+          >
+            {{ t('workforceMe.noLeaveBalance') }}
+          </VAlert>
           <AppSelect
             v-model="leaveForm.leave_type_id"
             :items="leaveTypeOptions"
@@ -824,6 +835,7 @@ function signatureChipProps(status) {
             <VBtn
               type="submit"
               :loading="leaveSubmitting"
+              :disabled="!leaveTypeOptions.length"
               data-test="me-leave-submit"
             >
               {{ t('timeSpace.leave.send') }}

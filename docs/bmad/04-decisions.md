@@ -28987,3 +28987,21 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - 4 P3 ;
   - les comportements voulus et les faux positifs sont listés à part.
 - **Conséquences** : corrections dans ADR-812. Aucune société réelle modifiée.
+
+## ADR-812 — Corrections des anomalies P2 d'ADR-811
+
+- **Date** : 2026-11-16, DEV, base `5c167e3d`. Rapport : `docs/bmad/ADR-812-UX-CORRECTIONS.md`.
+- **Décision** : corriger les 7 P2 prouvées en réutilisant l'existant.
+  - **C1** : e-mail d'activation dédié pour un nouvel invité (même jeton, même broker, même expiration).
+  - **C2** : règles de mot de passe traduites.
+  - **A2** : unité « salarié » du catalogue.
+  - **C3** : pas de proposition d'accès vide.
+  - **D3** : refus de planification traduit, avec l'action à mener.
+  - **D4** : congé sans solde expliqué.
+  - **F1** : fiche hors périmètre = « indisponible », sans Réessayer.
+- **Conséquences** :
+  - aucune migration ;
+  - aucun droit, prix ou règle RH modifié ;
+  - C4 (noms de rôles par défaut en anglais) reste une décision produit ;
+  - 4 nouveaux tests, tous en échec sans le correctif ; tests d'invitation adaptés ;
+  - vérification au navigateur de chaque correction.

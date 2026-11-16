@@ -12,6 +12,7 @@ export const usePersonStore = defineStore('company-person', () => {
   const data = ref(null)
   const loading = ref(false)
   const error = ref(null)
+  const errorStatus = ref(null) // ADR-812 : 403/404 = fiche hors périmètre ou inexistante (pas une panne)
 
   const identity = computed(() => data.value?.identity || {})
   const account = computed(() => data.value?.account || {})
@@ -26,11 +27,13 @@ export const usePersonStore = defineStore('company-person', () => {
   async function load(ref) {
     loading.value = true
     error.value = null
+    errorStatus.value = null
     try {
       data.value = await $api(`/company/people/${encodeURIComponent(ref)}`)
     }
     catch (e) {
       error.value = e?.data?.message || e?.message || 'load_error'
+      errorStatus.value = e?.status ?? e?.statusCode ?? e?.response?.status ?? null
       data.value = null
     }
     finally {
@@ -94,7 +97,7 @@ export const usePersonStore = defineStore('company-person', () => {
   }
 
   return {
-    data, loading, error,
+    data, loading, error, errorStatus,
     identity, account, employment, sections, can, employeeId, userId, membershipId, personRef,
     history, historyLoading,
     load, loadHistory, changeRole,

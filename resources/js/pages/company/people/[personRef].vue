@@ -316,7 +316,18 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
     </template>
 
     <VCard v-else-if="store.error || !store.data">
+      <!-- ADR-812 (ADR-811 F1) : 403/404 = hors périmètre ou inexistante ; « Réessayer » n'y changerait rien. -->
       <ErrorState
+        v-if="[403, 404].includes(store.errorStatus)"
+        icon="tabler-user-off"
+        color="warning"
+        :title="t('people.notAvailableTitle')"
+        :message="t('people.notAvailableMessage')"
+        :show-retry="false"
+        data-test="person-not-available"
+      />
+      <ErrorState
+        v-else
         :message="t('people.loadError')"
         @retry="reload"
       />

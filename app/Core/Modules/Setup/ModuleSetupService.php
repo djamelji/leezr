@@ -272,6 +272,11 @@ final class ModuleSetupService
             }
         }
 
+        // ADR-812 : a recommendation that grants nothing for THIS module is not offered (the button did nothing).
+        if (! collect($out)->contains(fn ($caps) => $caps !== [])) {
+            return ['available' => false, 'label' => null, 'roles' => []];
+        }
+
         return ['available' => true, 'label' => $rec['label'], 'roles' => $out];
     }
 }
