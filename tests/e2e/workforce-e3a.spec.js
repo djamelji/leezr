@@ -41,26 +41,23 @@ test('annuaire refondu : en-tête, compteur, recherche, filtres repliables', asy
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })
 
-test('fiche refondue : en-tête consolidé, overflow, salaire visible pour owner', async ({ page }) => {
+test('fiche refondue : en-tête consolidé, actions, salaire visible pour owner', async ({ page }) => {
+  // ADR-768 / ADR-803.1 : l'ancienne fiche salarié redirige vers la fiche personne d'Équipe — on teste la vraie fiche.
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
 
   await loginCompany(page, 'owner@leezr.test')
   await page.goto('/company/workforce/employees/1', { waitUntil: 'domcontentloaded' })
-  await page.waitForResponse(r => r.url().includes('/file') && r.request().method() === 'GET', { timeout: 15000 }).catch(() => {})
+  await expect(page).toHaveURL(/\/company\/people\/employee-1/, { timeout: 15000 }) // lien historique préservé
+  await expect(page.locator('[data-test="person-header"]')).toBeVisible({ timeout: 15000 })
 
-  // Action primaire « Modifier » (SmartActionBar). « Gérer les accès » est accessible soit en bouton
-  // direct, soit via l'overflow selon la largeur réelle du conteneur header (comportement adaptatif).
-  await expect(page.locator('[data-test="emp-edit"]')).toBeVisible({ timeout: 10000 })
-  const overflow = page.locator('[data-test="sab-overflow"]')
-  if (await overflow.count()) {
-    await overflow.click()
-    await page.waitForTimeout(400)
-  }
-  await expect(page.locator('[data-test="emp-manage-access"]')).toBeVisible()
+  // Actions de la fiche : « Gérer les accès » disponible pour l'owner (bouton direct ou menu selon la largeur).
+  const menu = page.locator('[data-test="person-actions-menu"]')
+  if (await menu.count()) await menu.first().click()
+  await expect(page.locator('[data-test="person-action-manage-access"]').first()).toBeVisible({ timeout: 8000 })
   await page.keyboard.press('Escape')
 
-  // Owner a workforce.compensation_read → le salaire (MoneyDisplay) est présent dans la synthèse.
+  // Owner a workforce.compensation_read → la rémunération est présente dans la synthèse.
   await expect(page.getByText(/\d[\d\s.,]*\s?€/).first()).toBeVisible({ timeout: 8000 })
 
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)

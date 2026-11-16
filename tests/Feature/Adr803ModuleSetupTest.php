@@ -89,11 +89,11 @@ class Adr803ModuleSetupTest extends TestCase
         return $this->as($this->owner)->getJson('/api/modules/workforce/setup')->assertOk()->json();
     }
 
-    private function apply(User $actor, array $changes, ?string $fp = null)
+    private function apply(User $actor, array $changes, ?string $fp = null, bool $confirm = false)
     {
         $fp ??= $this->as($actor)->postJson('/api/modules/workforce/setup/access/preview', ['changes' => $changes])->json('fingerprint');
 
-        return $this->as($actor)->putJson('/api/modules/workforce/setup/access', ['changes' => $changes, 'fingerprint' => $fp]);
+        return $this->as($actor)->putJson('/api/modules/workforce/setup/access', ['changes' => $changes, 'fingerprint' => $fp, 'confirm_affected' => $confirm]);
     }
 
     // ── activation & contract ─────────────────────────────────────────────
@@ -163,7 +163,10 @@ class Adr803ModuleSetupTest extends TestCase
             ['role_id' => $this->manager->id, 'capability' => 'workforce.team', 'grant' => true],
             ['role_id' => $this->manager->id, 'capability' => 'workforce.timesheet_employee', 'grant' => true],
         ])->assertOk();
-        $this->apply($this->owner, [['role_id' => $this->manager->id, 'capability' => 'workforce.team', 'grant' => false]])->assertOk();
+        $revoke = [['role_id' => $this->manager->id, 'capability' => 'workforce.team', 'grant' => false]];
+        // ADR-803.1 : another fully-held capability would stop being held → explicit decision required.
+        $this->apply($this->owner, $revoke)->assertStatus(422)->assertJsonPath('code', 'affected_capabilities');
+        $this->apply($this->owner, $revoke, null, true)->assertOk();
         $this->assertEqualsCanonicalizing(['workforce.timesheet_view', 'workforce.timesheet_submit'], $this->perms($this->manager));
     }
 

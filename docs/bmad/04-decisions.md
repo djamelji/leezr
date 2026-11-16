@@ -28689,3 +28689,20 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - Pilote : Workforce ; les 24 autres modules Company gardent leur parcours.
   - Aucun rôle existant modifié, aucune société réelle modifiée.
   - L'éditeur de rôles historique n'a pas encore l'interdit d'auto-élévation (lot suivant).
+
+## ADR-803.1 — Unification RBAC et validation réelle de l'assistant
+
+- **Date** : 2026-11-16, DEV uniquement, base `304823cb`. Rapport : `docs/bmad/ADR-803.1-UNIFIED-RBAC-REAL-ASSISTANT-VALIDATION.md`.
+- **Constat** :
+  - L'éditeur de rôles n'appliquait aucune politique de délégation : un administratif pouvait s'ajouter n'importe quel droit, sur son propre rôle compris.
+  - La visibilité du thème écrivait des droits sans contrôle.
+  - L'affectation d'un rôle ne vérifiait pas qu'il restait dans ce que l'acteur détient.
+- **Décisions** :
+  - **Une seule politique.** `MembershipSecurityPolicy` (ADR-752) est étendue : `rolePermissionChangeViolation` (codes `other_company`, `protected_role`, `operational_role`, `own_role`, `beyond_your_rights`) et `delegablePermissions`. L'acteur ne délègue que ce qu'il détient ; `roles.manage` ne s'ajoute que par le propriétaire.
+    - Elle s'applique à l'éditeur de rôles (création, modification, sur le diff effectif), au thème, à l'affectation (rôle ⊆ droits de l'acteur), à l'assistant et à Équipe → Rôles par capacité.
+  - **Un seul moteur de capacités** dans le RBAC : `CapabilityAccessService`. Changements explicites seulement, personnalisations conservées, capacités partielles jamais élargies, recouvrements préservés. Les capacités *affectées* exigent `confirm_affected`. Aperçu, empreinte et audit.
+  - **Interface.** Équipe → Rôles a une vue « Par capacité » (par défaut ; même composant et même aperçu que l'assistant) ; « Par rôle » reste la vue avancée.
+  - **« Prêt » fiable.** Vérification à la lecture (empreinte des accès enregistrée à la confirmation, prérequis, `staleReasons`) → `needs_review`. La réactivation demande une nouvelle confirmation. Une migration additive.
+  - **Recette réelle.** Les 14 étapes, sur une société fictive isolée, avec un preset fictif publié sur un JobDomain fictif. Nettoyage exact après vérification des dépendances ; société 1 inchangée.
+  - **E2E.** `workforce-e3a` et `workforce-hr-nav-group` sont réécrits sur l'interface actuelle.
+- **Conséquences** : comportement administratif plus strict pour les non-propriétaires (voulu) ; les droits historiques ne sont pas revus automatiquement.

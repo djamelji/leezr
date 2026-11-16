@@ -39,6 +39,7 @@ declare module 'vue' {
     AppTextField: typeof import('./resources/js/@core/components/app-form-elements/AppTextField.vue')['default']
     BrandLogo: typeof import('./resources/js/components/BrandLogo.vue')['default']
     BuyNow: typeof import('./resources/js/@core/components/BuyNow.vue')['default']
+    CapabilityChangePreview: typeof import('./resources/js/components/modules/CapabilityChangePreview.vue')['default']
     CardAddEditDialog: typeof import('./resources/js/components/dialogs/CardAddEditDialog.vue')['default']
     CardStatisticsHorizontal: typeof import('./resources/js/@core/components/cards/CardStatisticsHorizontal.vue')['default']
     CardStatisticsVertical: typeof import('./resources/js/@core/components/cards/CardStatisticsVertical.vue')['default']

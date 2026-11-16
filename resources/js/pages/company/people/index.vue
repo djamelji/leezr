@@ -12,6 +12,7 @@ import OnboardingPanel from './_OnboardingPanel.vue'
 import PeopleHrTools from './_PeopleHrTools.vue'
 import ProfileFieldsSettings from './_ProfileFieldsSettings.vue'
 import MemberHealth from './_MemberHealth.vue'
+import RoleCapabilities from './_RoleCapabilities.vue'
 import { useModuleStore } from '@/core/stores/module'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
@@ -47,6 +48,7 @@ const canRoles = computed(() => can('roles.view'))
 const moduleStore = useModuleStore()
 const canHr = computed(() => moduleStore.isActive('workforce') && can('workforce.view'))
 const fieldsRef = ref(null)
+const rolesView = ref('capabilities') // ADR-803.1
 // ADR-766 (M7) — deep-link `?tab=roles` (depuis l'alias /company/roles) ou repli selon les facettes.
 const initialTab = (route.query.tab === 'roles' && canRoles.value) ? 'roles'
   : (route.query.tab === 'hr' && canHr.value) ? 'hr'
@@ -236,7 +238,37 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
           </VCardText>
         </VWindowItem>
         <VWindowItem value="roles">
-          <RolesManager v-if="tab === 'roles' && canRoles" embedded />
+          <!-- ADR-803.1 : vue simple « par capacité » (même moteur que l'assistant de module) ; « par rôle » = vue avancée -->
+          <div
+            v-if="tab === 'roles' && canRoles"
+            class="pa-4 pb-0"
+          >
+            <VBtnToggle
+              v-model="rolesView"
+              mandatory
+              density="compact"
+              variant="outlined"
+              divided
+              data-test="roles-view"
+            >
+              <VBtn
+                value="capabilities"
+                data-test="roles-view-capabilities"
+              >
+                {{ t('moduleSetup.byCapability') }}
+              </VBtn>
+              <VBtn
+                value="roles"
+                data-test="roles-view-roles"
+              >
+                {{ t('moduleSetup.byRole') }}
+              </VBtn>
+            </VBtnToggle>
+          </div>
+          <VCardText v-if="tab === 'roles' && canRoles && rolesView === 'capabilities'">
+            <RoleCapabilities />
+          </VCardText>
+          <RolesManager v-if="tab === 'roles' && canRoles && rolesView === 'roles'" embedded />
         </VWindowItem>
       </VWindow>
     </VCard>

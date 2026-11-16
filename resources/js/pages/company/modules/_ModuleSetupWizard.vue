@@ -6,6 +6,7 @@
 import { defineAsyncComponent } from 'vue'
 import AppStepper from '@core/components/AppStepper.vue'
 import ModuleCapabilityAccess from '@/components/modules/ModuleCapabilityAccess.vue'
+import CapabilityChangePreview from '@/components/modules/CapabilityChangePreview.vue'
 import { resolveSetupStep } from '@/core/registries/moduleSetupSteps'
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
@@ -54,10 +55,10 @@ const askPreview = async () => {
   catch (e) { toast(err(e), 'error') }
   finally { busy.value = false }
 }
-const applyAccess = async () => {
+const applyAccess = async (confirmAffected = false) => {
   busy.value = true
   try {
-    data.value = await $api(`/modules/${props.moduleKey}/setup/access`, { method: 'PUT', body: { changes: changes.value, fingerprint: preview.value.fingerprint } })
+    data.value = await $api(`/modules/${props.moduleKey}/setup/access`, { method: 'PUT', body: { changes: changes.value, fingerprint: preview.value.fingerprint, confirm_affected: confirmAffected } })
     preview.value = null
     changes.value = []
     accessRef.value?.reset()
@@ -94,7 +95,7 @@ const confirm = async () => {
   }
   finally { busy.value = false }
 }
-const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure: 'warning', legacy: 'secondary', suspended: 'secondary' }[s] || 'secondary')
+const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure: 'warning', needs_review: 'warning', legacy: 'secondary', suspended: 'secondary' }[s] || 'secondary')
 </script>
 
 <template>
@@ -117,6 +118,24 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
       <VCardSubtitle class="text-wrap">
         {{ data.status === 'legacy' ? t('moduleSetup.legacyHint') : t('moduleSetup.intro') }}
       </VCardSubtitle>
+      <VAlert
+        v-if="data.status === 'needs_review'"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+        data-test="module-setup-stale"
+      >
+        {{ t('moduleSetup.needsReview') }}
+        <ul class="mt-1">
+          <li
+            v-for="r in data.stale_reasons"
+            :key="r"
+          >
+            {{ $te(`moduleSetup.stale_${r.replace(':', '_')}`) ? t(`moduleSetup.stale_${r.replace(':', '_')}`) : r }}
+          </li>
+        </ul>
+      </VAlert>
     </VCardItem>
     <VCardText>
       <AppStepper
@@ -160,43 +179,12 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
             {{ changes.length ? t('moduleSetup.preview') : t('moduleSetup.keepAccess') }}
           </VBtn>
         </div>
-        <VCard
+        <CapabilityChangePreview
           v-if="preview"
-          variant="tonal"
-          class="mt-4"
-          data-test="module-setup-preview-result"
-        >
-          <VCardText>
-            <div
-              v-if="!preview.plan.length"
-              class="text-body-2"
-            >
-              {{ t('moduleSetup.noChange') }}
-            </div>
-            <div
-              v-for="p in preview.plan"
-              :key="p.role_id"
-              class="mb-2"
-            >
-              <strong>{{ p.role }}</strong> —
-              {{ t('moduleSetup.diff', { adds: p.adds, removes: p.removes }) }}
-              <span
-                v-if="p.blocked"
-                class="text-error"
-              > · {{ t(`moduleSetup.blocked.${p.blocked}`) }}</span>
-            </div>
-            <VBtn
-              class="mt-2"
-              color="primary"
-              :disabled="preview.blocked"
-              :loading="busy"
-              data-test="module-setup-apply"
-              @click="applyAccess"
-            >
-              {{ t('moduleSetup.apply') }}
-            </VBtn>
-          </VCardText>
-        </VCard>
+          :preview="preview"
+          :busy="busy"
+          @apply="applyAccess"
+        />
       </div>
 
       <!-- 2..n-1. Réglages spécialisés du module -->

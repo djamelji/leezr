@@ -811,25 +811,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </h6>
 
                       <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
-
                       <VChip
-
                         v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
-
                         size="small"
-
                         class="mb-2"
-
                         :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
-
                         :to="`/company/modules/${mod.key}`"
-
                         :data-test="`module-setup-chip-${mod.key}`"
-
                       >
-
                         {{ t(`moduleSetup.status.${mod.setup_status}`) }}
-
                       </VChip>
                       <p class="text-body-2 text-medium-emphasis mb-3">
                         {{ modDesc(mod) || '—' }}
@@ -952,25 +942,15 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       </h6>
 
                       <!-- ADR-803 : état de configuration guidée (modules à contrat `setup`, activés depuis ADR-803) -->
-
                       <VChip
-
                         v-if="mod.is_active && mod.setup_status && mod.setup_status !== 'legacy'"
-
                         size="small"
-
                         class="mb-2"
-
                         :color="mod.setup_status === 'ready' ? 'success' : 'warning'"
-
                         :to="`/company/modules/${mod.key}`"
-
                         :data-test="`module-setup-chip-${mod.key}`"
-
                       >
-
                         {{ t(`moduleSetup.status.${mod.setup_status}`) }}
-
                       </VChip>
                       <p class="text-body-2 text-medium-emphasis mb-3">
                         {{ modDesc(mod) || '—' }}

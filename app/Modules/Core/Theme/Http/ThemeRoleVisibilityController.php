@@ -60,6 +60,14 @@ class ThemeRoleVisibilityController
             return response()->json(['message' => 'One or more roles not found.'], 422);
         }
 
+        // ADR-803.1 — `theme.view` is a permission like any other : same delegation policy, all checks first.
+        foreach ($validated['visibility'] as $roleId => $visible) {
+            $role = $companyRoles->get((int) $roleId);
+            $had = $role->permissions->contains('id', $themeViewPerm->id);
+            \App\Company\RBAC\MembershipSecurityPolicy::assertCanChangeRolePermissions($company, $role,
+                $visible && ! $had ? ['theme.view'] : [], ! $visible && $had ? ['theme.view'] : [], $request->user());
+        }
+
         $before = [];
         $after = [];
 

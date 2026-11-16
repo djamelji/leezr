@@ -9,36 +9,28 @@ import { loginCompany } from './helpers'
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
 
 test('Workforce activity nav renders a single group and routes correctly', async ({ page }) => {
+  // ADR-766/781/802 : il n'y a plus de groupe « Ressources humaines » — la navigation Company est organisée en
+  // espaces ; les personnes vivent dans « Équipe » (/company/people). On teste la navigation réelle.
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
 
   await loginCompany(page, 'owner@leezr.test')
-  await page.goto('/company/workforce', { waitUntil: 'networkidle' })
-
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   const nav = page.locator('.layout-vertical-nav')
-
-  // The single activity group heading « Ressources humaines » is present.
-  await expect(nav.getByText('Ressources humaines', { exact: false }).first(), 'group heading').toBeVisible({ timeout: 10000 })
-
-  // Owner (sees all) → every activity entry is present in the sidebar.
-  for (const label of ['Collaborateurs', 'Temps de travail', 'Congés & absences', 'Documents', 'Paie & déclarations', 'Organisation', 'Paramètres']) {
-    await expect(nav.getByText(label, { exact: false }).first(), `entry "${label}"`).toBeVisible({ timeout: 10000 })
+  await expect(nav).toBeVisible({ timeout: 15000 })
+  for (const href of ['/company/people', '/company/documents', '/company/workforce/payroll']) {
+    await expect(nav.locator(`a[href^="${href}"]`).first(), `entry ${href}`).toBeAttached({ timeout: 10000 })
   }
+  await expect(nav.getByText('Ressources humaines', { exact: true })).toHaveCount(0) // ancien groupe retiré
 
-  // A Workforce entry routes to its real workforce page.
-  const employeesLink = nav.locator('a[href*="/company/workforce/employees"]').first()
-  await expect(employeesLink).toBeVisible()
-  await employeesLink.click()
-  await expect(page).toHaveURL(/\/company\/workforce\/employees/, { timeout: 8000 })
+  const team = nav.locator('a[href^="/company/people"]').first()
+  await team.scrollIntoViewIfNeeded()
+  await team.click()
+  await expect(page).toHaveURL(/\/company\/people/, { timeout: 8000 })
 
-  await page.screenshot({ path: `${SCRATCH}/e2-nav-light.png`, fullPage: false })
-
-  // Dark mode: group + entries still render, no horizontal overflow.
+  // Dark mode : pas de débordement horizontal.
   await page.evaluate(() => document.documentElement.classList.add('v-theme--dark'))
-  await expect(nav.getByText('Ressources humaines', { exact: false }).first()).toBeVisible()
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)
   expect(overflow, 'no horizontal overflow').toBeFalsy()
-  await page.screenshot({ path: `${SCRATCH}/e2-nav-dark.png`, fullPage: false })
-
   expect(errors, `JS errors: ${errors.join(' | ')}`).toHaveLength(0)
 })

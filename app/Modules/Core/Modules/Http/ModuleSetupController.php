@@ -29,9 +29,9 @@ class ModuleSetupController
 
     public function applyAccess(Request $request, string $key): JsonResponse
     {
-        $fp = $request->validate(['fingerprint' => 'required|string|size:40'])['fingerprint'];
+        $v = $request->validate(['fingerprint' => 'required|string|size:40', 'confirm_affected' => 'sometimes|boolean']);
 
-        return response()->json($this->svc($request)->applyAccess($key, $this->changes($request), $fp, $request->user()));
+        return response()->json($this->svc($request)->applyAccess($key, $this->changes($request), $v['fingerprint'], $request->user(), (bool) ($v['confirm_affected'] ?? false)));
     }
 
     public function step(Request $request, string $key): JsonResponse

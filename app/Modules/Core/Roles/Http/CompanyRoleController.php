@@ -4,6 +4,7 @@ namespace App\Modules\Core\Roles\Http;
 
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
+use App\Company\RBAC\MembershipSecurityPolicy;
 use App\Core\RBAC\PermissionCatalogBuilder;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
@@ -63,6 +64,12 @@ class CompanyRoleController extends Controller
             $suffix++;
         }
 
+        // ADR-803.1 — same delegation policy as every other path (checked BEFORE creating anything).
+        if (! empty($validated['permissions'])) {
+            $draft = new CompanyRole(['company_id' => $company->id, 'key' => $key, 'is_administrative' => $validated['is_administrative'] ?? false]);
+            $this->guardPermissions($company, $draft, [], $validated['permissions'], $request);
+        }
+
         $role = CompanyRole::create([
             'company_id' => $company->id,
             'key' => $key,
@@ -108,6 +115,15 @@ class CompanyRoleController extends Controller
         ]);
 
         $wasAdministrative = $role->is_administrative;
+
+        // ADR-803.1 — the delegation policy sees the EFFECTIVE diff (incl. admin rights stripped by a switch to
+        // operational), before anything is written. Same rules as the module assistant and any direct API call.
+        $currentIds = $role->permissions()->pluck('company_permissions.id')->all();
+        $targetIds = $validated['permissions'] ?? $currentIds;
+        if (($validated['is_administrative'] ?? $wasAdministrative) === false) {
+            $targetIds = CompanyPermission::whereIn('id', $targetIds)->where('is_admin', false)->pluck('id')->all();
+        }
+        $this->guardPermissions($company, (clone $role)->forceFill(['is_administrative' => $validated['is_administrative'] ?? $wasAdministrative]), $currentIds, $targetIds, $request);
 
         $fields = array_intersect_key($validated, array_flip(['name', 'is_administrative', 'field_config', 'doc_config']));
         if (!empty($fields)) {
@@ -181,5 +197,13 @@ class CompanyRoleController extends Controller
         return response()->json([
             'message' => 'Role deleted.',
         ]);
+    }
+
+    /** ADR-803.1 — delegation check on the effective diff of permission ids (422 with a readable reason). */
+    private function guardPermissions($company, CompanyRole $role, array $currentIds, array $targetIds, Request $request): void
+    {
+        $keys = fn (array $ids) => CompanyPermission::whereIn('id', $ids)->pluck('key')->all();
+        MembershipSecurityPolicy::assertCanChangeRolePermissions($company, $role,
+            $keys(array_diff($targetIds, $currentIds)), $keys(array_diff($currentIds, $targetIds)), $request->user());
     }
 }

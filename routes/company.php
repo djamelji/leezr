@@ -209,6 +209,13 @@ Route::middleware('company.access:use-module,core.roles')->group(function () {
         ->middleware('company.access:use-permission,roles.manage');
     Route::delete('/company/roles/{id}', [CompanyRoleController::class, 'destroy'])
         ->middleware('company.access:use-permission,roles.manage');
+
+    // ADR-803.1 — Équipe → Rôles « par capacité » : même moteur et même politique que l'assistant de module.
+    $rc = \App\Modules\Core\Roles\Http\CompanyRoleCapabilityController::class;
+    Route::get('/company/role-capabilities', [$rc, 'modules'])->middleware('company.access:use-permission,roles.view');
+    Route::get('/company/role-capabilities/{module}', [$rc, 'show'])->middleware('company.access:use-permission,roles.view');
+    Route::post('/company/role-capabilities/{module}/preview', [$rc, 'preview'])->middleware('company.access:use-permission,roles.manage');
+    Route::put('/company/role-capabilities/{module}', [$rc, 'apply'])->middleware('company.access:use-permission,roles.manage');
 });
 
 // ─── Company jobdomain (module-gated, permission-based) ──

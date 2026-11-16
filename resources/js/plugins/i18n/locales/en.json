@@ -10487,7 +10487,8 @@
       "in_progress": "Configuration in progress",
       "ready": "Ready",
       "suspended": "Suspended",
-      "legacy": "Historical configuration"
+      "legacy": "Historical configuration",
+      "needs_review": "Needs review"
     },
     "steps": {
       "access": "Access",
@@ -10520,8 +10521,11 @@
     "stale": "Access changed meanwhile: the page was reloaded.",
     "blocked": {
       "operational_role": "management capability not allowed on an operational role",
-      "beyond_your_rights": "you cannot grant rights you do not hold",
-      "owner_role": "owner role cannot be edited"
+      "beyond_your_rights": "you cannot delegate these rights",
+      "owner_role": "owner role cannot be edited",
+      "own_role": "you cannot change your own role",
+      "protected_role": "owner role cannot be edited",
+      "other_company": "role of another company"
     },
     "stepDone": "These settings are fine",
     "summaryAccess": "Granted access",
@@ -10536,6 +10540,19 @@
     "notReady": "The module cannot be declared ready yet: complete the flagged items.",
     "confirm": "Confirm: the module is ready",
     "isReady": "Module ready",
-    "readyToast": "The module is ready."
+    "readyToast": "The module is ready.",
+    "affected": "Capabilities that would no longer be fully granted",
+    "alsoCompletes": "Capabilities that become complete",
+    "acceptAffected": "I understand these consequences and accept them",
+    "module": "Module",
+    "byCapability": "By capability",
+    "byRole": "By role (advanced)",
+    "needsReview": "The configuration changed since it was confirmed: review it and confirm again.",
+    "stale_access_changed": "Access was changed outside the assistant (role edited or deleted).",
+    "stale_settings_changed": "A working-time setting changed.",
+    "stale_framework_changed": "The applicable agreement was confirmed again.",
+    "stale_missing_access_decided": "Access is no longer decided.",
+    "stale_missing_framework_confirmed": "The agreement framework is no longer confirmed.",
+    "stale_missing_weekly_reference": "No weekly reference duration."
   }
 }

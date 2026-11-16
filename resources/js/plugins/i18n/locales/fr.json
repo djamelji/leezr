@@ -10487,7 +10487,8 @@
       "in_progress": "Configuration en cours",
       "ready": "Prêt",
       "suspended": "Suspendu",
-      "legacy": "Configuration historique"
+      "legacy": "Configuration historique",
+      "needs_review": "À revoir"
     },
     "steps": {
       "access": "Accès",
@@ -10520,8 +10521,11 @@
     "stale": "Les accès ont changé entre-temps : la page a été rechargée.",
     "blocked": {
       "operational_role": "capacité de gestion impossible sur un rôle opérationnel",
-      "beyond_your_rights": "vous ne pouvez pas attribuer des droits que vous n'avez pas",
-      "owner_role": "rôle propriétaire non modifiable"
+      "beyond_your_rights": "vous ne pouvez pas déléguer ces droits",
+      "owner_role": "rôle propriétaire non modifiable",
+      "own_role": "vous ne pouvez pas modifier votre propre rôle",
+      "protected_role": "rôle propriétaire non modifiable",
+      "other_company": "rôle d'une autre entreprise"
     },
     "stepDone": "Ces réglages me conviennent",
     "summaryAccess": "Accès attribués",
@@ -10536,6 +10540,19 @@
     "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
     "confirm": "Confirmer : le module est prêt",
     "isReady": "Module prêt",
-    "readyToast": "Le module est prêt."
+    "readyToast": "Le module est prêt.",
+    "affected": "Capacités qui ne seraient plus entièrement attribuées",
+    "alsoCompletes": "Capacités qui deviennent complètes",
+    "acceptAffected": "J'ai compris ces conséquences et je les accepte",
+    "module": "Module",
+    "byCapability": "Par capacité",
+    "byRole": "Par rôle (avancé)",
+    "needsReview": "La configuration a changé depuis sa confirmation : vérifiez-la puis confirmez à nouveau.",
+    "stale_access_changed": "Les accès ont été modifiés en dehors de l'assistant (rôle modifié ou supprimé).",
+    "stale_settings_changed": "Un réglage du temps de travail a changé.",
+    "stale_framework_changed": "La convention applicable a été confirmée à nouveau.",
+    "stale_missing_access_decided": "Les accès ne sont plus décidés.",
+    "stale_missing_framework_confirmed": "Le cadre conventionnel n'est plus confirmé.",
+    "stale_missing_weekly_reference": "Aucune durée hebdomadaire de référence."
   }
 }
