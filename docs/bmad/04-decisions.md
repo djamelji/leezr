@@ -28914,7 +28914,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-810.1 — Cohérence documentaire et intégrité des demandes
 
-- **Date** : 2026-11-16, DEV uniquement, base `be419daf`. Rapport : `docs/bmad/ADR-810.1-DOCUMENT-REQUEST-INTEGRITY.md`.
+- **Date** : 2026-11-16, DEV uniquement, base `be419daf`, commit `a8026505`. Rapport : `docs/bmad/ADR-810.1-DOCUMENT-REQUEST-INTEGRITY.md`.
 - **Contexte** : la demande 5 de la société 1 (permis d'Alice) était « transmise » sans aucun fichier. Les trois écrans documentaires employaient des libellés différents.
 - **Cause de la demande 5** : un script `tinker` de préparation des captures de la recette ADR-759 (11/11, 16:58:07 UTC) a écrit l'état directement par `updateOrCreate`, hors de tout parcours. Ce n'est ni un dépôt, ni un traitement asynchrone, ni ADR-810. La demande et ses événements ne sont pas modifiés (aucune autorisation).
 - **Failles réelles corrigées** :
