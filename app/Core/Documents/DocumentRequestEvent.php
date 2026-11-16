@@ -26,6 +26,7 @@ class DocumentRequestEvent extends Model
     public const E_RENEWED = 'renewed';
     public const E_MERGED = 'merged';       // ADR-770 : demande du même type repliée dans celle-ci (transition de sujet)
     public const E_SUBJECT_MOVED = 'subject_moved'; // ADR-770 : la demande suit la personne (fiche ⇄ compte)     // demande de renouvellement ouverte à l'expiration
+    public const E_REGULARIZED = 'regularized'; // ADR-810.2 : état « fichier fourni » sans fichier remis à « demandé »
 
     protected $fillable = [
         'company_id', 'document_request_id', 'event', 'actor_id', 'note', 'version_id', 'metadata', 'created_at',

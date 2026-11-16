@@ -187,6 +187,34 @@ class DocumentRequestService
     }
 
     /**
+     * ADR-810.2 — REGULARIZATION of a request that holds a file-backed state (submitted, in_review,
+     * approved) although its subject holds NO file of that type (data written outside the workflow).
+     * Back to « requested » so the person can provide the piece ; nothing else is touched (no
+     * document invented, history kept). Refused when a file exists : then the state is legitimate.
+     */
+    public function regularizeMissingFile(DocumentRequest $request, ?User $actor, string $reason, array $context = []): DocumentRequest
+    {
+        if (! in_array($request->status, DocumentRequest::FILE_BACKED_STATES, true)) {
+            throw ValidationException::withMessages(['status' => ["Nothing to regularize : the request is {$request->status}."]]);
+        }
+        if ($request->evidenceDocument() !== null) {
+            throw ValidationException::withMessages(['status' => ['Nothing to regularize : a file has been submitted.']]);
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $actor, $reason, $context) {
+            $previous = $request->status;
+            $request->update(['status' => DocumentRequest::STATUS_REQUESTED, 'submitted_at' => null]);
+            $this->record($request, DocumentRequestEvent::E_REGULARIZED, $actor, $reason, array_merge($context, [
+                'previous_status' => $previous,
+                'new_status' => DocumentRequest::STATUS_REQUESTED,
+                'file_present' => false,
+            ]));
+
+            return $request;
+        });
+    }
+
+    /**
      * ADR-773 — RENEWAL CYCLE still open on this request : a renewal was requested (`renewed`) and no
      * approval concluded it since. Returns the identity of the document AT THE TIME of the renewal
      * (`file_sha256`, `expires_at`) — the version a renewal must differ from — or null when the

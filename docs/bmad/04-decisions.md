@@ -28943,3 +28943,17 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
     - suite complète 4618 réussis, 12 ignorés, 3 échecs historiques `ControllerSizeInvariantTest` ;
     - E2E (demandé → transmis → refusé → remplacé → approuvé, par l'écran, contrôles négatifs) sur société fictive supprimée, société 1 inchangée ;
     - build propre.
+
+## ADR-810.2 — Régularisation ciblée de la demande documentaire n°5
+
+- **Date** : 2026-11-16, DEV uniquement, base `4fc5eb61`, sur GO explicite. Rapport : `docs/bmad/ADR-810.2-REQUEST-5-REGULARIZATION.md`.
+- **Contexte** : la demande 5 de la société 1 (permis d'Alice) était « transmise » sans pièce. L'état avait été écrit par un script de recette ADR-759 (ADR-810.1). Toutes les vérifications concordent : identité, type, état, aucune pièce, aucune version, aucune preuve.
+- **Décision** :
+  - `DocumentRequestService::regularizeMissingFile` est ajouté au moteur existant. Il n'est exposé par aucune route. Il est refusé hors des états « fichier fourni », ou dès qu'une pièce existe. Il remet la demande à `requested` et `submitted_at` à null, en transaction, avec l'événement `regularized` (`DocumentRequestEvent::E_REGULARIZED`) : état précédent, nouvel état, `file_present = false`, origine, raison.
+  - L'opération est appliquée à la demande 5 seule (événement 128).
+- **Conséquences** :
+  - société 1 : seules la demande 5 et l'événement 128 diffèrent. L'événement 2, les pièces, les fichiers et les versions sont identiques (photographies avant / après) ;
+  - Mon espace et la fiche affichent « Demandé » ; dépôt possible ; approbation refusée (422) ;
+  - aucun faux fichier, aucune écriture SQL directe, aucune migration ;
+  - aucun changement RBAC, Billing ni paie ;
+  - 1 test ajouté (6/6 dans `Adr8101DocumentRequestIntegrityTest`) ; régression documentaire 476 verts.

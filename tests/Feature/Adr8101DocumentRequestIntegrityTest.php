@@ -299,6 +299,48 @@ class Adr8101DocumentRequestIntegrityTest extends TestCase
         $this->assertSame('submitted', $bobRequest->fresh()->status);
     }
 
+    /**
+     * ADR-810.2 — regularization of a historical « submitted without a file » (request 5 shape, written by
+     * raw SQL like the legacy row) : back to « requested » with a traced event, history untouched, then the
+     * person can submit and an approval without a file stays impossible. Refused when there is nothing to fix.
+     */
+    public function test_regularizing_a_submitted_request_without_a_file(): void
+    {
+        $type = $this->type();
+        $id = \Illuminate\Support\Facades\DB::table('document_requests')->insertGetId(['company_id' => $this->c->id, 'document_subject_type' => 'user', 'document_subject_id' => $this->alice->id, 'user_id' => $this->alice->id, 'document_type_id' => $type->id, 'status' => 'submitted', 'requires_validation' => true, 'requested_at' => now(), 'submitted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $legacy = \Illuminate\Support\Facades\DB::table('document_request_events')->insertGetId(['company_id' => $this->c->id, 'document_request_id' => $id, 'event' => 'submitted', 'created_at' => now()]);
+        $other = DocumentRequest::create(['company_id' => $this->c->id, 'document_subject_type' => 'user', 'document_subject_id' => $this->bob->id, 'user_id' => $this->bob->id, 'document_type_id' => $type->id, 'status' => 'requested', 'requested_at' => now()]);
+        $service = app(DocumentRequestService::class);
+
+        // Approval without a file : refused, before and after.
+        $this->as($this->owner)->putJson("/api/company/people/{$this->ref($this->alice)}/documents/driving_license/review", ['status' => 'approved'])->assertStatus(422);
+
+        // Nothing to regularize on a « requested » request.
+        $this->expectExceptionCompat(fn () => $service->regularizeMissingFile($other, $this->owner, 'x'));
+
+        $service->regularizeMissingFile(DocumentRequest::find($id), null, 'reason', ['origin' => 'ADR-759 recette script']);
+        $r = DocumentRequest::find($id);
+        $this->assertSame(['requested', null], [$r->status, $r->submitted_at]);
+        $events = DocumentRequestEvent::where('document_request_id', $id)->orderBy('id')->get();
+        $this->assertSame([$legacy, 'submitted'], [$events[0]->id, $events[0]->event]);
+        $this->assertSame(DocumentRequestEvent::E_REGULARIZED, $events[1]->event);
+        $this->assertSame(['submitted', 'requested', false, 'ADR-759 recette script'], [$events[1]->metadata['previous_status'], $events[1]->metadata['new_status'], $events[1]->metadata['file_present'], $events[1]->metadata['origin']]);
+        $this->assertSame('requested', $other->fresh()->status);
+        $this->assertSame(0, MemberDocument::withoutGlobalScopes()->where('company_id', $this->c->id)->count());
+
+        // Visible as « Demandé » in My space and the person's file ; approval still refused.
+        [$queue, $file, $mine] = $this->views($this->alice);
+        $this->assertSame([$id, 'requested'], [$queue['id'], $queue['status']]);
+        $this->assertSameState('requested', 'requested', $file, $mine);
+        $this->as($this->owner)->putJson("/api/company/people/{$this->ref($this->alice)}/documents/driving_license/review", ['status' => 'approved'])->assertStatus(422);
+
+        // The person can now submit ; a request backed by a file cannot be « regularized ».
+        $this->as($this->alice)->post('/api/profile/documents/driving_license', ['files' => [$this->pdf('R')]], ['Accept' => 'application/json'])->assertSuccessful();
+        $this->assertSame('submitted', DocumentRequest::find($id)->status);
+        $this->expectExceptionCompat(fn () => $service->regularizeMissingFile(DocumentRequest::find($id), null, 'x'));
+        $this->assertSame('submitted', DocumentRequest::find($id)->status);
+    }
+
     private function expectExceptionCompat(callable $fn): void
     {
         try {
