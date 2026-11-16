@@ -63,6 +63,7 @@ declare module 'vue' {
     HomePrioritiesSection: typeof import('./resources/js/components/dashboard/HomePrioritiesSection.vue')['default']
     I18n: typeof import('./resources/js/@core/components/I18n.vue')['default']
     MaintenancePreview: typeof import('./resources/js/components/MaintenancePreview.vue')['default']
+    ModuleCapabilityAccess: typeof import('./resources/js/components/modules/ModuleCapabilityAccess.vue')['default']
     MoreBtn: typeof import('./resources/js/@core/components/MoreBtn.vue')['default']
     Notifications: typeof import('./resources/js/@core/components/Notifications.vue')['default']
     PaymentProvidersDialog: typeof import('./resources/js/components/dialogs/PaymentProvidersDialog.vue')['default']
