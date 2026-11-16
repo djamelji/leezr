@@ -28875,7 +28875,7 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 
 ## ADR-809 — Bascule expérimentale Logistique (DEV) : inscription simple et fonctionnelle
 
-- **Date** : 2026-11-16, DEV local uniquement, base `d2ae575f`, commit `SHA_809`. Rapport : `docs/bmad/ADR-809-LOGISTICS-SIGNUP-EXPERIMENT.md`.
+- **Date** : 2026-11-16, DEV local uniquement, base `d2ae575f`, commit `ed8a0190`. Rapport : `docs/bmad/ADR-809-LOGISTICS-SIGNUP-EXPERIMENT.md`.
 - **Contexte** : démontrer qu'une nouvelle entreprise Logistique s'inscrit, reçoit sa configuration minimale, confirme ses accès et commence son activité, sans nouvelle architecture.
 - **Décisions** :
   - **Presets Logistique contrôlés** contre les manifestes : rôles v2, exigences v1 identiques à l'historique, organisation facultative.

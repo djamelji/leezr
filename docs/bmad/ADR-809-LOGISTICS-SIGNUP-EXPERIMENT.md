@@ -119,3 +119,5 @@ Mesure `CreationParity`, transaction annulée, presets et liens finaux :
 4. **Écran de création d'expédition** : origine et destination sont obligatoires à l'écran, alors que l'API les accepte vides. C'est une incohérence mineure, existante, conservée.
 5. **Dette Billing distincte** : le devis crée un portefeuille.
 6. **ControllerSizeInvariantTest** : 3 échecs historiques conservés. Le nouveau contrôleur est petit et n'utilise pas `DB`.
+
+- **SHA DEV** : `ed8a0190`.
