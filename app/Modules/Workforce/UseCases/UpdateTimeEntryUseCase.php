@@ -11,9 +11,18 @@ class UpdateTimeEntryUseCase
 {
     public function execute(TimeEntry $entry, array $data, ?int $actorId = null): TimeEntry
     {
-        // Guard: only completed or idle entries can be corrected
-        if (! in_array($entry->status, [TimeEntry::STATUS_COMPLETED, TimeEntry::STATUS_IDLE], true)) {
-            throw new \DomainException("Cannot update a time entry with status '{$entry->status}'. Only completed or idle entries can be corrected.");
+        // ADR-818 (chantier F) — OUBLI DE SORTIE : un pointage resté ouvert (en cours / en pause) se CLÔTURE par
+        // une correction qui donne l'heure de sortie (motif obligatoire, contrôlé par le contrôleur). Sans heure
+        // de sortie, un pointage ouvert reste non modifiable (la personne est peut-être en train de travailler).
+        $closing = in_array($entry->status, [TimeEntry::STATUS_WORKING, TimeEntry::STATUS_ON_BREAK], true);
+        if ($closing && empty($data['clock_out'])) {
+            throw new \DomainException(__('time.open_entry_needs_clock_out'));
+        }
+        if (! $closing && ! in_array($entry->status, [TimeEntry::STATUS_COMPLETED, TimeEntry::STATUS_IDLE], true)) {
+            throw new \DomainException(__('time.entry_not_correctable'));
+        }
+        if ($closing && Carbon::parse($data['clock_out'])->isFuture()) {
+            throw new \DomainException(__('time.clock_out_in_future'));
         }
 
         // Guard: check if entry is referenced in a locked/approved timesheet
@@ -39,7 +48,17 @@ class UpdateTimeEntryUseCase
 
         // Validate clock_in < clock_out
         if ($entry->clock_in && $entry->clock_out && $entry->clock_in->gte($entry->clock_out)) {
-            throw new \DomainException('Clock in must be before clock out.');
+            throw new \DomainException(__('time.clock_in_before_out'));
+        }
+
+        if ($closing) {
+            // Une pause restée ouverte se termine au plus tard à l'heure de sortie retenue.
+            foreach ($entry->breaks()->whereNull('end_at')->get() as $break) {
+                $break->end_at = $break->start_at && $break->start_at->gt($entry->clock_out) ? $break->start_at : $entry->clock_out;
+                $break->computeDuration();
+                $break->save();
+            }
+            $entry->status = TimeEntry::STATUS_COMPLETED;
         }
 
         // Recompute totals if both clock times present
@@ -66,7 +85,8 @@ class UpdateTimeEntryUseCase
                     'reason' => $data['reason'] ?? null,   // W-G5 : motif obligatoire (traçabilité)
                     'actor_id' => $actorId,
                     'employee_id' => $entry->employee_id,
-                    'description' => 'Time entry corrected'.(isset($data['reason']) ? ' — '.$data['reason'] : ''),
+                    'closed_forgotten_clock_out' => $closing, // ADR-818
+                    'description' => ($closing ? 'Forgotten clock-out closed' : 'Time entry corrected').(isset($data['reason']) ? ' — '.$data['reason'] : ''),
                 ],
             ],
         );
@@ -88,7 +108,7 @@ class UpdateTimeEntryUseCase
             ->exists();
 
         if ($exists) {
-            throw new \DomainException('Cannot modify a time entry that is part of a locked or approved timesheet.');
+            throw new \DomainException(__('time.locked_timesheet'));
         }
     }
 }

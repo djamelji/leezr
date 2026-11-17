@@ -11,7 +11,7 @@ class ClockOutUseCase
     public function execute(TimeEntry $entry): TimeEntry
     {
         if ($entry->status === TimeEntry::STATUS_COMPLETED) {
-            throw new \DomainException('Time entry is already completed.');
+            throw new \DomainException(__('time.already_completed'));
         }
 
         // Close any open break

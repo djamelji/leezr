@@ -8519,7 +8519,10 @@
     "deleteConfirm": {
       "title": "Supprimer le pointage",
       "message": "Êtes-vous sûr de vouloir supprimer ce pointage ? Cette action est irréversible."
-    }
+    },
+    "closeEntry": "Clôturer le pointage (oubli de sortie)",
+    "clockOutRequired": "Indiquez l'heure de sortie pour clôturer ce pointage.",
+    "closeEntryHint": "Ce pointage est resté ouvert : indiquez l'heure de sortie réelle et le motif."
   },
   "timesheets": {
     "generateTimesheet": "Générer une feuille de temps",

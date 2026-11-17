@@ -20,7 +20,7 @@ class ClockInUseCase
             ->first();
 
         if ($active) {
-            throw new \DomainException('Employee already has an active time entry. Clock out first.');
+            throw new \DomainException(__('time.already_clocked_in'));
         }
 
         $now = now();

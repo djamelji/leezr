@@ -61,7 +61,7 @@ class DeleteTimeEntryUseCase
             ->exists();
 
         if ($exists) {
-            throw new \DomainException('Cannot delete a time entry that is part of a locked or approved timesheet.');
+            throw new \DomainException(__('time.locked_timesheet')); // ADR-818 : message traduit
         }
     }
 }

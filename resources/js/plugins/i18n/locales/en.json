@@ -8519,7 +8519,10 @@
     "deleteConfirm": {
       "title": "Delete Entry",
       "message": "Are you sure you want to delete this time entry? This action cannot be undone."
-    }
+    },
+    "closeEntry": "Close the time entry (forgotten clock-out)",
+    "clockOutRequired": "Enter the clock-out time to close this entry.",
+    "closeEntryHint": "This entry was left open: enter the actual clock-out time and the reason."
   },
   "timesheets": {
     "generateTimesheet": "Generate Timesheet",

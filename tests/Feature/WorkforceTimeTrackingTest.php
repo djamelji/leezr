@@ -144,7 +144,8 @@ class WorkforceTimeTrackingTest extends TestCase
         Model::reguard();
 
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Cannot update a time entry with status');
+        // ADR-818 : un pointage ouvert se clôture par correction — jamais avec une sortie dans le futur.
+        $this->expectExceptionMessage(__('time.clock_out_in_future'));
 
         app(UpdateTimeEntryUseCase::class)->execute($entry, [
             'clock_out' => now()->addHours(8)->toIso8601String(),
@@ -154,7 +155,7 @@ class WorkforceTimeTrackingTest extends TestCase
     public function test_update_rejects_clock_in_after_clock_out(): void
     {
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('Clock in must be before clock out');
+        $this->expectExceptionMessage(__('time.clock_in_before_out'));
 
         app(UpdateTimeEntryUseCase::class)->execute($this->completedEntry, [
             'clock_in' => '2026-05-19 20:00:00',
@@ -185,7 +186,7 @@ class WorkforceTimeTrackingTest extends TestCase
         Model::reguard();
 
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('locked or approved timesheet');
+        $this->expectExceptionMessage(__('time.locked_timesheet'));
 
         app(UpdateTimeEntryUseCase::class)->execute($this->completedEntry, [
             'clock_in' => '2026-05-19 09:00:00',
@@ -257,7 +258,7 @@ class WorkforceTimeTrackingTest extends TestCase
         Model::reguard();
 
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('locked or approved timesheet');
+        $this->expectExceptionMessage(__('time.locked_timesheet'));
 
         app(DeleteTimeEntryUseCase::class)->execute($this->completedEntry);
     }
@@ -445,5 +446,28 @@ class WorkforceTimeTrackingTest extends TestCase
         $response->assertOk();
         $types = array_column($response->json(), 'type');
         $this->assertContains('missing_break', $types);
+    }
+
+    /** ADR-818 (chantier F) — a forgotten clock-out is closed by a correction (reason, open break closed, totals). */
+    public function test_forgotten_clock_out_is_closed_by_a_correction(): void
+    {
+        Model::unguard();
+        $entry = TimeEntry::create(['company_id' => $this->employee->company_id, 'employee_id' => $this->employee->id, 'date' => now()->subDay()->toDateString(),
+            'clock_in' => now()->subDay()->setTime(8, 0), 'status' => TimeEntry::STATUS_ON_BREAK, 'source' => 'manual']);
+        \App\Core\Workforce\TimeEntryBreak::create(['company_id' => $entry->company_id, 'time_entry_id' => $entry->id, 'start_at' => now()->subDay()->setTime(12, 0)]);
+        Model::reguard();
+
+        try {
+            app(UpdateTimeEntryUseCase::class)->execute($entry->fresh(), ['reason' => 'oubli']);
+            $this->fail('an open entry needs a clock-out');
+        } catch (\DomainException $e) {
+            $this->assertSame(__('time.open_entry_needs_clock_out'), $e->getMessage());
+        }
+
+        $closed = app(UpdateTimeEntryUseCase::class)->execute($entry->fresh(), ['clock_out' => now()->subDay()->setTime(17, 0)->toIso8601String(), 'reason' => 'oubli de sortie']);
+        $this->assertSame(TimeEntry::STATUS_COMPLETED, $closed->status);
+        $this->assertSame(300, (int) $closed->total_break_minutes); // pause ouverte close à la sortie retenue (12h → 17h)
+        $this->assertSame(240, (int) $closed->total_worked_minutes);
+        $this->assertSame(0, $closed->breaks()->whereNull('end_at')->count());
     }
 }

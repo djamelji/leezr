@@ -271,7 +271,7 @@ class WorkforceFunctionalSmokeTest extends TestCase
 
         // Second clock in should fail
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('already has an active time entry');
+        $this->expectExceptionMessage(__('time.already_clocked_in')); // ADR-818 : message traduit
 
         app(ClockInUseCase::class)->execute(
             employee: $this->employee,

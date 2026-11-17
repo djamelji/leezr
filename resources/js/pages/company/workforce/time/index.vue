@@ -26,7 +26,11 @@ const { can } = useCan()
 const canPlanning = computed(() => can('workforce.planning_view'))
 // E2 (ADR-690): tab-level gating so the space works for its capabilities.
 const canTimesheet = computed(() => can('workforce.timesheet_view'))
-const tabAccess = computed(() => ({ cockpit: canTimesheet.value, entries: canTimesheet.value, timesheets: canTimesheet.value }))
+// ADR-818 (chantier F) : un salarié (lecture de SES pointages, sans gestion) n'a pas d'écran de supervision :
+// l'onglet « Aujourd'hui » (équipe) et la colonne collaborateur sont réservés à qui gère le temps. Ses
+// pointages et ses feuilles (soumission) restent ici ; le serveur borne déjà les données à la personne.
+const managesTime = computed(() => can('workforce.time_manage') || can('workforce.timesheet_approve') || can('workforce.timesheet_approve_team') || can('workforce.view_all'))
+const tabAccess = computed(() => ({ cockpit: canTimesheet.value && managesTime.value, entries: canTimesheet.value, timesheets: canTimesheet.value }))
 
 // ADR-729 (M6.A) — dédoublonnage « Planning → Planning ». On REDIRIGE (synchronement, avant que VTabs
 // ne corrige vers le 1er onglet) les anciens deep-links `?tab=planning` ET les utilisateurs planning-only
@@ -80,7 +84,7 @@ const entryStatusOptions = [
 // Priorité de colonne (AppResponsiveDataView) : tablette = essential+important ; mobile = liste tactile.
 const entriesHeaders = computed(() => [
   { title: t('timeTracking.columns.date'), key: 'date', sortable: false, width: 110, priority: 'essential' },
-  { title: t('timeTracking.columns.employee'), key: 'employee', sortable: false, priority: 'essential' },
+  ...(managesTime.value ? [{ title: t('timeTracking.columns.employee'), key: 'employee', sortable: false, priority: 'essential' }] : []),
   { title: t('timeTracking.columns.clockIn'), key: 'clock_in_formatted', sortable: false, width: 90, priority: 'important' },
   { title: t('timeTracking.columns.clockOut'), key: 'clock_out_formatted', sortable: false, width: 90, priority: 'important' },
   { title: t('timeTracking.columns.breaks'), key: 'break_count', sortable: false, width: 80, priority: 'secondary' },
@@ -162,7 +166,9 @@ const statusColor = status => {
 // B2 (ADR-698) — la correction passe par correctTimeEntry (envoie `reason`, requis côté serveur) ;
 // updateTimeEntry sans motif renvoyait un 422. Le serveur n'autorise que les pointages completed/idle
 // et refuse si la feuille couvrante est approuvée/verrouillée.
-const CORRECTABLE_STATUSES = ['completed', 'idle']
+// ADR-818 (chantier F) : un pointage resté OUVERT (oubli de sortie) se clôture aussi par correction.
+const CORRECTABLE_STATUSES = ['completed', 'idle', 'working', 'on_break']
+const isOpenEntry = entry => ['working', 'on_break'].includes(entry?.status)
 const canCorrectEntry = entry => can('workforce.time_manage') && CORRECTABLE_STATUSES.includes(entry.status)
 
 const isCorrectionOpen = ref(false)
@@ -188,6 +194,11 @@ const openCorrection = entry => {
 
 const submitCorrection = async () => {
   if (!correctionData.value.reason) return
+  if (isOpenEntry(correctionEntry.value) && !correctionData.value.clockOut) {
+    toast(t('timeTracking.clockOutRequired'), 'warning')
+
+    return
+  }
   correctionLoading.value = true
   try {
     await store.correctTimeEntry(correctionEntry.value.id, {
@@ -626,7 +637,7 @@ onMounted(() => {
               </div>
             </template>
             <template #mobile-append="{ item }">
-              <VMenu v-if="can('workforce.time_manage') && ['completed', 'idle'].includes(item.status)" location="bottom end">
+              <VMenu v-if="can('workforce.time_manage') && CORRECTABLE_STATUSES.includes(item.status)" location="bottom end">
                 <template #activator="{ props: menuProps }">
                   <VBtn v-bind="menuProps" icon="tabler-dots-vertical" variant="text" size="small" @click.stop />
                 </template>
@@ -634,10 +645,11 @@ onMounted(() => {
                   <VListItem
                     v-if="canCorrectEntry(item)"
                     prepend-icon="tabler-edit"
-                    :title="$t('timeTracking.correct')"
+                    :title="isOpenEntry(item) ? $t('timeTracking.closeEntry') : $t('timeTracking.correct')"
                     @click="openCorrection(item)"
                   />
                   <VListItem
+                    v-if="!isOpenEntry(item)"
                     prepend-icon="tabler-trash"
                     :title="$t('common.delete')"
                     class="text-error"
@@ -757,12 +769,12 @@ onMounted(() => {
                   @click.stop="openCorrection(item)"
                 >
                   <VIcon
-                    icon="tabler-edit"
+                    :icon="isOpenEntry(item) ? 'tabler-clock-stop' : 'tabler-edit'"
                     size="18"
                   />
                   <VTooltip
                     activator="parent"
-                    :text="$t('timeTracking.correct')"
+                    :text="isOpenEntry(item) ? $t('timeTracking.closeEntry') : $t('timeTracking.correct')"
                     location="top"
                   />
                 </VBtn>
@@ -1215,16 +1227,17 @@ onMounted(() => {
     <!-- Correction (dialogue adaptatif : plein écran mobile, motif OBLIGATOIRE, workflow tracé) -->
     <AppAdaptiveDialog
       v-model="isCorrectionOpen"
-      :title="$t('timeTracking.correctEntry')"
+      :title="isOpenEntry(correctionEntry) ? $t('timeTracking.closeEntry') : $t('timeTracking.correctEntry')"
       :max-width="460"
     >
       <VAlert
-        type="info"
+        :type="isOpenEntry(correctionEntry) ? 'warning' : 'info'"
         variant="tonal"
         density="comfortable"
         class="mb-4"
+        data-test="entry-correct-hint"
       >
-        {{ $t('timeTracking.correctionHint') }}
+        {{ isOpenEntry(correctionEntry) ? $t('timeTracking.closeEntryHint') : $t('timeTracking.correctionHint') }}
       </VAlert>
       <div
         v-if="correctionEntry"
@@ -1243,7 +1256,7 @@ onMounted(() => {
         />
         <AppTextField
           v-model="correctionData.clockOut"
-          :label="$t('timeTracking.fields.clockOut')"
+          :label="$t('timeTracking.fields.clockOut') + (isOpenEntry(correctionEntry) ? ' *' : '')"
           type="datetime-local"
           data-test="entry-correct-out"
           class="mb-3"
