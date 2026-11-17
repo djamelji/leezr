@@ -29103,3 +29103,22 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - recette navigateur sur clone isolé (propriétaire, RH en consultation, manager, salarié, chauffeur, responsable d'exploitation, autre société) ;
   - aucune demande ni pièce modifiée ;
   - risque préexistant noté : `documents.configure` est donné par défaut au Dispatcher (D3).
+
+## ADR-818 — Refonte Company et « Logistics Only »
+
+- **Date** : 2026-11-17, DEV, base `b2653b7a`. Rapport : `docs/bmad/LEEZR-LOGISTICS-COMPANY-REDESIGN-FINAL.md`. Master plan + complément « Logistics Only », sans GO intermédiaire.
+- **Décisions** :
+  - **Logistics Only** : `jobdomains.signup_available` (distinct de `is_active`) ; seul Logistique est proposé, refus côté serveur ; modules non livrés dépubliés du catalogue des sociétés qui ne les ont pas (rien de rétroactif) ; laboratoires réservés au développement.
+  - **Embaucher** : un assistant unique sur le moteur d'intégration existant ; mode sur place = même portail ouvert par la RH (vérification en présence, auditée) ; espace « Embauches » ; finalisation en une transaction (aucun compte, droit ni contrat implicite).
+  - **Autorité des exigences par société** (`role` par défaut, `position` sur bascule explicite `settings.manage`, aperçu par personne, pertes à confirmer, réversible) ; aucune demande régénérée.
+  - **Documents** : aucune écriture métier lors d'une lecture ; demandes des pièces exigées créées à des événements explicites (finalisation, changement de poste si basculée, action RH).
+  - **Accueil unique** `/home` (Moi, À traiter, Entreprise) ; `/dashboard` alias.
+  - **Moindre privilège** pour les rôles opérationnels des **nouvelles** sociétés (`documents.processing`) ; rôles existants inchangés, corrections proposées (`rbac:least-privilege-report`).
+  - **Correctifs prouvés** : oubli de sortie clôturable ; soldes ouverts à l'activation tardive des Congés ; planification d'expédition ; réinvité dirigé vers les invitations ; un nom par module ; dates localisées ; messages serveur dans la langue d'interface (`X-Locale`).
+- **Conséquences** :
+  - 3 migrations additives et réversibles ;
+  - aucun moteur nouveau ;
+  - Billing et paie inchangés ;
+  - aucune société réelle modifiée ;
+  - deux recettes navigateur sur clones isolés (empreinte DEV inchangée) ;
+  - 3 échecs historiques `ControllerSizeInvariant` inchangés.

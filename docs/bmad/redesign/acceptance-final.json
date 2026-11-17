@@ -1,0 +1,164 @@
+{
+  "steps": [
+    {
+      "name": "catalogue public = logistique seul",
+      "ok": true,
+      "detail": [
+        "logistique"
+      ]
+    },
+    {
+      "name": "inscription « beta-services » refusée (422)",
+      "ok": true,
+      "detail": 422
+    },
+    {
+      "name": "inscription Logistique créée",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "nouvelle société : Répartiteur sans documents.configure",
+      "ok": true,
+      "detail": "documents.manage,documents.view"
+    },
+    {
+      "name": "connexion → /home",
+      "ok": true,
+      "detail": "http://127.0.0.1:8817/home"
+    },
+    {
+      "name": "/dashboard → /home",
+      "ok": true,
+      "detail": "http://127.0.0.1:8817/home"
+    },
+    {
+      "name": "catalogue sans modules non livrés",
+      "ok": true,
+      "detail": [
+        "logistics_shipments"
+      ]
+    },
+    {
+      "name": "Équipe : colonnes Responsable et Contrat",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "owner : aucune erreur API",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "expédition créée",
+      "ok": true,
+      "detail": 201
+    },
+    {
+      "name": "planification par l'interface",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "statut « planifiée »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "affectée au chauffeur",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "le chauffeur voit la livraison",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "en route",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "livrée",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "statut final « livrée »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "sans heure de sortie : message traduit",
+      "ok": false,
+      "detail": "This time entry is still open: enter the clock-out time to close it."
+    },
+    {
+      "name": "oubli de sortie clôturé",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "salarié : pas d'onglet de supervision",
+      "ok": true,
+      "detail": [
+        "Temps & pointages",
+        "Mon activité",
+        "Présences",
+        "Feuilles de temps"
+      ]
+    },
+    {
+      "name": "salarié : aucun indicateur collectif",
+      "ok": true,
+      "detail": [
+        "workforce.headcount:refusé",
+        "workforce.clock_live:refusé"
+      ]
+    },
+    {
+      "name": "salarié : aucune erreur API inattendue",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "chauffeur atterrit sur /home",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "chauffeur : Embauches refusé",
+      "ok": true,
+      "detail": "http://127.0.0.1:8817/company/403"
+    },
+    {
+      "name": "aucune société active → /invitations",
+      "ok": true,
+      "detail": "http://127.0.0.1:8817/invitations"
+    },
+    {
+      "name": "capture mode sombre",
+      "ok": true,
+      "detail": null
+    }
+  ],
+  "new_company": {
+    "id": 103,
+    "dispatcher_documents": "documents.manage,documents.view"
+  },
+  "rerun_with_x_locale": [
+    {
+      "name": "sans heure de sortie : message traduit",
+      "ok": true,
+      "detail": "Ce pointage est encore ouvert : indiquez l'heure de sortie pour le clôturer."
+    },
+    {
+      "name": "oubli de sortie clôturé",
+      "ok": true,
+      "detail": 200
+    }
+  ]
+}
