@@ -4277,7 +4277,8 @@
       "dependency_cycle": "{module} has inconsistent dependencies: contact support."
     },
     "dependentsWarning": "{list} depend(s) on {module}. Switching {module} off alone would leave them without what they need.",
-    "dependentsCascade": "Also switch off {list} (data is kept)"
+    "dependentsCascade": "Also switch off {list} (data is kept)",
+    "includedLockedShort": "Part of your business"
   },
   "contactSales": {
     "title": "Premium module",

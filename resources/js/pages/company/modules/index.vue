@@ -567,6 +567,36 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
       </div>
     </div>
 
+    <!-- Barre de recherche d'origine, avec son libellé animé (noms des modules qui défilent) -->
+    <div class="search-wrap mb-4">
+      <AppTextField
+        v-model="searchQuery"
+        prepend-inner-icon="tabler-search"
+        clearable
+        data-test="modules-search"
+      />
+      <div
+        v-if="!searchQuery && currentPlaceholderModule"
+        class="search-placeholder"
+      >
+        <span class="search-placeholder-static">{{ t('companyModules.searchModuleHint') }} :</span>
+        <span class="search-placeholder-slot">
+          <Transition
+            name="slide-v"
+            mode="out-in"
+          >
+            <span :key="placeholderIdx">
+              <VIcon
+                :icon="currentPlaceholderModule.icon_name || 'tabler-puzzle'"
+                size="18"
+              />
+              {{ modName(currentPlaceholderModule) }}
+            </span>
+          </Transition>
+        </span>
+      </div>
+    </div>
+
     <VCard class="mb-6">
       <VCardText class="d-flex flex-wrap align-center gap-4">
         <VChipGroup
@@ -586,15 +616,6 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
             {{ t(`companyModules.catalogFilter.${f}`) }} ({{ filterCount(f) }})
           </VChip>
         </VChipGroup>
-        <VSpacer />
-        <AppTextField
-          v-model="searchQuery"
-          prepend-inner-icon="tabler-search"
-          :placeholder="t('companyModules.searchModules')"
-          clearable
-          style="max-inline-size: 280px"
-          data-test="modules-search"
-        />
       </VCardText>
     </VCard>
 
@@ -717,15 +738,22 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
             <!-- ADR-807 : un module inclus par l'activité ne se désactive pas ici -->
             <div
               v-if="mod.display_state === 'included' && mod.is_active"
-              class="d-flex align-start gap-1 text-body-2 text-medium-emphasis mt-2"
+              class="d-flex align-center gap-1 text-caption text-medium-emphasis mt-2"
+              :title="t('companyModules.includedLocked')"
               :data-test="`module-included-locked-${mod.key}`"
             >
               <VIcon
                 icon="tabler-lock"
-                size="16"
-                class="mt-1"
+                size="14"
               />
-              <span>{{ t('companyModules.includedLocked') }}</span>
+              <span>{{ t('companyModules.includedLockedShort') }}</span>
+              <VTooltip
+                activator="parent"
+                location="top"
+                max-width="320"
+              >
+                {{ t('companyModules.includedLocked') }}
+              </VTooltip>
             </div>
             <VChip
               v-if="mod.is_active && mod.setup_status"

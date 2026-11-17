@@ -4277,7 +4277,8 @@
       "dependency_cycle": "Les dépendances de {module} sont incohérentes : contactez le support."
     },
     "dependentsWarning": "{list} dépend(ent) de {module}. Désactiver {module} seul laisserait ces modules sans ce dont ils ont besoin.",
-    "dependentsCascade": "Désactiver aussi {list} (les données sont conservées)"
+    "dependentsCascade": "Désactiver aussi {list} (les données sont conservées)",
+    "includedLockedShort": "Fait partie de votre activité"
   },
   "contactSales": {
     "title": "Module premium",
