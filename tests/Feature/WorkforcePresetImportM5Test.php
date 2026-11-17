@@ -165,6 +165,25 @@ class WorkforcePresetImportM5Test extends TestCase
         $this->assertSame(4, ScheduleTemplate::withoutGlobalScopes()->where('company_id', $this->company->id)->count(), 'Objets Company autonomes.');
     }
 
+    // --- ADR-821 : le profil publié (preset « planning ») est la source ; le JobDomain n'en est plus propriétaire ---
+    public function test_published_planning_profile_is_the_source_and_company_owns_imported_objects(): void
+    {
+        \App\Core\Markets\MarketRegistry::sync();
+        $content = \App\Core\Jobdomains\Modernization\LegacyJobdomainConfig::planning(Jobdomain::where('key', 'logistique')->first())['content'];
+        $content['schedule_templates'] = array_slice($content['schedule_templates'], 0, 2);
+        $content['week_templates'] = [];
+        $p = \App\Core\Presets\PresetService::createDraft('planning', ['family_key' => 'lg_plan', 'label' => 'P', 'jobdomain_key' => 'logistique', 'content' => $content], null);
+        \App\Core\Presets\PresetService::publish($p, null);
+        \App\Core\Presets\PresetService::setRecommendations('logistique', [['kind' => 'planning', 'family_key' => 'lg_plan']]);
+        $this->assertCount(2, $this->svc()->preview($this->company)['schedule_templates'], 'published profile read, not the historical column');
+        $this->svc()->apply($this->company);
+        $tpl = ScheduleTemplate::withoutGlobalScopes()->where('company_id', $this->company->id)->first();
+        $tpl->update(['name' => 'Ma tournée du matin']); // personnalisation dans Workforce
+        $v2 = \App\Core\Presets\Preset::where('family_key', 'lg_plan')->sole()->nextVersion(null);
+        \App\Core\Presets\PresetService::publish($v2->fresh(), null);
+        $this->assertSame('Ma tournée du matin', $tpl->fresh()->name, 'a new profile version never rewrites the company settings');
+    }
+
     // --- 9. Import HTTP + RBAC ---
     public function test_import_http_rbac(): void
     {

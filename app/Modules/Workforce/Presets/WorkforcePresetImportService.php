@@ -29,7 +29,19 @@ class WorkforcePresetImportService
 {
     private function presets(Company $company): array
     {
-        return $this->explicitPresets ?? ($company->jobdomain->workforce_presets ?? []);
+        if ($this->explicitPresets !== null) {
+            return $this->explicitPresets;
+        }
+        // ADR-821 — le métier fournit un PROFIL de valeurs initiales (preset « planning » publié, versionné) ; le
+        // module Workforce en reste propriétaire une fois importé. Repli historique (colonne du JobDomain) seulement
+        // si aucun profil n'est publié.
+        $rec = collect(\App\Core\Presets\PresetService::recommendationsFor((string) $company->jobdomain_key, $company->market_key))
+            ->first(fn ($r) => $r['kind'] === 'planning' && $r['usable'] && $r['effective_status'] === 'published');
+        if ($rec) {
+            return \App\Core\Presets\PresetService::content(\App\Core\Presets\PresetService::find('planning', $rec['effective_id']));
+        }
+
+        return $company->jobdomain->workforce_presets ?? [];
     }
 
     private function provKey(array $item): ?string
