@@ -67,6 +67,30 @@ const filterEnabledItems = computed(() => [
   { title: t('platformModules.disabled'), value: false },
 ])
 
+// ── ADR-821 — catalogue lisible ──
+const { moduleName } = useCatalogText()
+const kindFilter = ref('extensions')
+const moduleSearch = ref('')
+const filterCommercial = ref(null)
+const commercialItems = computed(() => ['available', 'preview', 'internal', 'deprecated'].map(v => ({ value: v, title: t(`platformModulesCatalog.commercial.${v}`) })))
+const kindMatch = (m, f) => f === 'all' || (f === 'core' ? m.type === 'core' : m.type !== 'core')
+const kindCount = f => settingsStore.modules.filter(m => kindMatch(m, f)).length
+const catalogRows = computed(() => {
+  const q = (moduleSearch.value || '').toLowerCase()
+
+  return settingsStore.modules.filter(m => kindMatch(m, kindFilter.value)
+    && (!filterCommercial.value || (m.commercial_status || 'available') === filterCommercial.value)
+    && (!q || `${moduleName(m.key, m.name)} ${m.key}`.toLowerCase().includes(q)))
+})
+const catalogHeaders = computed(() => [
+  { title: t('platformModules.module'), key: 'name' },
+  { title: t('platformModulesCatalog.dependencies'), key: 'requires', sortable: false },
+  { title: t('platformModulesCatalog.offerCol'), key: 'offer', sortable: false },
+  { title: t('platformModulesCatalog.commercialCol'), key: 'commercial', sortable: false },
+  { title: t('platformModules.jobdomains'), key: 'compatible_jobdomains', sortable: false },
+  { title: t('platformModules.global'), key: 'status', align: 'center', width: 90, sortable: false },
+])
+
 const onRowClick = (_event, { item }) => {
   router.push({ name: 'platform-modules-key', params: { key: item.key } })
 }
@@ -218,171 +242,145 @@ const onPlatformRowClick = (_event, { item }) => {
       >
         <!-- Tab 1: Company Modules -->
         <VWindowItem value="company">
-          <!-- Filters -->
-          <VCardText class="pb-0">
-            <VRow>
-              <VCol
-                cols="12"
-                sm="3"
+          <!-- ADR-821 — catalogue lisible : recherche, filtres d'état, dépendances, offre et commercialisation -->
+          <div class="d-flex flex-wrap align-center gap-3 mb-4">
+            <VChipGroup
+              v-model="kindFilter"
+              mandatory
+              selected-class="text-primary"
+              data-test="pm-kind-filter"
+            >
+              <VChip
+                v-for="f in ['extensions', 'core', 'all']"
+                :key="f"
+                :value="f"
+                variant="tonal"
+                label
               >
-                <VSelect
-                  v-model="filterType"
-                  :items="filterTypeItems"
-                  :label="t('common.type')"
-                  clearable
-                  density="compact"
-                  hide-details
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="3"
-              >
-                <VSelect
-                  v-model="filterPlan"
-                  :items="filterPlanItems"
-                  :label="t('platformModules.minPlan')"
-                  clearable
-                  density="compact"
-                  hide-details
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="3"
-              >
-                <VSelect
-                  v-model="filterEnabled"
-                  :items="filterEnabledItems"
-                  :label="t('platformModules.globalStatus')"
-                  clearable
-                  density="compact"
-                  hide-details
-                />
-              </VCol>
-              <VCol
-                cols="12"
-                sm="3"
-                class="d-flex align-center"
-              >
-                <VBtn
-                  v-if="hasFilters"
-                  variant="text"
-                  size="small"
-                  color="secondary"
-                  @click="clearFilters"
-                >
-                  {{ t('platformModules.clearFilters') }}
-                </VBtn>
-              </VCol>
-            </VRow>
-          </VCardText>
-
+                {{ t(`platformModulesCatalog.kind.${f}`) }} ({{ kindCount(f) }})
+              </VChip>
+            </VChipGroup>
+            <VSpacer />
+            <AppSelect
+              v-model="filterCommercial"
+              :items="commercialItems"
+              :placeholder="t('platformModulesCatalog.commercialFilter')"
+              clearable
+              style="max-inline-size: 220px"
+            />
+            <AppTextField
+              v-model="moduleSearch"
+              prepend-inner-icon="tabler-search"
+              :placeholder="t('platformModulesCatalog.search')"
+              clearable
+              style="max-inline-size: 240px"
+              data-test="pm-search"
+            />
+          </div>
           <VDataTable
-            :headers="companyHeaders"
-            :items="filteredModules"
+            :headers="catalogHeaders"
+            :items="catalogRows"
             :loading="isLoading"
-            item-value="key"
             :items-per-page="-1"
             hide-default-footer
             hover
-            class="cursor-pointer"
+            class="text-no-wrap"
+            data-test="pm-table"
             @click:row="onRowClick"
           >
-            <!-- Module name with icon -->
             <template #item.name="{ item }">
-              <div class="d-flex align-center gap-x-3 py-2">
+              <div class="d-flex align-center gap-3 py-2">
                 <VAvatar
-                  size="32"
-                  :color="item.type === 'core' ? 'primary' : 'info'"
+                  size="34"
                   variant="tonal"
+                  :color="item.type === 'core' ? 'secondary' : 'primary'"
+                  rounded
                 >
                   <VIcon
                     :icon="item.icon_name || 'tabler-puzzle'"
-                    size="18"
+                    size="20"
                   />
                 </VAvatar>
-                <span class="text-body-1 font-weight-medium text-high-emphasis">
-                  {{ item.name }}
-                </span>
+                <div>
+                  <div class="font-weight-medium text-high-emphasis">
+                    {{ moduleName(item.key, item.name) }}
+                  </div>
+                  <div class="text-caption text-disabled">
+                    {{ item.key }}
+                  </div>
+                </div>
               </div>
             </template>
-
-            <!-- Key -->
-            <template #item.key="{ item }">
-              <code class="text-sm">{{ item.key }}</code>
-            </template>
-
-            <!-- Type -->
-            <template #item.type="{ item }">
-              <VChip
-                :color="item.type === 'core' ? 'primary' : 'info'"
-                size="small"
-                variant="tonal"
-              >
-                {{ item.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
-              </VChip>
-            </template>
-
-            <!-- Min plan -->
-            <template #item.min_plan="{ item }">
-              <VChip
-                v-if="item.min_plan"
-                color="warning"
-                size="small"
-                variant="tonal"
-              >
-                {{ planLabel(item.min_plan) }}
-              </VChip>
+            <template #item.requires="{ item }">
               <span
-                v-else
+                v-if="!item.requires_all?.length"
                 class="text-disabled"
               >—</span>
+              <VChip
+                v-for="r in item.requires_all"
+                :key="r"
+                size="x-small"
+                label
+                class="me-1"
+                variant="tonal"
+              >
+                {{ moduleName(r, r) }}
+              </VChip>
             </template>
-
-            <!-- Compatible jobdomains -->
+            <template #item.offer="{ item }">
+              <VChip
+                size="small"
+                label
+                variant="tonal"
+                :color="item.addon_pricing ? 'warning' : (item.min_plan ? 'info' : 'success')"
+              >
+                {{ item.type === 'core' ? t('platformModulesCatalog.offer.core') : (item.addon_pricing ? t('platformModulesCatalog.offer.option') : (item.min_plan ? t('platformModulesCatalog.offer.fromPlan', { plan: item.min_plan }) : t('platformModulesCatalog.offer.all'))) }}
+              </VChip>
+            </template>
+            <template #item.commercial="{ item }">
+              <VChip
+                size="small"
+                label
+                variant="outlined"
+                :color="item.commercial_status === 'available' ? 'success' : 'secondary'"
+              >
+                {{ t(`platformModulesCatalog.commercial.${item.commercial_status || 'available'}`) }}
+              </VChip>
+            </template>
             <template #item.compatible_jobdomains="{ item }">
-              <template v-if="item.compatible_jobdomains">
-                <VChip
-                  v-for="jd in item.compatible_jobdomains"
-                  :key="jd"
-                  size="small"
-                  variant="tonal"
-                  class="me-1"
-                >
-                  {{ jd }}
-                </VChip>
-              </template>
               <span
-                v-else
-                class="text-disabled"
+                v-if="!item.compatible_jobdomains"
+                class="text-medium-emphasis"
               >{{ t('platformModules.all') }}</span>
+              <VChip
+                v-for="jd in item.compatible_jobdomains || []"
+                :key="jd"
+                size="x-small"
+                label
+                class="me-1"
+              >
+                {{ jd }}
+              </VChip>
             </template>
-
-            <!-- Global status toggle -->
             <template #item.status="{ item }">
-              <div @click.stop>
-                <VSwitch
-                  :model-value="item.is_enabled_globally"
-                  :loading="togglingKey === item.key"
-                  :disabled="togglingKey === item.key"
-                  color="primary"
-                  hide-details
-                  @update:model-value="toggleModule(item)"
-                />
-              </div>
+              <VSwitch
+                :model-value="item.is_enabled_globally"
+                :loading="togglingKey === item.key"
+                :disabled="item.type === 'core'"
+                density="compact"
+                hide-details
+                @click.stop
+                @update:model-value="toggleModule(item)"
+              />
             </template>
-
-            <!-- Empty state -->
             <template #no-data>
-              <div class="text-center pa-4 text-disabled">
-                {{ t('platformModules.noModules') }}
+              <div class="text-center pa-6 text-medium-emphasis">
+                {{ t('platformModulesCatalog.empty') }}
               </div>
             </template>
           </VDataTable>
         </VWindowItem>
 
-        <!-- Tab 2: Platform Modules (read-only) -->
         <VWindowItem value="platform">
           <VCardText class="pb-0">
             <p class="text-body-2 text-medium-emphasis mb-0">

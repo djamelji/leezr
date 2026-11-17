@@ -207,7 +207,7 @@ class PageModuleAlignmentTest extends TestCase
             'platform-access-tab' => $base . '/platform/access/[tab].vue',
             'platform-companies' => $base . '/platform/companies/index.vue',
             'platform-markets-key' => $base . '/platform/markets/[key].vue',
-            'platform-modules-key' => $base . '/platform/modules/[key].vue',
+            'platform-modules-key' => $base . '/platform/modules/[key]/[[tab]].vue', // ADR-821
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
             'platform-companies-id' => $base . '/platform/companies/[id]/[[tab]].vue', // ADR-820 : onglet dans le chemin (nom conservé)
             'company-workforce-referrals' => $base . '/company/workforce/referrals/[[tab]].vue', // ADR-820

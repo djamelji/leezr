@@ -11767,5 +11767,58 @@
       "option": "Optional",
       "not_included": "Not included"
     }
+  },
+  "platformModulesCatalog": {
+    "kind": {
+      "extensions": "Extensions",
+      "core": "Core",
+      "all": "All"
+    },
+    "commercialFilter": "Commercial status",
+    "search": "Search a module",
+    "dependencies": "Dependencies",
+    "offerCol": "Plan",
+    "commercialCol": "Commercial status",
+    "offer": {
+      "core": "Always included",
+      "option": "Paid option",
+      "fromPlan": "From {plan}",
+      "all": "Every plan"
+    },
+    "commercial": {
+      "available": "On sale",
+      "preview": "In preparation",
+      "internal": "Internal",
+      "demo": "Demo",
+      "deprecated": "Retired"
+    },
+    "empty": "No module matches."
+  },
+  "platformModuleSections": {
+    "section": {
+      "general": "General",
+      "features": "Features",
+      "dependencies": "Dependencies",
+      "permissions": "Permissions",
+      "commercial": "Commercial",
+      "companies": "Companies",
+      "advanced": "Advanced"
+    },
+    "featuresTitle": "What the module brings",
+    "featuresHint": "Declared by the module: its pages and the steps of its activation assistant.",
+    "pages": "Pages and menu entries",
+    "noPages": "No page of its own",
+    "setup": "Activation assistant",
+    "noSetup": "No assistant",
+    "dataNeedsTitle": "Data needs",
+    "dataNeedsHint": "Information each company links to its own fields when activating (never an imposed field name).",
+    "noDataNeeds": "No data need declared",
+    "contributions": "Catalogue contributions: {fields} field(s), {documents} document type(s), {requirements} suggested requirement(s).",
+    "offerTitle": "In plans",
+    "offerHint": "Computed from the minimum plan and option price below.",
+    "dependenciesTitle": "Dependencies",
+    "dependenciesHint": "Declared by the modules; added automatically on activation, checked in plans.",
+    "needsAll": "Needs (including indirectly)",
+    "usedByAll": "Needed by"
   }
 }

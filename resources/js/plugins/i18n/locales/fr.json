@@ -11767,5 +11767,58 @@
       "option": "En option",
       "not_included": "Non inclus"
     }
+  },
+  "platformModulesCatalog": {
+    "kind": {
+      "extensions": "Extensions",
+      "core": "Essentiels",
+      "all": "Tous"
+    },
+    "commercialFilter": "Commercialisation",
+    "search": "Rechercher un module",
+    "dependencies": "Dépendances",
+    "offerCol": "Offre",
+    "commercialCol": "Commercialisation",
+    "offer": {
+      "core": "Toujours inclus",
+      "option": "Option payante",
+      "fromPlan": "À partir de {plan}",
+      "all": "Toutes les offres"
+    },
+    "commercial": {
+      "available": "Commercialisé",
+      "preview": "En préparation",
+      "internal": "Interne",
+      "demo": "Démonstration",
+      "deprecated": "Retiré"
+    },
+    "empty": "Aucun module ne correspond."
+  },
+  "platformModuleSections": {
+    "section": {
+      "general": "Général",
+      "features": "Fonctionnalités",
+      "dependencies": "Dépendances",
+      "permissions": "Permissions",
+      "commercial": "Commercialisation",
+      "companies": "Sociétés",
+      "advanced": "Avancé"
+    },
+    "featuresTitle": "Ce que le module apporte",
+    "featuresHint": "Déclaré par le module : ses pages et les étapes de son assistant d'activation.",
+    "pages": "Pages et entrées de menu",
+    "noPages": "Aucune page propre",
+    "setup": "Assistant d'activation",
+    "noSetup": "Pas d'assistant",
+    "dataNeedsTitle": "Besoins de données",
+    "dataNeedsHint": "Informations que chaque société associe à ses propres champs lors de l'activation (jamais un nom de champ imposé).",
+    "noDataNeeds": "Aucun besoin de données déclaré",
+    "contributions": "Contributions aux catalogues : {fields} champ(s), {documents} type(s) de document, {requirements} exigence(s) proposée(s).",
+    "offerTitle": "Dans les offres",
+    "offerHint": "Calculé à partir de l'offre minimale et du prix d'option ci-dessous.",
+    "dependenciesTitle": "Dépendances",
+    "dependenciesHint": "Déclarées par les modules ; ajoutées automatiquement à l'activation, contrôlées dans les offres.",
+    "needsAll": "Nécessite (y compris indirectement)",
+    "usedByAll": "Nécessaire à"
   }
 }

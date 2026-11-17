@@ -3,6 +3,7 @@ import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/sett
 import { useAppToast } from '@/composables/useAppToast'
 
 definePage({
+  name: 'platform-modules-key', // ADR-821 : sections dans le chemin (/platform/modules/{key}/{section})
   meta: {
     layout: 'platform',
     platform: true,
@@ -13,6 +14,15 @@ definePage({
 })
 
 const { t } = useI18n()
+// ADR-821 — fiche module en sections routées : Général · Fonctionnalités · Dépendances · Permissions ·
+// Commercialisation · Sociétés · Avancé (éditeur technique).
+const SECTIONS = [
+  { key: 'general', icon: 'tabler-id' }, { key: 'features', icon: 'tabler-apps' }, { key: 'dependencies', icon: 'tabler-hierarchy' },
+  { key: 'permissions', icon: 'tabler-shield-lock' }, { key: 'commercial', icon: 'tabler-receipt' }, { key: 'companies', icon: 'tabler-building' },
+  { key: 'advanced', icon: 'tabler-code' },
+]
+const section = computed(() => (SECTIONS.some(x => x.key === route.params.tab) ? route.params.tab : 'general'))
+const { moduleName } = useCatalogText()
 const route = useRoute()
 const router = useRouter()
 const settingsStore = usePlatformSettingsStore()
@@ -626,13 +636,25 @@ const planLabel = planKey => {
         </VCardText>
       </VCard>
 
-      <!-- Two-column layout -->
-      <VRow>
-        <!-- LEFT COLUMN (md=8) -->
-        <VCol
-          cols="12"
-          md="8"
+      <VTabs
+        :model-value="section"
+        show-arrows
+        class="border-b mb-6"
+        data-test="pm-tabs"
+      >
+        <VTab
+          v-for="sec in SECTIONS"
+          :key="sec.key"
+          :value="sec.key"
+          :prepend-icon="sec.icon"
+          :to="{ name: 'platform-modules-key', params: { key: route.params.key, tab: sec.key === 'general' ? undefined : sec.key } }"
+          :data-test="`pm-tab-${sec.key}`"
         >
+          {{ t(`platformModuleSections.section.${sec.key}`) }}
+        </VTab>
+      </VTabs>
+
+      <template v-if="section === 'general'">
           <!-- Module Identity (editable overrides + read-only technical) -->
           <VCard
             :title="t('platformModules.moduleIdentity')"
@@ -820,6 +842,367 @@ const planLabel = planKey => {
                   </span>
                 </div>
               </div>
+            </VCardText>
+          </VCard>
+
+          <!-- Save button -->
+          <VBtn
+            :loading="isSaving"
+            :disabled="!isDirty"
+            :variant="isDirty ? 'elevated' : 'tonal'"
+            class="mb-6"
+            @click="saveConfig"
+          >
+            {{ t('platformModules.saveConfiguration') }}
+          </VBtn>
+
+      </template>
+      <template v-else-if="section === 'features'">
+          <VCard
+            class="mb-6"
+            data-test="pm-features"
+          >
+            <VCardItem>
+              <VCardTitle>{{ t('platformModuleSections.featuresTitle') }}</VCardTitle>
+              <VCardSubtitle class="text-wrap">
+                {{ t('platformModuleSections.featuresHint') }}
+              </VCardSubtitle>
+            </VCardItem>
+            <VList density="compact">
+              <VListSubheader>{{ t('platformModuleSections.pages') }}</VListSubheader>
+              <VListItem
+                v-for="n in mod.nav_items || []"
+                :key="n.key"
+                prepend-icon="tabler-layout-sidebar"
+                :title="$te(`nav.company.${n.key}`) ? $t(`nav.company.${n.key}`) : n.title"
+                :subtitle="n.group || ''"
+              />
+              <VListItem
+                v-if="!(mod.nav_items || []).length"
+                :title="t('platformModuleSections.noPages')"
+              />
+              <VListSubheader>{{ t('platformModuleSections.setup') }}</VListSubheader>
+              <VListItem
+                v-for="st in mod.setup_steps || []"
+                :key="st"
+                prepend-icon="tabler-list-check"
+                :title="$te(`moduleSetup.steps.${st}`) ? $t(`moduleSetup.steps.${st}`) : st"
+              />
+              <VListItem
+                v-if="!(mod.setup_steps || []).length"
+                :title="t('platformModuleSections.noSetup')"
+              />
+            </VList>
+          </VCard>
+          <VCard
+            class="mb-6"
+            data-test="pm-data-needs"
+          >
+            <VCardItem>
+              <VCardTitle>{{ t('platformModuleSections.dataNeedsTitle') }}</VCardTitle>
+              <VCardSubtitle class="text-wrap">
+                {{ t('platformModuleSections.dataNeedsHint') }}
+              </VCardSubtitle>
+            </VCardItem>
+            <VList density="compact">
+              <VListItem
+                v-for="n in mod.data_needs || []"
+                :key="n.key"
+                prepend-icon="tabler-database"
+                :title="$te(`moduleData.need.${n.key}.label`) ? $t(`moduleData.need.${n.key}.label`) : n.label"
+                :subtitle="[ $t(`moduleData.type.${n.type}`), n.unique ? $t('moduleData.unique') : null, n.blocks ? $t(`moduleData.blocks.${n.blocks}`) : null ].filter(Boolean).join(' · ')"
+              />
+              <VListItem
+                v-if="!(mod.data_needs || []).length"
+                :title="t('platformModuleSections.noDataNeeds')"
+              />
+            </VList>
+            <VCardText class="text-body-2 text-medium-emphasis">
+              {{ t('platformModuleSections.contributions', mod.contributions || { fields: 0, documents: 0, requirements: 0 }) }}
+            </VCardText>
+          </VCard>
+      </template>
+      <template v-else-if="section === 'dependencies'">
+          <VCard
+            class="mb-6"
+            data-test="pm-dependencies"
+          >
+            <VCardItem>
+              <VCardTitle>{{ t('platformModuleSections.dependenciesTitle') }}</VCardTitle>
+              <VCardSubtitle class="text-wrap">
+                {{ t('platformModuleSections.dependenciesHint') }}
+              </VCardSubtitle>
+            </VCardItem>
+            <VCardText>
+              <div class="text-body-2 text-medium-emphasis mb-2">
+                {{ t('platformModuleSections.needsAll') }}
+              </div>
+              <VChip
+                v-for="r in mod.requires_all || []"
+                :key="r"
+                size="small"
+                label
+                class="me-1 mb-1"
+                :to="{ name: 'platform-modules-key', params: { key: r } }"
+              >
+                {{ moduleName(r, r) }}
+              </VChip>
+              <span
+                v-if="!(mod.requires_all || []).length"
+                class="text-disabled"
+              >—</span>
+              <div class="text-body-2 text-medium-emphasis mt-4 mb-2">
+                {{ t('platformModuleSections.usedByAll') }}
+              </div>
+              <VChip
+                v-for="r in mod.dependents_all || []"
+                :key="r"
+                size="small"
+                label
+                color="info"
+                variant="tonal"
+                class="me-1 mb-1"
+                :to="{ name: 'platform-modules-key', params: { key: r } }"
+              >
+                {{ moduleName(r, r) }}
+              </VChip>
+              <span
+                v-if="!(mod.dependents_all || []).length"
+                class="text-disabled"
+              >—</span>
+            </VCardText>
+          </VCard>
+          <!-- Organize (read-only info) -->
+          <VCard :title="t('platformModules.organize')">
+            <VCardText>
+              <!-- Compatibility (editable override) -->
+              <div class="text-body-2 font-weight-medium mb-2">
+                {{ t('platformModules.compatibleJobdomainsOverride') }}
+              </div>
+              <VCombobox
+                v-model="platformConfig.compatible_jobdomains_override"
+                :items="availableJobdomains.map(jd => jd.key)"
+                :label="t('platformModules.compatibleJobdomainsOverride')"
+                :hint="platformConfig.compatible_jobdomains_override?.length ? t('platformModules.compatibleJobdomainsHint') : t('platformModules.manifestPrefix', { value: manifestDefaults.compatible_jobdomains?.join(', ') || t('platformModules.allJobDomains') })"
+                persistent-hint
+                multiple
+                chips
+                closable-chips
+                clearable
+                class="mb-4"
+              />
+
+              <VDivider class="mb-4" />
+
+              <!-- Included by -->
+              <div class="text-body-2 font-weight-medium mb-2">
+                {{ t('platformModules.includedBy') }}
+              </div>
+              <template v-if="includedByJobdomains.length">
+                <div class="d-flex flex-wrap gap-1 mb-4">
+                  <VChip
+                    v-for="jd in includedByJobdomains"
+                    :key="jd.id"
+                    size="small"
+                    color="success"
+                    variant="tonal"
+                    :to="{ name: 'platform-jobdomains-id', params: { id: jd.id } }"
+                  >
+                    {{ jd.label }}
+                  </VChip>
+                </div>
+              </template>
+              <template v-else>
+                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.notIncludedByDefault') }}</span>
+              </template>
+
+              <VDivider class="mb-4" />
+
+              <!-- Dependencies -->
+              <div class="text-body-2 font-weight-medium mb-2">
+                {{ t('platformModules.requires') }}
+              </div>
+              <template v-if="mod.requires.length">
+                <div class="d-flex flex-wrap gap-1 mb-4">
+                  <VChip
+                    v-for="req in mod.requires"
+                    :key="req"
+                    size="small"
+                    color="warning"
+                    variant="tonal"
+                    :to="{ name: 'platform-modules-key', params: { key: req } }"
+                  >
+                    {{ req }}
+                  </VChip>
+                </div>
+              </template>
+              <template v-else>
+                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noDependencies') }}</span>
+              </template>
+
+              <div class="text-body-2 font-weight-medium mb-2">
+                {{ t('platformModules.dependents') }}
+              </div>
+              <template v-if="dependents.length">
+                <div class="d-flex flex-wrap gap-1">
+                  <VChip
+                    v-for="dep in dependents"
+                    :key="dep.key"
+                    size="small"
+                    color="info"
+                    variant="tonal"
+                    :to="{ name: 'platform-modules-key', params: { key: dep.key } }"
+                  >
+                    {{ dep.name }}
+                  </VChip>
+                </div>
+              </template>
+              <template v-else>
+                <span class="text-disabled text-body-2">{{ t('platformModules.noDependents') }}</span>
+              </template>
+            </VCardText>
+          </VCard>
+          <!-- Save button -->
+          <VBtn
+            :loading="isSaving"
+            :disabled="!isDirty"
+            :variant="isDirty ? 'elevated' : 'tonal'"
+            class="mb-6"
+            @click="saveConfig"
+          >
+            {{ t('platformModules.saveConfiguration') }}
+          </VBtn>
+
+      </template>
+      <template v-else-if="section === 'permissions'">
+        <VRow>
+          <VCol
+            cols="12"
+            md="6"
+          >
+          <!-- Permissions (read-only chips) -->
+          <VCard
+            :title="t('platformModules.permissionsTitle')"
+            class="mb-6"
+          >
+            <VCardText>
+              <template v-if="mod.permissions && mod.permissions.length">
+                <div class="d-flex flex-wrap gap-1">
+                  <VChip
+                    v-for="perm in mod.permissions"
+                    :key="perm.key"
+                    size="small"
+                    variant="tonal"
+                  >
+                    {{ perm.label }}
+                  </VChip>
+                </div>
+              </template>
+              <span
+                v-else
+                class="text-disabled text-body-2"
+              >{{ t('platformModules.noPermissions') }}</span>
+            </VCardText>
+          </VCard>
+
+          </VCol>
+          <VCol
+            cols="12"
+            md="6"
+          >
+          <!-- Capability Bundles (read-only chips + hint) -->
+          <VCard
+            :title="t('platformModules.capabilityBundles')"
+            class="mb-6"
+          >
+            <VCardText>
+              <template v-if="mod.bundles && mod.bundles.length">
+                <div
+                  v-for="bundle in mod.bundles"
+                  :key="bundle.key"
+                  class="mb-3"
+                >
+                  <VChip
+                    size="small"
+                    :color="bundle.is_admin ? 'warning' : 'info'"
+                    variant="tonal"
+                    class="mb-1"
+                  >
+                    {{ bundle.label }}
+                  </VChip>
+                  <div
+                    v-if="bundle.hint"
+                    class="text-body-2 text-medium-emphasis ms-1"
+                  >
+                    {{ bundle.hint }}
+                  </div>
+                </div>
+              </template>
+              <span
+                v-else
+                class="text-disabled text-body-2"
+              >{{ t('platformModules.noBundles') }}</span>
+              <div class="text-body-2 text-medium-emphasis mt-3">
+                {{ t('platformModules.bundlesDescription') }}
+              </div>
+            </VCardText>
+          </VCard>
+
+          </VCol>
+        </VRow>
+      </template>
+      <template v-else-if="section === 'commercial'">
+          <VCard
+            class="mb-6"
+            data-test="pm-offer"
+          >
+            <VCardItem>
+              <VCardTitle>{{ t('platformModuleSections.offerTitle') }}</VCardTitle>
+              <VCardSubtitle class="text-wrap">
+                {{ t('platformModuleSections.offerHint') }}
+              </VCardSubtitle>
+            </VCardItem>
+            <VCardText class="d-flex flex-wrap gap-2">
+              <VChip
+                v-for="(st, p) in mod.offer || {}"
+                :key="p"
+                label
+                variant="tonal"
+                :color="{ included: 'success', option: 'warning', not_included: 'secondary' }[st]"
+              >
+                {{ p }} · {{ t(`planModules.status.${st}`) }}
+              </VChip>
+            </VCardText>
+          </VCard>
+          <!-- Commercial -->
+          <VCard
+            :title="t('platformModules.commercial')"
+            class="mb-6"
+          >
+            <VCardText>
+              <div class="d-flex flex-column gap-y-4">
+                <VSwitch
+                  v-model="platformConfig.is_listed"
+                  :label="t('platformModules.listedInCatalog')"
+                  color="primary"
+                  hide-details
+                />
+                <VSwitch
+                  v-model="platformConfig.is_sellable"
+                  :label="t('platformModules.sellable')"
+                  color="primary"
+                  hide-details
+                />
+              </div>
+
+              <VDivider class="my-4" />
+
+              <AppTextarea
+                v-model="platformConfig.notes"
+                :label="t('platformModules.notes')"
+                rows="3"
+                :placeholder="t('platformModules.notesPlaceholder')"
+              />
             </VCardText>
           </VCard>
 
@@ -1182,44 +1565,6 @@ const planLabel = planKey => {
             </VCardText>
           </VCard>
 
-          <!-- Expert mode toggle -->
-          <div class="d-flex align-center gap-2 mb-4">
-            <VSwitch
-              v-model="showExpertMode"
-              :label="t('platformModules.expertMode')"
-              hide-details
-              density="compact"
-            />
-            <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.editRawJson') }}</span>
-          </div>
-
-          <!-- Expert mode card -->
-          <VCard
-            v-if="showExpertMode"
-            :title="t('platformModules.rawJson')"
-            class="mb-6"
-          >
-            <VCardText>
-              <AppTextarea
-                v-model="expertPricingJson"
-                :label="t('platformModules.addonPricingJson')"
-                rows="6"
-                :error-messages="expertPricingError ? [expertPricingError] : []"
-                style="font-family: monospace;"
-                class="mb-4"
-                @input="expertPricingError = ''"
-              />
-              <AppTextarea
-                v-model="expertSchemaJson"
-                :label="t('platformModules.settingsSchemaJson')"
-                rows="8"
-                :error-messages="expertSchemaError ? [expertSchemaError] : []"
-                style="font-family: monospace;"
-                @input="expertSchemaError = ''"
-              />
-            </VCardText>
-          </VCard>
-
           <!-- Save button -->
           <VBtn
             :loading="isSaving"
@@ -1231,6 +1576,8 @@ const planLabel = planKey => {
             {{ t('platformModules.saveConfiguration') }}
           </VBtn>
 
+      </template>
+      <template v-else-if="section === 'companies'">
           <!-- Companies (lazy-loaded) -->
           <VExpansionPanels class="mb-6">
             <VExpansionPanel>
@@ -1311,200 +1658,58 @@ const planLabel = planKey => {
               </VExpansionPanelText>
             </VExpansionPanel>
           </VExpansionPanels>
-        </VCol>
+      </template>
+      <template v-else-if="section === 'advanced'">
+          <!-- Expert mode toggle -->
+          <div class="d-flex align-center gap-2 mb-4">
+            <VSwitch
+              v-model="showExpertMode"
+              :label="t('platformModules.expertMode')"
+              hide-details
+              density="compact"
+            />
+            <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.editRawJson') }}</span>
+          </div>
 
-        <!-- RIGHT COLUMN (md=4) -->
-        <VCol
-          cols="12"
-          md="4"
-        >
-          <!-- Commercial -->
+          <!-- Expert mode card -->
           <VCard
-            :title="t('platformModules.commercial')"
+            v-if="showExpertMode"
+            :title="t('platformModules.rawJson')"
             class="mb-6"
           >
             <VCardText>
-              <div class="d-flex flex-column gap-y-4">
-                <VSwitch
-                  v-model="platformConfig.is_listed"
-                  :label="t('platformModules.listedInCatalog')"
-                  color="primary"
-                  hide-details
-                />
-                <VSwitch
-                  v-model="platformConfig.is_sellable"
-                  :label="t('platformModules.sellable')"
-                  color="primary"
-                  hide-details
-                />
-              </div>
-
-              <VDivider class="my-4" />
-
               <AppTextarea
-                v-model="platformConfig.notes"
-                :label="t('platformModules.notes')"
-                rows="3"
-                :placeholder="t('platformModules.notesPlaceholder')"
-              />
-            </VCardText>
-          </VCard>
-
-          <!-- Permissions (read-only chips) -->
-          <VCard
-            :title="t('platformModules.permissionsTitle')"
-            class="mb-6"
-          >
-            <VCardText>
-              <template v-if="mod.permissions && mod.permissions.length">
-                <div class="d-flex flex-wrap gap-1">
-                  <VChip
-                    v-for="perm in mod.permissions"
-                    :key="perm.key"
-                    size="small"
-                    variant="tonal"
-                  >
-                    {{ perm.label }}
-                  </VChip>
-                </div>
-              </template>
-              <span
-                v-else
-                class="text-disabled text-body-2"
-              >{{ t('platformModules.noPermissions') }}</span>
-            </VCardText>
-          </VCard>
-
-          <!-- Capability Bundles (read-only chips + hint) -->
-          <VCard
-            :title="t('platformModules.capabilityBundles')"
-            class="mb-6"
-          >
-            <VCardText>
-              <template v-if="mod.bundles && mod.bundles.length">
-                <div
-                  v-for="bundle in mod.bundles"
-                  :key="bundle.key"
-                  class="mb-3"
-                >
-                  <VChip
-                    size="small"
-                    :color="bundle.is_admin ? 'warning' : 'info'"
-                    variant="tonal"
-                    class="mb-1"
-                  >
-                    {{ bundle.label }}
-                  </VChip>
-                  <div
-                    v-if="bundle.hint"
-                    class="text-body-2 text-medium-emphasis ms-1"
-                  >
-                    {{ bundle.hint }}
-                  </div>
-                </div>
-              </template>
-              <span
-                v-else
-                class="text-disabled text-body-2"
-              >{{ t('platformModules.noBundles') }}</span>
-              <div class="text-body-2 text-medium-emphasis mt-3">
-                {{ t('platformModules.bundlesDescription') }}
-              </div>
-            </VCardText>
-          </VCard>
-
-          <!-- Organize (read-only info) -->
-          <VCard :title="t('platformModules.organize')">
-            <VCardText>
-              <!-- Compatibility (editable override) -->
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.compatibleJobdomainsOverride') }}
-              </div>
-              <VCombobox
-                v-model="platformConfig.compatible_jobdomains_override"
-                :items="availableJobdomains.map(jd => jd.key)"
-                :label="t('platformModules.compatibleJobdomainsOverride')"
-                :hint="platformConfig.compatible_jobdomains_override?.length ? t('platformModules.compatibleJobdomainsHint') : t('platformModules.manifestPrefix', { value: manifestDefaults.compatible_jobdomains?.join(', ') || t('platformModules.allJobDomains') })"
-                persistent-hint
-                multiple
-                chips
-                closable-chips
-                clearable
+                v-model="expertPricingJson"
+                :label="t('platformModules.addonPricingJson')"
+                rows="6"
+                :error-messages="expertPricingError ? [expertPricingError] : []"
+                style="font-family: monospace;"
                 class="mb-4"
+                @input="expertPricingError = ''"
               />
-
-              <VDivider class="mb-4" />
-
-              <!-- Included by -->
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.includedBy') }}
-              </div>
-              <template v-if="includedByJobdomains.length">
-                <div class="d-flex flex-wrap gap-1 mb-4">
-                  <VChip
-                    v-for="jd in includedByJobdomains"
-                    :key="jd.id"
-                    size="small"
-                    color="success"
-                    variant="tonal"
-                    :to="{ name: 'platform-jobdomains-id', params: { id: jd.id } }"
-                  >
-                    {{ jd.label }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.notIncludedByDefault') }}</span>
-              </template>
-
-              <VDivider class="mb-4" />
-
-              <!-- Dependencies -->
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.requires') }}
-              </div>
-              <template v-if="mod.requires.length">
-                <div class="d-flex flex-wrap gap-1 mb-4">
-                  <VChip
-                    v-for="req in mod.requires"
-                    :key="req"
-                    size="small"
-                    color="warning"
-                    variant="tonal"
-                    :to="{ name: 'platform-modules-key', params: { key: req } }"
-                  >
-                    {{ req }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noDependencies') }}</span>
-              </template>
-
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.dependents') }}
-              </div>
-              <template v-if="dependents.length">
-                <div class="d-flex flex-wrap gap-1">
-                  <VChip
-                    v-for="dep in dependents"
-                    :key="dep.key"
-                    size="small"
-                    color="info"
-                    variant="tonal"
-                    :to="{ name: 'platform-modules-key', params: { key: dep.key } }"
-                  >
-                    {{ dep.name }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2">{{ t('platformModules.noDependents') }}</span>
-              </template>
+              <AppTextarea
+                v-model="expertSchemaJson"
+                :label="t('platformModules.settingsSchemaJson')"
+                rows="8"
+                :error-messages="expertSchemaError ? [expertSchemaError] : []"
+                style="font-family: monospace;"
+                @input="expertSchemaError = ''"
+              />
             </VCardText>
           </VCard>
-        </VCol>
-      </VRow>
+
+          <!-- Save button -->
+          <VBtn
+            :loading="isSaving"
+            :disabled="!isDirty"
+            :variant="isDirty ? 'elevated' : 'tonal'"
+            class="mb-6"
+            @click="saveConfig"
+          >
+            {{ t('platformModules.saveConfiguration') }}
+          </VBtn>
+
+      </template>
     </template>
   </div>
 </template>

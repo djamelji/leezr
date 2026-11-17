@@ -62,8 +62,10 @@ class PlatformModuleReadModel
                 $arr['min_plan'] = $module->min_plan_override ?? $manifest?->minPlan;
 
                 $arr['type'] = $manifest?->type ?? 'addon';
-                $arr['compatible_jobdomains'] = $manifest?->compatibleJobdomains;
+                $arr['compatible_jobdomains'] = $module->compatible_jobdomains_override ?? $manifest?->compatibleJobdomains; // ADR-821 : la surcharge fait foi
                 $arr['requires'] = $manifest?->requires ?? [];
+                $arr['requires_all'] = \App\Core\Modules\ModuleDependencyResolver::requiresOf($module->key); // ADR-821
+                $arr['commercial_status'] = \App\Core\Modules\ModuleCommercialPolicy::statusFor($module->key);
 
                 $arr['icon_type'] = $module->icon_type ?? $manifest?->iconType ?? 'tabler';
                 $arr['icon_name'] = $module->icon_name ?? $manifest?->iconRef ?? 'tabler-puzzle';
@@ -194,6 +196,16 @@ class PlatformModuleReadModel
                 'bundles' => $manifest->bundles,
                 'icon_type' => $platformModule->icon_type ?? $manifest->iconType,
                 'icon_name' => $platformModule->icon_name ?? $manifest->iconRef,
+                // ADR-821 — ce que le module apporte et ce dont il a besoin (lecture du manifeste)
+                'requires_all' => \App\Core\Modules\ModuleDependencyResolver::requiresOf($manifest->key),
+                'dependents_all' => \App\Core\Modules\ModuleDependencyResolver::dependents($manifest->key, array_keys(ModuleRegistry::forScope('company'))),
+                'nav_items' => array_map(fn ($i) => ['key' => $i['key'], 'title' => $i['title'] ?? $i['key'], 'group' => $i['group'] ?? null], $manifest->capabilities->navItems ?? []),
+                'data_needs' => $manifest->dataNeeds,
+                'contributions' => ['fields' => count($manifest->contributions['fields'] ?? []), 'documents' => count($manifest->contributions['documents'] ?? []),
+                    'requirements' => count($manifest->contributions['requirements'] ?? [])],
+                'setup_steps' => $manifest->setup['steps'] ?? [],
+                'commercial_status' => \App\Core\Modules\ModuleCommercialPolicy::statusFor($manifest->key),
+                'offer' => collect(\App\Core\Plans\PlanRegistry::keys())->mapWithKeys(fn ($p) => [$p => \App\Core\Modules\ModuleDependencyResolver::commercialStatus($manifest->key, $p)])->all(),
             ],
             'manifest_defaults' => [
                 'name' => $manifest->name,
