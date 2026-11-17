@@ -1,0 +1,45 @@
+{
+  "owner": {
+    "pages": 30,
+    "remarks": [
+      {
+        "url": "/company/audit",
+        "path": "/company/audit",
+        "api": [],
+        "raw": [
+          "referral.converted",
+          "referral.accepted",
+          "referral.opened",
+          "referral.applied",
+          "referral.recommended",
+          "referral.settings_updated",
+          "onboarding.on_site_opened",
+          "requirements.updated"
+        ],
+        "forbidden": false,
+        "mobileOverflow": false
+      }
+    ]
+  },
+  "salarie": {
+    "pages": 18,
+    "remarks": [
+      {
+        "url": "/company/workforce/hiring",
+        "path": "/company/403",
+        "api": [],
+        "raw": [],
+        "forbidden": true,
+        "mobileOverflow": false
+      },
+      {
+        "url": "/company/workforce/referrals",
+        "path": "/company/403",
+        "api": [],
+        "raw": [],
+        "forbidden": true,
+        "mobileOverflow": false
+      }
+    ]
+  }
+}

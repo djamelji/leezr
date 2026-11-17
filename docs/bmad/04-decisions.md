@@ -29122,3 +29122,43 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - aucune société réelle modifiée ;
   - deux recettes navigateur sur clones isolés (empreinte DEV inchangée) ;
   - 3 échecs historiques `ControllerSizeInvariant` inchangés.
+
+## ADR-819 — Company 2.0 : catalogues, postes, documents intelligents, embauche collaborative, parrainage
+
+**Date** : 2026-11-17 · **Statut** : livré DEV (aucun push) · **Commits** : 7afa9a9f → 1345e6c4
+
+**Contexte** : la directive « Company 2.0 » demande un produit où le JobDomain fournit un socle minimal, les modules enrichissent les catalogues, la société configure ses postes et leurs exigences, un document finalisé dans un module satisfait une exigence, l'embauche est un dossier unique et collaboratif, et un module de parrainage alimente l'embauche. ADR-817/818 avaient livré le poste ≠ rôle, l'autorité des exigences par société et l'assistant « Embaucher ».
+
+**Décisions**
+1. **Socle métier minimal** : une entrée de preset JobDomain peut être `recommended` (proposée au catalogue, jamais activée). Logistique active 8 champs personne au lieu de 20 ; 12 champs et le certificat médical deviennent recommandés. Les sociétés existantes ne sont pas touchées (l'activation n'est lue qu'à l'affectation). Le chemin versionné, la reprise historique et la commande de synchronisation respectent `recommended`. Logistique autorise les champs personnalisés.
+2. **Catalogues de la société** (`/company/catalogs/{fields|documents}`, lecture `CompanyCatalogReadModel`) : chaque champ et type de document affiche son origine (standard, métier, module, créé par la société), son état (actif, disponible, recommandé), sa confidentialité, ses sources de satisfaction et les postes qui l'exigent. Disponible ≠ obligatoire. Création de champs et de types via les écritures existantes ; « Exiger pour un poste » passe par le registre des exigences. Aucun second moteur.
+3. **Poste** : onglets Informations, Champs, Documents, Personnes, Historique et reprise. Le calcul EFFECTIF (rôle ou poste) est affiché. Les exigences portent un **moment de collecte** (`stage` : embauche, intégration, en continu ; changement versionné). L'application aux personnes en place passe par un aperçu personne par personne puis une confirmation explicite (`documents.manage`). Elle est refusée tant que la société calcule par rôle. Rien n'est redemandé de ce qui est détenu, prouvé ou déjà demandé.
+4. **Documents intelligents** : `DocumentProofRegistry` (Core, générique) + sources déclarées par les modules. Workforce prouve `work_contract` quand le DERNIER document généré du contrat COURANT et EFFECTIF est SIGNÉ, module `workforce_contract` actif. Aucune copie de fichier. La preuve n'est consultée qu'en l'absence de dépôt satisfaisant. Elle est masquée à un lecteur non autorisé et respectée par la création des demandes. La signature clôt la demande ouverte sans pièce.
+5. **Embauche collaborative** : `HiringFileReadModel` donne :
+   - l'état par élément (à remplir, en cours, fourni, à vérifier, refusé, validé, non applicable) ;
+   - les files (à lancer, en attente du candidat, à vérifier, à finaliser, terminé, abandonné) ;
+   - l'historique, les participants et les relances (journal d'audit existant) ;
+   - un jeton de **révision** : toute écriture RH qui le porte est refusée (409) si le candidat ou un autre gestionnaire a modifié le dossier entre-temps.
+
+   Page « Dossier d'embauche » (`/company/workforce/hiring/{id}`). Un seul moteur (ADR-796/818), un seul dossier par personne.
+6. **Workforce Parrainage** (module `workforce_referral`, addon, requiert `workforce`) :
+   - **Côté salarié** : il recommande un proche (qui confirme lui-même) ou partage un lien à usage unique, pour les postes que la société ouvre.
+   - **Côté RH** : seules les candidatures CONSENTIES sont visibles ; les RH vérifient les doublons, demandent un complément, retiennent ou déclinent, puis convertissent dans le moteur d'embauche existant (pré-rempli avec les éléments en vigueur du poste, sans compte).
+   - **Confidentialité** : le parrain voit un statut grossier et le nom qu'IL a saisi ; jamais la décision ni la candidature.
+   - **Garde-fous** : jetons hachés et expirables, limite quotidienne, pot de miel, limitation de débit, contrôle du module à chaque appel public.
+   - **Rétention** : anonymisation planifiée (`referrals:purge`).
+   - **Récompense** : information seulement, ni paie ni paiement.
+   - **Prix** : la mise en vente reste une décision Platform ; sans tarif, le module n'est pas vendable.
+7. **Nettoyage et cohérence** :
+   - 11 composants Company sans consommateur supprimés, clés i18n mortes retirées ;
+   - dates localisées (les formats nommés étaient vides) ;
+   - libellés d'audit des nouveaux parcours en FR, EN et AR.
+
+**Conséquences**
+- Tests : nouveaux tests ADR-819 (catalogues et postes, preuves documentaires, embauche collaborative, parrainage). Les tests figeant l'ancien socle (36 champs actifs) sont adaptés à l'intention métier.
+- Recette :
+  - recette navigateur sur clone isolé : 32/32 ;
+  - revue de 93 pages × 5 profils, sur ordinateur, mobile et en sombre ;
+  - E2E principaux du dépôt rejoués sur le clone.
+- DEV : empreinte inchangée hors la ligne de migration 000004.
+- Non fait : aucune société basculée en calcul par poste ; module Parrainage non tarifé ; pas de refonte profonde des pages existantes jugées conformes par la revue.

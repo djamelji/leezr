@@ -1,0 +1,219 @@
+{
+  "steps": [
+    {
+      "name": "catalogue des champs affiché",
+      "ok": true,
+      "detail": {
+        "rows": 25
+      }
+    },
+    {
+      "name": "origines lisibles (standard / métier / module)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "champ personnalisé créé, origine « Créé par vous », exigé par aucun poste",
+      "ok": true,
+      "detail": "Numéro CACES\n\tTexte\t\nCréé par vous\n\t\nExigé par aucun poste\n\t\nActif"
+    },
+    {
+      "name": "contrat de travail : peut être satisfait par un contrat signé dans Leezr",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "type de document personnalisé créé (non obligatoire)",
+      "ok": true,
+      "detail": {
+        "code": "custom_101_attestation_fimo"
+      }
+    },
+    {
+      "name": "aucune erreur API sur les catalogues",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "poste créé",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "« Exigé pour » affiche le poste",
+      "ok": true,
+      "detail": "Attestation FIMO\n\tPDF, JPG, PNG · 10 Mo\t\nCréé par vous\n\t\nLivreur 819\n\t\nActif"
+    },
+    {
+      "name": "fiche poste : onglets Informations, Champs, Documents, Personnes, Historique et reprise",
+      "ok": true,
+      "detail": "Informations | Champs | Documents | Personnes (1) | Historique et reprise"
+    },
+    {
+      "name": "calcul effectif affiché honnêtement (encore par rôle)",
+      "ok": true,
+      "detail": "Calcul effectif : encore par rôle d'accès. Cette configuration est préparée : elle s'appliquera quand votre société calc"
+    },
+    {
+      "name": "le document exigé est listé sur le poste",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "collaborateurs : état du dossier par personne",
+      "ok": true,
+      "detail": "2 pièce(s) demandée(s)"
+    },
+    {
+      "name": "application aux personnes en place refusée tant que le calcul reste par rôle (422)",
+      "ok": true,
+      "detail": {
+        "s": 422
+      }
+    },
+    {
+      "name": "dossier d’embauche créé pour le poste",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "items": [
+          "birth_date",
+          "nationality",
+          "phone",
+          "address",
+          "emergency_contact_name",
+          "emergency_contact_phone",
+          "social_security_number",
+          "iban",
+          "license_number",
+          "license_category",
+          "license_expiry",
+          "adr_certified",
+          "driving_license",
+          "id_card",
+          "medical_certificate",
+          "custom_101_attestation_fimo"
+        ]
+      }
+    },
+    {
+      "name": "dossier : étape « À lancer »",
+      "ok": true,
+      "detail": "À lancer"
+    },
+    {
+      "name": "progression par élément (À remplir)",
+      "ok": true,
+      "detail": "À remplir"
+    },
+    {
+      "name": "historique lisible (Dossier créé)",
+      "ok": true,
+      "detail": "Dossier créé\n17 nov. 2026, 15:41\nE2E Proprietaire"
+    },
+    {
+      "name": "écriture avec une révision périmée refusée (409), rien écrasé",
+      "ok": true,
+      "detail": {
+        "s": 409
+      }
+    },
+    {
+      "name": "Embauches : files « À lancer / En attente du candidat / À vérifier / À finaliser / Terminés / Abandonnés »",
+      "ok": true,
+      "detail": "En cours | À lancer | En attente du candidat · 1 | À vérifier | À finaliser | Finalisées | Abandonnés | Toutes"
+    },
+    {
+      "name": "aucune erreur API inattendue (hors 409 voulu)",
+      "ok": true,
+      "detail": [
+        "409 POST /api/workforce/onboarding-files/10/revoke"
+      ]
+    },
+    {
+      "name": "réglages : poste ouvert au parrainage depuis l’interface",
+      "ok": true,
+      "detail": {
+        "mode": "both",
+        "job_role_ids": [
+          11
+        ],
+        "notify_reviewers": true,
+        "reward_note": null,
+        "retention_days": 180,
+        "link_days": 30,
+        "configured": true
+      }
+    },
+    {
+      "name": "Mon espace › Parrainage : poste ouvert visible",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "recommandation enregistrée, lien personnel fourni",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Mon espace › Parrainage lisible sur mobile (pas de défilement horizontal)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "candidat : opportunité affichée, prénom proposé",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "page candidat mobile sans défilement horizontal",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "consentement obligatoire puis candidature envoyée",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "conversion : dossier d’embauche ouvert, sans ressaisie",
+      "ok": true,
+      "detail": "Lina Proche-Martin"
+    },
+    {
+      "name": "date d’arrivée affichée",
+      "ok": true,
+      "detail": "Livreur 819 · arrivée le 01/12/2026"
+    },
+    {
+      "name": "dossier converti : seulement les éléments en vigueur du poste",
+      "ok": true,
+      "detail": {
+        "n": 2
+      }
+    },
+    {
+      "name": "aucun compte créé pour le candidat",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "parrain : statut simple « clôturé », son propre texte seulement (pas la saisie du candidat) ; détail RH interdit",
+      "ok": true,
+      "detail": {
+        "mineRow": {
+          "id": 1,
+          "channel": "recommendation",
+          "position": "Livreur 819",
+          "status": "closed",
+          "name": "Lina",
+          "created_at": "2026-11-17T15:42:24+00:00",
+          "link_expires_at": "2026-12-17T15:42:24+00:00"
+        },
+        "s": 403
+      }
+    }
+  ]
+}
