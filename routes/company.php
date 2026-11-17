@@ -371,6 +371,8 @@ Route::middleware('company.access:use-module,core.documents')->group(function ()
     // fonctionne pour un Employee SANS compte (sujet documentaire explicite).
     Route::get('/company/people/{personRef}/documents', [PersonDocumentController::class, 'index'])
         ->middleware('company.access:use-permission,documents.view');
+    Route::post('/company/people/{personRef}/documents/request-missing', [PersonDocumentController::class, 'requestMissing'])
+        ->middleware('company.access:use-permission,documents.manage'); // ADR-818
     Route::post('/company/people/{personRef}/documents/{code}', [PersonDocumentController::class, 'upload'])
         ->middleware('company.access:use-permission,documents.manage');
     Route::get('/company/people/{personRef}/documents/{code}/download', [PersonDocumentController::class, 'download'])

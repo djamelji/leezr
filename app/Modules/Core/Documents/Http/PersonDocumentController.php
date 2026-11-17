@@ -56,6 +56,24 @@ class PersonDocumentController extends Controller
         );
     }
 
+    /**
+     * ADR-818 (chantier C) — « Demander les pièces manquantes » : crée les demandes des pièces exigées, ni
+     * détenues ni déjà demandées (idempotent, même chaîne que les demandes manuelles). Explicite, jamais à la lecture.
+     */
+    public function requestMissing(Request $request, string $personRef): JsonResponse
+    {
+        $company = $request->attributes->get('company');
+        [, $user, $employee] = $this->resolve($company, $personRef);
+        if ($employee) {
+            $created = \App\Core\Documents\Services\RequiredDocumentRequests::ensureForEmployee($company, $employee, $request->user());
+        } else {
+            $roleKey = $company->memberships()->where('user_id', $user->id)->with('companyRole:id,key')->first()?->companyRole?->key;
+            $created = \App\Core\Documents\Services\RequiredDocumentRequests::ensure($company, \App\Core\Documents\DocumentSubject::user((int) $user->id), $roleKey, null, $request->user());
+        }
+
+        return response()->json(['requested' => $created]);
+    }
+
     public function upload(Request $request, string $personRef, string $documentCode): JsonResponse
     {
         $company = $request->attributes->get('company');

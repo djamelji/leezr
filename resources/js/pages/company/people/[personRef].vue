@@ -291,6 +291,20 @@ const goBack = () => (window.history.state?.back ? router.back() : router.push({
 const onRemoved = () => router.push({ name: 'company-people' })
 const onHrLinked = newRef => { if (newRef) router.replace({ params: { personRef: newRef } }); else reload() }
 const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}${(store.identity.last_name || '').charAt(0)}`.toUpperCase())
+
+// ADR-818 (chantier C) — « Demander les pièces manquantes » : demandes créées par une action explicite.
+const requestingMissing = ref(false)
+const requestMissing = async () => {
+  requestingMissing.value = true
+  try {
+    const res = await $api(`/company/people/${store.personRef}/documents/request-missing`, { method: 'POST' })
+
+    toast(res.requested?.length ? t('people.requestMissingDone', { n: res.requested.length }) : t('people.requestMissingNone'), 'success')
+    documentsPanel.value?.refresh?.()
+  }
+  catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
+  finally { requestingMissing.value = false }
+}
 </script>
 
 <template>
@@ -660,6 +674,19 @@ const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}
                     <div class="text-body-2 text-medium-emphasis">
                       {{ t('people.documentsRequestedHint') }}
                     </div>
+                    <!-- ADR-818 : création EXPLICITE des demandes des pièces exigées (jamais lors d'une lecture) -->
+                    <VBtn
+                      v-if="can('documents.manage')"
+                      size="small"
+                      variant="tonal"
+                      class="mt-2"
+                      prepend-icon="tabler-mail-question"
+                      :loading="requestingMissing"
+                      data-test="person-request-missing"
+                      @click="requestMissing"
+                    >
+                      {{ t('people.requestMissing') }}
+                    </VBtn>
                   </div>
                   <MemberDocumentsWorkflowPanel
                     v-if="can('documents.view') && store.personRef"

@@ -93,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         \App\Core\Notifications\Listeners\PlatformPaymentCollectedNotifier::register(); // ADR-781
+        \App\Modules\Workforce\Employees\Listeners\PositionChangeRequests::register(); // ADR-818
 
         Relation::enforceMorphMap([
             'user' => User::class,

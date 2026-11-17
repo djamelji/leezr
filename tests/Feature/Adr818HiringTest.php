@@ -229,4 +229,31 @@ class Adr818HiringTest extends TestCase
         RequirementAuthority::flush();
         $this->assertTrue(DocumentResolverService::subjectMap($this->a->id, 'drv', $office->id, 'FR', DocumentType::SCOPE_COMPANY_USER)[$licence]['required']);
     }
+
+    public function test_reads_never_write_requests_and_a_position_change_requests_its_documents_only_after_switch(): void
+    {
+        $u = $this->member($this->a, [], $this->driverRole);
+        $emp = Employee::withoutGlobalScopes()->create(['company_id' => $this->a->id, 'user_id' => $u->id, 'first_name' => 'P', 'last_name' => 'C', 'status' => 'active', 'hire_date' => '2024-01-01']);
+        $count = fn () => DocumentRequest::withoutGlobalScopes()->where('company_id', $this->a->id)->count();
+        $before = $count();
+        $this->api($this->owner, 'GET', "/company/people/user-{$u->id}/documents")->assertOk();
+        $this->api($this->owner, 'GET', "/company/people/employee-{$emp->id}")->assertOk();
+        $this->assertSame($before, $count(), 'a GET never creates a request');
+
+        // Role authority : changing the position changes nothing (historical behaviour).
+        $this->api($this->owner, 'PUT', "/workforce/employees/{$emp->id}", ['job_role_id' => $this->driver->id])->assertOk();
+        $this->assertSame($before, $count());
+
+        // Position authority : the new position's documents become requests (licence), once.
+        $this->api($this->owner, 'POST', '/workforce/requirements', ['scope' => 'job_role:'.$this->driver->id, 'items' => [['kind' => 'document', 'code' => 'driving_license', 'state' => 'required']]])->assertOk();
+        $this->api($this->owner, 'PUT', '/workforce/requirements/authority', ['authority' => 'position', 'accept_losses' => true])->assertOk();
+        RequirementAuthority::flush();
+        $office = JobRole::withoutGlobalScopes()->create(['company_id' => $this->a->id, 'title' => 'Bureau', 'level' => 'agent', 'source' => 'company']);
+        $this->api($this->owner, 'PUT', "/workforce/employees/{$emp->id}", ['job_role_id' => $office->id])->assertOk();
+        $this->api($this->owner, 'PUT', "/workforce/employees/{$emp->id}", ['job_role_id' => $this->driver->id])->assertOk();
+        $licence = DocumentType::where('code', 'driving_license')->value('id');
+        $this->assertSame(1, DocumentRequest::withoutGlobalScopes()->where('company_id', $this->a->id)->where('user_id', $u->id)->where('document_type_id', $licence)->count());
+        $this->api($this->owner, 'PUT', "/workforce/employees/{$emp->id}", ['job_role_id' => $office->id])->assertOk();
+        $this->assertSame(1, DocumentRequest::withoutGlobalScopes()->where('company_id', $this->a->id)->where('user_id', $u->id)->where('document_type_id', $licence)->whereIn('status', ['requested'])->count(), 'nothing cancelled for the previous position');
+    }
 }

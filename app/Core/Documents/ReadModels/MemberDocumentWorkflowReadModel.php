@@ -84,19 +84,10 @@ class MemberDocumentWorkflowReadModel
             $typeId = $type?->id;
             $request = $typeId ? $requests->get($typeId) : null;
 
-            // ADR-389: Lazy-create for required docs (mandatory OR required_override)
-            // CONSTRAINT: only for docs already in resolver output (effective surface)
-            if ($doc['required'] && $request === null && $typeId) {
-                $request = DocumentRequest::create([
-                    'company_id' => $company->id,
-                    'document_subject_type' => DocumentSubject::TYPE_USER,
-                    'document_subject_id' => $member->id,
-                    'user_id' => $member->id,
-                    'document_type_id' => $typeId,
-                    'status' => DocumentRequest::STATUS_REQUESTED,
-                    'requested_at' => now(),
-                ]);
-            }
+            // ADR-818 (chantier C) : une lecture n'écrit plus jamais de demande (ancien « lazy-create » ADR-389).
+            // Une pièce exigée sans demande est PRÉSENTÉE « à fournir » ; la demande réelle naît d'un événement
+            // explicite (embauche finalisée, changement de poste, action « Demander les pièces manquantes »).
+            $virtualRequested = $doc['required'] && $request === null && $typeId;
 
             // CONTINUITÉ : si aucune pièce user, récupérer celle déposée sous employee:{id}.
             if ($doc['upload'] === null && $typeId && ($empUpload = $employeeUploads->get($typeId))) {
@@ -112,7 +103,8 @@ class MemberDocumentWorkflowReadModel
                 $request = $request ?? ($typeId ? $employeeRequests->get($typeId) : null);
             }
 
-            $doc['request_status'] = $request?->status;
+            $doc['request_status'] = $request?->status ?? ($virtualRequested && $doc['upload'] === null ? DocumentRequest::STATUS_REQUESTED : null);
+            $doc['request_pending_creation'] = $request === null && $virtualRequested && $doc['upload'] === null;
             $doc['request_review_note'] = $request?->review_note;
             $doc['request_message'] = $request?->message;
             $doc['due_date'] = $request?->due_date?->toDateString();
@@ -124,7 +116,7 @@ class MemberDocumentWorkflowReadModel
             $doc['can_review'] = $request?->status === DocumentRequest::STATUS_SUBMITTED;
 
             // ADR-757/758 (DMS M1/M1.1): état consolidé + confidentialité + accès effectif + redaction.
-            $state = State::evaluateFromParts($doc['has_file'], $request?->status, $doc['lifecycle_status'] ?? 'missing');
+            $state = State::evaluateFromParts($doc['has_file'], $doc['request_status'], $doc['lifecycle_status'] ?? 'missing');
             $doc['compliance_status'] = $state['consolidated'];
             $doc['satisfies_obligation'] = $state['satisfies_obligation'];
             $doc['confidentiality'] = DocumentConfidentiality::forTypeCode($doc['code']);

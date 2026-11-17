@@ -149,7 +149,9 @@ final class OnboardingInvitationService
                 'manager_id' => $data['manager_id'] ?? $employee->manager_id,
                 'metadata' => $metadata,
             ])->save();
-            $this->audit($inv, 'onboarding.finalized', ['employee_id' => $employee->id]);
+            // ADR-818 (chantier C) : les pièces exigées et non encore déposées deviennent des demandes (même chaîne).
+            $requested = \App\Core\Documents\Services\RequiredDocumentRequests::ensureForEmployee($this->company, $employee, $this->actor);
+            $this->audit($inv, 'onboarding.finalized', ['employee_id' => $employee->id, 'requested' => $requested]);
 
             return $employee;
         });

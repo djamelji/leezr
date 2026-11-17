@@ -365,6 +365,8 @@ class Adr767SecurityHardeningTest extends TestCase
     {
         return collect(\App\Core\Navigation\NavBuilder::forCompany($this->company, $permissions, $roleLevel))
             ->flatMap(fn ($group) => $group['items'])
+            // ADR-818 : un espace à plusieurs entrées (Équipe = Collaborateurs + Embauches) porte ses entrées en enfants.
+            ->flatMap(fn ($item) => empty($item['children']) ? [$item] : $item['children'])
             ->filter(fn ($item) => ($item['to']['name'] ?? null) === 'company-people')
             ->count();
     }

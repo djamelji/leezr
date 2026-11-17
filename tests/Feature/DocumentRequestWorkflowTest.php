@@ -110,34 +110,24 @@ class DocumentRequestWorkflowTest extends TestCase
 
     public function test_admin_index_lazy_creates_requested_for_mandatory(): void
     {
-        // id_card is mandatory for logistique jobdomain FR
-        $this->assertDatabaseMissing('document_requests', [
-            'company_id' => $this->company->id,
-            'user_id' => $this->member->id,
-        ]);
-
-        $response = $this->actAsOwner()
-            ->getJson("/api/company/members/{$this->membership->id}/documents");
-
-        $response->assertOk();
-
-        $docs = collect($response->json('documents'));
+        // ADR-818 (chantier C) : une LECTURE n'écrit plus de demande. La pièce exigée est présentée « à fournir »
+        // (statut calculé) ; la demande réelle naît de l'action explicite « Demander les pièces manquantes ».
+        $type = DocumentType::where('code', 'id_card')->first();
+        $docs = collect($this->actAsOwner()->getJson("/api/company/members/{$this->membership->id}/documents")->assertOk()->json('documents'));
         $idCard = $docs->firstWhere('code', 'id_card');
-
         $this->assertNotNull($idCard);
         $this->assertEquals('requested', $idCard['request_status']);
-        $this->assertNotNull($idCard['requested_at']);
+        $this->assertTrue($idCard['request_pending_creation']);
         $this->assertFalse($idCard['has_file']);
+        $this->assertDatabaseMissing('document_requests', ['company_id' => $this->company->id, 'user_id' => $this->member->id]);
 
-        // DB has the request
-        $type = DocumentType::where('code', 'id_card')->first();
-
-        $this->assertDatabaseHas('document_requests', [
-            'company_id' => $this->company->id,
-            'user_id' => $this->member->id,
-            'document_type_id' => $type->id,
-            'status' => 'requested',
-        ]);
+        $this->actAsOwner()->postJson("/api/company/people/user-{$this->member->id}/documents/request-missing")->assertOk()->assertJsonFragment(['id_card']);
+        $this->assertDatabaseHas('document_requests', ['company_id' => $this->company->id, 'user_id' => $this->member->id, 'document_type_id' => $type->id, 'status' => 'requested']);
+        // Idempotent : rien n'est régénéré ni dupliqué.
+        $this->actAsOwner()->postJson("/api/company/people/user-{$this->member->id}/documents/request-missing")->assertOk()->assertJsonPath('requested', []);
+        $this->assertSame(1, \App\Core\Documents\DocumentRequest::where('company_id', $this->company->id)->where('user_id', $this->member->id)->where('document_type_id', $type->id)->count());
+        $idCard = collect($this->actAsOwner()->getJson("/api/company/members/{$this->membership->id}/documents")->json('documents'))->firstWhere('code', 'id_card');
+        $this->assertNotNull($idCard['requested_at']);
     }
 
     // ═══════════════════════════════════════════════════════

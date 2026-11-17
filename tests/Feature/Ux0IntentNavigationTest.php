@@ -78,7 +78,9 @@ class Ux0IntentNavigationTest extends TestCase
                 $this->assertCount(1, $group['items'], "{$group['key']} : ONE main entry");
             }
         }
-        $this->assertSame(['dashboard', 'people', 'space-time', 'documents', 'workforce-payroll', 'shipments', 'modules', 'space-settings'], $this->entries($groups)); // ADR-782
+        // ADR-818 : Équipe devient un espace (Collaborateurs + Embauches) pour qui gère les fiches.
+        $this->assertSame(['dashboard', 'space-team', 'space-time', 'documents', 'workforce-payroll', 'shipments', 'modules', 'space-settings'], $this->entries($groups)); // ADR-782
+        $this->assertSame(['people', 'workforce-hiring'], array_column(collect($groups)->firstWhere('key', 'team')['items'][0]['children'], 'key'));
         $this->assertSame(['workforce-planning', 'workforce-time', 'workforce-leave'], array_column(collect($groups)->firstWhere('key', 'time')['items'][0]['children'], 'key'));
         $this->assertSame('nav.groups.settings', collect($groups)->firstWhere('key', 'settings')['items'][0]['labelKey']);
         // A manager's personal entries live in the avatar menu — all of them, none lost.
