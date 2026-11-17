@@ -20,6 +20,19 @@ const errorMessage = ref('')
 
 // Tab state
 const currentTab = ref(0)
+// ADR-821 — un seul catalogue filtré par état
+const CATALOG_FILTERS = ['all', 'active', 'included', 'options', 'unavailable']
+const catalogFilter = ref('all')
+const FILTER_STATES = { active: ['active'], included: ['included'], options: ['available', 'locked_addon'], unavailable: ['locked_plan', 'contact_sales'] }
+const matchesFilter = (m, f) => f === 'all' || (FILTER_STATES[f] || []).includes(m.display_state)
+const filterCount = f => (moduleStore.modules || []).filter(m => matchesFilter(m, f)).length
+const catalogModules = computed(() => {
+  const q = (searchQuery.value || '').toLowerCase()
+  const rank = { active: 0, included: 1, available: 2, locked_addon: 3, locked_plan: 4, contact_sales: 5 }
+
+  return (moduleStore.modules || []).filter(m => matchesFilter(m, catalogFilter.value) && (!q || modName(m).toLowerCase().includes(q) || modDesc(m).toLowerCase().includes(q)))
+    .sort((a, b) => (Number(isPreview(a)) - Number(isPreview(b))) || ((rank[a.display_state] ?? 9) - (rank[b.display_state] ?? 9)) || modName(a).localeCompare(modName(b)))
+})
 
 // Search + filters
 const addonSearchQuery = ref('')
@@ -395,9 +408,24 @@ const activateModule = async module => {
     return
   }
 
-  // Direct enable
-  await doToggle(module.key, false)
+  // ADR-821 — modules sans achat : aperçu serveur (dépendances ajoutées, blocages commerciaux), puis confirmation.
+  activationTarget.value = module
+  activationPreview.value = null
+  activationDialog.value = true
+  try { activationPreview.value = await $api(`/modules/${module.key}/activation-preview`) }
+  catch (error) { activationDialog.value = false; errorMessage.value = error?.data?.message || t('companyModules.failedToToggle') }
 }
+
+// ── ADR-821 : aperçu d'activation et désactivation cohérente ──
+const activationDialog = ref(false)
+const activationTarget = ref(null)
+const activationPreview = ref(null)
+const confirmActivation = async () => {
+  activationDialog.value = false
+  if (activationTarget.value) await doToggle(activationTarget.value.key, false)
+}
+const deactivateCascade = ref(false)
+const deactivateDependents = computed(() => deactivatePreview.value?.dependents || [])
 
 const confirmReactivation = async () => {
   reactivateDialog.value = false
@@ -413,6 +441,9 @@ const requestDeactivation = async module => {
   deactivatePreview.value = null
   deactivateImpact.value = null
   deactivateDialog.value = true
+  deactivateCascade.value = false
+  // ADR-821 : modules actifs qui dépendent de celui-ci (et, pour une option payante, l'aperçu commercial)
+  moduleStore.fetchDeactivationPreview(module.key).then(r => { deactivatePreview.value = { ...(deactivatePreview.value || {}), ...r } }).catch(() => {})
   // ADR-805 : processus en cours / documents émis concernés (lecture seule, la désactivation ne change pas)
   $api(`/modules/${module.key}/deactivation-impact`).then(r => { deactivateImpact.value = r }).catch(() => {})
 
@@ -435,7 +466,7 @@ const confirmDeactivation = async () => {
   deactivateDialog.value = false
   if (deactivateTarget.value) {
     errorMessage.value = ''
-    await doToggle(deactivateTarget.value.key, true)
+    await doToggle(deactivateTarget.value.key, true, deactivateCascade.value)
     deactivateTarget.value = null
   }
 }
@@ -453,7 +484,7 @@ const confirmQuoteEnable = async () => {
   }
 }
 
-const doToggle = async (key, isCurrentlyEnabled) => {
+const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
   togglingKey.value = key
   errorMessage.value = ''
 
@@ -462,7 +493,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
   try {
     if (isCurrentlyEnabled) {
-      await moduleStore.disableModule(key)
+      await moduleStore.disableModule(key, cascade)
       toast(t('companyModules.deactivatedSuccess', { module: label }), 'success')
     }
     else {
@@ -495,896 +526,366 @@ const doToggle = async (key, isCurrentlyEnabled) => {
       {{ errorMessage }}
     </VAlert>
 
-    <!-- ADR-782 (UX6) — Modules : entrée principale (produits Leezr), en-tête commun, sans carte englobante. -->
-    <div>
-      <div>
-        <AppPageHeader
-          :title="t('companyModules.title')"
-          :description="t('companyModules.subtitle')"
+    <!-- ADR-821 — catalogue unifié (Vuexy) : un filtre d'état, une carte par module (objet manipulable),
+         dépendances et droits commerciaux expliqués, actions selon l'état. -->
+    <div class="d-flex flex-wrap align-center gap-4 mb-6">
+      <div class="flex-grow-1">
+        <h4 class="text-h4 mb-1">
+          {{ t('companyModules.title') }}
+        </h4>
+        <p class="text-body-1 mb-0">
+          {{ t('companyModules.subtitle') }}
+        </p>
+      </div>
+      <div
+        v-if="!isLoading"
+        class="d-flex flex-wrap gap-2"
+        data-test="modules-summary"
+      >
+        <VChip
+          color="success"
+          variant="tonal"
+          label
         >
-          <template
-            v-if="!isLoading"
-            #actions
-          >
-            <div
-              class="d-flex align-center flex-wrap gap-x-4 gap-y-1 text-body-2 text-medium-emphasis modules-summary"
-              data-test="modules-summary"
-            >
-              <AppStatusText
-                tone="success"
-                :text="t('companyModules.summaryActive', { n: activeModules.length })"
-              />
-              <AppStatusText
-                tone="info"
-                :text="t('companyModules.summaryIncluded', { n: includedModules.length })"
-              />
-              <AppStatusText
-                v-if="subscribedCount"
-                tone="success"
-                :text="t('companyModules.summarySubscribed', { n: subscribedCount })"
-              />
-              <AppStatusText
-                tone="warning"
-                :text="t('companyModules.summaryAvailable', { n: addonModulesAll.length })"
-              />
-            </div>
-          </template>
-        </AppPageHeader>
-
-        <!-- Loading -->
-        <div
-          v-if="isLoading"
-          class="text-center pa-8"
+          {{ t('companyModules.summaryActive', { n: activeModules.length }) }}
+        </VChip>
+        <VChip
+          color="primary"
+          variant="tonal"
+          label
         >
-          <VProgressCircular indeterminate />
-        </div>
-
-        <template v-else>
-          <!-- Tabs -->
-          <VTabs
-            v-model="currentTab"
-            class="mb-6 border-b"
-          >
-            <VTab :value="0">
-              {{ t('companyModules.tabAddons') }}
-              <span
-                v-if="addonModulesAll.length"
-                class="ms-2 text-caption text-medium-emphasis"
-              >{{ addonModulesAll.length }}</span>
-            </VTab>
-            <VTab :value="1">
-              {{ t('companyModules.tabIncluded') }}
-              <span
-                v-if="includedModules.length"
-                class="ms-2 text-caption text-medium-emphasis"
-              >{{ includedModules.length }}</span>
-            </VTab>
-            <VTab :value="2">
-              {{ t('companyModules.tabActive') }}
-              <span
-                v-if="activeModules.length"
-                class="ms-2 text-caption text-medium-emphasis"
-              >{{ activeModules.length }}</span>
-            </VTab>
-            <VTab :value="3">
-              {{ t('companyModules.tabAll') }}
-            </VTab>
-          </VTabs>
-
-          <VWindow
-            v-model="currentTab"
-            class="disable-tab-transition"
-          >
-            <!-- Tab 0: Add-ons -->
-            <VWindowItem :value="0">
-              <div
-                v-if="addonModulesAll.length"
-                class="search-wrap mb-6"
-              >
-                <AppTextField
-                  v-model="addonSearchQuery"
-                  prepend-inner-icon="tabler-search"
-                  clearable
-                />
-                <div
-                  v-if="!addonSearchQuery && currentPlaceholderModule"
-                  class="search-placeholder"
-                >
-                  <span class="search-placeholder-static">{{ t('companyModules.searchModuleHint') }} :</span>
-                  <span class="search-placeholder-slot">
-                    <Transition
-                      name="slide-v"
-                      mode="out-in"
-                    >
-                      <span :key="placeholderIdx">
-                        <VIcon
-                          :icon="currentPlaceholderModule.icon_name || 'tabler-puzzle'"
-                          size="18"
-                        />
-                        {{ modName(currentPlaceholderModule) }}
-                      </span>
-                    </Transition>
-                  </span>
-                </div>
-              </div>
-
-              <VRow v-if="addonModules.length" class="card-grid card-grid-md">
-                <VCol
-                  v-for="mod in addonModules"
-                  :key="mod.key"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                >
-                  <!-- Module Card -->
-                  <VCard
-                    flat
-                    border
-                    class="d-flex flex-column"
-                  >
-                    <VCardText class="flex-grow-1">
-                      <div class="d-flex justify-space-between align-center mb-4">
-                        <VAvatar
-                          size="42"
-                          color="info"
-                          variant="tonal"
-                        >
-                          <VIcon
-                            :icon="mod.icon_name || 'tabler-puzzle'"
-                            size="22"
-                          />
-                        </VAvatar>
-                        <VChip
-                          :color="categoryChip(mod).color"
-                          size="small"
-                          variant="tonal"
-                        >
-                          {{ categoryChip(mod).text }}
-                        </VChip>
-                      </div>
-
-                      <h6 class="text-h6 mb-1">
-                        {{ modName(mod) }}
-                        <VChip
-                          v-if="mod.is_featured"
-                          size="x-small"
-                          color="warning"
-                          class="ms-1"
-                        >
-                          {{ t('companyModules.featured') }}
-                        </VChip>
-                      </h6>
-                      <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ modDesc(mod) || '—' }}
-                      </p>
-
-                      <!-- ADR-210: Pricing + dependencies -->
-                      <div
-                        v-if="modulePriceLabel(mod)"
-                        class="mt-3"
-                      >
-                        <span class="text-subtitle-2 font-weight-bold">
-                          {{ modulePriceLabel(mod) }}
-                        </span>
-                      </div>
-
-                      <template v-if="mod.requires?.length">
-                        <div
-                          v-for="reqKey in mod.requires"
-                          :key="reqKey"
-                          class="d-flex align-center gap-1 mt-2"
-                        >
-                          <VIcon
-                            :icon="dependencyLabel(reqKey)?.icon || 'tabler-plus'"
-                            size="14"
-                            :color="dependencyLabel(reqKey)?.color || 'secondary'"
-                          />
-                          <span class="text-caption text-medium-emphasis">
-                            {{ dependencyLabel(reqKey)?.name }} —
-                            <span class="font-weight-medium">{{ dependencyLabel(reqKey)?.label }}</span>
-                          </span>
-                        </div>
-                      </template>
-
-                      <div
-                        v-if="dependentNames(mod)"
-                        class="d-flex align-center gap-1 mt-2"
-                      >
-                        <VIcon
-                          icon="tabler-sitemap"
-                          size="16"
-                          color="info"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
-                        </span>
-                      </div>
-                    </VCardText>
-
-                    <VCardActions class="px-4 pb-4 pt-0">
-                      <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat -->
-                      <!-- ADR-783 (UX6.2) : état, pas un bouton — rien à activer ni souscrire -->
-                      <div
-                        v-if="isPreview(mod)"
-                        class="d-flex align-center gap-2 text-body-2 text-medium-emphasis py-2"
-                        data-test="module-preview-cta"
-                      >
-                        <VIcon icon="tabler-clock-hour-4" size="18" />
-                        {{ t('companyModules.previewNotice') }}
-                      </div>
-
-                      <!-- Available → Activate -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'available' && canManage"
-                        v-can="'modules.manage'"
-                        color="primary"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :data-test="`module-activate-${mod.key}`"
-                        :loading="togglingKey === mod.key"
-                        @click="activateModule(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-power" />
-                        </template>
-                        {{ t('companyModules.activate') }}
-                      </VBtn>
-
-                      <!-- Locked plan → Upgrade CTA -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'locked_plan'"
-                        v-can="'modules.manage'"
-                        color="warning"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        @click="navigateToPlanUpgrade(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-lock" />
-                        </template>
-                        {{ t('companyModules.upgradeTo', { plan: mod.upgrade_target_plan }) }}
-                      </VBtn>
-
-                      <!-- Locked addon → Purchase -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'locked_addon'"
-                        v-can="'modules.manage'"
-                        color="warning"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :loading="togglingKey === mod.key"
-                        @click="activateModule(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-shopping-cart" />
-                        </template>
-                        {{ t('companyModules.purchaseAddon') }}
-                      </VBtn>
-
-                      <!-- Contact sales -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'contact_sales'"
-                        color="secondary"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        @click="openContactDialog(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-mail" />
-                        </template>
-                        {{ t('companyModules.contactSales') }}
-                      </VBtn>
-
-                      <VBtn
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        @click="openPreviewDrawer(mod)"
-                      >
-                        {{ t('modulePreview.viewDetails') }}
-                      </VBtn>
-                    </VCardActions>
-                  </VCard>
-                </VCol>
-              </VRow>
-
-              <div
-                v-else
-                class="text-center pa-8"
-              >
-                <h6 class="text-h6 text-disabled">
-                  {{ addonSearchQuery ? t('companyModules.noSearchResults') : t('companyModules.noModulesInTab') }}
-                </h6>
-              </div>
-            </VWindowItem>
-
-            <!-- Tab 1: Included -->
-            <VWindowItem :value="1">
-              <VRow v-if="includedModules.length" class="card-grid card-grid-md">
-                <VCol
-                  v-for="mod in includedModules"
-                  :key="mod.key"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                >
-                  <VCard
-                    flat
-                    border
-                    class="d-flex flex-column"
-                  >
-                    <VCardText class="flex-grow-1">
-                      <div class="d-flex justify-space-between align-center mb-4">
-                        <VAvatar
-                          size="42"
-                          color="primary"
-                          variant="tonal"
-                        >
-                          <VIcon
-                            :icon="mod.icon_name || 'tabler-puzzle'"
-                            size="22"
-                          />
-                        </VAvatar>
-                        <VChip
-                          :color="categoryChip(mod).color"
-                          size="small"
-                          variant="tonal"
-                        >
-                          {{ categoryChip(mod).text }}
-                        </VChip>
-                      </div>
-
-                      <h6 class="text-h6 mb-1">
-                        {{ modName(mod) }}
-                      </h6>
-                      <VChip
-                        v-if="mod.recommended_for_jobdomain && !mod.is_active"
-                        size="small"
-                        color="primary"
-                        variant="tonal"
-                        prepend-icon="tabler-star"
-                        class="mb-2"
-                        :data-test="`module-recommended-${mod.key}`"
-                      >
-                        {{ t('companyModules.recommendedForYou') }}
-                      </VChip>
-
-                      <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
-                      <VChip
-                        v-if="mod.is_active && mod.setup_status"
-                        size="small"
-                        class="mb-2"
-                        :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
-                        :to="`/company/modules/${mod.key}`"
-                        :data-test="`module-setup-chip-${mod.key}`"
-                      >
-                        {{ t(`moduleSetup.status.${mod.setup_status}`) }}
-                      </VChip>
-                      <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ modDesc(mod) || '—' }}
-                      </p>
-
-                      <VChip
-                        color="primary"
-                        size="small"
-                      >
-                        {{ t('companyModules.stateIncluded') }}
-                      </VChip>
-
-                      <!-- ADR-210: Dependencies (included tab) -->
-                      <template v-if="mod.requires?.length">
-                        <div
-                          v-for="reqKey in mod.requires"
-                          :key="reqKey"
-                          class="d-flex align-center gap-1 mt-2"
-                        >
-                          <VIcon
-                            icon="tabler-check"
-                            size="14"
-                            color="success"
-                          />
-                          <span class="text-caption text-medium-emphasis">
-                            {{ dependencyLabel(reqKey)?.name }} — {{ t('companyModules.depIncluded') }}
-                          </span>
-                        </div>
-                      </template>
-
-                      <div
-                        v-if="dependentNames(mod)"
-                        class="d-flex align-center gap-1 mt-2"
-                      >
-                        <VIcon
-                          icon="tabler-sitemap"
-                          size="16"
-                          color="info"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
-                        </span>
-                      </div>
-                      <!-- ADR-807 : pourquoi il n'y a pas de bouton « Désactiver » sur un module inclus -->
-                      <div
-                        class="d-flex align-start gap-1 mt-2"
-                        :data-test="`module-included-locked-${mod.key}`"
-                      >
-                        <VIcon
-                          icon="tabler-lock"
-                          size="16"
-                          class="mt-1"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.includedLocked') }}
-                        </span>
-                      </div>
-                    </VCardText>
-
-                    <VCardActions class="px-4 pb-4 pt-0">
-                      <VBtn
-                        v-if="mod.capabilities?.settings_panels?.length"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :to="{ name: 'company-modules-key', params: { key: mod.key } }"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-settings" />
-                        </template>
-                        {{ t('companyModules.configure') }}
-                      </VBtn>
-
-                      <VBtn
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        @click="openPreviewDrawer(mod)"
-                      >
-                        {{ t('modulePreview.viewDetails') }}
-                      </VBtn>
-                    </VCardActions>
-                  </VCard>
-                </VCol>
-              </VRow>
-
-              <div
-                v-else
-                class="text-center pa-8"
-              >
-                <h6 class="text-h6 text-disabled">
-                  {{ t('companyModules.noModulesInTab') }}
-                </h6>
-              </div>
-            </VWindowItem>
-
-            <!-- Tab 2: Active -->
-            <VWindowItem :value="2">
-              <VRow v-if="activeModules.length" class="card-grid card-grid-md">
-                <VCol
-                  v-for="mod in activeModules"
-                  :key="mod.key"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                >
-                  <VCard
-                    flat
-                    border
-                    class="d-flex flex-column"
-                  >
-                    <VCardText class="flex-grow-1">
-                      <div class="d-flex justify-space-between align-center mb-4">
-                        <VAvatar
-                          size="42"
-                          color="success"
-                          variant="tonal"
-                        >
-                          <VIcon
-                            :icon="mod.icon_name || 'tabler-puzzle'"
-                            size="22"
-                          />
-                        </VAvatar>
-                        <VChip
-                          :color="categoryChip(mod).color"
-                          size="small"
-                          variant="tonal"
-                        >
-                          {{ categoryChip(mod).text }}
-                        </VChip>
-                      </div>
-
-                      <h6 class="text-h6 mb-1">
-                        {{ modName(mod) }}
-                      </h6>
-                      <VChip
-                        v-if="mod.recommended_for_jobdomain && !mod.is_active"
-                        size="small"
-                        color="primary"
-                        variant="tonal"
-                        prepend-icon="tabler-star"
-                        class="mb-2"
-                        :data-test="`module-recommended-${mod.key}`"
-                      >
-                        {{ t('companyModules.recommendedForYou') }}
-                      </VChip>
-
-                      <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
-                      <VChip
-                        v-if="mod.is_active && mod.setup_status"
-                        size="small"
-                        class="mb-2"
-                        :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
-                        :to="`/company/modules/${mod.key}`"
-                        :data-test="`module-setup-chip-${mod.key}`"
-                      >
-                        {{ t(`moduleSetup.status.${mod.setup_status}`) }}
-                      </VChip>
-                      <p class="text-body-2 text-medium-emphasis mb-3">
-                        {{ modDesc(mod) || '—' }}
-                      </p>
-
-                      <VChip
-                        color="success"
-                        size="small"
-                      >
-                        {{ t('companyModules.stateActive') }}
-                      </VChip>
-
-                      <!-- ADR-624 (LOT 6g): frozen contractual price for a subscribed paid addon -->
-                      <div
-                        v-if="contractualPriceLabel(mod)"
-                        class="mt-3"
-                        data-test="addon-contractual-price"
-                      >
-                        <span class="text-caption text-medium-emphasis d-block">{{ t('companyModules.contractualPrice') }}</span>
-                        <span class="text-subtitle-2 font-weight-bold">{{ contractualPriceLabel(mod) }}</span>
-                      </div>
-
-                      <!-- ADR-210: Active dependencies -->
-                      <template v-if="mod.requires?.length">
-                        <div
-                          v-for="reqKey in mod.requires"
-                          :key="reqKey"
-                          class="d-flex align-center gap-1 mt-2"
-                        >
-                          <VIcon
-                            icon="tabler-check"
-                            size="14"
-                            color="success"
-                          />
-                          <span class="text-caption text-medium-emphasis">
-                            {{ dependencyLabel(reqKey)?.name }} — {{ dependencyLabel(reqKey)?.label }}
-                          </span>
-                        </div>
-                      </template>
-
-                      <div
-                        v-if="dependentNames(mod)"
-                        class="d-flex align-center gap-1 mt-2"
-                      >
-                        <VIcon
-                          icon="tabler-sitemap"
-                          size="16"
-                          color="info"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
-                        </span>
-                      </div>
-                    </VCardText>
-
-                    <VCardActions class="px-4 pb-4 pt-0">
-                      <VBtn
-                        v-if="mod.capabilities?.settings_panels?.length"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :to="{ name: 'company-modules-key', params: { key: mod.key } }"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-settings" />
-                        </template>
-                        {{ t('companyModules.configure') }}
-                      </VBtn>
-
-                      <VBtn
-                        v-if="canManage && mod.type !== 'core'"
-                        v-can="'modules.manage'"
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        :data-test="`module-deactivate-${mod.key}`"
-                        :loading="togglingKey === mod.key"
-                        @click="requestDeactivation(mod)"
-                      >
-                        {{ t('companyModules.deactivate') }}
-                      </VBtn>
-
-                      <VBtn
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        @click="openPreviewDrawer(mod)"
-                      >
-                        {{ t('modulePreview.viewDetails') }}
-                      </VBtn>
-                    </VCardActions>
-                  </VCard>
-                </VCol>
-              </VRow>
-
-              <div
-                v-else
-                class="text-center pa-8"
-              >
-                <h6 class="text-h6 text-disabled">
-                  {{ t('companyModules.noModulesInTab') }}
-                </h6>
-              </div>
-            </VWindowItem>
-
-            <!-- Tab 3: All (with filters) -->
-            <VWindowItem :value="3">
-              <div class="search-wrap mb-4">
-                <AppTextField
-                  v-model="searchQuery"
-                  prepend-inner-icon="tabler-search"
-                  clearable
-                />
-                <div
-                  v-if="!searchQuery && currentPlaceholderModule"
-                  class="search-placeholder"
-                >
-                  <span class="search-placeholder-static">{{ t('companyModules.searchModuleHint') }} :</span>
-                  <span class="search-placeholder-slot">
-                    <Transition
-                      name="slide-v"
-                      mode="out-in"
-                    >
-                      <span :key="placeholderIdx">
-                        <VIcon
-                          :icon="currentPlaceholderModule.icon_name || 'tabler-puzzle'"
-                          size="18"
-                        />
-                        {{ modName(currentPlaceholderModule) }}
-                      </span>
-                    </Transition>
-                  </span>
-                </div>
-              </div>
-              <div class="d-flex flex-wrap gap-x-4 gap-y-4 align-center mb-6">
-                <AppSelect
-                  v-model="categoryFilter"
-                  :items="categoryItems"
-                  style="min-inline-size: 180px;"
-                />
-              </div>
-
-              <VRow v-if="allFilteredModules.length" class="card-grid card-grid-md">
-                <VCol
-                  v-for="mod in allFilteredModules"
-                  :key="mod.key"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                >
-                  <VCard
-                    flat
-                    border
-                    class="d-flex flex-column"
-                  >
-                    <VCardText class="flex-grow-1">
-                      <div class="d-flex justify-space-between align-start mb-4">
-                        <VAvatar
-                          size="42"
-                          :color="mod.type === 'core' ? 'primary' : 'info'"
-                          variant="tonal"
-                        >
-                          <VIcon
-                            :icon="mod.icon_name || 'tabler-puzzle'"
-                            size="22"
-                          />
-                        </VAvatar>
-                        <div class="d-flex flex-column align-end gap-1">
-                          <VChip
-                            :color="categoryChip(mod).color"
-                            size="small"
-                            variant="tonal"
-                          >
-                            {{ categoryChip(mod).text }}
-                          </VChip>
-                          <VChip
-                            :color="stateChip(mod).color"
-                            size="small"
-                            variant="tonal"
-                          >
-                            {{ stateChip(mod).text }}
-                          </VChip>
-                        </div>
-                      </div>
-
-                      <h6
-                        class="text-h6 mb-1"
-                        :class="{ 'text-disabled': isLocked(mod) }"
-                      >
-                        {{ modName(mod) }}
-                      </h6>
-                      <p
-                        class="text-body-2 text-medium-emphasis mb-3"
-                        :class="{ 'text-disabled': isLocked(mod) }"
-                      >
-                        {{ modDesc(mod) || '—' }}
-                      </p>
-
-                      <!-- ADR-210: Pricing + dependencies -->
-                      <div
-                        v-if="modulePriceLabel(mod)"
-                        class="mt-3"
-                      >
-                        <span
-                          class="text-subtitle-2 font-weight-bold"
-                          :class="{ 'text-disabled': isLocked(mod) }"
-                        >
-                          {{ modulePriceLabel(mod) }}
-                        </span>
-                      </div>
-
-                      <template v-if="mod.requires?.length">
-                        <div
-                          v-for="reqKey in mod.requires"
-                          :key="reqKey"
-                          class="d-flex align-center gap-1 mt-2"
-                        >
-                          <VIcon
-                            :icon="dependencyLabel(reqKey)?.icon || 'tabler-plus'"
-                            size="14"
-                            :color="dependencyLabel(reqKey)?.color || 'secondary'"
-                          />
-                          <span class="text-caption text-medium-emphasis">
-                            {{ dependencyLabel(reqKey)?.name }} —
-                            <span class="font-weight-medium">{{ dependencyLabel(reqKey)?.label }}</span>
-                          </span>
-                        </div>
-                      </template>
-
-                      <div
-                        v-if="dependentNames(mod)"
-                        class="d-flex align-center gap-1 mt-2"
-                      >
-                        <VIcon
-                          icon="tabler-sitemap"
-                          size="16"
-                          color="info"
-                        />
-                        <span class="text-caption text-medium-emphasis">
-                          {{ t('companyModules.requiredByModules', { modules: dependentNames(mod) }) }}
-                        </span>
-                      </div>
-                    </VCardText>
-
-                    <VCardActions class="px-4 pb-4 pt-0">
-                      <!-- ADR-732 (P0-A) : module en préparation → aucune action d'achat, chip informatif -->
-                      <!-- ADR-783 (UX6.2) : état, pas un bouton — rien à activer ni souscrire -->
-                      <div
-                        v-if="isPreview(mod)"
-                        class="d-flex align-center gap-2 text-body-2 text-medium-emphasis py-2"
-                        data-test="module-preview-cta"
-                      >
-                        <VIcon icon="tabler-clock-hour-4" size="18" />
-                        {{ t('companyModules.previewNotice') }}
-                      </div>
-
-                      <!-- Included / Active → Configure (only if settings panels exist) -->
-                      <VBtn
-                        v-else-if="(mod.display_state === 'included' || mod.display_state === 'active') && mod.capabilities?.settings_panels?.length"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :to="{ name: 'company-modules-key', params: { key: mod.key } }"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-settings" />
-                        </template>
-                        {{ t('companyModules.configure') }}
-                      </VBtn>
-
-                      <!-- Available → Activate -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'available' && canManage"
-                        v-can="'modules.manage'"
-                        color="primary"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :loading="togglingKey === mod.key"
-                        @click="activateModule(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-power" />
-                        </template>
-                        {{ t('companyModules.activate') }}
-                      </VBtn>
-
-                      <!-- Locked plan -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'locked_plan'"
-                        v-can="'modules.manage'"
-                        color="warning"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        @click="navigateToPlanUpgrade(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-lock" />
-                        </template>
-                        {{ t('companyModules.upgradeTo', { plan: mod.upgrade_target_plan }) }}
-                      </VBtn>
-
-                      <!-- Locked addon -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'locked_addon'"
-                        v-can="'modules.manage'"
-                        color="warning"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        :loading="togglingKey === mod.key"
-                        @click="activateModule(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-shopping-cart" />
-                        </template>
-                        {{ t('companyModules.purchaseAddon') }}
-                      </VBtn>
-
-                      <!-- Contact sales -->
-                      <VBtn
-                        v-else-if="mod.display_state === 'contact_sales'"
-                        color="secondary"
-                        variant="tonal"
-                        class="flex-grow-1"
-                        @click="openContactDialog(mod)"
-                      >
-                        <template #prepend>
-                          <VIcon icon="tabler-mail" />
-                        </template>
-                        {{ t('companyModules.contactSales') }}
-                      </VBtn>
-
-                      <!-- Active → Deactivate (secondary) -->
-                      <VBtn
-                        v-if="mod.display_state === 'active' && canManage && mod.type !== 'core'"
-                        v-can="'modules.manage'"
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        :loading="togglingKey === mod.key"
-                        @click="requestDeactivation(mod)"
-                      >
-                        {{ t('companyModules.deactivate') }}
-                      </VBtn>
-
-                      <VBtn
-                        variant="text"
-                        color="secondary"
-                        size="small"
-                        @click="openPreviewDrawer(mod)"
-                      >
-                        {{ t('modulePreview.viewDetails') }}
-                      </VBtn>
-                    </VCardActions>
-                  </VCard>
-                </VCol>
-              </VRow>
-
-              <div
-                v-else
-                class="text-center pa-8"
-              >
-                <h6 class="text-h6 text-disabled">
-                  {{ t('companyModules.noModulesAvailable') }}
-                </h6>
-              </div>
-            </VWindowItem>
-          </VWindow>
-        </template>
+          {{ t('companyModules.summaryIncluded', { n: includedModules.length }) }}
+        </VChip>
+        <VChip
+          v-if="subscribedCount"
+          color="warning"
+          variant="tonal"
+          label
+        >
+          {{ t('companyModules.catalogSubscribed', { n: subscribedCount }) }}
+        </VChip>
       </div>
     </div>
 
-    <!-- Deactivation confirmation dialog -->
+    <VCard class="mb-6">
+      <VCardText class="d-flex flex-wrap align-center gap-4">
+        <VChipGroup
+          v-model="catalogFilter"
+          mandatory
+          selected-class="text-primary"
+          data-test="modules-filter"
+        >
+          <VChip
+            v-for="f in CATALOG_FILTERS"
+            :key="f"
+            :value="f"
+            variant="tonal"
+            label
+            :data-test="`modules-filter-${f}`"
+          >
+            {{ t(`companyModules.catalogFilter.${f}`) }} ({{ filterCount(f) }})
+          </VChip>
+        </VChipGroup>
+        <VSpacer />
+        <AppTextField
+          v-model="searchQuery"
+          prepend-inner-icon="tabler-search"
+          :placeholder="t('companyModules.searchModules')"
+          clearable
+          style="max-inline-size: 280px"
+          data-test="modules-search"
+        />
+      </VCardText>
+    </VCard>
+
+    <VRow
+      v-if="isLoading"
+      class="card-grid card-grid-md"
+    >
+      <VCol
+        v-for="i in 6"
+        :key="i"
+        cols="12"
+        sm="6"
+        lg="4"
+      >
+        <VSkeletonLoader type="card" />
+      </VCol>
+    </VRow>
+    <VCard
+      v-else-if="!catalogModules.length"
+      data-test="modules-empty"
+    >
+      <VCardText class="text-center py-12 text-medium-emphasis">
+        {{ t('companyModules.noModulesInTab') }}
+      </VCardText>
+    </VCard>
+    <VRow
+      v-else
+      class="card-grid card-grid-md"
+      data-test="modules-grid"
+    >
+      <VCol
+        v-for="mod in catalogModules"
+        :key="mod.key"
+        cols="12"
+        sm="6"
+        lg="4"
+      >
+        <VCard
+          class="d-flex flex-column"
+          :data-test="`module-card-${mod.key}`"
+        >
+          <VCardItem>
+            <template #prepend>
+              <VAvatar
+                :color="mod.is_active ? 'success' : 'primary'"
+                variant="tonal"
+                rounded
+              >
+                <VIcon :icon="mod.icon_name || 'tabler-puzzle'" />
+              </VAvatar>
+            </template>
+            <VCardTitle class="text-wrap">
+              {{ modName(mod) }}
+            </VCardTitle>
+            <VCardSubtitle>
+              <VChip
+                size="x-small"
+                label
+                variant="tonal"
+                :color="stateChip(mod).color"
+                :data-test="`module-state-${mod.key}`"
+              >
+                {{ stateChip(mod).text }}
+              </VChip>
+              <VChip
+                v-if="mod.recommended_for_jobdomain && !mod.is_active"
+                size="x-small"
+                label
+                color="primary"
+                variant="outlined"
+                prepend-icon="tabler-star"
+                class="ms-1"
+                :data-test="`module-recommended-${mod.key}`"
+              >
+                {{ t('companyModules.recommendedForYou') }}
+              </VChip>
+            </VCardSubtitle>
+          </VCardItem>
+          <VCardText class="flex-grow-1">
+            <p class="text-body-2 mb-3">
+              {{ modDesc(mod) || '—' }}
+            </p>
+            <div
+              v-if="mod.requires?.length"
+              class="text-body-2 mb-1"
+              :data-test="`module-requires-${mod.key}`"
+            >
+              <span class="text-medium-emphasis">{{ t('companyModules.needsLabel') }}</span>
+              <span
+                v-for="(r, i) in mod.requires"
+                :key="r"
+              >
+                {{ quoteName(r) }}<VIcon
+                  v-if="modByKey(r)?.is_active"
+                  icon="tabler-check"
+                  size="14"
+                  color="success"
+                  class="ms-1"
+                />{{ i < mod.requires.length - 1 ? ', ' : '' }}
+              </span>
+            </div>
+            <div
+              v-if="mod.is_active && dependentNames(mod)"
+              class="text-body-2 text-medium-emphasis mb-1"
+            >
+              {{ t('companyModules.usedBy', { list: dependentNames(mod) }) }}
+            </div>
+            <div
+              v-if="!mod.is_active && modulePriceLabel(mod)"
+              class="text-body-2 font-weight-medium"
+            >
+              {{ modulePriceLabel(mod) }}
+            </div>
+            <div
+              v-if="contractualPriceLabel(mod)"
+              class="text-body-2 text-medium-emphasis"
+            >
+              {{ contractualPriceLabel(mod) }}
+            </div>
+            <!-- ADR-807 : un module inclus par l'activité ne se désactive pas ici -->
+            <div
+              v-if="mod.display_state === 'included' && mod.is_active"
+              class="d-flex align-start gap-1 text-body-2 text-medium-emphasis mt-2"
+              :data-test="`module-included-locked-${mod.key}`"
+            >
+              <VIcon
+                icon="tabler-lock"
+                size="16"
+                class="mt-1"
+              />
+              <span>{{ t('companyModules.includedLocked') }}</span>
+            </div>
+            <VChip
+              v-if="mod.is_active && mod.setup_status"
+              size="small"
+              class="mt-2"
+              :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
+              :to="`/company/modules/${mod.key}`"
+              :data-test="`module-setup-chip-${mod.key}`"
+            >
+              {{ t(`moduleSetup.status.${mod.setup_status}`) }}
+            </VChip>
+          </VCardText>
+          <VDivider />
+          <VCardActions class="flex-wrap gap-2">
+            <VBtn
+              variant="text"
+              size="small"
+              :data-test="`module-details-${mod.key}`"
+              @click="openPreviewDrawer(mod)"
+            >
+              {{ t('companyModules.details') }}
+            </VBtn>
+            <VSpacer />
+            <template v-if="canManage">
+              <VBtn
+                v-if="mod.is_active"
+                variant="tonal"
+                size="small"
+                :to="`/company/modules/${mod.key}`"
+                :data-test="`module-configure-${mod.key}`"
+              >
+                {{ t('companyModules.configure') }}
+              </VBtn>
+              <VBtn
+                v-if="mod.display_state === 'active'"
+                variant="text"
+                color="error"
+                size="small"
+                :loading="togglingKey === mod.key"
+                :data-test="`module-deactivate-${mod.key}`"
+                @click="requestDeactivation(mod)"
+              >
+                {{ t('companyModules.deactivate') }}
+              </VBtn>
+              <VBtn
+                v-else-if="!mod.is_active && ['included', 'available'].includes(mod.display_state) && !isPreview(mod)"
+                color="primary"
+                size="small"
+                :loading="togglingKey === mod.key"
+                :data-test="`module-activate-${mod.key}`"
+                @click="activateModule(mod)"
+              >
+                {{ t('companyModules.activate') }}
+              </VBtn>
+              <VBtn
+                v-else-if="mod.display_state === 'locked_plan'"
+                variant="tonal"
+                color="warning"
+                size="small"
+                @click="navigateToPlanUpgrade(mod)"
+              >
+                {{ t('companyModules.upgradePlan') }}
+              </VBtn>
+              <VBtn
+                v-else-if="mod.display_state === 'contact_sales'"
+                variant="tonal"
+                size="small"
+                @click="openContactDialog(mod)"
+              >
+                {{ t('companyModules.contactSales') }}
+              </VBtn>
+            </template>
+          </VCardActions>
+        </VCard>
+      </VCol>
+    </VRow>
+
+    <!-- ADR-821 — aperçu d'activation : modules ajoutés automatiquement, blocages commerciaux -->
+    <VDialog
+      v-model="activationDialog"
+      max-width="520"
+    >
+      <VCard data-test="activation-preview">
+        <VCardItem>
+          <VCardTitle>{{ t('companyModules.activationTitle', { module: modName(activationTarget) }) }}</VCardTitle>
+        </VCardItem>
+        <VCardText>
+          <VSkeletonLoader
+            v-if="!activationPreview"
+            type="list-item-two-line"
+          />
+          <template v-else>
+            <p
+              v-for="(by, dep) in activationPreview.added"
+              :key="dep"
+              class="text-body-1"
+              :data-test="`activation-added-${dep}`"
+            >
+              {{ t('companyModules.addedAutomatically', { modules: by.map(k => quoteName(k)).join(', '), dependency: quoteName(dep) }) }}
+            </p>
+            <p
+              v-if="!Object.keys(activationPreview.added || {}).length && activationPreview.can_activate"
+              class="text-body-1"
+            >
+              {{ t('companyModules.activationSimple', { module: modName(activationTarget) }) }}
+            </p>
+            <VList
+              density="compact"
+              class="py-0"
+            >
+              <VListItem
+                v-for="k in activationPreview.to_activate"
+                :key="k"
+                prepend-icon="tabler-plus"
+                :title="quoteName(k)"
+                :subtitle="t('companyModules.willBeActivated')"
+              />
+              <VListItem
+                v-for="k in activationPreview.already_active"
+                :key="k"
+                prepend-icon="tabler-check"
+                :title="quoteName(k)"
+                :subtitle="t('companyModules.alreadyActive')"
+              />
+            </VList>
+            <VAlert
+              v-for="b in activationPreview.blocked"
+              :key="b.module"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mt-2"
+              :data-test="`activation-blocked-${b.module}`"
+            >
+              {{ t(`companyModules.blocked.${b.reason}`, { module: quoteName(b.module) }) }}
+            </VAlert>
+          </template>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="activationDialog = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            variant="elevated"
+            :disabled="!activationPreview?.can_activate"
+            :loading="togglingKey === activationTarget?.key"
+            data-test="activation-confirm"
+            @click="confirmActivation"
+          >
+            {{ t('companyModules.confirmActivation', { n: activationPreview?.to_activate?.length || 1 }) }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
     <VDialog
       v-model="deactivateDialog"
       max-width="420"
@@ -1404,6 +905,25 @@ const doToggle = async (key, isCurrentlyEnabled) => {
           <p class="text-body-1">
             {{ t('companyModules.deactivateConfirmMessage', { module: modName(deactivateTarget) }) }}
           </p>
+          <!-- ADR-821 : jamais un module actif privé de sa dépendance -->
+          <VAlert
+            v-if="deactivateDependents.length"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+            data-test="deactivate-dependents"
+          >
+            {{ t('companyModules.dependentsWarning', { module: modName(deactivateTarget), list: deactivateDependents.map(k => quoteName(k)).join(', ') }) }}
+            <VCheckbox
+              v-model="deactivateCascade"
+              :label="t('companyModules.dependentsCascade', { list: deactivateDependents.map(k => quoteName(k)).join(', ') })"
+              density="compact"
+              hide-details
+              class="mt-1"
+              data-test="deactivate-cascade"
+            />
+          </VAlert>
 
           <!-- ADR-341: Deactivation preview — loaded from backend -->
           <VSkeletonLoader
@@ -1600,6 +1120,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
             variant="elevated"
             data-test="module-deactivate-confirm"
             :loading="togglingKey === deactivateTarget?.key"
+            :disabled="deactivateDependents.length > 0 && !deactivateCascade"
             @click="confirmDeactivation"
           >
             {{ t('companyModules.deactivate') }}

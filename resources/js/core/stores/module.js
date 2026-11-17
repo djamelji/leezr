@@ -86,9 +86,10 @@ export const useModuleStore = defineStore('module', {
       return data.modules
     },
 
-    async disableModule(key) {
+    async disableModule(key, cascade = false) {
       const data = await $api(`/modules/${key}/disable`, {
         method: 'PUT',
+        body: cascade ? { cascade: true } : undefined, // ADR-821 : désactivation en cascade explicite
       })
 
       cacheRemove('features:modules') // ADR-804 : le catalogue en cache (SWR 5 min) ne doit pas survivre à un changement d'activation

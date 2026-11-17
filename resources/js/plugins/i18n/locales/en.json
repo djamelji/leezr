@@ -4248,7 +4248,36 @@
     "metricPlural_storage_gb": "GB",
     "metricPlural_employees": "employees",
     "metricPlural_units": "units",
-    "recommendedForYou": "Recommended for your business"
+    "recommendedForYou": "Recommended for your business",
+    "upgradePlan": "Change plan",
+    "details": "Details",
+    "catalogSubscribed": "{n} option(s) subscribed",
+    "catalogFilter": {
+      "all": "All",
+      "active": "Active",
+      "included": "Included in your plan",
+      "options": "Options",
+      "unavailable": "Not in your plan"
+    },
+    "needsLabel": "Needs: ",
+    "usedBy": "Used by: {list}",
+    "activationTitle": "Activate {module}",
+    "addedAutomatically": "{modules} also needs {dependency}. This module will be added automatically.",
+    "activationSimple": "{module} will be activated. You can then configure it.",
+    "willBeActivated": "Will be activated",
+    "alreadyActive": "Already active",
+    "confirmActivation": "Activate ({n})",
+    "blocked": {
+      "plan_required": "{module} is not included in your plan: change plan to activate it.",
+      "not_available": "{module} is not included in your plan.",
+      "addon_inactive": "{module} is a paid option not subscribed.",
+      "incompatible_jobdomain": "{module} is not available for your business.",
+      "unavailable": "{module} is not available at the moment.",
+      "unknown_module": "{module} cannot be found: contact support.",
+      "dependency_cycle": "{module} has inconsistent dependencies: contact support."
+    },
+    "dependentsWarning": "{list} depend(s) on {module}. Switching {module} off alone would leave them without what they need.",
+    "dependentsCascade": "Also switch off {list} (data is kept)"
   },
   "contactSales": {
     "title": "Premium module",

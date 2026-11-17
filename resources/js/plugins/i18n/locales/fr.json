@@ -4248,7 +4248,36 @@
     "metricPlural_storage_gb": "Go",
     "metricPlural_employees": "salariés",
     "metricPlural_units": "unités",
-    "recommendedForYou": "Recommandé pour votre activité"
+    "recommendedForYou": "Recommandé pour votre activité",
+    "upgradePlan": "Changer d'offre",
+    "details": "Détails",
+    "catalogSubscribed": "{n} option(s) souscrite(s)",
+    "catalogFilter": {
+      "all": "Tous",
+      "active": "Actifs",
+      "included": "Inclus dans votre offre",
+      "options": "Options",
+      "unavailable": "Hors offre"
+    },
+    "needsLabel": "Nécessite : ",
+    "usedBy": "Utilisé par : {list}",
+    "activationTitle": "Activer {module}",
+    "addedAutomatically": "{modules} nécessite également {dependency}. Ce module sera ajouté automatiquement.",
+    "activationSimple": "{module} sera activé. Vous pourrez ensuite le configurer.",
+    "willBeActivated": "Sera activé",
+    "alreadyActive": "Déjà actif",
+    "confirmActivation": "Activer ({n})",
+    "blocked": {
+      "plan_required": "{module} n'est pas inclus dans votre offre : changez d'offre pour l'activer.",
+      "not_available": "{module} n'est pas inclus dans votre offre.",
+      "addon_inactive": "{module} est une option payante non souscrite.",
+      "incompatible_jobdomain": "{module} n'est pas disponible pour votre activité.",
+      "unavailable": "{module} n'est pas disponible pour le moment.",
+      "unknown_module": "{module} est introuvable : contactez le support.",
+      "dependency_cycle": "Les dépendances de {module} sont incohérentes : contactez le support."
+    },
+    "dependentsWarning": "{list} dépend(ent) de {module}. Désactiver {module} seul laisserait ces modules sans ce dont ils ont besoin.",
+    "dependentsCascade": "Désactiver aussi {list} (les données sont conservées)"
   },
   "contactSales": {
     "title": "Module premium",
