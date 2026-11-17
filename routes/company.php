@@ -582,6 +582,9 @@ Route::prefix('workforce/requirements')->middleware(['company.access:use-module,
     Route::get('/catalog', [$c, 'catalog']);
     Route::get('/legacy', [$c, 'legacy']);
     Route::get('/proposal', [$c, 'proposal']); // ADR-817 : reprise des règles des rôles, par poste (lecture seule)
+    // ADR-818 : autorité des exigences de la société (rôle → poste), aperçu puis bascule explicite (settings.manage)
+    Route::get('/authority', [\App\Modules\Workforce\Requirements\Http\RequirementAuthorityController::class, 'show']);
+    Route::put('/authority', [\App\Modules\Workforce\Requirements\Http\RequirementAuthorityController::class, 'update'])->middleware('company.access:use-permission,settings.manage');
     Route::post('/preview', [$c, 'preview']);
     Route::post('/', [$c, 'save']);
     // ADR-794 (L4) : contributions des modules (aperçu + adoption explicite), même page, même mode parallèle
@@ -707,6 +710,8 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('onboarding-files/{id}/revoke', [$onb, 'revoke'])->whereNumber('id')->middleware($perm('workforce.manage'));
     Route::post('onboarding-files/{id}/request-changes', [$onb, 'requestChanges'])->whereNumber('id')->middleware($perm('workforce.manage'));
     Route::post('onboarding-files/{id}/validate', [$onb, 'validateFile'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/on-site', [$onb, 'onSite'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']); // ADR-818
+    Route::post('onboarding-files/{id}/finalize', [$onb, 'finalize'])->whereNumber('id')->middleware($perm('workforce.manage')); // ADR-818
     // ADR-796.1 — envoi par e-mail, changement d'adresse, prévisualisation de révision, nouvelle analyse
     Route::post('onboarding-files/{id}/send', [$onb, 'send'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:10,1']);
     Route::put('onboarding-files/{id}/contact', [$onb, 'contact'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']);

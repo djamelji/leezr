@@ -4,6 +4,8 @@
 return [
     'unknown_item' => 'Unknown or unavailable item for this file.',
     'empty_selection' => 'Choose at least one piece of information or document.',
+    'finalize_requires_validation' => 'Validate the file first: finalisation comes after information and documents are checked.',
+    'already_finalized' => 'This hire is already finalised.',
     'already_open' => 'An onboarding file is already open for this person.',
     'not_sendable' => 'This file can no longer receive a link.',
     'declaration_required' => 'Specify the declared legal basis and the information given to the person before sending the link.',

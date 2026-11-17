@@ -39,6 +39,8 @@ class WorkforceModule implements ModuleDefinition
                     // (`operationalOnly` → jamais en double de l'entrée Core côté management) ; le
                     // périmètre de données reste décidé par WorkforceAccess (soi + rapports, ou RH).
                     ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'team', 'sort' => 10],
+                    // ADR-818 — « Embauches » : dossiers d'embauche (sur place ou à distance), progression, finalisation.
+                    ['key' => 'workforce-hiring', 'title' => 'Hiring', 'to' => ['name' => 'company-workforce-hiring'], 'icon' => 'tabler-user-check', 'permission' => 'workforce.manage', 'surface' => 'hr', 'group' => 'team', 'sort' => 15],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'time', 'sort' => 20],
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20, 'settings' => ['section' => 'organization', 'level' => 'essential']],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »

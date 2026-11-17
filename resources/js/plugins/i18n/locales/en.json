@@ -211,7 +211,8 @@
       "settings-templates": "Document templates",
       "settings-signature": "Electronic signature",
       "settings-leave-types": "Absence types",
-      "workforce-requirements": "Requested information & documents"
+      "workforce-requirements": "Requested information & documents",
+      "workforce-hiring": "Hiring"
     }
   },
   "roles": {
@@ -11051,7 +11052,7 @@
       "level": "Level",
       "description": "Duties and responsibilities"
     },
-    "requirementsStatus": "These requirements are saved for the position. Files and ongoing requests do not change until activation by position is validated: today, requested documents still follow the historical configuration.",
+    "requirementsStatus": "These are the position's requirements. They apply to new requests as soon as the company computes documents by position (see « Requested information & documents »); documents already provided and ongoing requests never change.",
     "noPeople": "Nobody holds this position.",
     "withAccount": "With account",
     "withoutAccount": "Without account",
@@ -11082,5 +11083,76 @@
       "adopt": "Confirm takeover",
       "adopted": "{n} requirement(s) taken over for this position."
     }
+  },
+  "hiring": {
+    "title": "Hiring",
+    "subtitle": "Hiring files in progress: what is missing, what to check, what remains to finalise.",
+    "hire": "Hire",
+    "wizardTitle": "Hire",
+    "step1": "1. The person and their position",
+    "step2": "2. What the position requires",
+    "step3": "3. How to complete the file",
+    "emailHint": "Optional. Used to send the link and verify identity remotely.",
+    "positionHint": "The position defines the information and documents requested.",
+    "requiredLegend": "* required field",
+    "missing": "To complete: {fields}",
+    "noPosition": "No position is defined yet.",
+    "createPosition": "Create a position",
+    "onSite": "Complete on site now",
+    "onSiteOpened": "The file opened in a new tab: the person can complete it here, in front of you. You can resume it or send a link later.",
+    "continueOnSite": "Complete on site",
+    "review": "Review",
+    "details": "Open",
+    "finalize": "Finalise",
+    "finalizeTitle": "Finalise the hiring of {name}",
+    "finalizeSubtitle": "The person becomes an active employee.",
+    "finalizeNote": "No account, right or contract is created at this step: you can add them afterwards.",
+    "finalized": "Hire finalised.",
+    "finalizedLong": "The hire is finalised: the person is now part of the team.",
+    "openFile": "Open the file",
+    "createContract": "Prepare the contract",
+    "giveAccess": "Give access to Leezr",
+    "blocked": "{n} blocked document(s)",
+    "progressDetail": "{f}/{ft} information · {dd}/{dt} documents",
+    "empty": "No hire for this filter.",
+    "col": {
+      "person": "Person",
+      "position": "Position",
+      "stage": "Stage",
+      "progress": "Progress",
+      "start": "Planned start"
+    },
+    "stage": {
+      "collecting": "File in progress",
+      "to_review": "To review",
+      "to_finalize": "To finalise",
+      "done": "Finalised",
+      "closed": "Closed"
+    },
+    "filter": {
+      "open": "In progress",
+      "collecting": "File in progress",
+      "to_review": "To review",
+      "to_finalize": "To finalise",
+      "done": "Finalised",
+      "all": "All"
+    }
+  },
+  "requirementAuthority": {
+    "title": "Requirement computation",
+    "role": "Today, the documents requested from each person still follow their access role (historical configuration).",
+    "position": "Requested documents follow each person's position (current configuration).",
+    "preview": "See the effect of computing by position",
+    "people": "{t} person(s): {u} unchanged, {c} affected.",
+    "gained": "Would also be requested",
+    "lost": "Would no longer be requested",
+    "none": "None",
+    "lostHint": "Take these documents over on the positions concerned (each position's « Takeover » tab) before switching.",
+    "ready": "No document would be lost: you can switch.",
+    "switch": "Compute by position",
+    "switchAnyway": "Switch despite lost documents",
+    "back": "Back to computing by role",
+    "switched": "Computation mode updated.",
+    "note": "Documents already provided and ongoing requests do not change. Only new requests, files and compliance follow the new mode. You can switch back at any time."
   }
 }

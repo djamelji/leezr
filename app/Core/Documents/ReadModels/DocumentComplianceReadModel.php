@@ -52,9 +52,10 @@ class DocumentComplianceReadModel
         $marketKey = $company->market_key;
 
         // Décision partagée, mémoïsée par rôle pour ce calcul (quelques rôles, pas une requête par personne).
+        // ADR-818 : sous l'autorité « poste », la décision dépend du poste de la personne, plus de son rôle.
         $maps = [];
-        $mapFor = function (?string $roleKey) use (&$maps, $companyId, $marketKey) {
-            return $maps[$roleKey ?? ''] ??= \App\Core\Documents\DocumentResolverService::requirementMap($companyId, $roleKey, $marketKey);
+        $mapFor = function (?string $roleKey, ?int $jobRoleId = null) use (&$maps, $companyId, $marketKey) {
+            return $maps[($roleKey ?? '').'|'.($jobRoleId ?? '')] ??= \App\Core\Documents\DocumentResolverService::subjectMap($companyId, $roleKey, $jobRoleId, $marketKey);
         };
 
         $base = $mapFor(null);
@@ -70,7 +71,7 @@ class DocumentComplianceReadModel
         $population = \App\Core\Documents\Services\PersonPopulationResolver::forCompany($company);
         $requiredByPerson = [];
         foreach ($population as $i => $person) {
-            $map = $mapFor($person['role_key'] ?? null);
+            $map = $mapFor($person['role_key'] ?? null, $person['job_role_id'] ?? null);
             $requiredByPerson[$i] = collect($map)->filter(fn ($e, $id) => $e['type']->scope === DocumentType::SCOPE_COMPANY_USER && $required($map, $id))->keys()->all();
         }
         $userTypeIds = collect($requiredByPerson)->flatten()->unique()->values();

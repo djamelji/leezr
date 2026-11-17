@@ -4,6 +4,8 @@
 return [
     'unknown_item' => 'Élément inconnu ou indisponible pour ce dossier.',
     'empty_selection' => 'Choisissez au moins une information ou un document.',
+    'finalize_requires_validation' => 'Validez d\'abord le dossier : la finalisation intervient après la vérification des informations et des pièces.',
+    'already_finalized' => 'Cette embauche est déjà finalisée.',
     'already_open' => 'Un dossier d\'intégration est déjà en cours pour cette personne.',
     'not_sendable' => 'Ce dossier ne peut plus recevoir de lien.',
     'declaration_required' => 'Indiquez la base juridique déclarée et l\'information remise à la personne avant d\'envoyer le lien.',

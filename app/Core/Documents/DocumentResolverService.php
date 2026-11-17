@@ -84,6 +84,51 @@ class DocumentResolverService
         return $map;
     }
 
+    /**
+     * ADR-818 — requirement decision for ONE subject, honouring the company's explicit authority :
+     *   - `role` (default) : exactly `requirementMap($roleKey)` (historical, unchanged) ;
+     *   - `position` : the company rules (no role overlay) + the requirements of the subject's POSITION
+     *     from the registry (ADR-817). A document becomes required, never hidden ; role visibility rules
+     *     (access) no longer shape the expected list. Mandatory catalogue rules keep applying.
+     */
+    public static function subjectMap(int $companyId, ?string $roleKey, ?int $jobRoleId, ?string $marketKey = null, ?string $scope = null): array
+    {
+        if (! \App\Core\Requirements\RequirementAuthority::isPosition($companyId)) {
+            return static::requirementMap($companyId, $roleKey, $marketKey, $scope);
+        }
+
+        return static::positionMap($companyId, $jobRoleId, $marketKey, $scope);
+    }
+
+    /** ADR-818 — the TARGET decision (position authority), whatever the company's current authority (used by the preview). */
+    public static function positionMap(int $companyId, ?int $jobRoleId, ?string $marketKey = null, ?string $scope = null): array
+    {
+        $map = static::requirementMap($companyId, null, $marketKey, $scope);
+        if ($map === []) {
+            return $map;
+        }
+        $resolved = static::positionRequirements($companyId, $jobRoleId);
+        foreach ($map as $typeId => &$entry) {
+            $entry['visible'] = true;
+            if (($resolved['document:'.$typeId]['required'] ?? false) === true) {
+                $entry['required'] = true;
+            }
+        }
+        unset($entry);
+
+        return $map;
+    }
+
+    /** @return array<string, array> registry resolution for a position (callers memoise per computation : never stale) */
+    public static function positionRequirements(int $companyId, ?int $jobRoleId): array
+    {
+        $company = \App\Core\Models\Company::find($companyId);
+        $job = $jobRoleId ? \App\Core\Workforce\JobRole::withoutGlobalScopes()->where('company_id', $companyId)->find($jobRoleId) : null;
+
+        return $company ? \App\Core\Requirements\EffectiveRequirementResolver::forCompany($company)
+            ->resolveFor(\App\Core\Requirements\EffectiveRequirementResolver::subjectForJobRole($job)) : [];
+    }
+
     public static function resolve(
         ?User $user,
         int $companyId,
@@ -92,7 +137,12 @@ class DocumentResolverService
         ?string $scope = null,
     ): array {
         // ADR-790 : décision d'exigence partagée (requirementMap) ; ici, seulement la présentation.
-        $map = static::requirementMap($companyId, $user !== null ? $roleKey : null, $marketKey, $scope);
+        // ADR-818 : autorité explicite de la société (rôle par défaut ; poste si basculée).
+        $jobRoleId = null;
+        if ($user !== null && \App\Core\Requirements\RequirementAuthority::isPosition($companyId)) {
+            $jobRoleId = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('user_id', $user->id)->value('job_role_id');
+        }
+        $map = static::subjectMap($companyId, $user !== null ? $roleKey : null, $jobRoleId ? (int) $jobRoleId : null, $marketKey, $scope);
         if ($map === []) {
             return [];
         }

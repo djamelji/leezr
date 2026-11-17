@@ -278,7 +278,9 @@
       "hr_settings": "إعدادات الموارد البشرية",
       "workforce": "الموارد البشرية"
     },
-    "company": {}
+    "company": {
+      "workforce-hiring": "التوظيف"
+    }
   },
   "workforceDocuments": {
     "payslipMovedHint": "يتم إنشاء كشوف الرواتب الآن من دورة الرواتب. تعرض هذه الصفحة المستندات المُنشأة.",

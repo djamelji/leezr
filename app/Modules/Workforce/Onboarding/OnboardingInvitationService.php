@@ -91,6 +91,71 @@ final class OnboardingInvitationService
     }
 
     /**
+     * ADR-818 — ON-SITE mode : HR (authenticated, workforce.manage) opens THE SAME portal on its own device for
+     * the person in front of it. Same file, same items, same quarantine, same review — no second engine. The
+     * identity is checked in person by HR (session verified, audited with the actor) ; an e-mail is therefore
+     * not required. An existing remote link keeps working (the file can be continued remotely and vice versa).
+     *
+     * @return string raw session (HttpOnly cookie, never shown)
+     */
+    public function openOnSite(Inv $inv): string
+    {
+        $this->assertOwned($inv);
+        if (in_array($inv->status, [Inv::VALIDATED, Inv::REVOKED, Inv::SUBMITTED], true) || $inv->purged_at) {
+            throw ValidationException::withMessages(['status' => __('onboarding.not_sendable')]);
+        }
+        if (! $inv->legal_basis || ! $inv->notice_text) {
+            throw ValidationException::withMessages(['legal_basis' => __('onboarding.declaration_required')]);
+        }
+        $raw = bin2hex(random_bytes(32));
+        DB::transaction(function () use ($inv, $raw) {
+            Inv::where('id', $inv->id)->lockForUpdate()->first();
+            $expires = $inv->expires_at && $inv->expires_at->isFuture() ? $inv->expires_at : now()->addDay();
+            $inv->forceFill(['expires_at' => $expires, 'expired_at' => null, 'started_at' => $inv->started_at ?? now(),
+                'status' => in_array($inv->status, [Inv::DRAFT, Inv::SENT, Inv::EXPIRED], true) ? Inv::IN_PROGRESS : $inv->status])->save();
+            \App\Modules\Workforce\Onboarding\Models\OnboardingSession::create(['onboarding_invitation_id' => $inv->id, 'session_hash' => hash('sha256', $raw),
+                'expires_at' => now()->addMinutes(OnboardingPortalService::SESSION_MINUTES)->min($expires), 'verified_at' => now()]);
+        });
+        $this->audit($inv, 'onboarding.on_site_opened', ['identity_checked_by' => $this->actor->id]);
+
+        return $raw;
+    }
+
+    /**
+     * ADR-818 — FINALISE a validated hire in one transaction : the preparatory record becomes an active
+     * employee with its employment data (position, department, manager, start date). No account, no right,
+     * no contract is created here : access (members.invite, anti-escalation) and contract (workforce.contracts)
+     * stay their own explicit steps. Idempotent refusal once finalised.
+     */
+    public function finalize(Inv $inv, array $data): Employee
+    {
+        $this->assertOwned($inv);
+        if ($inv->status !== Inv::VALIDATED) {
+            throw ValidationException::withMessages(['status' => __('onboarding.finalize_requires_validation')]);
+        }
+
+        return DB::transaction(function () use ($inv, $data) {
+            $employee = Employee::withoutGlobalScopes()->where('company_id', $this->company->id)->lockForUpdate()->findOrFail($inv->employee_id);
+            if (! $employee->isPreparatory()) {
+                throw ValidationException::withMessages(['status' => __('onboarding.already_finalized')]);
+            }
+            $metadata = (array) ($employee->metadata ?? []);
+            $metadata['onboarding_finalized'] = ['at' => now()->toIso8601String(), 'by' => $this->actor->id, 'invitation_id' => $inv->id];
+            $employee->forceFill([
+                'status' => Employee::STATUS_ACTIVE,
+                'hire_date' => $data['hire_date'],
+                'job_role_id' => $data['job_role_id'] ?? $inv->job_role_id ?? $employee->job_role_id,
+                'department_id' => $data['department_id'] ?? $employee->department_id,
+                'manager_id' => $data['manager_id'] ?? $employee->manager_id,
+                'metadata' => $metadata,
+            ])->save();
+            $this->audit($inv, 'onboarding.finalized', ['employee_id' => $employee->id]);
+
+            return $employee;
+        });
+    }
+
+    /**
      * ADR-796.1 — e-mails the invitation (a NEW link : the previous one and its sessions die). Sent at once
      * through the transactional channel (never queued : the link never sits in a job payload) ; outcome
      * recorded (sent / failed, error without the link) ; cooldown + daily cap against repeated sends.
@@ -345,13 +410,22 @@ final class OnboardingInvitationService
         // ADR-796.1 : une lecture reste une lecture. L'expiration est CONSTATÉE par OnboardingLifecycleService
         // (tâche planifiée) ; ici, un lien échu s'affiche « expiré » sans rien écrire.
         $invs = Inv::where('company_id', $this->company->id)->whereNull('purged_at')->latest('id')->limit(200)->get();
-        $employees = Employee::withoutGlobalScopes()->whereIn('id', $invs->pluck('employee_id'))->get(['id', 'first_name', 'last_name'])->keyBy('id');
+        $employees = Employee::withoutGlobalScopes()->whereIn('id', $invs->pluck('employee_id'))->with('jobRole:id,title')->get(['id', 'first_name', 'last_name', 'status', 'preparatory_at', 'job_role_id', 'hire_date'])->keyBy('id');
+        // ADR-818 : avancement documentaire (dépôts) pour l'espace « Embauches ».
+        $uploads = \App\Modules\Workforce\Onboarding\Models\OnboardingUpload::whereIn('onboarding_invitation_id', $invs->pluck('id'))
+            ->where('status', '!=', \App\Modules\Workforce\Onboarding\Models\OnboardingUpload::SUPERSEDED)->get(['onboarding_invitation_id', 'document_code', 'status'])->groupBy('onboarding_invitation_id');
         $filled = OnboardingValue::whereIn('onboarding_invitation_id', $invs->pluck('id'))->whereNotNull('value')->selectRaw('onboarding_invitation_id, count(*) n')->groupBy('onboarding_invitation_id')->pluck('n', 'onboarding_invitation_id');
 
         return $invs->map(fn ($i) => ['id' => $i->id, 'status' => self::effectiveStatus($i), 'person_ref' => 'employee-'.$i->employee_id,
             'name' => trim(($employees[$i->employee_id]->first_name ?? '').' '.($employees[$i->employee_id]->last_name ?? '')),
             'fields_total' => count($i->items('field')), 'fields_filled' => (int) ($filled[$i->id] ?? 0), 'documents_total' => count($i->items('document')),
-            'expires_at' => $i->expires_at?->toIso8601String(), 'submitted_at' => $i->submitted_at?->toIso8601String()])->values()->all();
+            'expires_at' => $i->expires_at?->toIso8601String(), 'submitted_at' => $i->submitted_at?->toIso8601String(),
+            // ADR-818 — Embauches : poste, dépôts, pièces bloquées, finalisation (la fiche n'est plus préparatoire).
+            'job_role' => $employees[$i->employee_id]?->jobRole?->title, 'hire_date' => $employees[$i->employee_id]?->hire_date?->toDateString(),
+            'documents_deposited' => ($uploads[$i->id] ?? collect())->pluck('document_code')->unique()->count(),
+            'documents_blocked' => ($uploads[$i->id] ?? collect())->whereIn('status', \App\Modules\Workforce\Onboarding\Models\OnboardingUpload::BLOCKING)->count(),
+            'finalized' => isset($employees[$i->employee_id]) && ! $employees[$i->employee_id]->isPreparatory(),
+            'created_at' => $i->created_at?->toIso8601String()])->values()->all();
     }
 
     /** Status as displayed : a writable file past its expiry reads « expired » even before the scheduled task records it. */

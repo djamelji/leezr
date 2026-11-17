@@ -162,16 +162,11 @@ defineExpose({ load })
     />
 
     <!-- Mode parallèle : rien n'est encore actif -->
-    <VAlert
+    <!-- ADR-818 : le mode de calcul (rôle / poste) remplace l'ancien avis « mode parallèle » -->
+    <slot
       v-if="!embedded"
-      type="info"
-      variant="tonal"
-      density="compact"
-      class="mb-5"
-      data-test="requirements-parallel-notice"
-    >
-      {{ t('requirementsCfg.parallelNotice') }}
-    </VAlert>
+      name="before"
+    />
 
     <div
       v-if="!embedded"

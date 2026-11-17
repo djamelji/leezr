@@ -83,6 +83,32 @@ class OnboardingController extends Controller
         return response()->json(['url' => $s->issueLink($s->find($id), $data['days'] ?? 7)]); // affiché une seule fois
     }
 
+    /** ADR-818 — on-site mode : same portal, opened by HR on this device (cookie of the portal, never shown). */
+    public function onSite(Request $request, int $id): JsonResponse
+    {
+        $s = $this->service($request);
+        $raw = $s->openOnSite($s->find($id));
+
+        return response()->json(['url' => '/onboarding'])->cookie(OnboardingPortalController::COOKIE, $raw, \App\Modules\Workforce\Onboarding\OnboardingPortalService::SESSION_MINUTES,
+            '/api/public/onboarding', null, $request->isSecure() || app()->environment('production'), true, false, 'strict');
+    }
+
+    /** ADR-818 — finalise a validated hire (activation + employment data, one transaction). */
+    public function finalize(Request $request, int $id): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $data = $request->validate([
+            'hire_date' => 'required|date',
+            'job_role_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
+            'manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)->where('status', \App\Core\Workforce\Employee::STATUS_ACTIVE)],
+        ]);
+        $s = $this->service($request);
+        $employee = $s->finalize($s->find($id), $data);
+
+        return response()->json(['employee_id' => $employee->id, 'person_ref' => 'employee-'.$employee->id]);
+    }
+
     private const ITEMS_RULES = ['items' => 'required|array|min:1|max:80', 'items.*.kind' => 'required|in:field,document', 'items.*.code' => 'required|string|max:100', 'items.*.required' => 'sometimes|boolean'];
 
     public function revise(Request $request, int $id): JsonResponse

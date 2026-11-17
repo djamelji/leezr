@@ -6,6 +6,8 @@ return [
     'imperative_locked' => 'This requirement is imposed by a mandatory rule: it cannot be removed.',
     'unknown_definition' => 'Information or document not found in your catalogue.',
     'unknown_position' => 'Position not found in your company.',
+    'authority_unknown' => 'Unknown computation mode.',
+    'authority_losses' => ':n document(s) would no longer be requested: take them over on the positions concerned or confirm explicitly.',
     'position_required' => 'Choose a position to see its takeover proposal.',
     'forbidden_section' => 'You cannot change this part.',
     'module_not_active' => "This module is not active for your company: its proposals cannot be adopted.",

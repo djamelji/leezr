@@ -8,7 +8,6 @@ import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 import PersonAddDrawer from './_PersonAddDrawer.vue'
-import OnboardingPanel from './_OnboardingPanel.vue'
 import PeopleHrTools from './_PeopleHrTools.vue'
 import ProfileFieldsSettings from './_ProfileFieldsSettings.vue'
 import MemberHealth from './_MemberHealth.vue'
@@ -28,7 +27,7 @@ const route = useRoute()
 const accessRevision = ref(0) // ADR-809 : rafraîchit les vues après confirmation groupée
 const router = useRouter()
 const store = usePeopleListStore()
-const { can } = useCan()
+const { can, canModule } = useCan()
 const settings = useCompanySettingsStore()
 const { toast } = useAppToast()
 
@@ -153,8 +152,18 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
         </VList>
       </VMenu>
       <VBtn
-        v-if="(tab === 'people' || tab === 'hr') && canAdd"
+        v-if="(tab === 'people' || tab === 'hr') && canModule('workforce') && can('workforce.manage')"
         color="primary"
+        prepend-icon="tabler-user-check"
+        to="/company/workforce/hiring?new=1"
+        data-test="people-hire"
+      >
+        {{ t('hiring.hire') }}
+      </VBtn>
+      <VBtn
+        v-if="(tab === 'people' || tab === 'hr') && canAdd"
+        :color="canModule('workforce') && can('workforce.manage') ? 'secondary' : 'primary'"
+        :variant="canModule('workforce') && can('workforce.manage') ? 'tonal' : 'flat'"
         prepend-icon="tabler-user-plus"
         data-test="people-add"
         @click="openAdd()"
@@ -163,8 +172,7 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
       </VBtn>
     </div>
 
-    <!-- ADR-796 : intégrations en cours (RH) — même page Équipe, aucun nouveau menu -->
-    <OnboardingPanel v-if="tab === 'people' && can('workforce.manage')" />
+    <!-- ADR-818 : les embauches vivent dans l'espace « Embauches » (une seule liste, un seul assistant) -->
     <MemberHealth v-if="tab === 'people' && can('members.view')" />
     <!-- Garde = celle de l'API (POST field-activations / field-definitions : settings.manage) -->
     <ProfileFieldsSettings

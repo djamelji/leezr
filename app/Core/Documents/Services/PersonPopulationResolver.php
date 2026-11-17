@@ -51,6 +51,7 @@ class PersonPopulationResolver
                         'subject' => $subject,
                         'user_id' => $e->user_id ? (int) $e->user_id : null,
                         'employee_id' => (int) $e->id,
+                        'job_role_id' => $e->job_role_id ? (int) $e->job_role_id : null, // ADR-818 : autorité « poste »
                         'department_id' => $e->department_id ? (int) $e->department_id : null,
                         'status' => $e->status,
                         'role_key' => null,

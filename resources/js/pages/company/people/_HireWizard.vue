@@ -1,7 +1,10 @@
 <script setup>
-// ADR-796 (L6) — « Inviter une recrue à compléter son dossier » : personne, poste, éléments proposés
-// (sources expliquées par le serveur), déclaration de collecte, puis lien affiché UNE seule fois.
-// Aucun compte, aucun droit, aucun contrat n'est créé.
+// ADR-818 — assistant UNIQUE « Embaucher » (sur le moteur d'intégration ADR-796) :
+//   1. Personne (champs obligatoires signalés) + POSTE obligatoire (il détermine les exigences) ;
+//   2. Exigences du poste (sources expliquées par le serveur, obligatoire / facultatif) ;
+//   3. Déclaration de collecte puis MODE : compléter sur place maintenant (même portail, ouvert ici par la RH)
+//      ou à distance (lien par e-mail ou à copier, affiché UNE seule fois). Les deux modes alimentent le même dossier.
+// Aucun compte, aucun droit, aucun contrat n'est créé ici : la finalisation et l'accès sont des étapes explicites.
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -23,11 +26,12 @@ const busy = ref(false)
 
 const reset = () => {
   step.value = 1
+  onSiteOpened.value = false
   link.value = null
   mailed.value = false
   createdId.value = null
   selected.value = {}
-  form.value = { first_name: '', last_name: '', email: '', hire_date: '', candidate_email: '', job_role_id: null, purpose: 'hiring_onboarding', legal_basis: null, notice_text: t('onboardingFile.defaultNotice'), days: 7 }
+  form.value = { first_name: '', last_name: '', email: '', hire_date: '', candidate_email: '', job_role_id: null, purpose: 'hiring_onboarding', legal_basis: 'contract_preparation', notice_text: t('onboardingFile.defaultNotice'), days: 7 }
 }
 
 const loadProposal = async () => {
@@ -43,7 +47,8 @@ watch(() => props.isDialogVisible, async v => {
   try {
     const res = await $api('/workforce/job-roles')
 
-    jobs.value = Array.isArray(res) ? res : (res.data || res.job_roles || [])
+    // Sans droit rémunération, la liste arrive en objet (clé `compensation_hidden`) : ne garder que les postes.
+    jobs.value = Array.isArray(res) ? res : Object.values(res || {}).filter(r => r && typeof r === 'object' && r.id)
   }
   catch { jobs.value = [] }
 })
@@ -56,7 +61,16 @@ const toggle = item => {
   selected.value = next
 }
 const sourceText = s => t(`onboardingFile.source.${s.kind}`, { module: s.module || '' }) + (s.required ? ` · ${t('onboardingFile.required')}` : '')
-const canNext = computed(() => step.value !== 1 || (form.value.first_name && form.value.last_name && form.value.hire_date))
+// ADR-818 : plus de bouton bloqué sans explication — chaque champ manquant est nommé.
+const missing = computed(() => step.value !== 1 ? [] : [
+  !form.value.first_name && t('onboardingFile.firstName'),
+  !form.value.last_name && t('onboardingFile.lastName'),
+  !form.value.hire_date && t('onboardingFile.hireDate'),
+  !form.value.job_role_id && t('onboardingFile.position'),
+].filter(Boolean))
+const canNext = computed(() => missing.value.length === 0)
+const required = v => !!v || t('validation.required')
+const onSiteOpened = ref(false)
 
 const next = async () => {
   if (step.value === 1) await loadProposal()
@@ -73,7 +87,14 @@ const create = async mode => {
 
       createdId.value = created.id
     }
-    if (mode === 'mail') {
+    if (mode === 'onsite') {
+      // Même portail, ouvert ici : la personne complète son dossier devant la RH (identité vérifiée en personne).
+      const res = await $api(`/workforce/onboarding-files/${createdId.value}/on-site`, { method: 'POST' })
+
+      window.open(res.url, '_blank', 'noopener')
+      onSiteOpened.value = true
+    }
+    else if (mode === 'mail') {
       await $api(`/workforce/onboarding-files/${createdId.value}/send`, { method: 'POST', body: { days: form.value.days } })
       mailed.value = true
     }
@@ -98,14 +119,22 @@ const copy = async () => {
 <template>
   <AppDialog
     :model-value="isDialogVisible"
-    :title="t('onboardingFile.inviteTitle')"
-    :subtitle="t('onboardingFile.inviteSubtitle')"
+    :title="t('hiring.wizardTitle')"
+    :subtitle="t(`hiring.step${step}`)"
     :max-width="720"
     @update:model-value="v => emit('update:isDialogVisible', v)"
   >
     <!-- Lien généré : affiché une seule fois -->
     <VAlert
-      v-if="mailed"
+      v-if="onSiteOpened"
+      type="success"
+      variant="tonal"
+      data-test="hiring-onsite-opened"
+    >
+      {{ t('hiring.onSiteOpened') }}
+    </VAlert>
+    <VAlert
+      v-else-if="mailed"
       type="success"
       variant="tonal"
       data-test="onboarding-mailed"
@@ -133,12 +162,25 @@ const copy = async () => {
 
     <template v-else-if="step === 1">
       <VRow>
-        <VCol cols="12" sm="6"><AppTextField v-model="form.first_name" :label="t('onboardingFile.firstName')" data-test="onb-first-name" /></VCol>
-        <VCol cols="12" sm="6"><AppTextField v-model="form.last_name" :label="t('onboardingFile.lastName')" data-test="onb-last-name" /></VCol>
-        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('onboardingFile.email')" type="email" data-test="onb-email" /></VCol>
-        <VCol cols="12" sm="6"><AppDateTimePicker v-model="form.hire_date" :label="t('onboardingFile.hireDate')" data-test="onb-hire-date" /></VCol>
-        <VCol cols="12"><AppSelect v-model="form.job_role_id" :items="jobs" item-title="title" item-value="id" clearable :label="t('onboardingFile.position')" /></VCol>
+        <VCol cols="12" sm="6"><AppTextField v-model="form.first_name" :label="`${t('onboardingFile.firstName')} *`" :rules="[required]" data-test="onb-first-name" /></VCol>
+        <VCol cols="12" sm="6"><AppTextField v-model="form.last_name" :label="`${t('onboardingFile.lastName')} *`" :rules="[required]" data-test="onb-last-name" /></VCol>
+        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('onboardingFile.email')" type="email" :hint="t('hiring.emailHint')" persistent-hint data-test="onb-email" /></VCol>
+        <VCol cols="12" sm="6"><AppDateTimePicker v-model="form.hire_date" :label="`${t('onboardingFile.hireDate')} *`" :rules="[required]" data-test="onb-hire-date" /></VCol>
+        <VCol cols="12"><AppSelect v-model="form.job_role_id" :items="jobs" item-title="title" item-value="id" :label="`${t('onboardingFile.position')} *`" :rules="[required]" :hint="t('hiring.positionHint')" persistent-hint data-test="onb-position" /></VCol>
       </VRow>
+      <p class="text-caption text-medium-emphasis mt-3 mb-0">
+        {{ t('hiring.requiredLegend') }}
+      </p>
+      <VAlert
+        v-if="!jobs.length"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+      >
+        {{ t('hiring.noPosition') }}
+        <RouterLink to="/company/workforce/organization/positions">{{ t('hiring.createPosition') }}</RouterLink>
+      </VAlert>
     </template>
 
     <template v-else-if="step === 2">
@@ -203,14 +245,20 @@ const copy = async () => {
     </template>
 
     <template #actions>
+      <span
+        v-if="step === 1 && missing.length"
+        class="text-caption text-medium-emphasis me-auto"
+        data-test="hiring-missing"
+      >{{ t('hiring.missing', { fields: missing.join(', ') }) }}</span>
       <VBtn
         variant="text"
         @click="emit('update:isDialogVisible', false)"
       >
-        {{ link || mailed ? t('common.close') : t('common.cancel') }}
+        {{ link || mailed || onSiteOpened ? t('common.close') : t('common.cancel') }}
       </VBtn>
+      <template v-if="onSiteOpened" />
       <VBtn
-        v-if="link && !mailed"
+        v-else-if="link && !mailed"
         color="primary"
         prepend-icon="tabler-copy"
         @click="copy"
@@ -234,6 +282,17 @@ const copy = async () => {
         {{ t('onboardingFile.next') }}
       </VBtn>
       <template v-else>
+        <VBtn
+          color="primary"
+          variant="tonal"
+          prepend-icon="tabler-device-desktop"
+          :loading="busy"
+          :disabled="!form.legal_basis || !form.notice_text"
+          data-test="hiring-onsite"
+          @click="create('onsite')"
+        >
+          {{ t('hiring.onSite') }}
+        </VBtn>
         <VBtn
           variant="tonal"
           :loading="busy"

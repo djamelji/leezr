@@ -211,7 +211,8 @@
       "settings-templates": "Modèles de documents",
       "settings-signature": "Signature électronique",
       "settings-leave-types": "Types d'absence",
-      "workforce-requirements": "Informations & documents demandés"
+      "workforce-requirements": "Informations & documents demandés",
+      "workforce-hiring": "Embauches"
     }
   },
   "roles": {
@@ -11051,7 +11052,7 @@
       "level": "Niveau",
       "description": "Missions et responsabilités"
     },
-    "requirementsStatus": "Ces exigences sont enregistrées pour le poste. Les dossiers et demandes en cours ne changent pas tant que l'activation par poste n'est pas validée : aujourd'hui, les pièces demandées suivent encore la configuration historique.",
+    "requirementsStatus": "Ces exigences sont celles du poste. Elles s'appliquent aux nouvelles demandes dès que la société calcule les pièces par poste (voir « Informations et documents demandés ») ; les pièces déjà déposées et les demandes en cours ne changent jamais.",
     "noPeople": "Personne n'occupe ce poste.",
     "withAccount": "Avec compte",
     "withoutAccount": "Sans compte",
@@ -11082,5 +11083,76 @@
       "adopt": "Confirmer la reprise",
       "adopted": "{n} exigence(s) reprises pour ce poste."
     }
+  },
+  "hiring": {
+    "title": "Embauches",
+    "subtitle": "Les dossiers d'embauche en cours : ce qui manque, ce qui est à vérifier, ce qui reste à finaliser.",
+    "hire": "Embaucher",
+    "wizardTitle": "Embaucher",
+    "step1": "1. La personne et son poste",
+    "step2": "2. Ce que le poste demande",
+    "step3": "3. Comment compléter le dossier",
+    "emailHint": "Facultatif. Sert à envoyer le lien et à vérifier l'identité à distance.",
+    "positionHint": "Le poste détermine les informations et les justificatifs demandés.",
+    "requiredLegend": "* champ obligatoire",
+    "missing": "À compléter : {fields}",
+    "noPosition": "Aucun poste n'est encore défini.",
+    "createPosition": "Créer un poste",
+    "onSite": "Compléter sur place maintenant",
+    "onSiteOpened": "Le dossier s'est ouvert dans un nouvel onglet : la personne peut le compléter ici, devant vous. Vous pourrez le reprendre ou envoyer un lien plus tard.",
+    "continueOnSite": "Compléter sur place",
+    "review": "Vérifier",
+    "details": "Ouvrir",
+    "finalize": "Finaliser",
+    "finalizeTitle": "Finaliser l'embauche de {name}",
+    "finalizeSubtitle": "La personne devient un collaborateur actif.",
+    "finalizeNote": "Aucun compte, aucun droit ni contrat n'est créé à cette étape : vous pourrez les ajouter ensuite.",
+    "finalized": "Embauche finalisée.",
+    "finalizedLong": "L'embauche est finalisée : la personne fait désormais partie de l'équipe.",
+    "openFile": "Ouvrir la fiche",
+    "createContract": "Préparer le contrat",
+    "giveAccess": "Donner un accès à Leezr",
+    "blocked": "{n} pièce(s) bloquée(s)",
+    "progressDetail": "{f}/{ft} informations · {dd}/{dt} pièces",
+    "empty": "Aucune embauche pour ce filtre.",
+    "col": {
+      "person": "Personne",
+      "position": "Poste",
+      "stage": "Étape",
+      "progress": "Avancement",
+      "start": "Entrée prévue"
+    },
+    "stage": {
+      "collecting": "Dossier en cours",
+      "to_review": "À vérifier",
+      "to_finalize": "À finaliser",
+      "done": "Finalisée",
+      "closed": "Clos"
+    },
+    "filter": {
+      "open": "En cours",
+      "collecting": "Dossier en cours",
+      "to_review": "À vérifier",
+      "to_finalize": "À finaliser",
+      "done": "Finalisées",
+      "all": "Toutes"
+    }
+  },
+  "requirementAuthority": {
+    "title": "Mode de calcul des exigences",
+    "role": "Aujourd'hui, les pièces demandées à chaque personne suivent encore son rôle d'accès (configuration historique).",
+    "position": "Les pièces demandées suivent le poste de chaque personne (configuration actuelle).",
+    "preview": "Voir l'effet du passage au calcul par poste",
+    "people": "{t} personne(s) : {u} inchangée(s), {c} concernée(s).",
+    "gained": "Seraient demandés en plus",
+    "lost": "Ne seraient plus demandés",
+    "none": "Aucun",
+    "lostHint": "Reprenez ces pièces sur les postes concernés (onglet « Reprise de l'existant » de chaque poste) avant de basculer.",
+    "ready": "Aucune pièce ne serait perdue : vous pouvez basculer.",
+    "switch": "Passer au calcul par poste",
+    "switchAnyway": "Basculer malgré les pièces perdues",
+    "back": "Revenir au calcul par rôle",
+    "switched": "Mode de calcul mis à jour.",
+    "note": "Les pièces déjà déposées et les demandes en cours ne changent pas. Seules les nouvelles demandes, les dossiers et la conformité suivent le nouveau mode. Retour possible à tout moment."
   }
 }

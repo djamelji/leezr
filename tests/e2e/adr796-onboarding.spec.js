@@ -31,17 +31,19 @@ test('parcours complet : invitation e-mail, dossier mobile, quarantaine, validat
 
   try {
     await loginCompany(page, 'owner@leezr.test')
-    await page.goto('/company/people', { waitUntil: 'domcontentloaded' })
-    const panel = page.locator('[data-test="onboarding-panel"]')
-    await expect(panel).toBeVisible({ timeout: 15000 })
+    // ADR-818 : les embauches vivent dans l'espace « Embauches » (assistant unique « Embaucher »)
+    await page.goto('/company/workforce/hiring', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('[data-test="hiring-table"]')).toBeVisible({ timeout: 15000 })
 
     // ── RH : préparation (bureau) ──
-    await page.locator('[data-test="onboarding-invite"]').click()
+    await page.locator('[data-test="hiring-new"]').click()
     await page.locator('[data-test="onb-first-name"] input').fill('E2E Recrue')
     await page.locator('[data-test="onb-last-name"] input').fill(stamp)
     await page.locator('[data-test="onb-email"] input').fill(email)
     await page.locator('[data-test="onb-hire-date"] input.flatpickr-input, [data-test="onb-hire-date"] input').first()
       .evaluate(el => { const fp = el._flatpickr || el.closest('[data-test]').querySelector('input')._flatpickr; fp.setDate('2027-01-04', true) })
+    await page.locator('[data-test="onb-position"]').click() // ADR-818 : poste obligatoire
+    await page.getByRole('option').first().click()
     await page.locator('[data-test="onb-next"]').click()
     await expect(page.locator('[data-test^="onb-item-"]').first()).toBeVisible()
     const selectedRows = page.locator('[data-test^="onb-item-"][data-selected="true"]')
@@ -101,9 +103,9 @@ test('parcours complet : invitation e-mail, dossier mobile, quarantaine, validat
 
     // ── RH : pièce non analysée → validation bloquée ──
     await page.reload()
-    const row = panel.locator('.onb-row', { hasText: stamp })
+    const row = page.locator('[data-test="hiring-table"] tr', { hasText: stamp })
     await expect(row).toBeVisible({ timeout: 15000 })
-    await row.getByRole('button').click()
+    await row.locator('[data-test^="hiring-open-"]').click()
     await expect(page.locator('[data-test="onb-blocking"]')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('[data-test="onb-validate"]')).toBeDisabled()
     await settle(page, 600)
@@ -125,7 +127,7 @@ test('parcours complet : invitation e-mail, dossier mobile, quarantaine, validat
     expect(artisan('onboarding:scan-uploads', '--simulate', `--upload=${uploadId}`)).toContain('"ingested":1')
 
     await page.reload()
-    await panel.locator('.onb-row', { hasText: stamp }).getByRole('button').click()
+    await page.locator('[data-test="hiring-table"] tr', { hasText: stamp }).locator('[data-test^="hiring-open-"]').click()
     await expect(page.locator('[data-test="onb-review-nationality"]')).toBeVisible()
     await expect(page.locator('[data-test="onb-validate"]')).toBeEnabled()
     await settle(page, 600)
