@@ -11095,7 +11095,7 @@
     "step1": "1. La personne et son poste",
     "step2": "2. Ce que le poste demande",
     "step3": "3. Comment compléter le dossier",
-    "emailHint": "Facultatif. Sert à envoyer le lien et à vérifier l'identité à distance.",
+    "emailHint": "Sert à envoyer le lien et à vérifier l'identité à distance.",
     "positionHint": "Le poste détermine les informations et les justificatifs demandés.",
     "requiredLegend": "* champ obligatoire",
     "missing": "À compléter : {fields}",
@@ -11139,7 +11139,10 @@
       "to_finalize": "À finaliser",
       "done": "Finalisées",
       "all": "Toutes"
-    }
+    },
+    "position": "Poste",
+    "email": "E-mail de la personne",
+    "needsEmail": "Des éléments sensibles sont demandés : pour les compléter à distance, indiquez l'e-mail de la personne (un code de vérification lui sera envoyé). Sinon, complétez le dossier sur place."
   },
   "requirementAuthority": {
     "title": "Mode de calcul des exigences",

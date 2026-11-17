@@ -108,7 +108,7 @@ const submit = async () => {
         <AppSelect
           v-model="form.job_role_id"
           :items="jobs"
-          :label="t('onboardingFile.position')"
+          :label="t('hiring.position')"
         />
       </VCol>
       <VCol

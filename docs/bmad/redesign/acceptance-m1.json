@@ -1,0 +1,119 @@
+{
+  "steps": [
+    {
+      "name": "à distance sans e-mail : explication + lien désactivé",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "lien à distance affiché une fois",
+      "ok": true,
+      "detail": "http://127.0.0.1:8816/onboarding#t=…"
+    },
+    {
+      "name": "la recrue ouvre le lien (mobile)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "reprise sur place du même dossier (dépôt distant visible)",
+      "ok": true,
+      "detail": "Permis de conduire *\nReçu : piece.png — analyse de sécurité en cours, puis vérification par l’entreprise\nRemplacer"
+    },
+    {
+      "name": "carte « Mode de calcul des exigences »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "aperçu par personne",
+      "ok": true,
+      "detail": {
+        "people": "7 personne(s) : 5 inchangée(s), 2 concernée(s).",
+        "lost": [
+          "Permis de conduire · 1",
+          "Certificat médical · 1"
+        ]
+      }
+    },
+    {
+      "name": "bascule par poste appliquée (clone)",
+      "ok": true,
+      "detail": "requirements-authority-switch-anyway"
+    },
+    {
+      "name": "lecture de la fiche : aucune demande écrite",
+      "ok": true,
+      "detail": {
+        "before": "11",
+        "after": "11"
+      }
+    },
+    {
+      "name": "« Demander les pièces manquantes » crée les demandes explicitement",
+      "ok": true,
+      "detail": {
+        "after": "11",
+        "after2": "11"
+      }
+    },
+    {
+      "name": "retour au calcul par rôle",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "aucune erreur API inattendue",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "manager : pas d'accès aux embauches ni à la bascule",
+      "ok": false,
+      "detail": {
+        "files": 403,
+        "switch": 422,
+        "final": "/company/403",
+        "hireBtn": 0
+      }
+    },
+    {
+      "name": "salarie : pas d'accès aux embauches ni à la bascule",
+      "ok": true,
+      "detail": {
+        "files": 403,
+        "switch": 403,
+        "final": "/company/403",
+        "hireBtn": 0
+      }
+    },
+    {
+      "name": "chauffeur : pas d'accès aux embauches ni à la bascule",
+      "ok": true,
+      "detail": {
+        "files": 403,
+        "switch": 403,
+        "final": "/company/403",
+        "hireBtn": 0
+      }
+    }
+  ],
+  "manager": {
+    "files": 403,
+    "switch": 422,
+    "final": "/company/403",
+    "hireBtn": 0
+  },
+  "salarie": {
+    "files": 403,
+    "switch": 403,
+    "final": "/company/403",
+    "hireBtn": 0
+  },
+  "chauffeur": {
+    "files": 403,
+    "switch": 403,
+    "final": "/company/403",
+    "hireBtn": 0
+  }
+}

@@ -11095,7 +11095,7 @@
     "step1": "1. The person and their position",
     "step2": "2. What the position requires",
     "step3": "3. How to complete the file",
-    "emailHint": "Optional. Used to send the link and verify identity remotely.",
+    "emailHint": "Used to send the link and verify identity remotely.",
     "positionHint": "The position defines the information and documents requested.",
     "requiredLegend": "* required field",
     "missing": "To complete: {fields}",
@@ -11139,7 +11139,10 @@
       "to_finalize": "To finalise",
       "done": "Finalised",
       "all": "All"
-    }
+    },
+    "position": "Position",
+    "email": "Person's e-mail",
+    "needsEmail": "Sensitive items are requested: to complete them remotely, enter the person's e-mail (a verification code will be sent). Otherwise, complete the file on site."
   },
   "requirementAuthority": {
     "title": "Requirement computation",

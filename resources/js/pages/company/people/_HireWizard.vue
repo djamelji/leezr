@@ -41,8 +41,7 @@ const loadProposal = async () => {
   selected.value = Object.fromEntries(proposal.value.items.filter(i => i.suggested).map(i => [`${i.kind}:${i.code}`, { required: i.suggested_required }]))
 }
 
-watch(() => props.isDialogVisible, async v => {
-  if (!v) return
+const prepare = async () => {
   reset()
   try {
     const res = await $api('/workforce/job-roles')
@@ -51,7 +50,8 @@ watch(() => props.isDialogVisible, async v => {
     jobs.value = Array.isArray(res) ? res : Object.values(res || {}).filter(r => r && typeof r === 'object' && r.id)
   }
   catch { jobs.value = [] }
-})
+}
+watch(() => props.isDialogVisible, v => { if (v) prepare() })
 
 const toggle = item => {
   const key = `${item.kind}:${item.code}`
@@ -66,7 +66,7 @@ const missing = computed(() => step.value !== 1 ? [] : [
   !form.value.first_name && t('onboardingFile.firstName'),
   !form.value.last_name && t('onboardingFile.lastName'),
   !form.value.hire_date && t('onboardingFile.hireDate'),
-  !form.value.job_role_id && t('onboardingFile.position'),
+  !form.value.job_role_id && t('hiring.position'),
 ].filter(Boolean))
 const canNext = computed(() => missing.value.length === 0)
 const required = v => !!v || t('validation.required')
@@ -109,11 +109,16 @@ const create = async mode => {
   finally { busy.value = false }
 }
 const hasEmail = computed(() => !!(form.value.candidate_email || form.value.email))
+// ADR-818 : à distance, une pièce ou information sensible exige un e-mail (code de vérification, ADR-796.1).
+// Sur place, l'identité est vérifiée par la RH : le bouton reste disponible. Plus de refus sans explication.
+const needsEmail = computed(() => !hasEmail.value && proposal.value.items.some(i => i.sensitive && selected.value[`${i.kind}:${i.code}`]))
 
 const copy = async () => {
   await navigator.clipboard.writeText(link.value)
   toast(t('onboardingFile.copied'), 'success')
 }
+// ADR-818 : ouverture directe (?new=1) — la boîte est déjà visible au montage.
+if (props.isDialogVisible) prepare()
 </script>
 
 <template>
@@ -164,9 +169,9 @@ const copy = async () => {
       <VRow>
         <VCol cols="12" sm="6"><AppTextField v-model="form.first_name" :label="`${t('onboardingFile.firstName')} *`" :rules="[required]" data-test="onb-first-name" /></VCol>
         <VCol cols="12" sm="6"><AppTextField v-model="form.last_name" :label="`${t('onboardingFile.lastName')} *`" :rules="[required]" data-test="onb-last-name" /></VCol>
-        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('onboardingFile.email')" type="email" :hint="t('hiring.emailHint')" persistent-hint data-test="onb-email" /></VCol>
+        <VCol cols="12" sm="6"><AppTextField v-model="form.email" :label="t('hiring.email')" type="email" :hint="t('hiring.emailHint')" persistent-hint data-test="onb-email" /></VCol>
         <VCol cols="12" sm="6"><AppDateTimePicker v-model="form.hire_date" :label="`${t('onboardingFile.hireDate')} *`" :rules="[required]" data-test="onb-hire-date" /></VCol>
-        <VCol cols="12"><AppSelect v-model="form.job_role_id" :items="jobs" item-title="title" item-value="id" :label="`${t('onboardingFile.position')} *`" :rules="[required]" :hint="t('hiring.positionHint')" persistent-hint data-test="onb-position" /></VCol>
+        <VCol cols="12"><AppSelect v-model="form.job_role_id" :items="jobs" item-title="title" item-value="id" :label="`${t('hiring.position')} *`" :rules="[required]" :hint="t('hiring.positionHint')" persistent-hint data-test="onb-position" /></VCol>
       </VRow>
       <p class="text-caption text-medium-emphasis mt-3 mb-0">
         {{ t('hiring.requiredLegend') }}
@@ -242,6 +247,16 @@ const copy = async () => {
       >
         {{ t('onboardingFile.declarationNotice') }}
       </VAlert>
+      <VAlert
+        v-if="needsEmail"
+        type="warning"
+        variant="tonal"
+        density="compact"
+        class="mt-2"
+        data-test="hiring-needs-email"
+      >
+        {{ t('hiring.needsEmail') }}
+      </VAlert>
     </template>
 
     <template #actions>
@@ -296,8 +311,8 @@ const copy = async () => {
         <VBtn
           variant="tonal"
           :loading="busy"
-          :disabled="!form.legal_basis || !form.notice_text"
           data-test="onb-create"
+          :disabled="!form.legal_basis || !form.notice_text || needsEmail"
           @click="create('link')"
         >
           {{ t('onboardingFile.createLink') }}
