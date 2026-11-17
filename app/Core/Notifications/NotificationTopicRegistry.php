@@ -156,6 +156,17 @@ class NotificationTopicRegistry
     public static function boot(): void
     {
         static::register([
+            // ─── ADR-819 — Workforce Parrainage : candidature reçue (consentie) ─────────────────
+            'workforce.referral_received' => [
+                'label' => 'Referral application received',
+                'category' => 'workforce',
+                'scope' => 'company',
+                'icon' => 'tabler-heart-handshake',
+                'severity' => 'info',
+                'default_channels' => ['in_app'],
+                'sort_order' => 30,
+                'description' => 'A relative recommended by an employee has applied.',
+            ],
             // ─── Workforce planning topics (ADR-715) ─────────────────
             'workforce.planning_published' => [
                 'label' => 'Planning published',

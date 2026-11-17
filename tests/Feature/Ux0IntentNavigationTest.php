@@ -36,7 +36,7 @@ class Ux0IntentNavigationTest extends TestCase
     private function company(bool $allModules, string $jobdomain = 'logistique'): Company
     {
         $modules = $allModules
-            ? ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_contract', 'workforce_signature', 'logistics_shipments']
+            ? ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_contract', 'workforce_signature', 'workforce_referral', 'logistics_shipments'] // ADR-819 : + Parrainage
             : [];
         Jobdomain::updateOrCreate(['key' => $jobdomain], ['label' => $jobdomain, 'default_modules' => $modules]);
         $company = Company::create(['name' => 'UX0 '.uniqid(), 'slug' => 'ux0-'.uniqid(), 'plan_key' => 'pro', 'jobdomain_key' => $jobdomain]);
@@ -80,11 +80,11 @@ class Ux0IntentNavigationTest extends TestCase
         }
         // ADR-818 : Équipe devient un espace (Collaborateurs + Embauches) pour qui gère les fiches.
         $this->assertSame(['dashboard', 'space-team', 'space-time', 'documents', 'workforce-payroll', 'shipments', 'modules', 'space-settings'], $this->entries($groups)); // ADR-782
-        $this->assertSame(['people', 'workforce-hiring'], array_column(collect($groups)->firstWhere('key', 'team')['items'][0]['children'], 'key'));
+        $this->assertSame(['people', 'workforce-hiring', 'workforce-referrals'], array_column(collect($groups)->firstWhere('key', 'team')['items'][0]['children'], 'key'));
         $this->assertSame(['workforce-planning', 'workforce-time', 'workforce-leave'], array_column(collect($groups)->firstWhere('key', 'time')['items'][0]['children'], 'key'));
         $this->assertSame('nav.groups.settings', collect($groups)->firstWhere('key', 'settings')['items'][0]['labelKey']);
         // A manager's personal entries live in the avatar menu — all of them, none lost.
-        $this->assertSame(['my-space', 'workforce-me', 'account-settings'], $this->menuKeys($groups));
+        $this->assertSame(['my-space', 'workforce-me', 'my-referrals', 'account-settings'], $this->menuKeys($groups));
     }
 
     public function test_presentation_never_adds_or_loses_a_reachable_entry(): void
@@ -199,7 +199,7 @@ class Ux0IntentNavigationTest extends TestCase
         $this->assertSame(['my-space', 'account-settings'], $this->menuKeys($noRecord));
         // …and kept for an administrator who is ALSO an employee.
         $adminEmployee = NavBuilder::forCompany($company, null, 'management', ['employment' => true]);
-        $this->assertSame(['my-space', 'workforce-me', 'account-settings'], $this->menuKeys($adminEmployee));
+        $this->assertSame(['my-space', 'workforce-me', 'my-referrals', 'account-settings'], $this->menuKeys($adminEmployee)); // ADR-819 : + Parrainage (salarié)
 
         // HR settings is a structure page (refused to operational profiles by its own guard) : the
         // entry follows the page — no entry leading to a refusal.

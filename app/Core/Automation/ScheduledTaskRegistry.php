@@ -237,6 +237,15 @@ class ScheduledTaskRegistry
             'cron' => '15 * * * *',
             'expected_interval_minutes' => 60,
         ],
+        // ADR-819 — Workforce Parrainage : rétention (anonymisation)
+        'referrals:purge' => [
+            'command' => 'referrals:purge',
+            'description' => 'automations.tasks.referralsPurge',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '40 3 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
         'onboarding:scan-uploads' => [
             'command' => 'onboarding:scan-uploads',
             'description' => 'automations.tasks.onboardingScanUploads',

@@ -280,7 +280,10 @@
     },
     "company": {
       "workforce-hiring": "التوظيف",
-      "company-catalogs": "الفهارس"
+      "company-catalogs": "الفهارس",
+      "workforce-referrals": "الإحالات",
+      "my-referrals": "الإحالة",
+      "settings-referrals": "الإحالة"
     }
   },
   "workforceDocuments": {
@@ -547,6 +550,38 @@
       "documents.processing": {
         "label": "معالجة المستندات",
         "hint": "طلب المستندات ورفعها نيابةً عن الشخص ومراجعتها — دون إعداد أنواع المستندات أو فتح المستندات شديدة السرية."
+      },
+      "workforce_referral.employee": {
+        "label": "الإحالة (موظف)",
+        "hint": "التوصية بأحد المعارف ومتابعة الإحالات."
+      },
+      "workforce_referral.review": {
+        "label": "دراسة الإحالات",
+        "hint": "دراسة الطلبات وفتح التوظيف."
+      },
+      "workforce_referral.management": {
+        "label": "إعدادات الإحالة",
+        "hint": "اختيار الوظائف المفتوحة والأنماط ومدة الحفظ."
+      }
+    },
+    "modules": {
+      "workforce_referral": {
+        "name": "الإحالة",
+        "description": "يوصي الموظفون بأحد معارفهم أو يشاركون رابطًا؛ وتدرس الموارد البشرية الطلبات وتفتح التوظيف."
+      }
+    },
+    "permissions": {
+      "workforce_referral.refer": {
+        "label": "التوصية بأحد المعارف",
+        "hint": "التوصية بأحد المعارف أو مشاركة رابط لوظيفة مفتوحة."
+      },
+      "workforce_referral.review": {
+        "label": "دراسة الإحالات",
+        "hint": "الاطلاع على طلبات الإحالة واتخاذ القرار وفتح التوظيف."
+      },
+      "workforce_referral.manage": {
+        "label": "إعداد الإحالة",
+        "hint": "اختيار الوظائف المفتوحة والأنماط ومدة الحفظ."
       }
     }
   },
@@ -625,6 +660,10 @@
     },
     "logistics_analytics": {
       "name": "التحليلات المتقدمة"
+    },
+    "workforce_referral": {
+      "name": "الإحالة",
+      "description": "يوصي الموظفون بأحد معارفهم أو يشاركون رابطًا؛ وتدرس الموارد البشرية الطلبات وتفتح التوظيف."
     }
   },
   "moduleSetup": {
@@ -741,7 +780,8 @@
   },
   "settingsHub": {
     "hints": {
-      "company-catalogs": "حقول الشركة وأنواع المستندات ومصدرها والوظائف التي تتطلبها."
+      "company-catalogs": "حقول الشركة وأنواع المستندات ومصدرها والوظائف التي تتطلبها.",
+      "settings-referrals": "الوظائف المفتوحة للإحالة والأنماط والمكافأة والحفظ."
     }
   }
 }

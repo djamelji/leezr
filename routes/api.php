@@ -109,6 +109,13 @@ Route::prefix('public/onboarding')->middleware([\App\Modules\Workforce\Onboardin
     Route::post('/close', [$c, 'close']);
 });
 
+// ADR-819 — page PUBLIQUE de candidature par parrainage : jeton dans le corps, liens expirables à usage unique.
+Route::prefix('public/referral')->middleware([\App\Modules\Workforce\Onboarding\Http\OnboardingPublicHeaders::class, 'throttle:30,1,ref'])->group(function () {
+    $c = \App\Modules\Workforce\Referral\Http\ReferralPortalController::class;
+    Route::post('/view', [$c, 'view'])->middleware('throttle:20,1,ref-view');
+    Route::post('/apply', [$c, 'apply'])->middleware('throttle:5,10,ref-apply');
+});
+
 // Runtime error reporting — public (no auth, frontend → backend)
 Route::post('/runtime-error', RuntimeErrorController::class)->middleware('throttle:10,1');
 

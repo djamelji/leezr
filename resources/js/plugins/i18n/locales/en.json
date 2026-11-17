@@ -213,7 +213,10 @@
       "settings-leave-types": "Absence types",
       "workforce-requirements": "Requested information & documents",
       "workforce-hiring": "Hiring",
-      "company-catalogs": "Catalogues"
+      "company-catalogs": "Catalogues",
+      "workforce-referrals": "Referrals",
+      "my-referrals": "Referral",
+      "settings-referrals": "Referral"
     }
   },
   "roles": {
@@ -2820,6 +2823,10 @@
       "logistics_shipments": {
         "name": "Shipments",
         "description": "Logistics shipments with status workflow"
+      },
+      "workforce_referral": {
+        "name": "Referral",
+        "description": "Employees recommend a relative or share a link; HR review and open the hire."
       }
     },
     "bundles": {
@@ -2998,6 +3005,18 @@
       "documents.processing": {
         "label": "Document processing",
         "hint": "Request, upload on behalf of and review documents — without configuring document types or opening highly confidential pieces."
+      },
+      "workforce_referral.employee": {
+        "label": "Referral (employee)",
+        "hint": "Recommend relatives and follow own referrals."
+      },
+      "workforce_referral.review": {
+        "label": "Referral review",
+        "hint": "Review applications and open the hire."
+      },
+      "workforce_referral.management": {
+        "label": "Referral settings",
+        "hint": "Choose open positions, modes and retention."
       }
     },
     "permissions": {
@@ -3076,6 +3095,18 @@
       "shipments.delete": {
         "label": "Delete Shipments",
         "hint": "Permanently remove shipments from the system."
+      },
+      "workforce_referral.refer": {
+        "label": "Refer a relative",
+        "hint": "Recommend a relative or share a link for an open position."
+      },
+      "workforce_referral.review": {
+        "label": "Review referrals",
+        "hint": "See referral applications, decide and open the hire."
+      },
+      "workforce_referral.manage": {
+        "label": "Configure referrals",
+        "hint": "Choose open positions, modes and retention."
       }
     }
   },
@@ -6844,7 +6875,8 @@
       "membersInvitationsExpire": "Member invitations expiry",
       "onboardingExpire": "Onboarding files expiry",
       "onboardingScanUploads": "Analysis of quarantined deposits",
-      "onboardingRetention": "Onboarding files retention (dry run)"
+      "onboardingRetention": "Onboarding files retention (dry run)",
+      "referralsPurge": "Referral: anonymise closed referrals after the retention period"
     },
     "categories": {
       "documents": "Documents",
@@ -10037,7 +10069,8 @@
       "settings-signature": "Provider and options of electronic signature.",
       "modules": "Turn features on or off.",
       "workforce-requirements": "Per position: expected information and documents (in preparation).",
-      "company-catalogs": "Company fields and document types, their origin and the positions requiring them."
+      "company-catalogs": "Company fields and document types, their origin and the positions requiring them.",
+      "settings-referrals": "Positions open to referral, modes, reward, retention."
     },
     "timezoneHint": "Your company's time zone by default; change it only for a site in another time zone.",
     "advancedShort": "Advanced",
@@ -10165,6 +10198,10 @@
     "logistics_analytics": {
       "name": "Logistics analytics",
       "description": "Logistics performance indicators and reports."
+    },
+    "workforce_referral": {
+      "name": "Referral",
+      "description": "Employees recommend a relative or share a link; HR review and open the hire."
     }
   },
   "requirementsCfg": {
@@ -11353,6 +11390,140 @@
       "finalized": "Hire finalised",
       "revoked": "Hire abandoned",
       "expired": "Link expired"
+    }
+  },
+  "referralPortal": {
+    "invalidTitle": "Link unavailable",
+    "invalid": "This link is not valid, was already used or has expired. Ask the person who sent it for a new link.",
+    "doneTitle": "Application sent",
+    "done": "Thank you! {company} received your application and will come back to you. The person who recommended you does not see your application.",
+    "opportunity": "An opportunity",
+    "infoTitle": "More information requested",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "E-mail",
+    "phone": "Phone",
+    "message": "A word to introduce yourself (optional)",
+    "infoAnswer": "Your answer",
+    "apply": "Send my application",
+    "sendInfo": "Send the information",
+    "error": "Something went wrong. Try again."
+  },
+  "myReferrals": {
+    "title": "Referral",
+    "subtitle": "Recommend a relative for an open position, or share an application link.",
+    "notConfigured": "Your company has not opened any position to referral yet.",
+    "reward": "Reward",
+    "openPositions": "Positions open to referral",
+    "recommend": "Recommend a relative",
+    "share": "Share a link",
+    "noPosition": "No position is open to referral for now.",
+    "mine": "My referrals",
+    "sharedLink": "Shared link",
+    "none": "You have not recommended anyone yet.",
+    "privacy": "For confidentiality you only see where your referral stands, never the application nor the decision.",
+    "withdraw": "Withdraw",
+    "withdrawn": "Referral withdrawn: the link no longer works.",
+    "recommendTitle": "Recommend a relative — {position}",
+    "note": "Why do you recommend them? (HR only)",
+    "recommendHint": "Your relative receives a link to discover the position and apply themselves. Nothing is sent to the company without their consent.",
+    "recommendConfirm": "Recommend",
+    "mailed": "An e-mail with a personal link was sent to your relative.",
+    "notMailed": "No e-mail could be sent: share this personal link with your relative.",
+    "link": "Personal link",
+    "copy": "Copy the link",
+    "copied": "Link copied.",
+    "copyFailed": "Copy impossible: select the link to copy it.",
+    "shareTitle": "An opportunity for you",
+    "shareTitleFor": "Share the position — {position}",
+    "shareHint": "This link is valid for one application. Send it to the person of your choice.",
+    "shareAction": "Share",
+    "status": {
+      "link_shared": "Link shared",
+      "awaiting_candidate": "Waiting for your relative",
+      "received": "Received by the company",
+      "closed": "Closed",
+      "withdrawn": "Withdrawn",
+      "expired": "Link expired"
+    }
+  },
+  "referrals": {
+    "title": "Referrals",
+    "subtitle": "Applications recommended by your employees. Only applications confirmed by the person themselves appear.",
+    "tabs": {
+      "applications": "Applications",
+      "settings": "Settings"
+    },
+    "awaitingConsent": "{n} recommendation(s) wait for the confirmation of the person concerned. Nothing is visible before their consent.",
+    "filter": {
+      "open": "To handle",
+      "accepted": "Retained",
+      "converted": "Hires opened",
+      "declined": "Declined",
+      "all": "All"
+    },
+    "col": {
+      "candidate": "Candidate",
+      "position": "Position",
+      "referrer": "Recommended by",
+      "received": "Received on",
+      "status": "Status"
+    },
+    "status": {
+      "submitted": "New",
+      "in_review": "Under review",
+      "info_requested": "More requested",
+      "accepted": "Retained",
+      "declined": "Declined",
+      "converted": "Hire opened"
+    },
+    "channel": {
+      "recommendation": "Recommendation",
+      "link": "Shared link"
+    },
+    "empty": "No application received through referral.",
+    "referredBy": "Recommended by {name}",
+    "candidateMessage": "Candidate message",
+    "referrerNote": "Referrer note",
+    "duplicates": "Possible duplicates",
+    "duplicateKind": {
+      "employee": "Already an employee",
+      "hiring": "Hiring in progress",
+      "referral": "Another application"
+    },
+    "waitingInfo": "More requested: “{q}”. Waiting for the candidate answer.",
+    "note": "Internal note",
+    "noteHint": "Never shown to the referrer. For a request for more, this text is sent to the candidate.",
+    "accept": "Retain",
+    "requestInfo": "Ask for more",
+    "decline": "Decline",
+    "decided": {
+      "accept": "Application retained.",
+      "decline": "Application declined."
+    },
+    "infoMailed": "Request sent to the candidate.",
+    "infoNotMailed": "Request recorded: no e-mail could be sent.",
+    "hireDate": "Planned start date",
+    "convert": "Open the hiring file",
+    "convertHint": "The file reuses the candidate information and the position requirements. No account is created.",
+    "converted": "Hiring file opened.",
+    "openHiringFile": "See the hiring file",
+    "settings": {
+      "modeLabel": "What employees can do",
+      "mode": {
+        "both": "Recommend a relative and share a link",
+        "recommend": "Recommend a relative only",
+        "share": "Share a link only"
+      },
+      "positions": "Positions open to referral",
+      "positionsHint": "Only these positions are offered to employees.",
+      "notify": "Notify the people in charge of recruitment on each application",
+      "reward": "Reward (information)",
+      "rewardHint": "Shown to employees. Leezr pays nothing and adds nothing to payroll.",
+      "linkDays": "Link validity (days)",
+      "retention": "Retention after closing (days)",
+      "retentionHint": "Afterwards the identity of non-retained candidates is erased.",
+      "saved": "Settings saved."
     }
   }
 }

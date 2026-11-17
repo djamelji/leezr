@@ -245,3 +245,11 @@ Schedule::command('leave:accrue')->monthlyOn(1, '02:00')->withoutOverlapping()
 // Consume approved leaves whose start date has arrived — daily at 01:00. Idempotent per request.
 Schedule::command('leave:consume-due')->dailyAt('01:00')->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/leave-consume-due.log'));
+
+// ADR-819 — Workforce Parrainage : rétention (anonymisation des parrainages clos après la durée de l'entreprise)
+Schedule::command('referrals:purge')->dailyAt('03:40')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/referrals-purge.log'))
+    ->when(SI::enabled('referrals:purge'))
+    ->before(SI::before('referrals:purge'))
+    ->onSuccess(SI::onSuccess('referrals:purge'))
+    ->onFailure(SI::onFailure('referrals:purge'));

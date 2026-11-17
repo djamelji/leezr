@@ -584,6 +584,25 @@ Route::middleware('company.access:use-module,core.workflows')->group(function ()
     });
 });
 
+// ── ADR-819 : Workforce Parrainage (module workforce_referral) ──
+Route::prefix('workforce/referrals')->middleware(['company.access:use-module,workforce_referral'])->group(function () {
+    $c = \App\Modules\Workforce\Referral\Http\ReferralController::class;
+    $perm = fn (string $p) => 'company.access:use-permission,'.$p;
+    // Parrain (salarié)
+    Route::get('mine', [$c, 'overview'])->middleware($perm('workforce_referral.refer'));
+    Route::post('recommend', [$c, 'recommend'])->middleware([$perm('workforce_referral.refer'), 'throttle:20,1']);
+    Route::post('share', [$c, 'share'])->middleware([$perm('workforce_referral.refer'), 'throttle:20,1']);
+    Route::post('{id}/withdraw', [$c, 'withdraw'])->whereNumber('id')->middleware($perm('workforce_referral.refer'));
+    // RH autorisés
+    Route::get('/', [$c, 'index'])->middleware($perm('workforce_referral.review'));
+    Route::get('{id}', [$c, 'show'])->whereNumber('id')->middleware($perm('workforce_referral.review'));
+    Route::post('{id}/decision', [$c, 'decide'])->whereNumber('id')->middleware($perm('workforce_referral.review'));
+    Route::post('{id}/convert', [$c, 'convert'])->whereNumber('id')->middleware([$perm('workforce_referral.review'), $perm('workforce.manage')]);
+    // Réglages
+    Route::get('settings', [$c, 'settings'])->middleware($perm('workforce_referral.manage'));
+    Route::put('settings', [$c, 'saveSettings'])->middleware($perm('workforce_referral.manage'));
+});
+
 // ── ADR-792 (L2) : informations & documents demandés par poste — MODE PARALLÈLE (registre L1 uniquement) ──
 Route::prefix('workforce/requirements')->middleware(['company.access:use-module,workforce', 'company.access:use-any-permission,settings.manage|documents.configure'])->group(function () {
     $c = \App\Modules\Workforce\Requirements\Http\RequirementConfigController::class;

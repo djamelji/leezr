@@ -213,7 +213,10 @@
       "settings-leave-types": "Types d'absence",
       "workforce-requirements": "Informations & documents demandés",
       "workforce-hiring": "Embauches",
-      "company-catalogs": "Catalogues"
+      "company-catalogs": "Catalogues",
+      "workforce-referrals": "Parrainages",
+      "my-referrals": "Parrainage",
+      "settings-referrals": "Parrainage"
     }
   },
   "roles": {
@@ -2820,6 +2823,10 @@
       "logistics_shipments": {
         "name": "Expéditions",
         "description": "Expéditions logistiques avec suivi de statut"
+      },
+      "workforce_referral": {
+        "name": "Parrainage",
+        "description": "Les salariés recommandent un proche ou partagent un lien ; les RH examinent et ouvrent l'embauche."
       }
     },
     "bundles": {
@@ -2998,6 +3005,18 @@
       "documents.processing": {
         "label": "Traitement des documents",
         "hint": "Demander, déposer pour la personne et vérifier les pièces — sans configurer les types de documents ni ouvrir les pièces hautement confidentielles."
+      },
+      "workforce_referral.employee": {
+        "label": "Parrainage (salarié)",
+        "hint": "Recommander un proche et suivre ses parrainages."
+      },
+      "workforce_referral.review": {
+        "label": "Examen des parrainages",
+        "hint": "Examiner les candidatures et ouvrir l'embauche."
+      },
+      "workforce_referral.management": {
+        "label": "Réglages du parrainage",
+        "hint": "Choisir les postes ouverts, les modes et la conservation."
       }
     },
     "permissions": {
@@ -3076,6 +3095,18 @@
       "shipments.delete": {
         "label": "Supprimer des expéditions",
         "hint": "Supprimer définitivement des expéditions."
+      },
+      "workforce_referral.refer": {
+        "label": "Recommander un proche",
+        "hint": "Recommander un proche ou partager un lien pour un poste ouvert."
+      },
+      "workforce_referral.review": {
+        "label": "Examiner les parrainages",
+        "hint": "Voir les candidatures reçues par parrainage, décider et ouvrir l'embauche."
+      },
+      "workforce_referral.manage": {
+        "label": "Configurer le parrainage",
+        "hint": "Choisir les postes ouverts, les modes et la conservation."
       }
     }
   },
@@ -6844,7 +6875,8 @@
       "membersInvitationsExpire": "Expiration des invitations de membres",
       "onboardingExpire": "Expiration des dossiers d’intégration",
       "onboardingScanUploads": "Analyse des dépôts en quarantaine",
-      "onboardingRetention": "Conservation des dossiers d’intégration (simulation)"
+      "onboardingRetention": "Conservation des dossiers d’intégration (simulation)",
+      "referralsPurge": "Parrainage : anonymise les parrainages clos après la durée de conservation"
     },
     "categories": {
       "documents": "Documents",
@@ -10037,7 +10069,8 @@
       "settings-signature": "Prestataire et options de la signature électronique.",
       "modules": "Activer ou retirer des fonctionnalités.",
       "workforce-requirements": "Par poste : informations et pièces attendues (en préparation).",
-      "company-catalogs": "Champs et types de documents de la société, leur origine et les postes qui les exigent."
+      "company-catalogs": "Champs et types de documents de la société, leur origine et les postes qui les exigent.",
+      "settings-referrals": "Postes ouverts au parrainage, modes, récompense, conservation."
     },
     "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau.",
     "advancedShort": "Avancé",
@@ -10165,6 +10198,10 @@
     "logistics_analytics": {
       "name": "Analyses logistiques",
       "description": "Indicateurs et rapports de performance logistique."
+    },
+    "workforce_referral": {
+      "name": "Parrainage",
+      "description": "Les salariés recommandent un proche ou partagent un lien ; les RH examinent et ouvrent l'embauche."
     }
   },
   "requirementsCfg": {
@@ -11353,6 +11390,140 @@
       "finalized": "Embauche finalisée",
       "revoked": "Embauche abandonnée",
       "expired": "Lien expiré"
+    }
+  },
+  "referralPortal": {
+    "invalidTitle": "Lien indisponible",
+    "invalid": "Ce lien n'est pas valide, a déjà été utilisé ou a expiré. Demandez un nouveau lien à la personne qui vous l'a transmis.",
+    "doneTitle": "Candidature envoyée",
+    "done": "Merci ! {company} a bien reçu votre candidature et reviendra vers vous. La personne qui vous a recommandé(e) ne voit pas votre candidature.",
+    "opportunity": "Une opportunité",
+    "infoTitle": "Complément demandé",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "message": "Un mot pour vous présenter (facultatif)",
+    "infoAnswer": "Votre réponse",
+    "apply": "Envoyer ma candidature",
+    "sendInfo": "Envoyer le complément",
+    "error": "Une erreur est survenue. Réessayez."
+  },
+  "myReferrals": {
+    "title": "Parrainage",
+    "subtitle": "Recommandez un proche pour un poste ouvert, ou partagez un lien de candidature.",
+    "notConfigured": "Votre entreprise n'a pas encore ouvert de poste au parrainage.",
+    "reward": "Récompense",
+    "openPositions": "Postes ouverts au parrainage",
+    "recommend": "Recommander un proche",
+    "share": "Partager un lien",
+    "noPosition": "Aucun poste n'est ouvert au parrainage pour le moment.",
+    "mine": "Mes parrainages",
+    "sharedLink": "Lien partagé",
+    "none": "Vous n'avez encore recommandé personne.",
+    "privacy": "Par respect de la confidentialité, vous voyez seulement où en est votre parrainage, jamais la candidature ni la décision.",
+    "withdraw": "Retirer",
+    "withdrawn": "Parrainage retiré : le lien ne fonctionne plus.",
+    "recommendTitle": "Recommander un proche — {position}",
+    "note": "Pourquoi le recommandez-vous ? (visible des RH seulement)",
+    "recommendHint": "Votre proche reçoit un lien pour découvrir le poste et candidater lui-même. Rien n'est transmis à l'entreprise sans son accord.",
+    "recommendConfirm": "Recommander",
+    "mailed": "Un e-mail a été envoyé à votre proche avec un lien personnel.",
+    "notMailed": "Aucun e-mail n'a pu être envoyé : transmettez ce lien personnel à votre proche.",
+    "link": "Lien personnel",
+    "copy": "Copier le lien",
+    "copied": "Lien copié.",
+    "copyFailed": "Copie impossible : sélectionnez le lien pour le copier.",
+    "shareTitle": "Une opportunité pour vous",
+    "shareTitleFor": "Partager le poste — {position}",
+    "shareHint": "Ce lien est valable pour une seule candidature. Transmettez-le à la personne de votre choix.",
+    "shareAction": "Partager",
+    "status": {
+      "link_shared": "Lien partagé",
+      "awaiting_candidate": "En attente de votre proche",
+      "received": "Reçue par l'entreprise",
+      "closed": "Clôturé",
+      "withdrawn": "Retiré",
+      "expired": "Lien expiré"
+    }
+  },
+  "referrals": {
+    "title": "Parrainages",
+    "subtitle": "Les candidatures recommandées par vos salariés. Seules les candidatures confirmées par la personne elle-même apparaissent.",
+    "tabs": {
+      "applications": "Candidatures",
+      "settings": "Réglages"
+    },
+    "awaitingConsent": "{n} recommandation(s) attendent la confirmation de la personne concernée. Rien n'est visible avant son accord.",
+    "filter": {
+      "open": "À traiter",
+      "accepted": "Retenues",
+      "converted": "Embauches ouvertes",
+      "declined": "Déclinées",
+      "all": "Toutes"
+    },
+    "col": {
+      "candidate": "Candidat",
+      "position": "Poste",
+      "referrer": "Recommandé par",
+      "received": "Reçue le",
+      "status": "État"
+    },
+    "status": {
+      "submitted": "Nouvelle",
+      "in_review": "En cours d'examen",
+      "info_requested": "Complément demandé",
+      "accepted": "Retenue",
+      "declined": "Déclinée",
+      "converted": "Embauche ouverte"
+    },
+    "channel": {
+      "recommendation": "Recommandation",
+      "link": "Lien partagé"
+    },
+    "empty": "Aucune candidature reçue par parrainage.",
+    "referredBy": "Recommandé par {name}",
+    "candidateMessage": "Message du candidat",
+    "referrerNote": "Mot du parrain",
+    "duplicates": "Doublons possibles",
+    "duplicateKind": {
+      "employee": "Déjà salarié",
+      "hiring": "Embauche en cours",
+      "referral": "Autre candidature"
+    },
+    "waitingInfo": "Complément demandé : « {q} ». En attente de la réponse du candidat.",
+    "note": "Note interne",
+    "noteHint": "Jamais montrée au parrain. Pour une demande de complément, ce texte est envoyé au candidat.",
+    "accept": "Retenir",
+    "requestInfo": "Demander un complément",
+    "decline": "Décliner",
+    "decided": {
+      "accept": "Candidature retenue.",
+      "decline": "Candidature déclinée."
+    },
+    "infoMailed": "Demande de complément envoyée au candidat.",
+    "infoNotMailed": "Demande enregistrée : aucun e-mail n'a pu être envoyé.",
+    "hireDate": "Date d'arrivée prévue",
+    "convert": "Ouvrir le dossier d'embauche",
+    "convertHint": "Le dossier reprend les informations du candidat et les exigences du poste. Aucun compte n'est créé.",
+    "converted": "Dossier d'embauche ouvert.",
+    "openHiringFile": "Voir le dossier d'embauche",
+    "settings": {
+      "modeLabel": "Ce que les salariés peuvent faire",
+      "mode": {
+        "both": "Recommander un proche et partager un lien",
+        "recommend": "Recommander un proche seulement",
+        "share": "Partager un lien seulement"
+      },
+      "positions": "Postes ouverts au parrainage",
+      "positionsHint": "Seuls ces postes sont proposés aux salariés.",
+      "notify": "Prévenir les personnes chargées du recrutement à chaque candidature",
+      "reward": "Récompense (information)",
+      "rewardHint": "Affichée aux salariés. Leezr ne verse rien et n'ajoute rien à la paie.",
+      "linkDays": "Validité des liens (jours)",
+      "retention": "Conservation après clôture (jours)",
+      "retentionHint": "Ensuite, l'identité des candidats non retenus est effacée.",
+      "saved": "Réglages enregistrés."
     }
   }
 }
