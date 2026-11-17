@@ -166,6 +166,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::put('/plans/{id}/toggle-active', [PlanCrudController::class, 'toggleActive']);
         // ADR-588: pricing governance impact (read-only) — who keeps their contracted price.
         Route::get('/plans/{key}/pricing-impact', [PlanCrudController::class, 'pricingImpact']);
+        Route::get('/plans/{key}/modules', [\App\Modules\Platform\Plans\Http\PlanModulesController::class, 'show']); // ADR-821
     });
 
     // Tariff migration (explicit, financial) — stronger permission (ADR-588)

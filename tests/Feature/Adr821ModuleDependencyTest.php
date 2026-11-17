@@ -165,6 +165,21 @@ class Adr821ModuleDependencyTest extends TestCase
         JobdomainComposition::save($jd, ['compatible' => array_values(array_diff($all, ['logistics_shipments'])), 'start' => [], 'recommended' => []], null);
     }
 
+    public function test_offer_edit_creating_an_uncovered_dependency_is_refused_and_plan_shows_it(): void
+    {
+        $admin = \App\Platform\Models\PlatformUser::create(['first_name' => 'P', 'last_name' => 'A', 'email' => 'pa-'.uniqid().'@t.com', 'password' => 'P@ssw0rd!Strong']);
+        $admin->roles()->attach(\App\Platform\Models\PlatformRole::where('key', 'super_admin')->firstOrFail());
+        // Planning est inclus dans toutes les offres : rendre sa dépendance (RH) payante créerait une offre incohérente.
+        $this->actingAs($admin, 'platform')->putJson('/api/platform/modules/workforce/config', ['is_listed' => true, 'is_sellable' => true, 'addon_pricing' => ['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 10]]])
+            ->assertStatus(422)->assertJsonValidationErrors('min_plan_override');
+        $this->assertNull(PlatformModule::where('key', 'workforce')->value('addon_pricing'), 'nothing saved');
+        $plan = $this->actingAs($admin, 'platform')->getJson('/api/platform/plans/starter/modules')->assertOk()->json();
+        $row = collect($plan['modules'])->firstWhere('key', 'workforce_payroll');
+        $this->assertSame('included', $row['status']);
+        $this->assertEqualsCanonicalizing(['workforce', 'workforce_leave'], array_column($row['dependencies'], 'key'), 'transitive dependencies shown');
+        $this->assertTrue($plan['coherent']);
+    }
+
     public function test_preview_endpoints_are_tenant_scoped_and_guarded(): void
     {
         $other = $this->company('B');

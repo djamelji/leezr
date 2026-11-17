@@ -11747,5 +11747,25 @@
     },
     "advancedFamilies": "Advanced initial configuration",
     "advancedFamiliesHint": "Roles, organisation, suggested requirements and planning starting values — versions and publication."
+  },
+  "planModules": {
+    "title": "Plan modules",
+    "hint": "Read from each module (minimum plan and option price). To change it, open the module: a change leaving a dependency uncovered is refused.",
+    "gaps": "Uncovered dependencies to fix: {list}.",
+    "filter": {
+      "included": "Included",
+      "option": "Optional",
+      "not_included": "Not included",
+      "all": "All"
+    },
+    "module": "Module",
+    "inOffer": "In this plan",
+    "dependencies": "Dependencies",
+    "mandatoryDependency": "Mandatory dependency",
+    "status": {
+      "included": "Included",
+      "option": "Optional",
+      "not_included": "Not included"
+    }
   }
 }

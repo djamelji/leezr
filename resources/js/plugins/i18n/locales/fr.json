@@ -11747,5 +11747,25 @@
     },
     "advancedFamilies": "Options avancées de la configuration initiale",
     "advancedFamiliesHint": "Rôles, organisation, exigences suggérées et valeurs initiales du planning — versions et publication."
+  },
+  "planModules": {
+    "title": "Modules de l'offre",
+    "hint": "Lu depuis chaque module (offre minimale et prix d'option). Pour modifier, ouvrez le module : une modification qui laisserait une dépendance non couverte est refusée.",
+    "gaps": "Dépendances non couvertes à corriger : {list}.",
+    "filter": {
+      "included": "Inclus",
+      "option": "En option",
+      "not_included": "Non inclus",
+      "all": "Tous"
+    },
+    "module": "Module",
+    "inOffer": "Dans cette offre",
+    "dependencies": "Dépendances",
+    "mandatoryDependency": "Dépendance obligatoire",
+    "status": {
+      "included": "Inclus",
+      "option": "En option",
+      "not_included": "Non inclus"
+    }
   }
 }

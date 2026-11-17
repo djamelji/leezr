@@ -4,6 +4,7 @@ import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 import TariffMigrationWizard from './_TariffMigrationWizard.vue'
+import PlanModules from './_PlanModules.vue'
 
 definePage({
   meta: {
@@ -694,6 +695,7 @@ const fmtDate = dateStr => {
           />
         </VCardText>
       </VCard>
+      <PlanModules :plan-key="String(route.params.key)" />
     </template>
 
     <TariffMigrationWizard
