@@ -19,6 +19,10 @@ class UserCompaniesReadModel
             // SECURITY-1 (ADR-688): a suspended membership is hidden from the company switcher
             // (access is blocked server-side anyway; this avoids a dead selector entry).
             ->whereNull('suspended_at')
+            // ADR-818 (chantier K) : une invitation non encore acceptée n'est pas une société active : la
+            // proposer comme société courante donnait des écrans vides et des 400 (nav, modules). Elle reste
+            // listée dans /my-invitations ; la connexion dirige vers l'acceptation.
+            ->whereNull('acceptance_pending_at')
             ->get();
 
         return $memberships->map(function ($membership) {

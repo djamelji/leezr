@@ -113,6 +113,11 @@ export const setupGuards = router => {
       return { path: '/login' }
     }
 
+    // ADR-818 (chantier K) : connecté mais sans AUCUNE société active (invitation pas encore acceptée,
+    // accès retiré) → la page des invitations, jamais un écran vide ni des 400 en cascade.
+    if (auth.companies.length === 0 && to.path !== '/invitations')
+      return { path: '/invitations' }
+
     // ADR-357: Workspace cross-guard. Un field worker ne doit PAS accéder à la gestion →
     // /dashboard est renvoyé vers /home. L'inverse n'est PLUS forcé (ADR-751b) : un
     // administrateur (workspace 'dashboard') qui est AUSSI salarié peut consulter

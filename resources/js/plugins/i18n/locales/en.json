@@ -4165,8 +4165,8 @@
     "pricingFree": "Included",
     "pricingContactSales": "Contact sales",
     "pricingTiered": "Tiered pricing",
-    "pricingPerSeatIncluded": "{count} {metric} included, then {price} €/{metric}",
-    "pricingPerSeatBase": "{count} {metric} included",
+    "pricingPerSeatIncluded": "{count} {metrics} included, then {price} €/{metric}",
+    "pricingPerSeatBase": "{count} {metrics} included",
     "metric_users": "user",
     "metric_shipments": "shipment",
     "metric_sms": "SMS",
@@ -4202,7 +4202,14 @@
     "quoteDeactivationWithAdded": "If you disable {module} later, the modules added for it ({list}) will also be disabled if no other module needs them; data is kept.",
     "quoteBillingStopsEndOfPeriod": "A paid module stays billed until the end of the current period.",
     "quoteBillingStopsNow": "A paid module stops being billed immediately; the rest of the period is credited pro rata.",
-    "includedLocked": "Included in your business: this module is part of your industry and cannot be disabled here. Its access and settings remain customizable."
+    "includedLocked": "Included in your business: this module is part of your industry and cannot be disabled here. Its access and settings remain customizable.",
+    "metricPlural_users": "users",
+    "metricPlural_shipments": "shipments",
+    "metricPlural_sms": "SMS",
+    "metricPlural_api_calls": "API calls",
+    "metricPlural_storage_gb": "GB",
+    "metricPlural_employees": "employees",
+    "metricPlural_units": "units"
   },
   "contactSales": {
     "title": "Premium module",

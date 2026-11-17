@@ -8,7 +8,7 @@ import { useAppToast } from '@/composables/useAppToast'
 import { formatMoney } from '@/utils/money'
 import { useRouter } from 'vue-router'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 const moduleStore = useModuleStore()
 const { toast } = useAppToast()
@@ -273,6 +273,8 @@ const modulePriceLabel = mod => {
 
   if (pricing_model === 'per_seat') {
     const metricLabel = t(`companyModules.metric_${pricing_metric || 'users'}`)
+    // ADR-818 : accord du nombre (« 5 salariés inclus », jamais « 5 salarié inclus »).
+    const metricsFor = n => (n > 1 ? t(`companyModules.metricPlural_${pricing_metric || 'users'}`) : metricLabel)
     const included = pricing_params?.included
     const overage = pricing_params?.overage_unit_price
 
@@ -281,10 +283,10 @@ const modulePriceLabel = mod => {
       const qty = included[planKey] ?? Object.values(included)[0] ?? 0
       const overagePrice = overage?.[planKey] ?? overage ?? null
       if (overagePrice != null) {
-        return t('companyModules.pricingPerSeatIncluded', { count: qty, price: overagePrice, metric: metricLabel })
+        return t('companyModules.pricingPerSeatIncluded', { count: qty, price: overagePrice, metric: metricLabel, metrics: metricsFor(qty) })
       }
 
-      return t('companyModules.pricingPerSeatBase', { count: qty, metric: metricLabel })
+      return t('companyModules.pricingPerSeatBase', { count: qty, metric: metricLabel, metrics: metricsFor(qty) })
     }
 
     // Simple per-unit
@@ -334,7 +336,7 @@ const dependencyLabel = reqKey => {
 const dependentNames = mod => {
   if (!mod.dependents?.length) return null
   return mod.dependents
-    .map(k => moduleStore.modules.find(m => m.key === k)?.name || k)
+    .map(k => modName(moduleStore.modules.find(m => m.key === k) || { key: k, name: k })) // ADR-818 : un module = un nom
     .join(', ')
 }
 
@@ -343,7 +345,8 @@ const dependentNames = mod => {
 const formatPeriodEnd = dateStr => {
   if (!dateStr) return ''
 
-  return new Date(dateStr).toLocaleDateString(undefined, {
+  // ADR-818 : dates dans la langue de l'interface (le dialogue de désactivation affichait l'anglais).
+  return new Date(dateStr).toLocaleDateString(locale.value, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -1377,7 +1380,7 @@ const doToggle = async (key, isCurrentlyEnabled) => {
 
         <VCardText class="px-6">
           <p class="text-body-1">
-            {{ t('companyModules.deactivateConfirmMessage', { module: deactivateTarget?.name }) }}
+            {{ t('companyModules.deactivateConfirmMessage', { module: modName(deactivateTarget) }) }}
           </p>
 
           <!-- ADR-341: Deactivation preview — loaded from backend -->

@@ -4165,8 +4165,8 @@
     "pricingFree": "Offert",
     "pricingContactSales": "Sur devis",
     "pricingTiered": "Tarification par paliers",
-    "pricingPerSeatIncluded": "{count} {metric} inclus, puis {price} €/{metric}",
-    "pricingPerSeatBase": "{count} {metric} inclus",
+    "pricingPerSeatIncluded": "{count} {metrics} inclus, puis {price} €/{metric}",
+    "pricingPerSeatBase": "{count} {metrics} inclus",
     "metric_users": "utilisateur",
     "metric_shipments": "envoi",
     "metric_sms": "SMS",
@@ -4202,7 +4202,14 @@
     "quoteDeactivationWithAdded": "Si vous désactivez {module} plus tard, les modules ajoutés pour lui ({list}) seront aussi désactivés s'ils ne servent à aucun autre module ; les données sont conservées.",
     "quoteBillingStopsEndOfPeriod": "Un module payant reste facturé jusqu'à la fin de la période en cours.",
     "quoteBillingStopsNow": "Un module payant cesse d'être facturé immédiatement ; le reste de la période est crédité au prorata.",
-    "includedLocked": "Inclus dans votre activité : ce module fait partie de votre métier et ne se désactive pas ici. Ses accès et réglages restent personnalisables."
+    "includedLocked": "Inclus dans votre activité : ce module fait partie de votre métier et ne se désactive pas ici. Ses accès et réglages restent personnalisables.",
+    "metricPlural_users": "utilisateurs",
+    "metricPlural_shipments": "envois",
+    "metricPlural_sms": "SMS",
+    "metricPlural_api_calls": "appels API",
+    "metricPlural_storage_gb": "Go",
+    "metricPlural_employees": "salariés",
+    "metricPlural_units": "unités"
   },
   "contactSales": {
     "title": "Module premium",
