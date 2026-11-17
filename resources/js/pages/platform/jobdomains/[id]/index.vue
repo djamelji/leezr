@@ -13,7 +13,7 @@ definePage({
 
 const route = useRoute()
 const router = useRouter()
-const LEGACY = { general: 'general', modules: 'modules', roles: 'presets', organization: 'presets', requirements: 'presets', planning: 'presets' }
+const LEGACY = { general: 'general', modules: 'modules', roles: 'setup', organization: 'setup', requirements: 'setup', planning: 'setup' } // ADR-821
 
 router.replace({ name: 'platform-jobdomains-id-tab', params: { id: route.params.id, tab: LEGACY[route.query.tab] || 'general' } })
 </script>

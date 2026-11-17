@@ -70,6 +70,22 @@ class JobdomainModernizationController extends Controller
         return collect($groups)->map(fn ($items, $key) => ['key' => $key, 'title_key' => \App\Core\Navigation\NavGroupRegistry::titleKey($key), 'items' => $items])->values()->all();
     }
 
+    /** ADR-821 — modules du métier (compatibles, au démarrage, recommandés), dépendances ajoutées automatiquement. */
+    public function composition(int $id): JsonResponse
+    {
+        return response()->json(\App\Core\Jobdomains\JobdomainComposition::describe(Jobdomain::findOrFail($id)));
+    }
+
+    public function saveComposition(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate(['compatible' => 'present|array', 'compatible.*' => 'string', 'start' => 'present|array', 'start.*' => 'string',
+            'recommended' => 'present|array', 'recommended.*' => 'string']);
+        $jd = Jobdomain::findOrFail($id);
+        $result = \App\Core\Jobdomains\JobdomainComposition::save($jd, $data, $request->user()?->id);
+
+        return response()->json($result + \App\Core\Jobdomains\JobdomainComposition::describe($jd->fresh()));
+    }
+
     public function legacyDraft(Request $request, int $id): JsonResponse
     {
         $data = $request->validate(['kind' => 'required|in:catalog,rbac,requirements,planning']);

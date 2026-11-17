@@ -25,7 +25,7 @@ onMounted(async () => {
   try { jdIds.value = Object.fromEntries(((await $platformApi('/jobdomains')).jobdomains || []).map(j => [j.key, j.id])) }
   catch { jdIds.value = {} }
 })
-const domainLink = key => jdIds.value[key] ? { name: 'platform-jobdomains-id-tab', params: { id: jdIds.value[key], tab: 'presets' } } : null // ADR-820
+const domainLink = key => jdIds.value[key] ? { name: 'platform-jobdomains-id-tab', params: { id: jdIds.value[key], tab: 'setup' } } : null // ADR-820
 const editor = ref(false)
 const editing = ref(null)
 const blocked = ref(null)

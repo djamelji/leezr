@@ -11690,5 +11690,33 @@
     "duplicate": "La valeur « {value} » est utilisée par plusieurs personnes : {people}.",
     "noPopulation": "Aucune personne n'a encore de rôle de livraison.",
     "showOthers": "Afficher les autres champs compatibles ({n})"
+  },
+  "jobdomainSimple": {
+    "section": {
+      "general": "Métier",
+      "modules": "Modules",
+      "setup": "Configuration initiale"
+    },
+    "experienceTitle": "Expérience métier (facultatif)",
+    "modulesHint": "Compatible : le module peut être proposé aux sociétés de ce métier. Au démarrage : il est activé à la création si l'offre de la société l'inclut. Les modules nécessaires sont ajoutés automatiquement.",
+    "compatible": "Compatible",
+    "start": "Au démarrage",
+    "offer": "Offres",
+    "needs": "nécessite {list}",
+    "requiredBy": "requis par {list}",
+    "addedDependency": "{modules} nécessite également {dependency} : ce module a été ajouté automatiquement.",
+    "startNotIncluded": "Prévus au démarrage mais pas inclus dans toutes les offres : {list}. Ils ne seront activés que pour les sociétés dont l'offre les inclut ; jamais offerts.",
+    "commercial": {
+      "included": "Inclus dans cette offre",
+      "option": "Option payante",
+      "not_included": "Non inclus"
+    },
+    "commercialShort": {
+      "included": "inclus",
+      "option": "option",
+      "not_included": "non"
+    },
+    "advancedFamilies": "Options avancées de la configuration initiale",
+    "advancedFamiliesHint": "Rôles, organisation, exigences suggérées et valeurs initiales du planning — versions et publication."
   }
 }
