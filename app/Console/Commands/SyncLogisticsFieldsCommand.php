@@ -32,7 +32,8 @@ class SyncLogisticsFieldsCommand extends Command
             return self::FAILURE;
         }
 
-        $defaultFields = $definition['default_fields'] ?? [];
+        // ADR-819 : un champ « recommandé » reste au catalogue — la synchronisation ne l'impose jamais.
+        $defaultFields = array_values(array_filter($definition['default_fields'] ?? [], fn ($f) => empty($f['recommended'])));
         $fieldCodes = collect($defaultFields)->pluck('code')->toArray();
         $fieldConfigs = collect($defaultFields)->keyBy('code');
 

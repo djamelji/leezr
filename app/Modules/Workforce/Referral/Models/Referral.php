@@ -37,7 +37,7 @@ class Referral extends Model
     public const CLOSED = [self::DECLINED, self::CONVERTED, self::WITHDRAWN, self::EXPIRED];
 
     protected $fillable = [
-        'company_id', 'referrer_user_id', 'referrer_employee_id', 'job_role_id', 'channel', 'status', 'first_name', 'last_name', 'email', 'phone',
+        'company_id', 'referrer_user_id', 'referrer_employee_id', 'job_role_id', 'channel', 'status', 'first_name', 'last_name', 'referred_name', 'email', 'phone',
         'referrer_note', 'candidate_message', 'consent_at', 'consent_version', 'token_hash', 'link_expires_at', 'reviewed_by', 'reviewed_at',
         'review_note', 'info_request', 'onboarding_invitation_id', 'purge_after', 'anonymized_at',
     ];

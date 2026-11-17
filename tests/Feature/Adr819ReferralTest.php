@@ -121,7 +121,7 @@ class Adr819ReferralTest extends TestCase
         $this->assertSame('Léa', $view->json('prefill.first_name'));
         $this->public('/apply', ['token' => $token, 'first_name' => 'Léa', 'last_name' => 'Proche', 'email' => 'lea@example.test'])->assertStatus(422); // no consent
         $this->public('/apply', ['token' => $token, 'first_name' => 'Léa', 'last_name' => 'Proche', 'email' => 'lea@example.test', 'consent' => true, 'website' => 'spam'])->assertStatus(422); // honeypot
-        $this->public('/apply', ['token' => $token, 'first_name' => 'Léa', 'last_name' => 'Proche', 'email' => 'lea@example.test', 'phone' => '0600000000', 'message' => 'Disponible.', 'consent' => true])->assertOk();
+        $this->public('/apply', ['token' => $token, 'first_name' => 'Léa', 'last_name' => 'Proche-Martin', 'email' => 'lea@example.test', 'phone' => '0600000000', 'message' => 'Disponible.', 'consent' => true])->assertOk();
         $this->public('/view', ['token' => $token])->assertNotFound(); // used
 
         // HR : review, duplicate check, accept, convert into ONE hiring file prefilled.
@@ -135,7 +135,9 @@ class Adr819ReferralTest extends TestCase
         $file = $this->api($this->hr, 'POST', "/workforce/referrals/{$id}/convert", ['hire_date' => '2027-01-04'])->assertOk()->json('hiring_file_id');
         $inv = OnboardingInvitation::find($file);
         $emp = Employee::withoutGlobalScopes()->find($inv->employee_id);
-        $this->assertSame(['Léa', 'Proche', 'lea@example.test', $this->driver->id], [$emp->first_name, $emp->last_name, $inv->candidate_email, $emp->job_role_id]);
+        $this->assertSame(['Léa', 'Proche-Martin', 'lea@example.test', $this->driver->id], [$emp->first_name, $emp->last_name, $inv->candidate_email, $emp->job_role_id]);
+        $proposed = collect((new \App\Modules\Workforce\Onboarding\OnboardingPlanner($this->a))->propose($this->driver));
+        $this->assertSame($proposed->where('suggested', true)->count(), count($inv->snapshot['items']), 'only the items in force for the position, never the whole catalogue');
         $this->assertTrue($emp->isPreparatory());
         $this->assertNull($emp->user_id, 'no account created');
         $this->api($this->hr, 'POST', "/workforce/referrals/{$id}/convert", ['hire_date' => '2027-01-04'])->assertStatus(422); // once
@@ -143,6 +145,7 @@ class Adr819ReferralTest extends TestCase
         // Referrer : coarse status only, never the decision nor the application.
         $mine = collect($this->api($this->employee, 'GET', '/workforce/referrals/mine')->json('mine'))->firstWhere('id', $id);
         $this->assertSame('closed', $mine['status']);
+        $this->assertSame('Léa Proche', $mine['name'], 'the referrer sees what HE typed, never what the candidate provided');
         $this->assertArrayNotHasKey('candidate_message', $mine);
         $this->assertArrayNotHasKey('review_note', $mine);
         $this->api($this->employee, 'GET', "/workforce/referrals/{$id}")->assertForbidden();

@@ -82,6 +82,7 @@ final class ReferralService
             'company_id' => $this->company->id, 'referrer_user_id' => $this->actor->id, 'referrer_employee_id' => $this->referrerEmployee()?->id,
             'job_role_id' => (int) $data['job_role_id'], 'channel' => Referral::CHANNEL_RECOMMENDATION, 'status' => Referral::AWAITING_CONSENT,
             'first_name' => $data['first_name'], 'last_name' => $data['last_name'] ?? null, 'email' => $data['email'] ?? null, 'phone' => $data['phone'] ?? null,
+            'referred_name' => trim($data['first_name'].' '.($data['last_name'] ?? '')), // ce que le PARRAIN a saisi, figé
             'referrer_note' => $data['note'] ?? null, 'token_hash' => hash('sha256', $raw), 'link_expires_at' => now()->addDays($this->settings()->link_days),
         ]);
         $url = $this->url($raw);
@@ -148,7 +149,7 @@ final class ReferralService
 
         return ['id' => $r->id, 'channel' => $r->channel, 'position' => $r->jobRole?->title, 'status' => $public,
             // Le parrain voit le prénom qu'il a lui-même saisi ; jamais ce que le candidat a transmis.
-            'name' => $r->channel === Referral::CHANNEL_RECOMMENDATION && ! $r->anonymized_at ? trim($r->first_name.' '.$r->last_name) : null,
+            'name' => $r->channel === Referral::CHANNEL_RECOMMENDATION && ! $r->anonymized_at ? $r->referred_name : null,
             'created_at' => $r->created_at?->toIso8601String(), 'link_expires_at' => $r->link_expires_at?->toIso8601String()];
     }
 
@@ -242,7 +243,9 @@ final class ReferralService
             throw ValidationException::withMessages(['status' => __('referral.convert_requires_acceptance')]);
         }
         $job = $ref->job_role_id ? JobRole::withoutGlobalScopes()->where('company_id', $this->company->id)->find($ref->job_role_id) : null;
-        $items = array_map(fn ($i) => ['kind' => $i['kind'], 'code' => $i['code'], 'required' => (bool) ($i['required'] ?? false)], (new OnboardingPlanner($this->company))->propose($job));
+        // Les éléments EN VIGUEUR pour ce poste (pré-sélection de l'assistant « Embaucher »), jamais tout le catalogue.
+        $items = array_values(array_map(fn ($i) => ['kind' => $i['kind'], 'code' => $i['code'], 'required' => (bool) $i['suggested_required']],
+            array_filter((new OnboardingPlanner($this->company))->propose($job), fn ($i) => $i['suggested'])));
         if ($items === []) {
             throw ValidationException::withMessages(['items' => __('referral.nothing_to_collect')]);
         }
@@ -339,8 +342,10 @@ final class ReferralService
             return null;
         }
         $ref = Referral::withoutGlobalScopes()->where('token_hash', hash('sha256', $raw))->first();
+        // Le module Parrainage de la société du lien est vérifié à CHAQUE appel public (pas de contexte tenant ici).
+        $company = $ref ? Company::find($ref->company_id) : null;
 
-        return $ref && $ref->linkOpen() ? $ref : null;
+        return $ref && $ref->linkOpen() && $company && \App\Core\Modules\ModuleGate::isActive($company, 'workforce_referral') ? $ref : null;
     }
 
     public static function portalView(Referral $ref): array
@@ -397,7 +402,7 @@ final class ReferralService
                 ->orWhere(fn ($w) => $w->whereIn('status', [Referral::LINK_SHARED, Referral::AWAITING_CONSENT])->where('link_expires_at', '<=', now()->subDays(30))))
             ->chunkById(200, function ($rows) use (&$n) {
                 foreach ($rows as $r) {
-                    $r->forceFill(['first_name' => null, 'last_name' => null, 'email' => null, 'phone' => null, 'referrer_note' => null, 'candidate_message' => null,
+                    $r->forceFill(['first_name' => null, 'last_name' => null, 'referred_name' => null, 'email' => null, 'phone' => null, 'referrer_note' => null, 'candidate_message' => null,
                         'review_note' => null, 'info_request' => null, 'token_hash' => null, 'anonymized_at' => now(),
                         'status' => in_array($r->status, Referral::CANDIDATE_OPEN, true) ? Referral::EXPIRED : $r->status])->save();
                     $n++;

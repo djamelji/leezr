@@ -7,7 +7,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 definePage({ meta: { module: 'workforce_referral', permission: 'workforce_referral.refer' } })
 
-const { t, d } = useI18n()
+const { t, locale } = useI18n()
 const { toast } = useAppToast()
 
 const data = ref(null)
@@ -78,6 +78,10 @@ const withdraw = async r => {
 }
 
 const STATUS_TONE = { link_shared: 'info', awaiting_candidate: 'info', received: 'primary', closed: 'secondary', withdrawn: 'secondary', expired: 'secondary' }
+
+// Dates dans la langue de l'interface (aucun format nommé n'est déclaré dans l'i18n).
+const fmtDate = v => (v ? new Date(v).toLocaleDateString(locale.value) : '')
+const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 </script>
 
 <template>
@@ -176,7 +180,7 @@ const STATUS_TONE = { link_shared: 'info', awaiting_candidate: 'info', received:
             v-for="r in data.mine"
             :key="r.id"
             :title="r.name || t('myReferrals.sharedLink')"
-            :subtitle="[r.position, d(new Date(r.created_at), 'short')].filter(Boolean).join(' · ')"
+            :subtitle="[r.position, fmtDate(r.created_at)].filter(Boolean).join(' · ')"
           >
             <template #append>
               <div class="d-flex align-center gap-2">

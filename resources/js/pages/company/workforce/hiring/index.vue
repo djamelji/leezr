@@ -10,7 +10,7 @@ import HireFinalizeDialog from './_HireFinalizeDialog.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.manage' } })
 
-const { t, d } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const { toast } = useAppToast()
 
@@ -59,6 +59,10 @@ const headers = computed(() => [
   { title: '', key: 'actions', sortable: false, align: 'end' },
 ])
 const FILTERS = ['open', 'waiting_company', 'waiting_candidate', 'to_verify', 'to_finalize', 'done', 'abandoned', 'all']
+
+// Dates dans la langue de l'interface (aucun format nommé n'est déclaré dans l'i18n).
+const fmtDate = v => (v ? new Date(v).toLocaleDateString(locale.value) : '')
+const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 </script>
 
 <template>
@@ -152,7 +156,7 @@ const FILTERS = ['open', 'waiting_company', 'waiting_candidate', 'to_verify', 't
           </div>
         </template>
         <template #item.hire_date="{ item }">
-          {{ item.hire_date ? d(new Date(item.hire_date), 'short') : '—' }}
+          {{ item.hire_date ? fmtDate(item.hire_date) : '—' }}
         </template>
         <template #item.actions="{ item }">
           <div class="d-flex justify-end gap-1 flex-wrap">

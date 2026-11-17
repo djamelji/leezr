@@ -57,6 +57,8 @@ class TenantScopeBypassGuardTest extends TestCase
         'app/Modules/Workforce/Signature/Services/SignerIdentityResolver.php',
         'app/Modules/Workforce/Signature/UseCases/RecordSignerActionUseCase.php',
         'app/Modules/Workforce/Signature/UseCases/SendSignatureRequestUseCase.php',
+        // ADR-819 : jeton public de parrainage (aucun contexte tenant), verrou de candidature, rétention système — revu.
+        'app/Modules/Workforce/Referral/ReferralService.php',
     ];
 
     public function test_no_new_uncontrolled_scope_bypass(): void

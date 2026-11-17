@@ -11109,7 +11109,6 @@
     "notFoundMessage": "This position does not exist or is not accessible.",
     "tabs": {
       "overview": "Information",
-      "requirements": "Requirements",
       "people": "People ({n})",
       "reprise": "History and takeover",
       "fields": "Fields",
@@ -11121,7 +11120,6 @@
       "level": "Level",
       "description": "Duties and responsibilities"
     },
-    "requirementsStatus": "These are the position's requirements. They apply to new requests as soon as the company computes documents by position (see « Requested information & documents »); documents already provided and ongoing requests never change.",
     "noPeople": "Nobody holds this position.",
     "withAccount": "With account",
     "withoutAccount": "Without account",
@@ -11216,17 +11214,8 @@
       "progress": "Progress",
       "start": "Planned start"
     },
-    "stage": {
-      "collecting": "File in progress",
-      "to_review": "To review",
-      "to_finalize": "To finalise",
-      "done": "Finalised",
-      "closed": "Closed"
-    },
     "filter": {
       "open": "In progress",
-      "collecting": "File in progress",
-      "to_review": "To review",
       "to_finalize": "To finalise",
       "done": "Finalised",
       "all": "All",

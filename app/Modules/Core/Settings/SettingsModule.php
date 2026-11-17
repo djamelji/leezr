@@ -26,7 +26,7 @@ class SettingsModule implements ModuleDefinition
                     ['key' => 'my-space', 'title' => 'My Space', 'to' => ['name' => 'company-my-space-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-user-circle', 'group' => 'personal', 'sort' => 10],
                     ['key' => 'account-settings', 'title' => 'Account Settings', 'to' => ['name' => 'account-settings-tab', 'params' => ['tab' => 'account']], 'icon' => 'tabler-settings', 'group' => 'personal', 'sort' => 900, 'tags' => ['avatar']],
                 ],
-                routeNames: ['company-profile-tab', 'company-catalogs-tab'],
+                routeNames: ['company-profile-tab'], // ADR-819 : la page Catalogues se garde par ses propres permissions (definePage)
                 middlewareKey: 'core.settings',
             ),
             permissions: [

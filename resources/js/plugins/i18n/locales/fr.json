@@ -11109,7 +11109,6 @@
     "notFoundMessage": "Ce poste n'existe pas ou n'est pas accessible.",
     "tabs": {
       "overview": "Informations",
-      "requirements": "Exigences",
       "people": "Personnes ({n})",
       "reprise": "Historique et reprise",
       "fields": "Champs",
@@ -11121,7 +11120,6 @@
       "level": "Niveau",
       "description": "Missions et responsabilités"
     },
-    "requirementsStatus": "Ces exigences sont celles du poste. Elles s'appliquent aux nouvelles demandes dès que la société calcule les pièces par poste (voir « Informations et documents demandés ») ; les pièces déjà déposées et les demandes en cours ne changent jamais.",
     "noPeople": "Personne n'occupe ce poste.",
     "withAccount": "Avec compte",
     "withoutAccount": "Sans compte",
@@ -11216,17 +11214,8 @@
       "progress": "Avancement",
       "start": "Entrée prévue"
     },
-    "stage": {
-      "collecting": "Dossier en cours",
-      "to_review": "À vérifier",
-      "to_finalize": "À finaliser",
-      "done": "Finalisée",
-      "closed": "Clos"
-    },
     "filter": {
       "open": "En cours",
-      "collecting": "Dossier en cours",
-      "to_review": "À vérifier",
       "to_finalize": "À finaliser",
       "done": "Finalisées",
       "all": "Toutes",

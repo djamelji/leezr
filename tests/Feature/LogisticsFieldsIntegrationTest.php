@@ -58,6 +58,17 @@ class LogisticsFieldsIntegrationTest extends TestCase
         ]);
     }
 
+    /** ADR-819 : la société adopte aussi les champs RECOMMANDÉS par son métier (catalogue) — état des tests de visibilité par rôle. */
+    private function assignWithRecommendedFields(): void
+    {
+        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $recommended = collect(JobdomainRegistry::get('logistique')['default_fields'])->filter(fn ($f) => ! empty($f['recommended']))->keyBy('code');
+        foreach (FieldDefinition::whereNull('company_id')->whereIn('code', $recommended->keys())->get() as $def) {
+            FieldActivation::updateOrCreate(['company_id' => $this->company->id, 'field_definition_id' => $def->id],
+                ['enabled' => true, 'required_override' => false, 'order' => $recommended[$def->code]['order'] ?? 0]);
+        }
+    }
+
     private function actAs(User $user)
     {
         return $this->actingAs($user)->withHeaders(['X-Company-Id' => $this->company->id]);
@@ -110,7 +121,8 @@ class LogisticsFieldsIntegrationTest extends TestCase
         JobdomainGate::assignToCompany($this->company, 'logistique');
 
         $definition = JobdomainRegistry::get('logistique');
-        $expectedCodes = collect($definition['default_fields'])->pluck('code')->sort()->values();
+        // ADR-819 : socle minimal — les champs « recommandés » restent au catalogue, non activés.
+        $expectedCodes = collect($definition['default_fields'])->reject(fn ($f) => ! empty($f['recommended']))->pluck('code')->sort()->values();
 
         $activatedCodes = FieldActivation::where('company_id', $this->company->id)
             ->where('enabled', true)
@@ -149,7 +161,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_driver_role_hides_management_fields(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $fields = FieldResolverService::resolve(
             model: $this->member,
@@ -173,7 +185,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_dispatcher_role_hides_driver_and_management_fields(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $fields = FieldResolverService::resolve(
             model: $this->member,
@@ -197,7 +209,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_manager_role_sees_base_hides_driving_and_dispatch(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $fields = FieldResolverService::resolve(
             model: $this->member,
@@ -222,7 +234,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_ops_manager_has_partial_driving_visibility(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $fields = FieldResolverService::resolve(
             model: $this->member,
@@ -248,7 +260,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_all_roles_see_base_commune_fields(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $baseCodes = ['phone', 'address', 'emergency_contact_name', 'birth_date',
             'social_security_number', 'iban', 'contract_type', 'hire_date', 'employee_status'];
@@ -276,7 +288,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_sensitive_fields_masked_when_no_permission(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         // Store sensitive values
         $ibanDef = FieldDefinition::whereNull('company_id')->where('code', 'iban')->first();
@@ -316,7 +328,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_sensitive_fields_unmasked_when_permission_granted(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $ibanDef = FieldDefinition::whereNull('company_id')->where('code', 'iban')->first();
         FieldValue::create([
@@ -343,7 +355,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_http_masking_for_non_admin_member(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         // Store IBAN value
         $ibanDef = FieldDefinition::whereNull('company_id')->where('code', 'iban')->first();
@@ -457,7 +469,7 @@ class LogisticsFieldsIntegrationTest extends TestCase
     public function test_driver_fields_have_groups(): void
     {
         JobdomainRegistry::sync();
-        JobdomainGate::assignToCompany($this->company, 'logistique');
+        $this->assignWithRecommendedFields();
 
         $fields = FieldResolverService::resolve(
             model: $this->member,

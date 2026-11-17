@@ -40,6 +40,10 @@ class CompanyModuleRoutesAreGatedTest extends TestCase
         'api/public/onboarding/verify',
         'api/public/onboarding/submit',
         'api/public/onboarding/close',
+        // ADR-819 : page publique de candidature par parrainage — jeton du lien (corps de requête), sans compte ni
+        // contexte tenant ; le module Parrainage de la société du lien est vérifié par le service à chaque appel.
+        'api/public/referral/view',
+        'api/public/referral/apply',
     ];
 
     public function test_all_company_module_routes_have_module_gate(): void

@@ -10,7 +10,7 @@ import HireFinalizeDialog from './_HireFinalizeDialog.vue'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.manage' } })
 
-const { t, te, d } = useI18n()
+const { t, te, locale } = useI18n()
 const route = useRoute()
 const { toast } = useAppToast()
 
@@ -87,6 +87,10 @@ const finalizeOpen = ref(false)
 
 const historyLabel = h => (te(`hiringFile.history.${h.action.replace('onboarding.', '')}`) ? t(`hiringFile.history.${h.action.replace('onboarding.', '')}`) : h.action)
 const actorLabel = h => (h.actor_type === 'candidate' ? t('hiringFile.candidate') : h.actor_type === 'system' ? t('hiringFile.system') : (h.actor || '—'))
+
+// Dates dans la langue de l'interface (aucun format nommé n'est déclaré dans l'i18n).
+const fmtDate = v => (v ? new Date(v).toLocaleDateString(locale.value) : '')
+const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 </script>
 
 <template>
@@ -112,7 +116,7 @@ const actorLabel = h => (h.actor_type === 'candidate' ? t('hiringFile.candidate'
     <template v-else-if="file">
       <AppPageHeader
         :title="file.name"
-        :description="[file.job_role, file.hire_date ? t('hiringFile.start', { date: d(new Date(file.hire_date), 'short') }) : null].filter(Boolean).join(' · ')"
+        :description="[file.job_role, file.hire_date ? t('hiringFile.start', { date: fmtDate(file.hire_date) }) : null].filter(Boolean).join(' · ')"
       >
         <template #actions>
           <VChip
@@ -153,7 +157,7 @@ const actorLabel = h => (h.actor_type === 'candidate' ? t('hiringFile.candidate'
           <VCard class="h-100">
             <VCardText>
               <div class="d-flex align-center gap-3 mb-2">
-                <span class="text-h6">{{ progressPct }} %</span>
+                <span class="text-h6 text-no-wrap">{{ progressPct }} %</span>
                 <VProgressLinear
                   :model-value="progressPct"
                   height="8"
@@ -362,7 +366,7 @@ const actorLabel = h => (h.actor_type === 'candidate' ? t('hiringFile.candidate'
               >
                 <div class="d-flex flex-wrap justify-space-between gap-2">
                   <span class="font-weight-medium">{{ historyLabel(h) }}</span>
-                  <span class="text-caption text-medium-emphasis">{{ h.at ? d(new Date(h.at), 'long') : '' }}</span>
+                  <span class="text-caption text-medium-emphasis">{{ h.at ? fmtDateTime(h.at) : '' }}</span>
                 </div>
                 <div class="text-caption text-medium-emphasis">
                   {{ actorLabel(h) }}

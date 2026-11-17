@@ -7,7 +7,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 definePage({ meta: { module: 'workforce_referral', permission: 'workforce_referral.review' } })
 
-const { t, d } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { can } = useCan()
@@ -98,6 +98,10 @@ const saveSettings = async () => {
   finally { savingSettings.value = false }
 }
 const MODES = computed(() => ['both', 'recommend', 'share'].map(v => ({ value: v, title: t(`referrals.settings.mode.${v}`) })))
+
+// Dates dans la langue de l'interface (aucun format nommé n'est déclaré dans l'i18n).
+const fmtDate = v => (v ? new Date(v).toLocaleDateString(locale.value) : '')
+const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 </script>
 
 <template>
@@ -161,7 +165,7 @@ const MODES = computed(() => ['both', 'recommend', 'share'].map(v => ({ value: v
               <span class="font-weight-medium">{{ [item.first_name, item.last_name].filter(Boolean).join(' ') }}</span>
             </template>
             <template #item.submitted_at="{ item }">
-              {{ item.submitted_at ? d(new Date(item.submitted_at), 'short') : '—' }}
+              {{ item.submitted_at ? fmtDate(item.submitted_at) : '—' }}
             </template>
             <template #item.status="{ item }">
               <VChip

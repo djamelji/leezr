@@ -29,7 +29,7 @@ class WorkforceReferralModule implements ModuleDefinition
                     ['key' => 'my-referrals', 'title' => 'My referrals', 'to' => ['name' => 'company-my-referrals'], 'icon' => 'tabler-heart-handshake', 'permission' => 'workforce_referral.refer', 'group' => 'personal', 'sort' => 60, 'requires' => 'employment'],
                     ['key' => 'settings-referrals', 'title' => 'Referrals', 'to' => ['name' => 'company-workforce-referrals', 'query' => ['tab' => 'settings']], 'icon' => 'tabler-heart-handshake', 'permission' => 'workforce_referral.manage', 'surface' => 'hr', 'group' => 'settings', 'sort' => 58, 'settings' => ['section' => 'work', 'level' => 'regular']],
                 ],
-                routeNames: ['company-workforce-referrals', 'company-my-referrals'],
+                routeNames: ['company-workforce-referrals'], // « Mon espace › Parrainage » : gardé par definePage (module + permission)
                 middlewareKey: 'workforce_referral',
             ),
             permissions: [
