@@ -30,9 +30,9 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
 
     // ── Lecture : domaine « logistique » (configuration historique réelle) ──
     const logi = Number(tinker("echo App\\Core\\Jobdomains\\Jobdomain::where('key','logistique')->value('id');"))
-    await page.goto(`/platform/jobdomains/${logi}/publication`)
+    await page.goto(`/platform/jobdomains/${logi}/setup`)
     await expect(page.locator('[data-test="jd-publication"]')).toBeVisible({ timeout: 20000 })
-    await page.locator('[data-test="jd-advanced"] .v-expansion-panel-title').click() // ADR-820 : diagnostic dans Publication › avancé
+    await page.locator('[data-test="jd-advanced-diagnostics"]').click() // ADR-821 : diagnostic dans Configuration initiale › avancé
     await expect(page.locator('[data-test="jd-compat-rbac"]')).toContainText('sans équivalent')
     await expect(page.locator('[data-test="jd-draft-rbac"]')).toBeVisible()
     await page.locator('[data-test="jd-legacy"] button').first().click()

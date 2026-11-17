@@ -54,21 +54,21 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   const cases = [
     // Redirections à parité prouvée.
     ['/company/roles', /\/company\/people\/roles$/, 'Rôles → onglet de Collaborateurs'],
-    ['/company/workforce/documents', /\/company\/documents\/hr/, 'Documents RH → espace Documents'],
+    ['/company/workforce/documents', /\/company\/documents\/people/, 'Documents RH → espace Documents'], // ADR-802 : registre RH = /documents/people
     [`/company/members/${someone.id}`, new RegExp(`/company/people/${resolved.json.person_ref}$`), 'fiche membre → fiche unifiée (id résolu serveur)'],
     [`/company/workforce/employees/${linked.employee_id}?tab=contract`, new RegExp(`/company/people/employee-${linked.employee_id}/contract$`), 'fiche salarié → fiche unifiée, onglet conservé'],
     ['/account-settings/documents', /\/company\/my-space\/documents$/, 'mes documents → Mon espace'],
     // Chemins nus.
     ['/company/my-space', /\/company\/my-space\/overview$/, 'Mon espace sans onglet'],
-    ['/company/documents', /\/company\/documents\/overview$/, 'Documents sans onglet'],
+    ['/company/documents', /\/company\/documents\/todo$/, 'Documents sans onglet'], // UX3 (ADR-778) : « À faire » est la vue par défaut
     ['/account-settings', /\/account-settings\/account$/, 'paramètres du compte sans onglet'],
     // Surfaces historiques CONSERVÉES (fonctions sans équivalent).
-    ['/company/members', /\/company\/members$/, 'liste membres conservée'],
-    ['/company/workforce/employees', /\/company\/workforce\/employees$/, 'liste salariés conservée'],
+    ['/company/members', /\/company\/people$/, 'liste membres → Équipe'], // ADR-802 : une fonction, un chemin
+    ['/company/workforce/employees', /\/company\/people\/hr$/, 'liste salariés → Équipe › Gestion RH'], // ADR-802 + ADR-820 (vue dans le chemin)
     [`/company/members/${someone.id}?legacy=1`, new RegExp(`/company/members/${someone.id}\\?legacy=1$`), 'ancienne fiche membre sur demande'],
     // Surfaces cibles.
     ['/company/people', /\/company\/people$/, 'Collaborateurs'],
-    ['/company/documents/hr', /\/company\/documents\/hr$/, 'Documents RH'],
+    ['/company/documents/hr', /\/company\/documents\/people$/, 'Documents RH'], // ADR-802 : registre RH = /documents/people
     ['/home', /\/home$/, 'accueil'],
     ['/company/workforce/me', /\/company\/workforce\/me$/, 'Mon activité'],
   ]
@@ -88,7 +88,7 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   await page.keyboard.press('Escape')
   await visit(page, '/company/people')
   await page.locator('[data-test="people-tools"]').click()
-  await expect(page.getByText('Import, export et actions groupées')).toBeVisible()
+  // ADR-802 : import / export vivent dans l'onglet Gestion RH (vérifié ci-dessus) ; le menu Outils ne garde que les champs
   await expect(page.getByText('Champs personnalisés')).toBeVisible()
   await page.keyboard.press('Escape')
 
@@ -138,7 +138,7 @@ test('profil salarié opérationnel : son espace, et des refus de sécurité EXP
   // Ce que son rôle autorise : la facette ACCÈS seulement — aucune donnée RH dans les réponses.
   const list = await apiRequest(page, { path: '/api/company/people?per_page=100' })
   expect(list.status).toBe(200)
-  expect(list.json.facets, 'facette ACCÈS sans facette RH').toEqual({ access: true, hr: false })
+  expect(list.json.facets, 'facette ACCÈS sans facette RH').toMatchObject({ access: true, hr: false }) // ADR-816 : account_details en plus
   expect(list.json.data.every(r => r.employment_status === null && r.job_role === null && r.department === null), 'aucune colonne RH').toBe(true)
   const other = list.json.data.find(r => r.user_id && r.email !== 'bob@leezr.test' && !r.is_owner)
   const file = await apiRequest(page, { path: `/api/company/people/${other.person_ref}` })

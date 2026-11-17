@@ -34,9 +34,10 @@ const stage = i => i.bucket || 'waiting_company'
 const STAGE_TONE = { waiting_company: 'secondary', waiting_candidate: 'info', to_verify: 'warning', to_finalize: 'primary', done: 'success', abandoned: 'secondary' }
 const OPEN = ['waiting_company', 'waiting_candidate', 'to_verify', 'to_finalize']
 const counts = computed(() => items.value.reduce((acc, i) => { acc[stage(i)] = (acc[stage(i)] || 0) + 1; return acc }, {}))
+// ADR-821 : les dossiers les plus récents d'abord (un dossier qui vient d'arriver ne doit pas être en page 2)
 const visible = computed(() => items.value.filter(i => filter.value === 'all'
   || (filter.value === 'open' && OPEN.includes(stage(i)))
-  || stage(i) === filter.value))
+  || stage(i) === filter.value).sort((a, b) => b.id - a.id))
 const progress = i => Math.round(100 * (i.fields_filled + i.documents_deposited) / Math.max(1, i.fields_total + i.documents_total))
 
 const onSite = async i => {
