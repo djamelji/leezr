@@ -195,7 +195,7 @@
       "workforce-time": "Temps & pointages",
       "workforce-leave": "Absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Paie",
+      "workforce-payroll": "Préparation de la paie",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Sites, services & postes",
@@ -8247,9 +8247,9 @@
     }
   },
   "payroll": {
-    "title": "Paie",
-    "subtitle": "Préparez, calculez et exportez la paie de vos employés",
-    "createRun": "Créer un bulletin de paie",
+    "title": "Préparation de la paie",
+    "subtitle": "Rassemblez les temps, absences et variables de la période, contrôlez les montants calculés à titre indicatif et exportez-les vers votre logiciel ou votre gestionnaire de paie, qui reste responsable de la paie.",
+    "createRun": "Créer une période de paie",
     "backToList": "Retour à la liste",
     "employees": "employés",
     "created": "Cycle de paie créé",
@@ -10137,8 +10137,8 @@
       "description": "Modèles RH, génération de contrats et gestion des documents."
     },
     "workforce_payroll": {
-      "name": "Paie",
-      "description": "Préparation, calcul, bulletins, déclarations et export."
+      "name": "Préparation de la paie",
+      "description": "Périodes, variables, montants indicatifs, bulletins et export — à valider par votre gestionnaire de paie."
     },
     "workforce_planning": {
       "name": "Planning",

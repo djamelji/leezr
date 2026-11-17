@@ -76,7 +76,7 @@ const submit = async () => {
           v-if="can('workforce.contracts')"
           variant="tonal"
           prepend-icon="tabler-file-certificate"
-          :to="`/company/people/${done.person_ref}?tab=contracts`"
+          :to="`/company/people/${done.person_ref}?tab=contract`"
         >
           {{ t('hiring.createContract') }}
         </VBtn>

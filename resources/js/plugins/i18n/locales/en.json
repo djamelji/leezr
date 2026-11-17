@@ -195,7 +195,7 @@
       "workforce-time": "Time & clock-ins",
       "workforce-leave": "Absences",
       "workforce-planning": "Planning",
-      "workforce-payroll": "Payroll",
+      "workforce-payroll": "Payroll preparation",
       "workforce-documents": "Documents",
       "workforce-dsn": "DSN",
       "workforce-organization": "Sites, departments & positions",
@@ -8247,9 +8247,9 @@
     }
   },
   "payroll": {
-    "title": "Payroll",
-    "subtitle": "Prepare, calculate and export your employees' payroll",
-    "createRun": "Create Payroll Run",
+    "title": "Payroll preparation",
+    "subtitle": "Gather the period's time, absences and variables, check the amounts computed as an indication and export them to your payroll software or provider, who remains responsible for payroll.",
+    "createRun": "Create a payroll period",
     "backToList": "Back to list",
     "employees": "employees",
     "created": "Payroll run created",
@@ -10137,8 +10137,8 @@
       "description": "HR templates, contract generation and document management."
     },
     "workforce_payroll": {
-      "name": "Payroll",
-      "description": "Preparation, calculation, payslips, declarations and export."
+      "name": "Payroll preparation",
+      "description": "Periods, variables, indicative amounts, payslips and export — to be validated by your payroll provider."
     },
     "workforce_planning": {
       "name": "Planning",
