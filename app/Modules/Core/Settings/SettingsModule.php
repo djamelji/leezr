@@ -19,12 +19,14 @@ class SettingsModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     ['key' => 'company-profile', 'title' => 'Company Profile', 'to' => ['name' => 'company-profile-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-building-community', 'permission' => 'settings.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 10, 'settings' => ['section' => 'company', 'level' => 'essential', 'status' => 'company_profile']],
+                    // ADR-819 (Company 2.0) — catalogues de la société : champs et types de documents, avec leur origine.
+                    ['key' => 'company-catalogs', 'title' => 'Catalogues', 'to' => ['name' => 'company-catalogs-tab', 'params' => ['tab' => 'fields']], 'icon' => 'tabler-books', 'anyPermission' => ['settings.manage', 'documents.configure', 'workforce.manage'], 'surface' => 'structure', 'group' => 'settings', 'sort' => 15, 'settings' => ['section' => 'organization', 'level' => 'essential']],
                     // ADR-769 (M7 LOT 3) — « Mon espace » : self-service Core (documents, bulletins, signatures,
                     // profil), présent pour TOUT membre, avec ou sans Workforce, quel que soit son rôle.
                     ['key' => 'my-space', 'title' => 'My Space', 'to' => ['name' => 'company-my-space-tab', 'params' => ['tab' => 'overview']], 'icon' => 'tabler-user-circle', 'group' => 'personal', 'sort' => 10],
                     ['key' => 'account-settings', 'title' => 'Account Settings', 'to' => ['name' => 'account-settings-tab', 'params' => ['tab' => 'account']], 'icon' => 'tabler-settings', 'group' => 'personal', 'sort' => 900, 'tags' => ['avatar']],
                 ],
-                routeNames: ['company-profile-tab'],
+                routeNames: ['company-profile-tab', 'company-catalogs-tab'],
                 middlewareKey: 'core.settings',
             ),
             permissions: [

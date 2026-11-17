@@ -91,6 +91,7 @@ class RequirementConfigController extends Controller
             'items.*.kind' => 'required|in:field,document',
             'items.*.code' => 'required|string|max:100',
             'items.*.state' => 'required|in:required,optional,removed',
+            'items.*.stage' => 'nullable|in:hire,onboarding,ongoing', // ADR-819 : moment de collecte
         ]);
         $can = $this->can($request);
         foreach ($data['items'] as $item) {

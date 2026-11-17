@@ -212,7 +212,8 @@
       "settings-signature": "Signature électronique",
       "settings-leave-types": "Types d'absence",
       "workforce-requirements": "Informations & documents demandés",
-      "workforce-hiring": "Embauches"
+      "workforce-hiring": "Embauches",
+      "company-catalogs": "Catalogues"
     }
   },
   "roles": {
@@ -10035,7 +10036,8 @@
       "workflows": "Tâches et notifications déclenchées automatiquement.",
       "settings-signature": "Prestataire et options de la signature électronique.",
       "modules": "Activer ou retirer des fonctionnalités.",
-      "workforce-requirements": "Par poste : informations et pièces attendues (en préparation)."
+      "workforce-requirements": "Par poste : informations et pièces attendues (en préparation).",
+      "company-catalogs": "Champs et types de documents de la société, leur origine et les postes qui les exigent."
     },
     "timezoneHint": "Fuseau de votre entreprise par défaut ; à changer seulement pour un site dans un autre fuseau.",
     "advancedShort": "Avancé",
@@ -10288,6 +10290,12 @@
         "declined": "Écartées",
         "skipped": "Sans changement"
       }
+    },
+    "stage": {
+      "title": "Moment de collecte",
+      "hire": "À l'embauche",
+      "onboarding": "Pendant l'intégration",
+      "ongoing": "En continu"
     }
   },
   "employeeFields": {
@@ -11066,7 +11074,9 @@
       "overview": "Informations",
       "requirements": "Exigences",
       "people": "Personnes ({n})",
-      "reprise": "Reprise de l'existant"
+      "reprise": "Historique et reprise",
+      "fields": "Champs",
+      "documents": "Documents"
     },
     "fields": {
       "title": "Intitulé",
@@ -11104,6 +11114,31 @@
       "previewResult": "{n} exigence(s) seront ajoutées au poste ({p} personne(s) concernée(s)).",
       "adopt": "Confirmer la reprise",
       "adopted": "{n} exigence(s) reprises pour ce poste."
+    },
+    "effective": {
+      "position": "Calcul effectif : par poste. Ces exigences s'appliquent aux nouvelles embauches et aux demandes que vous lancez. Les pièces déjà fournies et les demandes en cours ne changent pas.",
+      "role": "Calcul effectif : encore par rôle d'accès. Cette configuration est préparée : elle s'appliquera quand votre société calculera les pièces par poste (Réglages › Informations et documents demandés)."
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif",
+      "terminated": "Sorti",
+      "preparatory": "Embauche en cours",
+      "on_leave": "En congé",
+      "suspended": "Suspendu"
+    },
+    "file": {
+      "complete": "Dossier complet",
+      "missing": "{n} pièce(s) à demander",
+      "requested": "{n} pièce(s) demandée(s)"
+    },
+    "apply": {
+      "summary": "{n} pièce(s) exigée(s) par ce poste ne sont ni fournies ni demandées, pour {p} personne(s).",
+      "action": "Demander les pièces manquantes",
+      "title": "Appliquer les exigences du poste",
+      "intro": "Les demandes suivantes vont être créées. Les pièces déjà fournies, prouvées ou demandées ne sont jamais redemandées ; les embauches en cours et les personnes sorties sont ignorées.",
+      "confirm": "Créer les demandes",
+      "done": "{n} demande(s) créée(s)."
     }
   },
   "hiring": {
@@ -11179,5 +11214,68 @@
     "back": "Revenir au calcul par rôle",
     "switched": "Mode de calcul mis à jour.",
     "note": "Les pièces déjà déposées et les demandes en cours ne changent pas. Seules les nouvelles demandes, les dossiers et la conformité suivent le nouveau mode. Retour possible à tout moment."
+  },
+  "catalogs": {
+    "title": "Catalogues",
+    "subtitle": "Ce que votre société peut collecter : les informations de la fiche et les types de documents. Ce qui est obligatoire se règle par poste.",
+    "tabs": {
+      "fields": "Champs ({n})",
+      "documents": "Types de documents ({n})"
+    },
+    "availabilityHint": "Disponible ne veut pas dire obligatoire : un élément actif est proposé dans les formulaires. Pour le rendre obligatoire, exigez-le pour un poste.",
+    "search": "Rechercher un champ, un document…",
+    "col": {
+      "name": "Nom",
+      "type": "Type",
+      "formats": "Formats acceptés",
+      "origin": "Origine",
+      "usedBy": "Exigé pour",
+      "status": "État"
+    },
+    "origin": {
+      "standard": "Standard",
+      "jobdomain": "Votre métier",
+      "jobdomainRecommended": "Recommandé par votre métier",
+      "module": "Module",
+      "custom": "Créé par vous"
+    },
+    "status": {
+      "active": "Actif",
+      "available": "Disponible",
+      "recommended": "Recommandé"
+    },
+    "fieldType": {
+      "string": "Texte",
+      "number": "Nombre",
+      "date": "Date",
+      "boolean": "Oui / non",
+      "select": "Liste de choix",
+      "json": "Données structurées"
+    },
+    "moduleInactive": "Module non activé : l'élément reste standard, sans fonction du module.",
+    "moduleProof": "Peut aussi être satisfait par un contrat signé dans Leezr",
+    "sensitive": "Information sensible : accès restreint",
+    "expires": "date d'expiration",
+    "everyone": "Tout le monde",
+    "notRequired": "Exigé par aucun poste",
+    "activate": "Proposer dans les formulaires",
+    "deactivate": "Ne plus proposer",
+    "activated": "Élément proposé dans les formulaires.",
+    "deactivated": "Élément retiré des formulaires. Les valeurs et pièces déjà collectées sont conservées.",
+    "requireForPosition": "Exiger pour un poste",
+    "requireHint": "« {name} » sera exigé des personnes de ce poste. Les demandes ne sont créées que lors d'une embauche ou à votre demande, jamais d'office pour les personnes en place.",
+    "position": "Poste",
+    "noPosition": "Aucun poste : créez-en un dans Organisation › Postes.",
+    "requireConfirm": "Exiger",
+    "required": "Exigence ajoutée au poste.",
+    "createField": "Créer un champ",
+    "createDocument": "Créer un type de document",
+    "options": "Choix proposés",
+    "optionsHint": "Saisissez un choix puis Entrée.",
+    "maxSize": "Taille maximale",
+    "requiresExpiration": "Le document a une date d'expiration",
+    "createHint": "L'élément est créé pour votre société seulement. Il n'est obligatoire pour personne tant que vous ne l'exigez pas pour un poste.",
+    "created": "Élément créé.",
+    "empty": "Aucun élément ne correspond à votre recherche."
   }
 }

@@ -100,6 +100,7 @@ final class RequirementConfigService
                 'justification' => ! $r['customizable'] ? ($retained['legal_reference'] ?? null) : null,
                 'verified_at' => ! $r['customizable'] ? ($retained['verified_at'] ?? null) : null,
                 'update_available' => $r['update_available'] !== null,
+                'stage' => $retained['stage'] ?? null, // ADR-819
             ];
         }
         foreach ($out as &$list) {
@@ -190,10 +191,11 @@ final class RequirementConfigService
             }
 
             $level = self::STATES[$state];
+            $stage = $item['stage'] ?? null; // ADR-819 : moment de collecte (embauche, intégration, en continu)
             if ($waiver) {
                 $this->close($waiver, Requirement::STATUS_INACTIVE, 'waiver_lifted');
             }
-            if (($existing ?? $copy) && ($existing ?? $copy)->level === $level) {
+            if (($existing ?? $copy) && ($existing ?? $copy)->level === $level && ($stage === null || ($existing ?? $copy)->stage === $stage)) {
                 $changes['unchanged'][] = $label; // idempotent
 
                 continue;
@@ -201,17 +203,17 @@ final class RequirementConfigService
             if (! $existing && $copy) {
                 // Personnalisation d'une proposition adoptée : la valeur de l'entreprise prévaut, l'origine est gardée.
                 $this->close($copy, Requirement::STATUS_SUPERSEDED, 'customized_by_company');
-                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, $copy);
+                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, $copy, $stage);
                 $changes['modified'][] = $label + ['from' => $copy->level, 'to' => $level];
 
                 continue;
             }
             if ($existing) {
                 $this->close($existing, Requirement::STATUS_SUPERSEDED, 'modified');
-                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, $existing);
+                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, $existing, $stage);
                 $changes['modified'][] = $label + ['from' => $existing->level, 'to' => $level];
             } else {
-                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE);
+                $this->create($kind, $targetColumn, $targetId, $applicability, $level, Requirement::EFFECT_REQUIRE, null, $stage);
                 $changes['added'][] = $label + ['to' => $level];
             }
         }
@@ -289,10 +291,11 @@ final class RequirementConfigService
         return $resolved[$kind.':'.$targetId] ?? null;
     }
 
-    private function create(string $kind, string $column, int $id, ?array $applicability, ?string $level, string $effect, ?Requirement $previous = null): void
+    private function create(string $kind, string $column, int $id, ?array $applicability, ?string $level, string $effect, ?Requirement $previous = null, ?string $stage = null): void
     {
         Requirement::create([
             'company_id' => $this->company->id, 'target_kind' => $kind, $column => $id, 'effect' => $effect, 'level' => $level,
+            'stage' => $effect === Requirement::EFFECT_WAIVE ? null : ($stage ?? $previous?->stage),
             'applicability' => $applicability, 'source' => 'company', 'status' => Requirement::STATUS_ACTIVE, 'effective_from' => now(),
             'derived_from_id' => $previous?->derived_from_id, 'customized_at' => $previous ? now() : null, 'created_by' => $this->actor?->id,
         ]);

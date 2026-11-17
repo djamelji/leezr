@@ -259,6 +259,9 @@ final class VersionedCompanyInitializer
             if (($item['job_role_keys'] ?? []) !== [] || $subject === Requirement::SUBJECT_LEGAL_REPRESENTATIVE) {
                 continue; // par poste ou représentant légal : registre seulement
             }
+            if (($item['level'] ?? null) === RequirementLevel::RECOMMENDED) {
+                continue; // ADR-819 : recommandé = proposé au catalogue, jamais activé d'office
+            }
             $companyScope = $subject === Requirement::SUBJECT_COMPANY;
             if ($item['kind'] === 'field') {
                 $def = FieldDefinition::whereNull('company_id')->where('code', $item['code'])->where('scope', $companyScope ? FieldDefinition::SCOPE_COMPANY : FieldDefinition::SCOPE_COMPANY_USER)->first();

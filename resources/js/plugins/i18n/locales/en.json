@@ -212,7 +212,8 @@
       "settings-signature": "Electronic signature",
       "settings-leave-types": "Absence types",
       "workforce-requirements": "Requested information & documents",
-      "workforce-hiring": "Hiring"
+      "workforce-hiring": "Hiring",
+      "company-catalogs": "Catalogues"
     }
   },
   "roles": {
@@ -10035,7 +10036,8 @@
       "workflows": "Tasks and notifications triggered automatically.",
       "settings-signature": "Provider and options of electronic signature.",
       "modules": "Turn features on or off.",
-      "workforce-requirements": "Per position: expected information and documents (in preparation)."
+      "workforce-requirements": "Per position: expected information and documents (in preparation).",
+      "company-catalogs": "Company fields and document types, their origin and the positions requiring them."
     },
     "timezoneHint": "Your company's time zone by default; change it only for a site in another time zone.",
     "advancedShort": "Advanced",
@@ -10288,6 +10290,12 @@
         "declined": "Dismissed",
         "skipped": "No change"
       }
+    },
+    "stage": {
+      "title": "When to collect",
+      "hire": "At hiring",
+      "onboarding": "During onboarding",
+      "ongoing": "Ongoing"
     }
   },
   "employeeFields": {
@@ -11066,7 +11074,9 @@
       "overview": "Information",
       "requirements": "Requirements",
       "people": "People ({n})",
-      "reprise": "Takeover"
+      "reprise": "History and takeover",
+      "fields": "Fields",
+      "documents": "Documents"
     },
     "fields": {
       "title": "Title",
@@ -11104,6 +11114,31 @@
       "previewResult": "{n} requirement(s) will be added to the position ({p} person(s) concerned).",
       "adopt": "Confirm takeover",
       "adopted": "{n} requirement(s) taken over for this position."
+    },
+    "effective": {
+      "position": "Effective calculation: per position. These requirements apply to new hires and to the requests you launch. Documents already provided and pending requests do not change.",
+      "role": "Effective calculation: still per access role. This configuration is prepared: it will apply once your company computes documents per position (Settings › Requested information and documents)."
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "terminated": "Left",
+      "preparatory": "Hiring in progress",
+      "on_leave": "On leave",
+      "suspended": "Suspended"
+    },
+    "file": {
+      "complete": "File complete",
+      "missing": "{n} document(s) to request",
+      "requested": "{n} document(s) requested"
+    },
+    "apply": {
+      "summary": "{n} document(s) required by this position are neither provided nor requested, for {p} person(s).",
+      "action": "Request missing documents",
+      "title": "Apply the position requirements",
+      "intro": "The following requests will be created. Documents already provided, proven or requested are never asked again; ongoing hires and people who left are skipped.",
+      "confirm": "Create the requests",
+      "done": "{n} request(s) created."
     }
   },
   "hiring": {
@@ -11179,5 +11214,68 @@
     "back": "Back to computing by role",
     "switched": "Computation mode updated.",
     "note": "Documents already provided and ongoing requests do not change. Only new requests, files and compliance follow the new mode. You can switch back at any time."
+  },
+  "catalogs": {
+    "title": "Catalogues",
+    "subtitle": "What your company can collect: person file information and document types. What is mandatory is set per position.",
+    "tabs": {
+      "fields": "Fields ({n})",
+      "documents": "Document types ({n})"
+    },
+    "availabilityHint": "Available does not mean mandatory: an active item is offered in forms. To make it mandatory, require it for a position.",
+    "search": "Search a field, a document…",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "formats": "Accepted formats",
+      "origin": "Origin",
+      "usedBy": "Required for",
+      "status": "Status"
+    },
+    "origin": {
+      "standard": "Standard",
+      "jobdomain": "Your business",
+      "jobdomainRecommended": "Recommended for your business",
+      "module": "Module",
+      "custom": "Created by you"
+    },
+    "status": {
+      "active": "Active",
+      "available": "Available",
+      "recommended": "Recommended"
+    },
+    "fieldType": {
+      "string": "Text",
+      "number": "Number",
+      "date": "Date",
+      "boolean": "Yes / no",
+      "select": "Choice list",
+      "json": "Structured data"
+    },
+    "moduleInactive": "Module not activated: the item stays standard, without the module features.",
+    "moduleProof": "Can also be satisfied by a contract signed in Leezr",
+    "sensitive": "Sensitive information: restricted access",
+    "expires": "expiry date",
+    "everyone": "Everyone",
+    "notRequired": "Required by no position",
+    "activate": "Offer in forms",
+    "deactivate": "Stop offering",
+    "activated": "Item offered in forms.",
+    "deactivated": "Item removed from forms. Values and documents already collected are kept.",
+    "requireForPosition": "Require for a position",
+    "requireHint": "“{name}” will be required from people in this position. Requests are only created at hiring or when you ask, never automatically for people already in place.",
+    "position": "Position",
+    "noPosition": "No position: create one in Organisation › Positions.",
+    "requireConfirm": "Require",
+    "required": "Requirement added to the position.",
+    "createField": "Create a field",
+    "createDocument": "Create a document type",
+    "options": "Choices",
+    "optionsHint": "Type a choice then Enter.",
+    "maxSize": "Maximum size",
+    "requiresExpiration": "The document has an expiry date",
+    "createHint": "The item is created for your company only. It is mandatory for no one until you require it for a position.",
+    "created": "Item created.",
+    "empty": "No item matches your search."
   }
 }

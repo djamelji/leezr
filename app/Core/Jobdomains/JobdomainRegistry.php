@@ -42,6 +42,7 @@ class JobdomainRegistry
                 'nav_profile' => 'logistique',
                 'default_modules' => ['core.theme', 'core.members', 'core.settings', 'core.documents', 'logistics_shipments', 'core.documentation'],
                 // ADR-169: default_fields only control activation + order.
+                // ADR-819 (Company 2.0) : socle MINIMAL — `recommended` = proposé dans le catalogue, jamais activé d'office.
                 // Mandatory is handled exclusively by FieldDefinitionCatalog required_by_*.
                 'default_fields' => [
                     // Company scope — address
@@ -55,7 +56,7 @@ class JobdomainRegistry
                     // Company User — identity
                     ['code' => 'job_title', 'order' => 10],
                     ['code' => 'birth_date', 'order' => 20],
-                    ['code' => 'nationality', 'order' => 30],
+                    ['code' => 'nationality', 'order' => 30, 'recommended' => true],
                     // Company User — contact
                     ['code' => 'phone', 'order' => 40],
                     ['code' => 'address', 'order' => 50],
@@ -64,26 +65,26 @@ class JobdomainRegistry
                     // Company User — hr
                     ['code' => 'hire_date', 'order' => 80],
                     ['code' => 'contract_type', 'order' => 90],
-                    ['code' => 'employee_status', 'order' => 100],
-                    ['code' => 'social_security_number', 'order' => 110],
-                    ['code' => 'iban', 'order' => 120],
+                    ['code' => 'employee_status', 'order' => 100, 'recommended' => true],
+                    ['code' => 'social_security_number', 'order' => 110, 'recommended' => true],
+                    ['code' => 'iban', 'order' => 120, 'recommended' => true],
                     // Company User — driving
-                    ['code' => 'license_number', 'order' => 200],
-                    ['code' => 'license_category', 'order' => 210],
-                    ['code' => 'license_expiry', 'order' => 220],
-                    ['code' => 'adr_certified', 'order' => 230],
-                    ['code' => 'vehicle_type', 'order' => 240],
+                    ['code' => 'license_number', 'order' => 200, 'recommended' => true],
+                    ['code' => 'license_category', 'order' => 210, 'recommended' => true],
+                    ['code' => 'license_expiry', 'order' => 220, 'recommended' => true],
+                    ['code' => 'adr_certified', 'order' => 230, 'recommended' => true],
+                    ['code' => 'vehicle_type', 'order' => 240, 'recommended' => true],
                     // Company User — dispatch
-                    ['code' => 'geographic_zone', 'order' => 300],
-                    ['code' => 'work_schedule', 'order' => 310],
-                    ['code' => 'work_mode', 'order' => 320],
+                    ['code' => 'geographic_zone', 'order' => 300, 'recommended' => true],
+                    ['code' => 'work_schedule', 'order' => 310, 'recommended' => true],
+                    ['code' => 'work_mode', 'order' => 320, 'recommended' => true],
                 ],
                 // ADR-389: default document types activated on assignment
                 // required: true → sets required_override at assignment time
                 'default_documents' => [
                     ['code' => 'id_card', 'order' => 0, 'required' => true],
                     ['code' => 'driving_license', 'order' => 10, 'required' => false],
-                    ['code' => 'medical_certificate', 'order' => 20, 'required' => false],
+                    ['code' => 'medical_certificate', 'order' => 20, 'required' => false, 'recommended' => true],
                     ['code' => 'kbis', 'order' => 30, 'required' => true],
                     ['code' => 'insurance_certificate', 'order' => 40, 'required' => true],
                 ],

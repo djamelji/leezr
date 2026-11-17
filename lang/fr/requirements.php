@@ -12,4 +12,5 @@ return [
     'forbidden_section' => 'Vous ne pouvez pas modifier cette partie.',
     'module_not_active' => "Ce module n'est pas actif pour votre entreprise : ses propositions ne peuvent pas être adoptées.",
     'unknown_proposal' => "Proposition inconnue.",
+    'apply_requires_position_authority' => 'Les exigences de ce poste ne s\'appliquent pas encore : votre société calcule toujours les pièces par rôle d\'accès. Basculez le calcul par poste avant de les appliquer aux personnes en place.', // ADR-819
 ];

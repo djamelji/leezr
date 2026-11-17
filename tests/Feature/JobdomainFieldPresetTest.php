@@ -47,6 +47,9 @@ class JobdomainFieldPresetTest extends TestCase
         $activatedDefs = FieldDefinition::whereIn('id', $activatedDefIds)->pluck('code')->toArray();
 
         foreach ($defaultFields as $fieldConfig) {
+            if (! empty($fieldConfig['recommended'])) {
+                continue; // ADR-819 : recommandé = proposé au catalogue, pas activé
+            }
             $code = $fieldConfig['code'];
             $def = FieldDefinition::where('code', $code)->first();
             if ($def && in_array($def->scope, [FieldDefinition::SCOPE_COMPANY, FieldDefinition::SCOPE_COMPANY_USER])) {

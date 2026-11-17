@@ -176,6 +176,9 @@ class JobdomainGate
             // Activate default field presets (structured format)
             $defaultFields = $presets->fields;
 
+            // ADR-819 (Company 2.0) : une entrée « recommandée » reste au catalogue, sans être activée.
+            $defaultFields = array_values(array_filter($defaultFields, fn ($f) => empty($f['recommended'])));
+
             if (!empty($defaultFields)) {
                 $fieldConfigs = collect($defaultFields)->keyBy('code');
                 $codes = $fieldConfigs->keys()->toArray();
@@ -205,6 +208,8 @@ class JobdomainGate
 
             // ADR-169 Phase 3: Activate default document types
             $defaultDocuments = $presets->documents;
+
+            $defaultDocuments = array_values(array_filter($defaultDocuments, fn ($d) => empty($d['recommended']))); // ADR-819
 
             if (!empty($defaultDocuments)) {
                 $docConfigs = collect($defaultDocuments)->keyBy('code');

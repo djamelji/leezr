@@ -279,7 +279,8 @@
       "workforce": "الموارد البشرية"
     },
     "company": {
-      "workforce-hiring": "التوظيف"
+      "workforce-hiring": "التوظيف",
+      "company-catalogs": "الفهارس"
     }
   },
   "workforceDocuments": {
@@ -673,6 +674,74 @@
       "bulkApprovePartial": "تمت الموافقة على {count}، ولم تتم الموافقة على {skipped}: الملف مفقود أو سبقت معالجته — افتح الطلب لإعادة طلبه.",
       "status_submitted": "مُرسَل",
       "status_rejected": "مرفوض"
+    }
+  },
+  "catalogs": {
+    "title": "الفهارس",
+    "subtitle": "ما يمكن لشركتك جمعه: معلومات الملف وأنواع المستندات. ما هو إلزامي يُحدَّد لكل وظيفة.",
+    "tabs": {
+      "fields": "الحقول ({n})",
+      "documents": "أنواع المستندات ({n})"
+    },
+    "availabilityHint": "المتاح لا يعني الإلزامي: العنصر النشط يُعرض في النماذج. لجعله إلزاميًا، اطلبه لوظيفة.",
+    "search": "ابحث عن حقل أو مستند…",
+    "col": {
+      "name": "الاسم",
+      "type": "النوع",
+      "formats": "الصيغ المقبولة",
+      "origin": "المصدر",
+      "usedBy": "مطلوب لـ",
+      "status": "الحالة"
+    },
+    "origin": {
+      "standard": "قياسي",
+      "jobdomain": "نشاطك",
+      "jobdomainRecommended": "موصى به لنشاطك",
+      "module": "وحدة",
+      "custom": "من إنشائك"
+    },
+    "status": {
+      "active": "نشط",
+      "available": "متاح",
+      "recommended": "موصى به"
+    },
+    "fieldType": {
+      "string": "نص",
+      "number": "رقم",
+      "date": "تاريخ",
+      "boolean": "نعم / لا",
+      "select": "قائمة اختيارات",
+      "json": "بيانات منظمة"
+    },
+    "moduleInactive": "الوحدة غير مفعّلة: يبقى العنصر قياسيًا دون ميزات الوحدة.",
+    "moduleProof": "يمكن استيفاؤه أيضًا بعقد موقّع في Leezr",
+    "sensitive": "معلومة حساسة: وصول مقيّد",
+    "expires": "تاريخ الانتهاء",
+    "everyone": "الجميع",
+    "notRequired": "غير مطلوب لأي وظيفة",
+    "activate": "عرض في النماذج",
+    "deactivate": "إيقاف العرض",
+    "activated": "يُعرض العنصر في النماذج.",
+    "deactivated": "أُزيل العنصر من النماذج. تُحفظ القيم والمستندات المجمعة.",
+    "requireForPosition": "طلبه لوظيفة",
+    "requireHint": "سيُطلب «{name}» من أصحاب هذه الوظيفة. لا تُنشأ الطلبات إلا عند التوظيف أو بطلبك.",
+    "position": "الوظيفة",
+    "noPosition": "لا توجد وظيفة: أنشئ واحدة في التنظيم › الوظائف.",
+    "requireConfirm": "طلب",
+    "required": "أُضيف المتطلب إلى الوظيفة.",
+    "createField": "إنشاء حقل",
+    "createDocument": "إنشاء نوع مستند",
+    "options": "الاختيارات",
+    "optionsHint": "اكتب اختيارًا ثم Enter.",
+    "maxSize": "الحجم الأقصى",
+    "requiresExpiration": "للمستند تاريخ انتهاء",
+    "createHint": "يُنشأ العنصر لشركتك فقط ولا يكون إلزاميًا حتى تطلبه لوظيفة.",
+    "created": "تم إنشاء العنصر.",
+    "empty": "لا يوجد عنصر يطابق بحثك."
+  },
+  "settingsHub": {
+    "hints": {
+      "company-catalogs": "حقول الشركة وأنواع المستندات ومصدرها والوظائف التي تتطلبها."
     }
   }
 }

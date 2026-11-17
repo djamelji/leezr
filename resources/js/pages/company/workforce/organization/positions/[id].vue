@@ -18,7 +18,7 @@ const docLabel = (code, fallback) => (te(`documents.type.${code}`) ? t(`document
 const id = computed(() => Number(route.params.id))
 const position = ref(null)
 const notFound = ref(false)
-const tab = ref(route.query.tab || 'overview')
+const tab = ref(route.query.tab === 'requirements' ? 'documents' : (route.query.tab || 'overview')) // ADR-819 : ancien onglet « Exigences »
 const canEditInfo = computed(() => can('workforce.manage'))
 const canConfigure = computed(() => can('settings.manage') || can('documents.configure'))
 
@@ -54,21 +54,48 @@ const saveInfo = async () => {
   finally { savingInfo.value = false }
 }
 
-// ── Personnes affectées (périmètre de l'utilisateur, appliqué par le serveur) ──
+// ── Collaborateurs du poste (périmètre de l'utilisateur, appliqué par le serveur) + état de leur dossier ──
+// ADR-819 : le calcul EFFECTIF (rôle ou poste) vient du serveur ; appliquer les exigences aux personnes
+// en place passe par un aperçu puis une confirmation — jamais d'office.
 const people = ref([])
 const peopleLoaded = ref(false)
+const application = ref(null)
+const canDocs = computed(() => can('documents.view'))
 const loadPeople = async () => {
-  const res = await $api('/workforce/employees', { query: { job_role_id: id.value, per_page: 100 } })
-  people.value = res.data || res || []
+  if (canDocs.value) {
+    application.value = await $api(`/workforce/job-roles/${id.value}/people-documents`).catch(() => null)
+    people.value = application.value?.people || []
+  }
+  else {
+    const res = await $api('/workforce/employees', { query: { job_role_id: id.value, per_page: 100 } })
+    people.value = (res.data || res || []).map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}`, status: p.status, account: !!p.user_id }))
+  }
   peopleLoaded.value = true
 }
+const docName = code => docLabel(code, code)
+const applyOpen = ref(false)
+const applying = ref(false)
+const applyTargets = computed(() => people.value.filter(p => p.to_request?.length && !p.preparatory && p.status !== 'terminated'))
+const applyRequirements = async () => {
+  applying.value = true
+  try {
+    const res = await $api(`/workforce/job-roles/${id.value}/apply-requirements`, { method: 'POST', body: { employee_ids: applyTargets.value.map(p => p.id) } })
+    const n = Object.values(res.created || {}).reduce((a, c) => a + c.length, 0)
+    toast(t('positions.apply.done', { n }), 'success')
+    applyOpen.value = false
+    await loadPeople()
+  }
+  catch (e) { toast(e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('common.error'), 'error') }
+  finally { applying.value = false }
+}
+const authorityIsPosition = computed(() => application.value?.authority === 'position')
 
 // ── Reprise des règles historiques (lecture seule, adoption explicite) ──
 const proposal = ref(null)
 const selected = ref([])
 const adoptPreview = ref(null)
 const adopting = ref(false)
-const editorRef = ref(null)
+const editorKey = ref(0)
 const loadProposal = async () => {
   proposal.value = await $api('/workforce/requirements/proposal', { query: { scope: `job_role:${id.value}` } })
   selected.value = []
@@ -90,14 +117,14 @@ const adopt = async () => {
     toast(t('positions.reprise.adopted', { n: selected.value.length }), 'success')
     adoptPreview.value = null
     await loadProposal()
-    editorRef.value?.load()
+    editorKey.value++
   }
   catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
   finally { adopting.value = false }
 }
 
 watch(tab, v => {
-  if (v === 'people' && !peopleLoaded.value)
+  if (['people', 'fields', 'documents'].includes(v) && !peopleLoaded.value)
     loadPeople()
   if (v === 'reprise' && !proposal.value)
     loadProposal()
@@ -146,10 +173,17 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
         </VTab>
         <VTab
           v-if="canConfigure"
-          value="requirements"
-          data-test="position-tab-requirements"
+          value="fields"
+          data-test="position-tab-fields"
         >
-          {{ t('positions.tabs.requirements') }}
+          {{ t('positions.tabs.fields') }}
+        </VTab>
+        <VTab
+          v-if="canConfigure"
+          value="documents"
+          data-test="position-tab-documents"
+        >
+          {{ t('positions.tabs.documents') }}
         </VTab>
         <VTab
           value="people"
@@ -245,23 +279,25 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
           </VCard>
         </VWindowItem>
 
-        <!-- Exigences -->
+        <!-- Champs / Documents : exigences du poste (registre des exigences), calcul effectif affiché -->
         <VWindowItem
-          v-if="canConfigure"
-          value="requirements"
+          v-for="section in (canConfigure ? ['fields', 'documents'] : [])"
+          :key="section"
+          :value="section"
         >
           <VAlert
-            type="info"
+            :type="authorityIsPosition ? 'success' : 'info'"
             variant="tonal"
             density="compact"
             class="mb-4"
             data-test="position-requirements-status"
           >
-            {{ t('positions.requirementsStatus') }}
+            {{ authorityIsPosition ? t('positions.effective.position') : t('positions.effective.role') }}
           </VAlert>
           <RequirementsEditor
-            ref="editorRef"
+            :key="`${section}-${editorKey}`"
             :position-id="id"
+            :only="section === 'fields' ? 'field' : 'document'"
           />
         </VWindowItem>
 
@@ -274,18 +310,45 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
             >
               {{ t('positions.noPeople') }}
             </VCardText>
-            <VList
-              v-else
-              data-test="position-people"
-            >
-              <VListItem
-                v-for="p in people"
-                :key="p.id"
-                :to="`/company/people/employee-${p.id}`"
-                :title="`${p.first_name} ${p.last_name}`"
-                :subtitle="p.user_id ? t('positions.withAccount') : t('positions.withoutAccount')"
-              />
-            </VList>
+            <template v-else>
+              <VCardText
+                v-if="application?.to_request_total && can('documents.manage')"
+                class="d-flex flex-wrap align-center gap-3 pb-0"
+              >
+                <span class="text-body-2 flex-grow-1">{{ t('positions.apply.summary', { n: application.to_request_total, p: applyTargets.length }) }}</span>
+                <VBtn
+                  variant="tonal"
+                  prepend-icon="tabler-send"
+                  data-test="position-apply-open"
+                  @click="applyOpen = true"
+                >
+                  {{ t('positions.apply.action') }}
+                </VBtn>
+              </VCardText>
+              <VList data-test="position-people">
+                <VListItem
+                  v-for="p in people"
+                  :key="p.id"
+                  :to="`/company/people/employee-${p.id}`"
+                  :title="p.name"
+                  :subtitle="[t(`positions.status.${p.preparatory ? 'preparatory' : p.status}`), p.account ? t('positions.withAccount') : t('positions.withoutAccount')].join(' · ')"
+                >
+                  <template
+                    v-if="p.complete !== undefined"
+                    #append
+                  >
+                    <VChip
+                      size="small"
+                      label
+                      :color="p.complete ? 'success' : (p.to_request.length ? 'warning' : 'info')"
+                      :data-test="`position-person-state-${p.id}`"
+                    >
+                      {{ p.complete ? t('positions.file.complete') : p.to_request.length ? t('positions.file.missing', { n: p.to_request.length }) : t('positions.file.requested', { n: p.requested.length }) }}
+                    </VChip>
+                  </template>
+                </VListItem>
+              </VList>
+            </template>
             <VCardText class="text-caption text-medium-emphasis">
               {{ t('positions.peopleScope') }}
             </VCardText>
@@ -415,5 +478,53 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
       v-else
       indeterminate
     />
+    <!-- ADR-819 : application aux personnes en place — aperçu puis confirmation explicite -->
+    <VDialog
+      v-model="applyOpen"
+      max-width="560"
+    >
+      <VCard :title="t('positions.apply.title')">
+        <VCardText>
+          <VAlert
+            v-if="!application?.can_apply"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            {{ t('positions.effective.role') }}
+          </VAlert>
+          <p class="text-body-2">
+            {{ t('positions.apply.intro') }}
+          </p>
+          <VList density="compact">
+            <VListItem
+              v-for="p in applyTargets"
+              :key="p.id"
+              :title="p.name"
+              :subtitle="p.to_request.map(docName).join(', ')"
+            />
+          </VList>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="applyOpen = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :disabled="!application?.can_apply || !applyTargets.length"
+            :loading="applying"
+            data-test="position-apply-confirm"
+            @click="applyRequirements"
+          >
+            {{ t('positions.apply.confirm') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>

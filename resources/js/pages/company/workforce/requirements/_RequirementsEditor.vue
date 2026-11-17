@@ -9,7 +9,8 @@ import ModuleProposals from './_ModuleProposals.vue'
 
 // ADR-817 (L1) — éditeur partagé : page « Informations & documents demandés » (tous les postes) ET fiche
 // d'un poste (Organisation › Postes › [poste] › Exigences). Une seule source : le registre des exigences.
-const props = defineProps({ positionId: { type: Number, default: null } })
+// ADR-819 : `only` restreint l'éditeur à une section (onglets Champs / Documents de la fiche poste).
+const props = defineProps({ positionId: { type: Number, default: null }, only: { type: String, default: null } })
 const emit = defineEmits(['saved'])
 const embedded = computed(() => props.positionId !== null)
 
@@ -83,12 +84,22 @@ const available = kind => {
 const setState = (row, state) => {
   const key = `${row.kind}:${row.code}`
   const copy = { ...pending.value }
-  if (!row.isNew && row.state === state)
+  const stage = copy[key]?.stage
+  if (!row.isNew && row.state === state && !stage)
     delete copy[key]
   else
-    copy[key] = { kind: row.kind, code: row.code, state }
+    copy[key] = { kind: row.kind, code: row.code, state, ...(stage ? { stage } : {}) }
   pending.value = copy
 }
+// ADR-819 — moment de collecte : à l'embauche, pendant l'intégration, ou en continu (renouvellements).
+const STAGES = ['hire', 'onboarding', 'ongoing']
+const setStage = (row, stage) => {
+  const key = `${row.kind}:${row.code}`
+  const current = pending.value[key]
+  pending.value = { ...pending.value, [key]: { kind: row.kind, code: row.code, state: current?.state || row.state || 'required', stage } }
+}
+const stageOf = row => pending.value[`${row.kind}:${row.code}`]?.stage || row.stage || null
+const kinds = computed(() => (props.only ? [props.only] : ['field', 'document']))
 const add = kind => {
   const code = search.value[kind]
   if (!code)
@@ -203,7 +214,7 @@ defineExpose({ load })
 
     <template v-else>
       <AppSettingsGroup
-        v-for="kind in ['field', 'document']"
+        v-for="kind in kinds"
         :key="kind"
         :title="t(kind === 'field' ? 'requirementsCfg.fields' : 'requirementsCfg.documents')"
         :description="t(kind === 'field' ? 'requirementsCfg.fieldsHint' : 'requirementsCfg.documentsHint')"
@@ -226,7 +237,9 @@ defineExpose({ load })
               />
             </div>
             <div class="req-row__sub">
-              {{ originText(row.origin) }}<template v-if="row.pendingState">
+              {{ originText(row.origin) }}<template v-if="stageOf(row)">
+                · {{ t(`requirementsCfg.stage.${stageOf(row)}`) }}
+              </template><template v-if="row.pendingState">
                 · {{ t('requirementsCfg.unsaved') }}
               </template><template v-if="row.locked && row.justification">
                 · {{ t('requirementsCfg.justification', { ref: row.justification }) }}
@@ -262,6 +275,15 @@ defineExpose({ load })
               <VListItem
                 :title="t('requirementsCfg.state.optional')"
                 @click="setState(row, 'optional')"
+              />
+              <VListSubheader>{{ t('requirementsCfg.stage.title') }}</VListSubheader>
+              <VListItem
+                v-for="st in STAGES"
+                :key="st"
+                :title="t(`requirementsCfg.stage.${st}`)"
+                :prepend-icon="stageOf(row) === st ? 'tabler-check' : 'tabler-point'"
+                :data-test="`req-stage-${row.kind}-${row.code}-${st}`"
+                @click="setStage(row, st)"
               />
               <VDivider v-if="row.state !== 'waived'" />
               <VListItem

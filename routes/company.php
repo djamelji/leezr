@@ -186,6 +186,10 @@ Route::middleware('company.access:use-module,core.settings')->group(function () 
     Route::post('/company/field-activations', [CompanyFieldActivationController::class, 'upsert'])
         ->middleware('company.access:use-permission,settings.manage');
 
+    // ADR-819 — catalogues unifiés (champs + types de documents, origine, utilisation par poste)
+    Route::get('/company/catalogs', [\App\Modules\Core\Settings\Http\CompanyCatalogController::class, 'index'])
+        ->middleware('company.access:use-any-permission,settings.manage|documents.configure|workforce.manage');
+
     // Custom field definitions
     Route::get('/company/field-definitions', [CompanyFieldDefinitionController::class, 'index']);
     Route::post('/company/field-definitions', [CompanyFieldDefinitionController::class, 'store'])
@@ -666,6 +670,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
 
     // Job Roles
     Route::get('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'index'])->middleware($perm('workforce.view'));
+    // ADR-819 — personnes du poste, état de leur dossier, application explicite des exigences (aperçu puis confirmation)
+    Route::get('job-roles/{id}/people-documents', [\App\Modules\Workforce\Requirements\Http\PositionApplicationController::class, 'show'])->whereNumber('id')->middleware([$perm('workforce.view'), $perm('documents.view')]);
+    Route::post('job-roles/{id}/apply-requirements', [\App\Modules\Workforce\Requirements\Http\PositionApplicationController::class, 'apply'])->whereNumber('id')->middleware([$perm('workforce.view'), $perm('documents.manage')]);
     Route::post('job-roles', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'store'])->middleware($perm('workforce.manage'));
     Route::put('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'update'])->middleware($perm('workforce.manage'));
     Route::delete('job-roles/{id}', [\App\Modules\Workforce\Employees\Http\JobRoleController::class, 'destroy'])->middleware($perm('workforce.manage'));

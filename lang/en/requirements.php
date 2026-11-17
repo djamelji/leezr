@@ -12,4 +12,5 @@ return [
     'forbidden_section' => 'You cannot change this part.',
     'module_not_active' => "This module is not active for your company: its proposals cannot be adopted.",
     'unknown_proposal' => "Unknown proposal.",
+    'apply_requires_position_authority' => 'This position\'s requirements do not apply yet: your company still computes documents per access role. Switch to per-position calculation before applying them to people in place.', // ADR-819
 ];

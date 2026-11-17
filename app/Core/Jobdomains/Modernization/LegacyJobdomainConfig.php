@@ -61,7 +61,7 @@ final class LegacyJobdomainConfig
             }
             // Historique : « required » au niveau du JobDomain → exigence CONFIGURABLE (jamais impérative).
             $items[] = array_filter(['subject' => $subject, 'kind' => 'document', 'code' => $d['code'], 'order' => isset($d['order']) ? (int) $d['order'] : null,
-                'level' => ($d['required'] ?? false) ? RequirementLevel::CONFIGURABLE_REQUIRED : RequirementLevel::DEFAULT, 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null);
+                'level' => ($d['required'] ?? false) ? RequirementLevel::CONFIGURABLE_REQUIRED : (($d['recommended'] ?? false) ? RequirementLevel::RECOMMENDED : RequirementLevel::DEFAULT), 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null);
         }
         foreach ((array) $jd->default_fields as $f) {
             $subject = $subjectOf($fieldScopes[$f['code'] ?? ''] ?? null);
@@ -71,7 +71,7 @@ final class LegacyJobdomainConfig
                 continue;
             }
             $items[] = array_filter(['subject' => $subject, 'kind' => 'field', 'code' => $f['code'], 'order' => isset($f['order']) ? (int) $f['order'] : null,
-                'level' => RequirementLevel::DEFAULT, 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null); // activation historique (l'obligation vit au catalogue)
+                'level' => ($f['recommended'] ?? false) ? RequirementLevel::RECOMMENDED : RequirementLevel::DEFAULT, 'origin' => 'legacy:'.$jd->key], fn ($v) => $v !== null); // activation historique (l'obligation vit au catalogue)
         }
         $keyed = [];
         foreach ($items as $i) {

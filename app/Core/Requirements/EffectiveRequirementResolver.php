@@ -257,7 +257,7 @@ final class EffectiveRequirementResolver
             'effect' => $r->effect ?? Requirement::EFFECT_REQUIRE, 'level' => $r->level, 'status' => $status,
             'customized' => $r->customized_at !== null, 'legal_reference' => $r->legal_reference, 'reason' => $r->reason,
             'applicability' => $r->applicability ?? [], 'verified_at' => $r->verified_at?->toDateString(),
-            'derived_from_id' => $r->derived_from_id,
+            'derived_from_id' => $r->derived_from_id, 'stage' => $r->stage, // ADR-819 : moment de collecte
         ];
     }
 }
