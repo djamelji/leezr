@@ -5743,7 +5743,21 @@
         "submitted": "Dossier d’intégration transmis",
         "upload_ingested": "Pièce d’intégration enregistrée",
         "upload_quarantined": "Pièce d’intégration mise en quarantaine",
-        "validated": "Dossier d’intégration validé"
+        "validated": "Dossier d’intégration validé",
+        "on_site_opened": "Dossier d’embauche ouvert sur place",
+        "finalized": "Embauche finalisée",
+        "revoked": "Embauche abandonnée",
+        "revised": "Demandes du dossier modifiées",
+        "changes_requested": "Complément demandé au candidat",
+        "contact_changed": "Adresse du candidat modifiée",
+        "invitation_delivery_failed": "Échec d’envoi du lien",
+        "expired": "Lien d’intégration expiré",
+        "code_sent": "Code de vérification envoyé",
+        "verified": "Identité du candidat vérifiée",
+        "verification_locked": "Vérification bloquée",
+        "upload_infected": "Pièce refusée (fichier dangereux)",
+        "upload_scan_failed": "Analyse de pièce impossible",
+        "upload_scan_retried": "Nouvelle analyse de pièce"
       },
       "payroll_calculations": {
         "computed": "Calculs de paie effectués"
@@ -5865,6 +5879,23 @@
       },
       "workforce_presets": {
         "imported": "Modèles RH importés"
+      },
+      "referral": {
+        "recommended": "Proche recommandé",
+        "link_shared": "Lien de parrainage partagé",
+        "applied": "Candidature par parrainage reçue",
+        "opened": "Candidature consultée",
+        "info_requested": "Complément demandé au candidat",
+        "accepted": "Candidature retenue",
+        "declined": "Candidature déclinée",
+        "converted": "Dossier d’embauche ouvert depuis un parrainage",
+        "withdrawn": "Parrainage retiré",
+        "settings_updated": "Réglages du parrainage modifiés"
+      },
+      "requirements": {
+        "updated": "Exigences d’un poste modifiées",
+        "applied_to_position": "Exigences appliquées aux personnes du poste",
+        "authority_switched": "Mode de calcul des exigences changé"
       }
     },
     "actionCode": "Code technique"

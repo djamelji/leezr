@@ -83,7 +83,7 @@ test('parcours complet : invitation e-mail, dossier mobile, quarantaine, validat
     await cand.locator('[data-test="onboarding-save"]').click()
     await expect(cand.getByText('Enregistré')).toBeVisible()
     await cand.locator('[data-test="onboarding-doc-driving_license"] input[type="file"]').setInputFiles({ name: 'permis-fictif.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') })
-    await expect(cand.getByText(/analyse de sécurité en cours/)).toBeVisible({ timeout: 15000 }) // quarantaine, jamais « reçu et utilisable »
+    await expect(cand.getByText(/analyse de sécurité en cours/).first()).toBeVisible({ timeout: 15000 }) // quarantaine, jamais « reçu et utilisable »
     await settle(cand)
     await cand.screenshot({ path: `${OUT}/candidate-quarantine-mobile.jpg`, fullPage: true, type: 'jpeg', quality: 70 })
 

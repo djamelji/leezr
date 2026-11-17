@@ -783,5 +783,42 @@
       "company-catalogs": "حقول الشركة وأنواع المستندات ومصدرها والوظائف التي تتطلبها.",
       "settings-referrals": "الوظائف المفتوحة للإحالة والأنماط والمكافأة والحفظ."
     }
+  },
+  "audit": {
+    "actions": {
+      "onboarding": {
+        "on_site_opened": "فُتح ملف التوظيف حضوريًا",
+        "finalized": "اكتمل التوظيف",
+        "revoked": "أُلغي التوظيف",
+        "revised": "عُدّلت طلبات الملف",
+        "changes_requested": "طُلبت معلومات إضافية من المرشح",
+        "contact_changed": "عُدّل عنوان المرشح",
+        "invitation_delivery_failed": "فشل إرسال الرابط",
+        "expired": "انتهت صلاحية الرابط",
+        "code_sent": "أُرسل رمز التحقق",
+        "verified": "تم التحقق من هوية المرشح",
+        "verification_locked": "التحقق مقفل",
+        "upload_infected": "رُفض المستند (ملف خطير)",
+        "upload_scan_failed": "تعذّر تحليل المستند",
+        "upload_scan_retried": "أُعيد تحليل المستند"
+      },
+      "referral": {
+        "recommended": "تمت التوصية بأحد المعارف",
+        "link_shared": "تمت مشاركة رابط إحالة",
+        "applied": "استُلم طلب إحالة",
+        "opened": "تم الاطلاع على الطلب",
+        "info_requested": "طُلبت معلومات إضافية من المرشح",
+        "accepted": "قُبل الطلب",
+        "declined": "رُفض الطلب",
+        "converted": "فُتح ملف توظيف من إحالة",
+        "withdrawn": "سُحبت الإحالة",
+        "settings_updated": "عُدّلت إعدادات الإحالة"
+      },
+      "requirements": {
+        "updated": "عُدّلت متطلبات وظيفة",
+        "applied_to_position": "طُبّقت المتطلبات على أصحاب الوظيفة",
+        "authority_switched": "تغيّر نمط حساب المتطلبات"
+      }
+    }
   }
 }

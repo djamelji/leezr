@@ -5743,7 +5743,21 @@
         "submitted": "Onboarding file submitted",
         "upload_ingested": "Onboarding file stored",
         "upload_quarantined": "Onboarding file quarantined",
-        "validated": "Onboarding file validated"
+        "validated": "Onboarding file validated",
+        "on_site_opened": "Hiring file opened on site",
+        "finalized": "Hire finalised",
+        "revoked": "Hire abandoned",
+        "revised": "File requests changed",
+        "changes_requested": "More requested from the candidate",
+        "contact_changed": "Candidate address changed",
+        "invitation_delivery_failed": "Link sending failed",
+        "expired": "Onboarding link expired",
+        "code_sent": "Verification code sent",
+        "verified": "Candidate identity verified",
+        "verification_locked": "Verification locked",
+        "upload_infected": "Document refused (dangerous file)",
+        "upload_scan_failed": "Document analysis impossible",
+        "upload_scan_retried": "Document analysed again"
       },
       "payroll_calculations": {
         "computed": "Payroll calculations computed"
@@ -5865,6 +5879,23 @@
       },
       "workforce_presets": {
         "imported": "HR presets imported"
+      },
+      "referral": {
+        "recommended": "Relative recommended",
+        "link_shared": "Referral link shared",
+        "applied": "Referral application received",
+        "opened": "Application opened",
+        "info_requested": "More requested from the candidate",
+        "accepted": "Application retained",
+        "declined": "Application declined",
+        "converted": "Hiring file opened from a referral",
+        "withdrawn": "Referral withdrawn",
+        "settings_updated": "Referral settings changed"
+      },
+      "requirements": {
+        "updated": "Position requirements changed",
+        "applied_to_position": "Requirements applied to the position's people",
+        "authority_switched": "Requirement calculation mode changed"
       }
     },
     "actionCode": "Technical code"
