@@ -68,6 +68,14 @@ class JobdomainController extends Controller
             'allow_custom_fields' => ['sometimes', 'boolean'],
             'default_modules' => ['sometimes', 'array'],
             'default_modules.*' => ['string'],
+            // ADR-820 — profil d'expérience métier
+            'recommended_modules' => ['sometimes', 'nullable', 'array', 'max:30'],
+            'recommended_modules.*' => ['string', 'max:100'],
+            'experience' => ['sometimes', 'nullable', 'array'],
+            'experience.group_order' => ['sometimes', 'array', 'max:20'],
+            'experience.group_order.*' => ['string', 'max:60'],
+            'experience.entry_points' => ['sometimes', 'array', 'max:6'],
+            'experience.entry_points.*' => ['string', 'max:100'],
             // ADR-169: default_fields = code + order only (no 'required')
             'default_fields' => ['sometimes', 'array'],
             'default_fields.*.code' => ['required', 'string'],

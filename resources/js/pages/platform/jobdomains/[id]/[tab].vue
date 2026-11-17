@@ -130,14 +130,21 @@ const moduleSearch = ref('')
 const moduleRows = computed(() => (profile.value?.available_modules || []).filter(m => !m.core).map(m => ({ ...m, name: moduleName(m.key, m.name),
   requiresNames: (m.requires || []).map(r => moduleName(r, r)), cls: profile.value.modules.find(x => x.key === m.key)?.class || null })))
 const coreModules = computed(() => (profile.value?.available_modules || []).filter(m => m.core).map(m => ({ ...m, name: moduleName(m.key, m.name) })))
+// Le template reçoit les tableaux déjà déballés : on modifie le tableau lui-même (pas `.value`).
 const setIn = (list, key, on) => {
-  const i = list.value.indexOf(key)
-  if (on && i < 0) list.value.push(key)
-  if (!on && i >= 0) list.value.splice(i, 1)
+  const i = list.indexOf(key)
+  if (on && i < 0) list.push(key)
+  if (!on && i >= 0) list.splice(i, 1)
 }
 
 // ── Expérience ──
-const groupTitle = g => (te(`nav.groups.${g}`) ? t(`nav.groups.${g}`) : (te(`nav.company.groups.${g}`) ? t(`nav.company.groups.${g}`) : g))
+const groupTitle = g => {
+  const key = (profile.value?.nav_catalog || []).find(x => x.key === g)?.title_key
+
+  if (g === 'main') return t('jobdomainExperience.mainGroup')
+
+  return key && te(key) ? t(key) : (te(`nav.groups.${g}`) ? t(`nav.groups.${g}`) : g)
+}
 const itemTitle = i => (te(`nav.company.${i.key}`) ? t(`nav.company.${i.key}`) : i.title)
 const groupItems = computed(() => (profile.value?.nav_catalog || []).map(g => ({ value: g.key, title: groupTitle(g.key) })))
 const entryItems = computed(() => (profile.value?.nav_catalog || []).flatMap(g => g.items

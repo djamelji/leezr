@@ -7,7 +7,8 @@ import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({ moduleKey: { type: String, required: true } })
-const emit = defineEmits(['saved'])
+// L'étape n'avance pas d'elle-même : la couverture (personnes sans valeur, doublons) reste lisible ; « Étape terminée » de l'assistant.
+defineEmits(['saved'])
 const { t, te } = useI18n()
 const { toast } = useAppToast()
 
@@ -17,6 +18,9 @@ const busy = ref(null)
 const choice = ref({})
 const creating = ref({})
 const newLabel = ref({})
+const showAll = ref({})
+// Vos champs d'abord ; les champs standard compatibles (même type) seulement sur demande — jamais une suggestion.
+const shown = n => (showAll.value[n.key] || !n.candidates.some(c => c.origin === 'custom') ? n.candidates : n.candidates.filter(c => c.origin === 'custom' || c.id === choice.value[n.key]))
 
 const load = async () => {
   loading.value = true
@@ -37,7 +41,6 @@ const bind = async n => {
   try {
     needs.value = (await $api(`/modules/${props.moduleKey}/data-needs/${n.key}`, { method: 'PUT', body: { field_definition_id: choice.value[n.key] } })).needs
     toast(t('moduleData.bound'), 'success')
-    if (needs.value.every(x => x.mapping)) emit('saved')
   }
   catch (e) { toast(err(e), 'error') }
   finally { busy.value = null }
@@ -49,7 +52,6 @@ const create = async n => {
     for (const x of needs.value) choice.value[x.key] = x.mapping?.field_definition_id ?? null
     creating.value[n.key] = false
     toast(t('moduleData.created'), 'success')
-    if (needs.value.every(x => x.mapping)) emit('saved')
   }
   catch (e) { toast(err(e), 'error') }
   finally { busy.value = null }
@@ -122,7 +124,7 @@ const create = async n => {
           :data-test="`data-need-${n.key}-choices`"
         >
           <VRadio
-            v-for="c in n.candidates"
+            v-for="c in shown(n)"
             :key="c.id"
             :value="c.id"
             :data-test="`data-need-candidate-${c.code}`"
@@ -133,6 +135,15 @@ const create = async n => {
             </template>
           </VRadio>
         </VRadioGroup>
+        <VBtn
+          v-if="!showAll[n.key] && shown(n).length < n.candidates.length"
+          variant="text"
+          size="small"
+          class="mb-2"
+          @click="showAll[n.key] = true"
+        >
+          {{ t('moduleData.showOthers', { n: n.candidates.length - shown(n).length }) }}
+        </VBtn>
         <p
           v-if="!n.candidates.length"
           class="text-body-2 text-medium-emphasis"

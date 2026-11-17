@@ -67,7 +67,7 @@ class JobdomainModernizationController extends Controller
         $order = \App\Core\Navigation\NavGroupRegistry::orderedKeys('company');
         uksort($groups, fn ($a, $b) => (array_search($a, $order, true) === false ? 99 : array_search($a, $order, true)) <=> (array_search($b, $order, true) === false ? 99 : array_search($b, $order, true)));
 
-        return collect($groups)->map(fn ($items, $key) => ['key' => $key, 'items' => $items])->values()->all();
+        return collect($groups)->map(fn ($items, $key) => ['key' => $key, 'title_key' => \App\Core\Navigation\NavGroupRegistry::titleKey($key), 'items' => $items])->values()->all();
     }
 
     public function legacyDraft(Request $request, int $id): JsonResponse

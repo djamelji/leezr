@@ -327,7 +327,7 @@ const err = path => Object.entries(errors.value).filter(([k]) => k === path || k
             data-test="library-add"
             @click="addLibraryItem"
           >
-            {{ t('presetEditor.addItem') }}
+            {{ t('presetEditor.libraryAddButton') }}
           </VBtn>
           <AppTextField
             v-model="librarySearch"

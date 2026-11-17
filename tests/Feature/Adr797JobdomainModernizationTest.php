@@ -241,6 +241,19 @@ class Adr797JobdomainModernizationTest extends TestCase
         VersionedCompanyInitializer::initializeNew($existing, 'logistique', [], null);
     }
 
+    // ADR-820 — profil d'expérience et modules recommandés modifiables depuis la fiche (persistés).
+    public function test_experience_profile_and_recommended_modules_are_saved(): void
+    {
+        $this->api()->putJson("/api/platform/jobdomains/{$this->jd->id}", ['recommended_modules' => ['workforce_leave'],
+            'experience' => ['group_order' => ['activity'], 'entry_points' => ['shipments']]])->assertOk();
+        $jd = $this->jd->fresh();
+        $this->assertSame(['workforce_leave'], $jd->recommended_modules);
+        $this->assertSame(['shipments'], $jd->experience['entry_points']);
+        $profile = $this->api()->getJson("/api/platform/jobdomains/{$this->jd->id}/profile")->assertOk()->json();
+        $this->assertSame(['workforce_leave'], $profile['identity']['recommended_modules']);
+        $this->assertNotEmpty($profile['nav_catalog']);
+    }
+
     // 11, 12, 13 — permissions Platform réelles ; utilisateur non superadmin ; aucun accès Company.
     public function test_platform_permissions(): void
     {

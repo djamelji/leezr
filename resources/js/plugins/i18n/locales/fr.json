@@ -10880,7 +10880,8 @@
     "librarySubject": {
       "person": "Personne",
       "company": "Société"
-    }
+    },
+    "libraryAddButton": "Ajouter"
   },
   "jobdomainTabs": {
     "tab": {
@@ -11650,7 +11651,8 @@
       "versioned": "Presets publiés",
       "historical": "Configuration historique"
     },
-    "historicalHint": "Publiez une bibliothèque de départ et des rôles comprenant le propriétaire pour que les presets s'appliquent."
+    "historicalHint": "Publiez une bibliothèque de départ et des rôles comprenant le propriétaire pour que les presets s'appliquent.",
+    "mainGroup": "Menu principal"
   },
   "moduleData": {
     "intro": "Le module a besoin de quelques informations sur les personnes concernées. Associez chacune à un champ que vous avez déjà : ses valeurs sont réutilisées telles quelles, rien n'est recopié. Vous pouvez aussi créer le champ ici.",
@@ -11686,6 +11688,7 @@
     "filled": "personnes renseignées",
     "missing": "{n} personne(s) sans cette information : seule l'affectation d'une livraison leur est bloquée.",
     "duplicate": "La valeur « {value} » est utilisée par plusieurs personnes : {people}.",
-    "noPopulation": "Aucune personne n'a encore de rôle de livraison."
+    "noPopulation": "Aucune personne n'a encore de rôle de livraison.",
+    "showOthers": "Afficher les autres champs compatibles ({n})"
   }
 }

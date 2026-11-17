@@ -10880,7 +10880,8 @@
     "librarySubject": {
       "person": "Person",
       "company": "Company"
-    }
+    },
+    "libraryAddButton": "Add"
   },
   "jobdomainTabs": {
     "tab": {
@@ -11650,7 +11651,8 @@
       "versioned": "Published presets",
       "historical": "Historical configuration"
     },
-    "historicalHint": "Publish a starting library and roles including the owner for presets to apply."
+    "historicalHint": "Publish a starting library and roles including the owner for presets to apply.",
+    "mainGroup": "Main menu"
   },
   "moduleData": {
     "intro": "The module needs a few pieces of information about the people concerned. Link each one to a field you already have: its values are reused as they are, nothing is copied. You can also create the field here.",
@@ -11686,6 +11688,7 @@
     "filled": "people filled in",
     "missing": "{n} person(s) without this information: only assigning a delivery is blocked for them.",
     "duplicate": "The value “{value}” is used by several people: {people}.",
-    "noPopulation": "Nobody has a delivery role yet."
+    "noPopulation": "Nobody has a delivery role yet.",
+    "showOthers": "Show other compatible fields ({n})"
   }
 }

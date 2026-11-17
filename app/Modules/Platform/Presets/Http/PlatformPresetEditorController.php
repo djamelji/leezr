@@ -31,7 +31,7 @@ class PlatformPresetEditorController extends Controller
             'key' => $b['key'], 'label' => $b['label'], 'module' => $m->name, 'is_admin' => (bool) ($b['is_admin'] ?? false),
             'sensitive' => collect($b['permissions'] ?? [])->contains(fn ($p) => isset($adminPerms[$p])), 'permissions' => count($b['permissions'] ?? []),
         ]))->values();
-        $locale = substr((string) (\App\Core\Fields\FieldResolverService::requestLocale() ?? app()->getLocale()), 0, 2); // ADR-820 : langue de l'interface
+        $locale = substr((string) (request()->header('X-Locale') ?: 'fr'), 0, 2); // ADR-820 : langue de l'interface (français par défaut, comme l'interface)
         $label = fn ($d) => method_exists($d, 'resolvedLabel') ? $d->resolvedLabel($locale) : ($d->label ?? $d->code);
         $fields = FieldDefinition::whereNull('company_id')->whereIn('scope', [FieldDefinition::SCOPE_COMPANY, FieldDefinition::SCOPE_COMPANY_USER])->orderBy('code')->get()
             ->map(fn ($d) => ['code' => $d->code, 'label' => $label($d), 'subject' => $d->scope === FieldDefinition::SCOPE_COMPANY ? 'company' : 'person', 'sensitive' => (bool) ($d->validation_rules['sensitive'] ?? false)]);
