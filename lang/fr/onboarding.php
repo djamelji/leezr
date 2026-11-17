@@ -42,4 +42,5 @@ Il est valable :minutes minutes. Ne le communiquez à personne.',
     'documents_not_cleared' => 'Pièces non utilisables (analyse en attente, refusée ou indéterminée) : :items. Demandez un complément ou relancez l\'analyse.',
     'required_unjustified' => '« :item » ne peut pas être rendu obligatoire : aucune règle ni proposition ne le justifie.',
     'scan_retry_impossible' => 'Une nouvelle analyse n\'est possible que pour un dépôt à l\'analyse indéterminée.',
+    'stale_revision' => 'Ce dossier vient d\'être modifié par quelqu\'un d\'autre (un autre gestionnaire ou le candidat). Rechargez-le pour voir la dernière version avant de continuer.', // ADR-819
 ];

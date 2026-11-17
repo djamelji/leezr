@@ -11192,11 +11192,23 @@
       "to_review": "To review",
       "to_finalize": "To finalise",
       "done": "Finalised",
-      "all": "All"
+      "all": "All",
+      "waiting_company": "To start",
+      "waiting_candidate": "Waiting for the candidate",
+      "to_verify": "To verify",
+      "abandoned": "Abandoned"
     },
     "position": "Position",
     "email": "Person's e-mail",
-    "needsEmail": "Sensitive items are requested: to complete them remotely, enter the person's e-mail (a verification code will be sent). Otherwise, complete the file on site."
+    "needsEmail": "Sensitive items are requested: to complete them remotely, enter the person's e-mail (a verification code will be sent). Otherwise, complete the file on site.",
+    "bucket": {
+      "waiting_company": "To start",
+      "waiting_candidate": "Waiting for the candidate",
+      "to_verify": "To verify",
+      "to_finalize": "To finalise",
+      "done": "Done",
+      "abandoned": "Abandoned"
+    }
   },
   "requirementAuthority": {
     "title": "Requirement computation",
@@ -11277,5 +11289,70 @@
     "createHint": "The item is created for your company only. It is mandatory for no one until you require it for a position.",
     "created": "Item created.",
     "empty": "No item matches your search."
+  },
+  "hiringFile": {
+    "notFound": "This hiring file does not exist or is not accessible.",
+    "start": "starts on {date}",
+    "stale": "The file has just been changed by someone else (candidate or another manager). Reload it to continue on the latest version.",
+    "reload": "Reload",
+    "progressDetail": "{done} of {total} item(s) completed, {ok} validated.",
+    "missingTitle": "Still missing:",
+    "onSite": "Continue on site",
+    "sendLink": "Send the link to the candidate",
+    "remind": "Remind the candidate",
+    "linkSent": "Link sent to the candidate.",
+    "requestChanges": "Ask for more",
+    "changesMessage": "What the candidate must complete or correct",
+    "changesRequested": "Request sent.",
+    "send": "Send",
+    "abandon": "Abandon the hire",
+    "abandonConfirm": "The candidate link is disabled and the file moves to “Abandoned”. Information and documents already received are kept.",
+    "abandoned": "Hire abandoned.",
+    "openPerson": "Open the person",
+    "participants": "Participants",
+    "candidate": "The candidate",
+    "system": "Leezr",
+    "actions": "{n} action(s)",
+    "noParticipant": "Nobody has acted yet.",
+    "reminders": "{n} link sending(s) or reminder(s).",
+    "tabs": {
+      "items": "Information and documents",
+      "history": "History"
+    },
+    "fields": "Information",
+    "documents": "Documents",
+    "required": "Mandatory",
+    "optional": "Optional",
+    "none": "Nothing requested.",
+    "state": {
+      "to_fill": "To fill",
+      "in_progress": "In progress",
+      "provided": "Provided",
+      "to_verify": "To verify",
+      "refused": "Refused",
+      "validated": "Validated",
+      "not_applicable": "Not applicable"
+    },
+    "history": {
+      "created": "File created",
+      "on_site_opened": "Opened on site",
+      "link_issued": "Secure link created",
+      "invitation_mailed": "Link sent by e-mail",
+      "invitation_delivery_failed": "Link sending failed",
+      "contact_changed": "E-mail address changed",
+      "code_sent": "Verification code sent",
+      "verified": "Candidate identity verified",
+      "upload_quarantined": "Document deposited (analysis running)",
+      "upload_ingested": "Document accepted after analysis",
+      "upload_infected": "Document refused (dangerous file)",
+      "upload_scan_failed": "Document analysis impossible",
+      "submitted": "File sent by the candidate",
+      "changes_requested": "More requested",
+      "revised": "Requests changed",
+      "validated": "File verified",
+      "finalized": "Hire finalised",
+      "revoked": "Hire abandoned",
+      "expired": "Link expired"
+    }
   }
 }

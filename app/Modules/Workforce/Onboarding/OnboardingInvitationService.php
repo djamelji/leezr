@@ -409,6 +409,11 @@ final class OnboardingInvitationService
     /** Dashboard of the company : who was invited, started, missing, submitted, to review, expired. */
     public function index(): array
     {
+        return array_map(fn ($r) => $r + ['bucket' => HiringFileReadModel::bucket($r)], $this->rows()); // ADR-819
+    }
+
+    private function rows(): array
+    {
         // ADR-796.1 : une lecture reste une lecture. L'expiration est CONSTATÉE par OnboardingLifecycleService
         // (tâche planifiée) ; ici, un lien échu s'affiche « expiré » sans rien écrire.
         $invs = Inv::where('company_id', $this->company->id)->whereNull('purged_at')->latest('id')->limit(200)->get();
@@ -427,6 +432,7 @@ final class OnboardingInvitationService
             'documents_deposited' => ($uploads[$i->id] ?? collect())->pluck('document_code')->unique()->count(),
             'documents_blocked' => ($uploads[$i->id] ?? collect())->whereIn('status', \App\Modules\Workforce\Onboarding\Models\OnboardingUpload::BLOCKING)->count(),
             'finalized' => isset($employees[$i->employee_id]) && ! $employees[$i->employee_id]->isPreparatory(),
+            'updated_at' => $i->updated_at?->toIso8601String(),
             'created_at' => $i->created_at?->toIso8601String()])->values()->all();
     }
 

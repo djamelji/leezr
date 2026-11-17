@@ -42,4 +42,5 @@ It is valid for :minutes minutes. Do not share it.',
     'documents_not_cleared' => 'Documents not usable (analysis pending, refused or indeterminate): :items. Request a complement or retry the analysis.',
     'required_unjustified' => '":item" cannot be made mandatory: no rule or proposal justifies it.',
     'scan_retry_impossible' => 'A new analysis is only possible for a deposit whose analysis was indeterminate.',
+    'stale_revision' => 'This file has just been changed by someone else (another manager or the candidate). Reload it to see the latest version before continuing.', // ADR-819
 ];

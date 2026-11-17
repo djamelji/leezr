@@ -29,23 +29,13 @@ const load = async () => {
 }
 onMounted(load)
 
-// Étape lisible d'un dossier (le statut serveur reste la seule vérité).
-const stage = i => {
-  if (i.finalized)
-    return 'done'
-  if (i.status === 'validated')
-    return 'to_finalize'
-  if (i.status === 'submitted')
-    return 'to_review'
-  if (['revoked', 'expired'].includes(i.status))
-    return 'closed'
-
-  return 'collecting'
-}
-const STAGE_TONE = { collecting: 'info', to_review: 'warning', to_finalize: 'primary', done: 'success', closed: 'secondary' }
+// ADR-819 — file de suivi calculée par le serveur (`bucket`) : qui doit agir maintenant.
+const stage = i => i.bucket || 'waiting_company'
+const STAGE_TONE = { waiting_company: 'secondary', waiting_candidate: 'info', to_verify: 'warning', to_finalize: 'primary', done: 'success', abandoned: 'secondary' }
+const OPEN = ['waiting_company', 'waiting_candidate', 'to_verify', 'to_finalize']
 const counts = computed(() => items.value.reduce((acc, i) => { acc[stage(i)] = (acc[stage(i)] || 0) + 1; return acc }, {}))
 const visible = computed(() => items.value.filter(i => filter.value === 'all'
-  || (filter.value === 'open' && ['collecting', 'to_review', 'to_finalize'].includes(stage(i)))
+  || (filter.value === 'open' && OPEN.includes(stage(i)))
   || stage(i) === filter.value))
 const progress = i => Math.round(100 * (i.fields_filled + i.documents_deposited) / Math.max(1, i.fields_total + i.documents_total))
 
@@ -68,7 +58,7 @@ const headers = computed(() => [
   { title: t('hiring.col.start'), key: 'hire_date' },
   { title: '', key: 'actions', sortable: false, align: 'end' },
 ])
-const FILTERS = ['open', 'collecting', 'to_review', 'to_finalize', 'done', 'all']
+const FILTERS = ['open', 'waiting_company', 'waiting_candidate', 'to_verify', 'to_finalize', 'done', 'abandoned', 'all']
 </script>
 
 <template>
@@ -118,8 +108,9 @@ const FILTERS = ['open', 'collecting', 'to_review', 'to_finalize', 'done', 'all'
       >
         <template #item.name="{ item }">
           <RouterLink
-            :to="`/company/people/${item.person_ref}`"
+            :to="`/company/workforce/hiring/${item.id}`"
             class="font-weight-medium text-high-emphasis"
+            :data-test="`hiring-file-link-${item.id}`"
           >
             {{ item.name }}
           </RouterLink>
@@ -134,7 +125,7 @@ const FILTERS = ['open', 'collecting', 'to_review', 'to_finalize', 'done', 'all'
             :color="STAGE_TONE[stage(item)]"
             :data-test="`hiring-stage-${item.id}`"
           >
-            {{ t(`hiring.stage.${stage(item)}`) }}
+            {{ t(`hiring.bucket.${stage(item)}`) }}
           </VChip>
           <div
             v-if="item.documents_blocked"
@@ -166,7 +157,7 @@ const FILTERS = ['open', 'collecting', 'to_review', 'to_finalize', 'done', 'all'
         <template #item.actions="{ item }">
           <div class="d-flex justify-end gap-1 flex-wrap">
             <VBtn
-              v-if="stage(item) === 'collecting'"
+              v-if="['waiting_company', 'waiting_candidate'].includes(stage(item))"
               size="small"
               variant="text"
               prepend-icon="tabler-device-desktop"
@@ -186,12 +177,13 @@ const FILTERS = ['open', 'collecting', 'to_review', 'to_finalize', 'done', 'all'
             </VBtn>
             <VBtn
               size="small"
-              :variant="stage(item) === 'to_review' ? 'flat' : 'text'"
-              :color="stage(item) === 'to_review' ? 'warning' : undefined"
+              :variant="stage(item) === 'to_verify' ? 'flat' : 'text'"
+              :color="stage(item) === 'to_verify' ? 'warning' : undefined"
               :data-test="`hiring-open-${item.id}`"
-              @click="reviewId = item.id"
+              :to="stage(item) === 'to_verify' ? undefined : `/company/workforce/hiring/${item.id}`"
+              @click="stage(item) === 'to_verify' ? (reviewId = item.id) : null"
             >
-              {{ stage(item) === 'to_review' ? t('hiring.review') : t('hiring.details') }}
+              {{ stage(item) === 'to_verify' ? t('hiring.review') : t('hiring.details') }}
             </VBtn>
           </div>
         </template>

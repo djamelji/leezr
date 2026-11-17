@@ -717,13 +717,14 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::get('onboarding-files/proposal', [$onb, 'proposal'])->middleware($perm('workforce.manage'));
     Route::post('onboarding-files', [$onb, 'store'])->middleware([$perm('workforce.manage'), 'throttle:30,1']);
     Route::get('onboarding-files/{id}', [$onb, 'show'])->whereNumber('id')->middleware($perm('workforce.manage'));
-    Route::put('onboarding-files/{id}/items', [$onb, 'revise'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::get('onboarding-files/{id}/file', [\App\Modules\Workforce\Onboarding\Http\HiringFileController::class, 'show'])->whereNumber('id')->middleware($perm('workforce.manage')); // ADR-819 dossier d'embauche
+    Route::put('onboarding-files/{id}/items', [$onb, 'revise'])->whereNumber('id')->middleware([$perm('workforce.manage'), \App\Modules\Workforce\Onboarding\Http\EnsureHiringFileRevision::class]);
     Route::post('onboarding-files/{id}/link', [$onb, 'link'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']);
-    Route::post('onboarding-files/{id}/revoke', [$onb, 'revoke'])->whereNumber('id')->middleware($perm('workforce.manage'));
-    Route::post('onboarding-files/{id}/request-changes', [$onb, 'requestChanges'])->whereNumber('id')->middleware($perm('workforce.manage'));
-    Route::post('onboarding-files/{id}/validate', [$onb, 'validateFile'])->whereNumber('id')->middleware($perm('workforce.manage'));
+    Route::post('onboarding-files/{id}/revoke', [$onb, 'revoke'])->whereNumber('id')->middleware([$perm('workforce.manage'), \App\Modules\Workforce\Onboarding\Http\EnsureHiringFileRevision::class]);
+    Route::post('onboarding-files/{id}/request-changes', [$onb, 'requestChanges'])->whereNumber('id')->middleware([$perm('workforce.manage'), \App\Modules\Workforce\Onboarding\Http\EnsureHiringFileRevision::class]);
+    Route::post('onboarding-files/{id}/validate', [$onb, 'validateFile'])->whereNumber('id')->middleware([$perm('workforce.manage'), \App\Modules\Workforce\Onboarding\Http\EnsureHiringFileRevision::class]);
     Route::post('onboarding-files/{id}/on-site', [$onb, 'onSite'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']); // ADR-818
-    Route::post('onboarding-files/{id}/finalize', [$onb, 'finalize'])->whereNumber('id')->middleware($perm('workforce.manage')); // ADR-818
+    Route::post('onboarding-files/{id}/finalize', [$onb, 'finalize'])->whereNumber('id')->middleware([$perm('workforce.manage'), \App\Modules\Workforce\Onboarding\Http\EnsureHiringFileRevision::class]); // ADR-818
     // ADR-796.1 — envoi par e-mail, changement d'adresse, prévisualisation de révision, nouvelle analyse
     Route::post('onboarding-files/{id}/send', [$onb, 'send'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:10,1']);
     Route::put('onboarding-files/{id}/contact', [$onb, 'contact'])->whereNumber('id')->middleware([$perm('workforce.manage'), 'throttle:20,1']);

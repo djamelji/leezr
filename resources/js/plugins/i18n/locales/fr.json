@@ -11192,11 +11192,23 @@
       "to_review": "À vérifier",
       "to_finalize": "À finaliser",
       "done": "Finalisées",
-      "all": "Toutes"
+      "all": "Toutes",
+      "waiting_company": "À lancer",
+      "waiting_candidate": "En attente du candidat",
+      "to_verify": "À vérifier",
+      "abandoned": "Abandonnés"
     },
     "position": "Poste",
     "email": "E-mail de la personne",
-    "needsEmail": "Des éléments sensibles sont demandés : pour les compléter à distance, indiquez l'e-mail de la personne (un code de vérification lui sera envoyé). Sinon, complétez le dossier sur place."
+    "needsEmail": "Des éléments sensibles sont demandés : pour les compléter à distance, indiquez l'e-mail de la personne (un code de vérification lui sera envoyé). Sinon, complétez le dossier sur place.",
+    "bucket": {
+      "waiting_company": "À lancer",
+      "waiting_candidate": "En attente du candidat",
+      "to_verify": "À vérifier",
+      "to_finalize": "À finaliser",
+      "done": "Terminé",
+      "abandoned": "Abandonné"
+    }
   },
   "requirementAuthority": {
     "title": "Mode de calcul des exigences",
@@ -11277,5 +11289,70 @@
     "createHint": "L'élément est créé pour votre société seulement. Il n'est obligatoire pour personne tant que vous ne l'exigez pas pour un poste.",
     "created": "Élément créé.",
     "empty": "Aucun élément ne correspond à votre recherche."
+  },
+  "hiringFile": {
+    "notFound": "Ce dossier d'embauche n'existe pas ou n'est pas accessible.",
+    "start": "arrivée le {date}",
+    "stale": "Le dossier vient d'être modifié par quelqu'un d'autre (candidat ou autre gestionnaire). Rechargez-le pour reprendre sur la dernière version.",
+    "reload": "Recharger",
+    "progressDetail": "{done} élément(s) sur {total} renseigné(s), dont {ok} validé(s).",
+    "missingTitle": "Il manque encore :",
+    "onSite": "Continuer sur place",
+    "sendLink": "Envoyer le lien au candidat",
+    "remind": "Relancer le candidat",
+    "linkSent": "Lien envoyé au candidat.",
+    "requestChanges": "Demander un complément",
+    "changesMessage": "Ce que le candidat doit compléter ou corriger",
+    "changesRequested": "Demande de complément envoyée.",
+    "send": "Envoyer",
+    "abandon": "Abandonner l'embauche",
+    "abandonConfirm": "Le lien du candidat est désactivé et le dossier passe dans « Abandonnés ». Les informations et pièces déjà reçues sont conservées.",
+    "abandoned": "Embauche abandonnée.",
+    "openPerson": "Ouvrir la fiche",
+    "participants": "Participants",
+    "candidate": "Le candidat",
+    "system": "Leezr",
+    "actions": "{n} action(s)",
+    "noParticipant": "Personne n'est encore intervenu.",
+    "reminders": "{n} envoi(s) ou relance(s) du lien.",
+    "tabs": {
+      "items": "Informations et documents",
+      "history": "Historique"
+    },
+    "fields": "Informations",
+    "documents": "Documents",
+    "required": "Obligatoire",
+    "optional": "Facultatif",
+    "none": "Rien n'est demandé.",
+    "state": {
+      "to_fill": "À remplir",
+      "in_progress": "En cours",
+      "provided": "Fourni",
+      "to_verify": "À vérifier",
+      "refused": "Refusé",
+      "validated": "Validé",
+      "not_applicable": "Non applicable"
+    },
+    "history": {
+      "created": "Dossier créé",
+      "on_site_opened": "Ouvert sur place",
+      "link_issued": "Lien sécurisé créé",
+      "invitation_mailed": "Lien envoyé par e-mail",
+      "invitation_delivery_failed": "Échec d'envoi du lien",
+      "contact_changed": "Adresse e-mail modifiée",
+      "code_sent": "Code de vérification envoyé",
+      "verified": "Identité du candidat vérifiée",
+      "upload_quarantined": "Document déposé (analyse en cours)",
+      "upload_ingested": "Document accepté après analyse",
+      "upload_infected": "Document refusé (fichier dangereux)",
+      "upload_scan_failed": "Analyse du document impossible",
+      "submitted": "Dossier envoyé par le candidat",
+      "changes_requested": "Complément demandé",
+      "revised": "Demandes modifiées",
+      "validated": "Dossier vérifié",
+      "finalized": "Embauche finalisée",
+      "revoked": "Embauche abandonnée",
+      "expired": "Lien expiré"
+    }
   }
 }

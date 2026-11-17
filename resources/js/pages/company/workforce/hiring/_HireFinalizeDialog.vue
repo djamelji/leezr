@@ -38,7 +38,7 @@ watch(() => props.isDialogVisible, async v => {
 const submit = async () => {
   busy.value = true
   try {
-    done.value = await $api(`/workforce/onboarding-files/${props.file.id}/finalize`, { method: 'POST', body: form.value })
+    done.value = await $api(`/workforce/onboarding-files/${props.file.id}/finalize`, { method: 'POST', body: { ...form.value, ...(props.file.revision ? { revision: props.file.revision } : {}) } }) // ADR-819 : révision chargée
     toast(t('hiring.finalized'), 'success')
     emit('finalized')
   }
