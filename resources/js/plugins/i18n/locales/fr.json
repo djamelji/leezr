@@ -4874,7 +4874,8 @@
     "customize": "Personnaliser",
     "customizeDone": "Terminer",
     "overviewEmpty": "Aucun indicateur à afficher pour le moment.",
-    "overviewEmptyEditable": "Aucun indicateur affiché. Utilisez « Personnaliser » pour en ajouter."
+    "overviewEmptyEditable": "Aucun indicateur affiché. Utilisez « Personnaliser » pour en ajouter.",
+    "meTitle": "Moi"
   },
   "companyDashboard": {
     "title": "Tableau de bord",

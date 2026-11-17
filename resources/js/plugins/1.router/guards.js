@@ -101,9 +101,7 @@ export const setupGuards = router => {
 
     if (to.meta.unauthenticatedOnly) {
       // ADR-357: Redirect to correct workspace
-      return auth.isLoggedIn
-        ? (auth.workspace === 'home' ? '/home' : '/dashboard')
-        : undefined
+      return auth.isLoggedIn ? '/home' : undefined // ADR-818 : un seul accueil
     }
 
     if (!auth.isLoggedIn) {

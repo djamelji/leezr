@@ -4874,7 +4874,8 @@
     "customize": "Customize",
     "customizeDone": "Done",
     "overviewEmpty": "No indicator to display for now.",
-    "overviewEmptyEditable": "No indicator displayed. Use “Customize” to add some."
+    "overviewEmptyEditable": "No indicator displayed. Use “Customize” to add some.",
+    "meTitle": "Me"
   },
   "companyDashboard": {
     "title": "Dashboard",

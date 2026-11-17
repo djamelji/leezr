@@ -18,21 +18,15 @@ class DashboardModule implements ModuleDefinition
             sortOrder: 1,
             capabilities: new Capabilities(
                 navItems: [
+                    // ADR-818 (chantier D) : UN seul accueil (/home) — blocs Moi / À traiter / Entreprise selon les
+                    // permissions effectives. `/dashboard` reste un alias ; l'ancienne entrée « Accueil personnel » de
+                    // l'avatar (doublon pour un gestionnaire salarié) est retirée : son contenu est le bloc « Moi ».
                     [
                         'key' => 'dashboard',
                         'title' => 'Dashboard',
-                        'to' => ['name' => 'dashboard'],
+                        'to' => ['name' => 'home'],
                         'icon' => 'tabler-smart-home',
                         'group' => 'home', 'sort' => 10,
-                    ],
-                    // ADR-777 : « Accueil personnel » (/home) — pour un gestionnaire AUSSI salarié, dans le
-                    // menu de l'avatar ; un salarié sans gestion y arrive déjà par « Accueil ».
-                    [
-                        'key' => 'personal-home',
-                        'title' => 'Personal home',
-                        'to' => ['name' => 'home'],
-                        'icon' => 'tabler-home-heart',
-                        'group' => 'personal', 'sort' => 5, 'requires' => 'employment', 'tags' => ['avatar', 'with-management'],
                     ],
                 ],
                 routeNames: [], // ADR-149: dashboard always accessible, no module gate
