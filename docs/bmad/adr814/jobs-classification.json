@@ -1,0 +1,1445 @@
+[
+    {
+        "id": 15,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-05 06:42",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "planning 2026-11-07",
+        "target_exists": true,
+        "recipient": "owner@leezr.test",
+        "cat": [
+            "stale",
+            "external_notification",
+            "company_unknown"
+        ],
+        "sha256": "f517b9e7cff9e2180fb49a010a616e2b849757ddb58d414d11d1dce64af40e91",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 16,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-05 07:02",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "recipient has a single company",
+        "target": "planning 2026-11-05",
+        "target_exists": true,
+        "recipient": "thomas.bernard.001407@leezr.invalid",
+        "cat": [
+            "stale",
+            "external_notification"
+        ],
+        "sha256": "d3d3c22a73d3b913fa921a004da1d0a42861aaeb9ac8800e62f4b34ec276170c",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 17,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-06 22:57",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "recipient has a single company",
+        "target": "planning 2026-11-06",
+        "target_exists": true,
+        "recipient": "bob@leezr.test",
+        "cat": [
+            "stale",
+            "external_notification"
+        ],
+        "sha256": "28382c3f9f2af68e4c5fd674d05cb8c82c3380ccc29371c87578c1103606f9d1",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 18,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-06 23:01",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "planning 2026-11-02",
+        "target_exists": true,
+        "recipient": "owner@leezr.test",
+        "cat": [
+            "stale",
+            "external_notification",
+            "company_unknown"
+        ],
+        "sha256": "088bf850bb85ccfc9633a267d1e03464a1468a0e6adbbc4bf21355b0f94d3fe5",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 22,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-08 00:47",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #66",
+        "target_exists": false,
+        "recipient": "owner@leezr.test",
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "4638e721eaf7ac6c250d609a1a34aaf6e42cf6141c1c631fd7ef7ef407a96791",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 23,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-08 00:47",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #67",
+        "target_exists": false,
+        "recipient": "owner@leezr.test",
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "9a9b764e0556ea1f106028c1da82c75f200709e33ea283c44834bf1205c666e3",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 29,
+        "queue": "default",
+        "type": "CompanyInvitationNotification",
+        "created": "2026-11-12 21:29",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload companyName",
+        "target": "invitation of trial@leezr.test to Leezr Logistics E2E 1792412257425",
+        "target_exists": true,
+        "recipient": "trial@leezr.test",
+        "cat": [
+            "stale",
+            "external_notification"
+        ],
+        "sha256": "3314d574a53956ad593483a310c386d3fb0348127b62501bdcd6c106721e25f6",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 30,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 17:04",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #69",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "6a766061ad82830080fd4951c78c10a080cc130605b9f6adbf430a58174f3543",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 31,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 17:04",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #70",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "cb0b3ccb184efeba44668debb01fc6641da8bc0899dffbeca4c557ef94b1c865",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 32,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 17:05",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #71",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "e557dcb20770b973657e132ad530e39a51b7bfbdd2d6aaf3efb43778c7703cd6",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 33,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 18:48",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #72",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "c63d4578531ff3ab30d774b9f793b9c640a3945bf71ce1954e9e33e6498a9ebd",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 34,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 18:48",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #73",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "fdcbf22a870f2ef357d525e1d5dd1248de2bbf642822429b69d89fff0cd5b822",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 35,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-13 19:06",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #74",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "f133db236b0f9f0d179cd322071a8d293a33e83b5794342153075258d312e1e2",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 36,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:09",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #75",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "cd8622b967965596c4fc57acfcf6a9b0270665130ebf747aae0d222c90d2447f",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 37,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 04:09",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #7",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "b28fde0f2b44268bb5be134a1eeda46a60032457dff34723cc153052e05e7432",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 38,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:12",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #76",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "0c684ab2e4d8e1c59394c967dfcc0e74d80e17e97a6da991c61bacdb589693f3",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 39,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 04:12",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #8",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "820546fcf0bda92738258bd372095383247f1c358c4c107a31ca4977f7cc33c0",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 40,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:13",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #77",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "e74ba3c2e96158291f78ce8b6fee3040292a2336156fd8a27d3fbf1817e1fb65",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 41,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 04:13",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #9",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "98276d7fcf4883dd91df4f302cda29251c3f3f0afa7ed8f3ecb3d09535b4f08b",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 42,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:56",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #78",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "229b47344ab1a83bf49b556f50c4057566a8c33db4a5b954ddb4e08d891c6bd6",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 43,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:56",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #79",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "27f042f9da624feb0f85bc8279f220ec9d043e7ad90d4338e91decde48f88075",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 44,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:57",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #80",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "78e25c0f0a9fb302904d91875de7f1399c5f5af03133d510165a04e163c5858e",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 45,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 04:57",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #81",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "3d9c2002afba34a7e20e175d65bbad891ed7b25c528d0ac943230db26aa7cf22",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 46,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:06",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #82",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "25733c001d869a36516fbedf2e758d5d8bb56734ca482f2bc3b67ec602b7f710",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 47,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:09",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #83",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "06fb77dfd9a185bca2a226dce8570993ca76ae37035500ed0d68f1b6b0071437",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 48,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:11",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #84",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "a175fda5f37748332806d5a5f976475682999dd0646811d4c59767c6dd9f4b7d",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 49,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:12",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #85",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "4465591a43e61868b7b6e8b5268fdf2f5aa216b34546b7c3464131baa60ba2bd",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 50,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:27",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #86",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "5d42fcc8a3bdae42803323a35b05234735548d3893ad4c3277be63e8ad0373e3",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 51,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:27",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #87",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "423a0da5150fdd8183e4be8e9ada36d64bbfb9dc38624318d83ab0a7ddc2f81f",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 52,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 05:30",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #88",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "69646c3c0b1deb2f269a19f834095263bca7c913ee11373c60c9230da88c08fd",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 53,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 05:30",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #13",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "8896497eeb5e34bdc42dac6578aad9fdf56e5faad6d0e36271848b35973774fc",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 54,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:05",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "company_audit_logs (document withdrawn)",
+        "target": "CompanyDocument #5",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "fcdc9ed5e70dcb7a476b18c7a2659ee463d5cb12c3442a0e00bea5938c7fa71a",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 55,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:06",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "company_audit_logs (document withdrawn)",
+        "target": "CompanyDocument #6",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "4f03bc846c174b6fea4373514338a5eb91108834d3158d14a9f71d83b9c2b4f5",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 56,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:06",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "company_audit_logs (document withdrawn)",
+        "target": "CompanyDocument #7",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "824d02413d6c1fca3b3d75fd3387cba4b34a3a64bcccfbe51b59a682814570bf",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 57,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:07",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "company_audit_logs (document withdrawn)",
+        "target": "CompanyDocument #8",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "50140f0d5f2704853e349d68c87d029ef8b23d2b021f35cf00b389df13f41d7c",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 58,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:08",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "company_audit_logs (document withdrawn)",
+        "target": "CompanyDocument #9",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "14614033ee01bdfa29f819984a4889a19d7709b9f0944457db40e0ba7301aad9",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 59,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 06:22",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #89",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "8b945dec9e35ab3ac81853f208ca56ccb883024d11c28f50907f0107fba6a216",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 60,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:22",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #17",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "5b2803f95e80fb429103493a0c8f0884fa50217b5670235713a0fec99e9f3301",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 61,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 06:23",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #90",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "89ac61493eff2b4847a1fc3e8a8bb0f47ee26bb72fded2fc37d4589aa713dfd1",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 62,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 06:23",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #91",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "328c9ff5c981bbcdf50e0e5f061e41a594d13cc956cb8bbb8080187ab7b5ba95",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 63,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 06:24",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #92",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "fb8f983afac44b962cf2d4855fe8311b86c25c8727c24712f851e57d919e5aa3",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 64,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 06:24",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #19",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "9313a524ed638e7e7694a76fb247603b7d57e38bc3122dd714466546a854b631",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 65,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 18:33",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #93",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "715c7e10b433314cfc1161d8748bf862bfbda8ff4494ac00d46ead144ac1a3a8",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 66,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 18:33",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #20",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "e11667b7747d618cf137d0b38e3c306daea24ce2f44ffb993b29a0b453846340",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 67,
+        "queue": "default",
+        "type": "SendMembershipInvitationJob",
+        "created": "2026-11-14 23:30",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "membership #94",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "92d2d20cc584dc418842439aa2d688349d61a3d6fe6e2cc45a7173677e3d6ac6",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 68,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-14 23:30",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #21",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "600cc7a85a51ad36a3f42ad60dfa179081a0a4fd6d7074601919d49c18344d2d",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 69,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-15 21:51",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 58,
+        "company_proof": "invoices.company_id",
+        "target": "invoice #97",
+        "target_exists": true,
+        "recipient": "vortex@leezr.test",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "616a396cc649577b1bf653abf2ae959f16afa0c9686f0f399cb043197b4cc8f9",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 70,
+        "queue": "default",
+        "type": "ScanOnboardingUploadJob",
+        "created": "2026-11-16 00:49",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "onboarding_upload #1",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "18dc67873fbee34298ff08a7b66dd1e86378abb35b1fc5c0e7e90dd2bf561208",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 71,
+        "queue": "default",
+        "type": "ScanOnboardingUploadJob",
+        "created": "2026-11-16 00:51",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "payload tenantCompanyId",
+        "target": "onboarding_upload #2",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted"
+        ],
+        "sha256": "33de6441162b7d029322c0c2c6b86f5fddc686575877a0b04d9e8669f326cef9",
+        "will_fail": true,
+        "verdict": "doomed — owned by company 1 (not a fixture) : kept, decision required"
+    },
+    {
+        "id": 72,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 09:58",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #98",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "44cc451f0a5bc19396111d2d092ce68518a9742dcc6c2ab153a94ae59d23f432",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 73,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 09:58",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #99",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "6f08978ccbbd610479acad66815141239fec92650fde847ee9bbe82873f03397",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 74,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:01",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #100",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "4443d59ef726e61a73e31cef6a67df55bcc4f1263614e46e2c504affb4f7df38",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 75,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:01",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #101",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "9e72f7c8f23e2ecf98fc7c297a5a4c848b23c0cb4b3879a55770ec4732192445",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 76,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:04",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #102",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "86b3efe86ea7da263b2a800c612dbd2867674ab25087268ea46f836db5a65319",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 77,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:04",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #103",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "42a788588b711aaca90b082d3072f0937b4e813b8b506269534fa98f850fecc7",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 78,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:52",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #104",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "8e0dc879d9df947b89a5b6098d3f2ca7a602c0064861ea14a3c6bd86318e847b",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 79,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:52",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #105",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "796611cc5db185fb25a5eb50ac479727b74381b0e0b6bea2cfd6b0b5da4ca83e",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 80,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:56",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #106",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "637ae39de9db37661c99348c9cca19f425146dc6b75c45f9c350896461346d62",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 81,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:56",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #107",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "b90835c18354c313ae1bc8adfc6b7ebb9ef4dda80bf76dee042e850dddf4bde2",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 82,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:58",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #108",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "a4309c5f2e2186bc88fe3089e2ae9bfe318abec83456d0645ab4ebd111cbcc21",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 83,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 10:58",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "invoice #109",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "external_notification",
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "b2916d5d8808416b8ecc407b197c1f9e786b7429314d6dde38b74705be0f25a6",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 84,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-16 12:10",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 1,
+        "company_proof": "recipient has a single company",
+        "target": "planning 2026-11-16 → 2026-11-17",
+        "target_exists": true,
+        "recipient": "bob@leezr.test",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "5fd2a1ddf3670140fad28f0a95f5f2be72c84ca8dfbcbb42be9bcce57c52eef9",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 85,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 17:50",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #31",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "082c17369979e6108027dfed2d763ff204ee872c623b974a1931b9a4de51e0d0",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 86,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 17:51",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #33",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "4b94ffc95f64daaeb12769b9151672542d3e93136c171fdd7c2019d81ba8d89f",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 87,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 17:56",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #35",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "dafa20132304abc432e4e3808b3796d2c45c8cc27f236b45e70e1eb4fc2ff056",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 88,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 17:57",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #37",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "93165c74ce01a30b47a54f449308f740ff8cbc00b937114adbe2905c6d29fa7d",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 89,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 19:30",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #39",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "b213c333dbe39c65db833f63b85ec3c56810609ebdbcf9b79481f55813d59247",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 90,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 19:31",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": null,
+        "company_proof": null,
+        "target": "MemberDocument #39",
+        "target_exists": false,
+        "recipient": null,
+        "cat": [
+            "fixture_deleted",
+            "company_unknown"
+        ],
+        "sha256": "78a368bf949c040a58e47047b29a60221b6eac0676bcf08bdcff320ae5d7bbb9",
+        "will_fail": true,
+        "verdict": "doomed — owner unproven : kept, decision required"
+    },
+    {
+        "id": 91,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 21:38",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 101,
+        "company_proof": "invoices.company_id",
+        "target": "invoice #110",
+        "target_exists": true,
+        "recipient": "e2e.8091.owner.433828@leezr.invalid",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "c58f69667682a7fb3a44b080571428a92d21bb1c03945b8374c92c251e5fedf3",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 92,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 21:38",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 101,
+        "company_proof": "invoices.company_id",
+        "target": "invoice #111",
+        "target_exists": true,
+        "recipient": "e2e.8091.owner.433828@leezr.invalid",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "e6e437f9478e5b0cfffeaedc98c318548f19ee8d9cbed253102eab2eba692a9a",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 93,
+        "queue": "default",
+        "type": "InvoiceCreated",
+        "created": "2026-11-16 21:38",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 101,
+        "company_proof": "invoices.company_id",
+        "target": "invoice #112",
+        "target_exists": true,
+        "recipient": "e2e.8091.owner.433828@leezr.invalid",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "1760838a6844a6be06bb8292a6d68724a628a0d36442ad3ef852d65fff5575bb",
+        "will_fail": false,
+        "verdict": "kept"
+    },
+    {
+        "id": 98,
+        "queue": "ai",
+        "type": "ProcessDocumentAiJob",
+        "created": "2026-11-16 22:24",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 101,
+        "company_proof": "member_documents.company_id",
+        "target": "MemberDocument #40",
+        "target_exists": true,
+        "recipient": null,
+        "cat": [
+            "billable",
+            "useful"
+        ],
+        "sha256": "b62b0683ffeb2c4b13df1079cd87cdbed6e5f2c45b8a6de4bc43d57542cb8014",
+        "will_fail": false,
+        "verdict": "excluded (ADR-814)"
+    },
+    {
+        "id": 99,
+        "queue": "default",
+        "type": "PlanningPublishedNotification",
+        "created": "2026-11-16 22:37",
+        "attempts": 0,
+        "reserved": false,
+        "company_id": 101,
+        "company_proof": "recipient has a single company",
+        "target": "planning 2026-11-17",
+        "target_exists": true,
+        "recipient": "e2e.811.driver.42700@leezr.invalid",
+        "cat": [
+            "external_notification",
+            "useful"
+        ],
+        "sha256": "139b0dd455803f6bfa476c3e68c3f46fa79fb08d825e5517907b84695b6f1732",
+        "will_fail": false,
+        "verdict": "kept"
+    }
+]

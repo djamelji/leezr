@@ -1,0 +1,113 @@
+{
+    "company": {
+        "id": 102,
+        "name": "E2E Recette 813 667092",
+        "slug": "e2e-recette-813-667092-bjG6",
+        "status": "active",
+        "plan_key": "starter",
+        "market_key": "FR",
+        "created_at": "2026-11-17 00:34:42"
+    },
+    "tables": {
+        "company_audit_logs": [
+            "01m7ketw3nvkedfa7nc88gh315"
+        ],
+        "company_dashboard_layouts": [
+            184,
+            185,
+            186,
+            187,
+            188
+        ],
+        "company_jobdomain": [
+            "rows:1"
+        ],
+        "company_module_activation_reasons": [
+            371,
+            372,
+            373,
+            374,
+            375,
+            376
+        ],
+        "company_modules": [
+            332,
+            333,
+            334,
+            335,
+            336,
+            337
+        ],
+        "company_preset_snapshots": [
+            20
+        ],
+        "company_roles": [
+            175,
+            176,
+            177,
+            178,
+            179
+        ],
+        "document_type_activations": [
+            169,
+            170,
+            171,
+            172,
+            173
+        ],
+        "field_activations": [
+            1104,
+            1105,
+            1106,
+            1107,
+            1108,
+            1109,
+            1110,
+            1111,
+            1112,
+            1113,
+            1114,
+            1115,
+            1116,
+            1117,
+            1118,
+            1119,
+            1120,
+            1121,
+            1122,
+            1123,
+            1124,
+            1125,
+            1126,
+            1127,
+            1128,
+            1129,
+            1130,
+            1131,
+            1132,
+            1133,
+            1134,
+            1135,
+            1136,
+            1137,
+            1138,
+            1139
+        ],
+        "memberships": [
+            191
+        ],
+        "registration_funnel_events": [
+            7
+        ],
+        "subscriptions": [
+            53
+        ]
+    },
+    "users": [
+        {
+            "id": 179,
+            "email": "e2e.813.owner.667092@leezr.invalid"
+        }
+    ],
+    "invoices": []
+}

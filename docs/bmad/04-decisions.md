@@ -29019,3 +29019,15 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - une migration non destructive, sur la définition du métier seulement ;
   - aucun changement Billing, paie, droits, `@core` ;
   - 10 nouveaux tests, tous en échec sur le code d'origine.
+
+## ADR-814 — Hygiène DEV et préparation de livraison
+
+- **Date** : 2026-11-17, DEV, base `ae47b8a0`. Rapport : `docs/bmad/ADR-814-DEV-HYGIENE.md`.
+- **Décision** :
+  - **File DEV** : classement individuel des 73 tâches. 61 sont vouées à l'échec, mais aucune n'appartient de façon prouvée à une société fictive. Leur mise à l'écart est donc préparée (sauvegarde, empreintes, procédure de mise à l'écart et de restauration), et **non appliquée**. La tâche IA 98 est exclue. Rien n'a été exécuté.
+  - **Société 102** : supprimée par identifiants exacts (182 lignes), après gardes : aucune finance, aucune autre appartenance, aucune tâche. Sauvegarde hors Git ; sociétés 1 et 101 identiques avant et après.
+  - **Société 101** : conservée. Procédure de remise à zéro fonctionnelle préparée, qui ne touche ni factures ni écritures (empreinte financière vérifiée). Non lancée.
+  - **Exploitation** : conditions DEV et production documentées (worker, scheduler, temps réel, e-mails, stockage, génération, sessions, logs).
+- **Conséquences** :
+  - aucune modification de code applicatif, de migration, de Billing ou de paie ;
+  - décision attendue sur les 61 tâches vouées à l'échec.

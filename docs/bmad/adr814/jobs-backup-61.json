@@ -1,0 +1,615 @@
+{
+    "taken_at": "2026-11-17T00:56:50+00:00",
+    "rows": [
+        {
+            "id": 22,
+            "queue": "default",
+            "payload": "{\"uuid\":\"5138a83f-086e-4bea-a0db-600462f5a8ff\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:1;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:63;s:14:\\\"emailMessageId\\\";s:47:\\\"fd7c9945-d9d2-47ad-b197-9513a922963c@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:66;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"71370621-e383-4441-bcce-5640d7201e37\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794098852,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794098852,
+            "created_at": 1794098852,
+            "sha256": "4638e721eaf7ac6c250d609a1a34aaf6e42cf6141c1c631fd7ef7ef407a96791"
+        },
+        {
+            "id": 23,
+            "queue": "default",
+            "payload": "{\"uuid\":\"5b6b2b7a-7b94-4996-88ad-670fb0208648\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:1;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:64;s:14:\\\"emailMessageId\\\";s:47:\\\"f368a709-c16e-459f-89d3-83983607f628@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:67;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"96a7dbb5-a5c8-4000-a6e9-29c1dc9ee19c\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794098852,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794098852,
+            "created_at": 1794098852,
+            "sha256": "9a9b764e0556ea1f106028c1da82c75f200709e33ea283c44834bf1205c666e3"
+        },
+        {
+            "id": 30,
+            "queue": "default",
+            "payload": "{\"uuid\":\"2345acc8-2813-46f4-ab82-0efc87da6a38\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:69;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794589450,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794589450,
+            "created_at": 1794589450,
+            "sha256": "6a766061ad82830080fd4951c78c10a080cc130605b9f6adbf430a58174f3543"
+        },
+        {
+            "id": 31,
+            "queue": "default",
+            "payload": "{\"uuid\":\"806ca066-3e3d-48eb-be67-2a255945c8ab\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:70;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794589466,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794589466,
+            "created_at": 1794589466,
+            "sha256": "cb0b3ccb184efeba44668debb01fc6641da8bc0899dffbeca4c557ef94b1c865"
+        },
+        {
+            "id": 32,
+            "queue": "default",
+            "payload": "{\"uuid\":\"34ad3f28-9d71-4550-b3e3-237680c39d78\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:71;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794589507,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794589507,
+            "created_at": 1794589507,
+            "sha256": "e557dcb20770b973657e132ad530e39a51b7bfbdd2d6aaf3efb43778c7703cd6"
+        },
+        {
+            "id": 33,
+            "queue": "default",
+            "payload": "{\"uuid\":\"fcd76b5a-91fc-4ace-b17f-89ef1b45383b\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:72;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794595710,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794595710,
+            "created_at": 1794595710,
+            "sha256": "c63d4578531ff3ab30d774b9f793b9c640a3945bf71ce1954e9e33e6498a9ebd"
+        },
+        {
+            "id": 34,
+            "queue": "default",
+            "payload": "{\"uuid\":\"651ea5a3-f1ce-4975-adcb-711da8f8c2c9\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:73;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794595726,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794595726,
+            "created_at": 1794595726,
+            "sha256": "fdcbf22a870f2ef357d525e1d5dd1248de2bbf642822429b69d89fff0cd5b822"
+        },
+        {
+            "id": 35,
+            "queue": "default",
+            "payload": "{\"uuid\":\"752acb79-547d-4fa5-b251-a1becc95ef82\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:74;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794596797,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794596797,
+            "created_at": 1794596797,
+            "sha256": "f133db236b0f9f0d179cd322071a8d293a33e83b5794342153075258d312e1e2"
+        },
+        {
+            "id": 36,
+            "queue": "default",
+            "payload": "{\"uuid\":\"6fe6630a-ead6-45c6-baea-0defe0455948\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:75;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794629357,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629357,
+            "created_at": 1794629357,
+            "sha256": "cd8622b967965596c4fc57acfcf6a9b0270665130ebf747aae0d222c90d2447f"
+        },
+        {
+            "id": 37,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"2bb4f024-b87a-4177-9053-b8c2eeee7cb1\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:7;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794629357,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629357,
+            "created_at": 1794629357,
+            "sha256": "b28fde0f2b44268bb5be134a1eeda46a60032457dff34723cc153052e05e7432"
+        },
+        {
+            "id": 38,
+            "queue": "default",
+            "payload": "{\"uuid\":\"5de84bc0-11ee-4ad2-91ba-363cfe4ee65c\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:76;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794629559,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629559,
+            "created_at": 1794629559,
+            "sha256": "0c684ab2e4d8e1c59394c967dfcc0e74d80e17e97a6da991c61bacdb589693f3"
+        },
+        {
+            "id": 39,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"3136c2ba-0f4f-4d67-8ab3-2014ea0ac841\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:8;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794629559,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629559,
+            "created_at": 1794629559,
+            "sha256": "820546fcf0bda92738258bd372095383247f1c358c4c107a31ca4977f7cc33c0"
+        },
+        {
+            "id": 40,
+            "queue": "default",
+            "payload": "{\"uuid\":\"56c980e0-f230-4438-99cf-6a90167947b0\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:77;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794629587,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629587,
+            "created_at": 1794629587,
+            "sha256": "e74ba3c2e96158291f78ce8b6fee3040292a2336156fd8a27d3fbf1817e1fb65"
+        },
+        {
+            "id": 41,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"c358f225-999b-4d8e-a9e5-d1ed55620c75\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:9;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794629587,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794629587,
+            "created_at": 1794629587,
+            "sha256": "98276d7fcf4883dd91df4f302cda29251c3f3f0afa7ed8f3ecb3d09535b4f08b"
+        },
+        {
+            "id": 42,
+            "queue": "default",
+            "payload": "{\"uuid\":\"ee9c2e50-f454-4f54-819a-2196597c2498\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:78;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632206,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632206,
+            "created_at": 1794632206,
+            "sha256": "229b47344ab1a83bf49b556f50c4057566a8c33db4a5b954ddb4e08d891c6bd6"
+        },
+        {
+            "id": 43,
+            "queue": "default",
+            "payload": "{\"uuid\":\"13935c23-93e3-406d-837a-d541c18abc0f\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:79;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632209,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632209,
+            "created_at": 1794632209,
+            "sha256": "27f042f9da624feb0f85bc8279f220ec9d043e7ad90d4338e91decde48f88075"
+        },
+        {
+            "id": 44,
+            "queue": "default",
+            "payload": "{\"uuid\":\"b2a16379-d508-4f20-95e6-48813645f370\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:80;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632271,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632271,
+            "created_at": 1794632271,
+            "sha256": "78e25c0f0a9fb302904d91875de7f1399c5f5af03133d510165a04e163c5858e"
+        },
+        {
+            "id": 45,
+            "queue": "default",
+            "payload": "{\"uuid\":\"f0a98d22-1ef8-4c74-87df-ac5d67002ad4\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:81;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632273,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632273,
+            "created_at": 1794632273,
+            "sha256": "3d9c2002afba34a7e20e175d65bbad891ed7b25c528d0ac943230db26aa7cf22"
+        },
+        {
+            "id": 46,
+            "queue": "default",
+            "payload": "{\"uuid\":\"529d2c49-4f70-4b6d-bfab-1531fc99029c\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:82;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632766,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632766,
+            "created_at": 1794632766,
+            "sha256": "25733c001d869a36516fbedf2e758d5d8bb56734ca482f2bc3b67ec602b7f710"
+        },
+        {
+            "id": 47,
+            "queue": "default",
+            "payload": "{\"uuid\":\"cb5bca2d-73ee-4c8b-8bf3-d5ec0c0575a0\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:83;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794632955,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794632955,
+            "created_at": 1794632955,
+            "sha256": "06fb77dfd9a185bca2a226dce8570993ca76ae37035500ed0d68f1b6b0071437"
+        },
+        {
+            "id": 48,
+            "queue": "default",
+            "payload": "{\"uuid\":\"ab721244-b318-416b-8fea-1637f97d0194\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:84;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794633073,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794633073,
+            "created_at": 1794633073,
+            "sha256": "a175fda5f37748332806d5a5f976475682999dd0646811d4c59767c6dd9f4b7d"
+        },
+        {
+            "id": 49,
+            "queue": "default",
+            "payload": "{\"uuid\":\"0bcfba9b-b579-49c7-9126-782663209f8d\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:85;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794633138,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794633138,
+            "created_at": 1794633138,
+            "sha256": "4465591a43e61868b7b6e8b5268fdf2f5aa216b34546b7c3464131baa60ba2bd"
+        },
+        {
+            "id": 50,
+            "queue": "default",
+            "payload": "{\"uuid\":\"7ef021f8-5f6f-4613-922a-1f65bc1795a1\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:86;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794634025,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794634025,
+            "created_at": 1794634025,
+            "sha256": "5d42fcc8a3bdae42803323a35b05234735548d3893ad4c3277be63e8ad0373e3"
+        },
+        {
+            "id": 51,
+            "queue": "default",
+            "payload": "{\"uuid\":\"b64a0208-27a9-4b12-bab2-a81c1c4d1b93\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:87;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794634028,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794634028,
+            "created_at": 1794634028,
+            "sha256": "423a0da5150fdd8183e4be8e9ada36d64bbfb9dc38624318d83ab0a7ddc2f81f"
+        },
+        {
+            "id": 52,
+            "queue": "default",
+            "payload": "{\"uuid\":\"28eadee4-bd1b-416b-b6aa-851e4c10ad4b\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:88;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794634231,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794634231,
+            "created_at": 1794634231,
+            "sha256": "69646c3c0b1deb2f269a19f834095263bca7c913ee11373c60c9230da88c08fd"
+        },
+        {
+            "id": 53,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"8e853a40-b67c-4ef8-9c25-e178d0b692ea\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:13;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794634231,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794634231,
+            "created_at": 1794634231,
+            "sha256": "8896497eeb5e34bdc42dac6578aad9fdf56e5faad6d0e36271848b35973774fc"
+        },
+        {
+            "id": 54,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"32d4934e-b648-4781-b425-385847ce62a4\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:34:\\\"App\\\\Core\\\\Documents\\\\CompanyDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:5;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:10;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794636327,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794636327,
+            "created_at": 1794636327,
+            "sha256": "fcdc9ed5e70dcb7a476b18c7a2659ee463d5cb12c3442a0e00bea5938c7fa71a"
+        },
+        {
+            "id": 55,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"0541ba4e-bdcf-4449-826b-c3681a9d133b\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:34:\\\"App\\\\Core\\\\Documents\\\\CompanyDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:6;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:10;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794636365,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794636365,
+            "created_at": 1794636365,
+            "sha256": "4f03bc846c174b6fea4373514338a5eb91108834d3158d14a9f71d83b9c2b4f5"
+        },
+        {
+            "id": 56,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"de50d304-c4f0-4b83-8ea0-5055e15637da\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:34:\\\"App\\\\Core\\\\Documents\\\\CompanyDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:7;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:10;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794636412,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794636412,
+            "created_at": 1794636412,
+            "sha256": "824d02413d6c1fca3b3d75fd3387cba4b34a3a64bcccfbe51b59a682814570bf"
+        },
+        {
+            "id": 57,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"150c677a-7bb6-4371-b1ac-f54504052c02\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:34:\\\"App\\\\Core\\\\Documents\\\\CompanyDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:8;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:10;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794636439,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794636439,
+            "created_at": 1794636439,
+            "sha256": "50140f0d5f2704853e349d68c87d029ef8b23d2b021f35cf00b389df13f41d7c"
+        },
+        {
+            "id": 58,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"da9ac1f0-3dc3-4a1e-8c43-c4b747be38f4\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:34:\\\"App\\\\Core\\\\Documents\\\\CompanyDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:9;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:10;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794636492,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794636492,
+            "created_at": 1794636492,
+            "sha256": "14614033ee01bdfa29f819984a4889a19d7709b9f0944457db40e0ba7301aad9"
+        },
+        {
+            "id": 59,
+            "queue": "default",
+            "payload": "{\"uuid\":\"15d8dde7-6308-40a2-8b57-4a80e345e587\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:89;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794637368,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637368,
+            "created_at": 1794637368,
+            "sha256": "8b945dec9e35ab3ac81853f208ca56ccb883024d11c28f50907f0107fba6a216"
+        },
+        {
+            "id": 60,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"2c0881ce-6feb-45cf-9d51-71eb4afc68d5\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:17;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794637368,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637368,
+            "created_at": 1794637368,
+            "sha256": "5b2803f95e80fb429103493a0c8f0884fa50217b5670235713a0fec99e9f3301"
+        },
+        {
+            "id": 61,
+            "queue": "default",
+            "payload": "{\"uuid\":\"694316b1-033c-4e3b-8bb2-a9f6ddc71237\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:90;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794637393,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637393,
+            "created_at": 1794637393,
+            "sha256": "89ac61493eff2b4847a1fc3e8a8bb0f47ee26bb72fded2fc37d4589aa713dfd1"
+        },
+        {
+            "id": 62,
+            "queue": "default",
+            "payload": "{\"uuid\":\"8b21688a-ca7e-4bb8-ac46-f9ce7598df25\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:91;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794637396,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637396,
+            "created_at": 1794637396,
+            "sha256": "328c9ff5c981bbcdf50e0e5f061e41a594d13cc956cb8bbb8080187ab7b5ba95"
+        },
+        {
+            "id": 63,
+            "queue": "default",
+            "payload": "{\"uuid\":\"979b4d32-3b4f-4af5-a8fa-3ab95ba5e0a0\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:92;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794637470,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637470,
+            "created_at": 1794637470,
+            "sha256": "fb8f983afac44b962cf2d4855fe8311b86c25c8727c24712f851e57d919e5aa3"
+        },
+        {
+            "id": 64,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"9afe3db6-b2ed-43b5-84be-0f00e5b27f2b\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:19;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794637470,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794637470,
+            "created_at": 1794637470,
+            "sha256": "9313a524ed638e7e7694a76fb247603b7d57e38bc3122dd714466546a854b631"
+        },
+        {
+            "id": 65,
+            "queue": "default",
+            "payload": "{\"uuid\":\"bfc9fc46-68f5-41f1-bcd1-a6aaf063af98\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:93;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794681181,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794681181,
+            "created_at": 1794681181,
+            "sha256": "715c7e10b433314cfc1161d8748bf862bfbda8ff4494ac00d46ead144ac1a3a8"
+        },
+        {
+            "id": 66,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"53f5a6b9-de80-4f66-9949-2f837db403c6\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:20;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794681181,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794681181,
+            "created_at": 1794681181,
+            "sha256": "e11667b7747d618cf137d0b38e3c306daea24ce2f44ffb993b29a0b453846340"
+        },
+        {
+            "id": 67,
+            "queue": "default",
+            "payload": "{\"uuid\":\"d4e5aad0-a7b2-4eaf-9af5-2b2033255556\",\"displayName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\",\"command\":\"O:44:\\\"App\\\\Jobs\\\\Members\\\\SendMembershipInvitationJob\\\":3:{s:12:\\\"membershipId\\\";i:94;s:7:\\\"actorId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;}\"},\"createdAt\":1794699016,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794699016,
+            "created_at": 1794699016,
+            "sha256": "92d2d20cc584dc418842439aa2d688349d61a3d6fe6e2cc45a7173677e3d6ac6"
+        },
+        {
+            "id": 68,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"d6792d39-aa26-4ca2-bb97-1dbe9122e363\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:21;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:1;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794699016,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794699016,
+            "created_at": 1794699016,
+            "sha256": "600cc7a85a51ad36a3f42ad60dfa179081a0a4fd6d7074601919d49c18344d2d"
+        },
+        {
+            "id": 70,
+            "queue": "default",
+            "payload": "{\"uuid\":\"b87c64e4-3d35-4626-a25f-3dd2d056789b\",\"displayName\":\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\",\"command\":\"O:61:\\\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\\\":3:{s:8:\\\"uploadId\\\";i:1;s:15:\\\"tenantCompanyId\\\";i:1;s:11:\\\"afterCommit\\\";b:1;}\"},\"createdAt\":1794790190,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794790190,
+            "created_at": 1794790190,
+            "sha256": "18dc67873fbee34298ff08a7b66dd1e86378abb35b1fc5c0e7e90dd2bf561208"
+        },
+        {
+            "id": 71,
+            "queue": "default",
+            "payload": "{\"uuid\":\"f9abec4c-1a9c-4c6f-925f-1d8df81a723b\",\"displayName\":\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\",\"command\":\"O:61:\\\"App\\\\Modules\\\\Workforce\\\\Onboarding\\\\Jobs\\\\ScanOnboardingUploadJob\\\":3:{s:8:\\\"uploadId\\\";i:2;s:15:\\\"tenantCompanyId\\\";i:1;s:11:\\\"afterCommit\\\";b:1;}\"},\"createdAt\":1794790298,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794790298,
+            "created_at": 1794790298,
+            "sha256": "33de6441162b7d029322c0c2c6b86f5fddc686575877a0b04d9e8669f326cef9"
+        },
+        {
+            "id": 72,
+            "queue": "default",
+            "payload": "{\"uuid\":\"51dff377-4eb6-489a-91e0-7ae46d4f8dba\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:106;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:66;s:14:\\\"emailMessageId\\\";s:47:\\\"a2d81b58-fe7f-4285-bf77-2d85ab3efb4f@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:98;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"8b0a6379-e678-46b3-9f33-304bb71058c1\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823100,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823100,
+            "created_at": 1794823100,
+            "sha256": "44cc451f0a5bc19396111d2d092ce68518a9742dcc6c2ab153a94ae59d23f432"
+        },
+        {
+            "id": 73,
+            "queue": "default",
+            "payload": "{\"uuid\":\"fea6c287-b324-4bac-a0bc-6a3eade08677\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:106;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:67;s:14:\\\"emailMessageId\\\";s:47:\\\"cdebfce8-1212-4ed0-8509-9dc5fb0b244c@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:99;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"6e76448f-456a-41da-8dc8-71ccd7f4113b\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823103,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823103,
+            "created_at": 1794823103,
+            "sha256": "6f08978ccbbd610479acad66815141239fec92650fde847ee9bbe82873f03397"
+        },
+        {
+            "id": 74,
+            "queue": "default",
+            "payload": "{\"uuid\":\"fd6ee507-ce64-457a-9ec5-f1d2549d8c8f\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:109;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:68;s:14:\\\"emailMessageId\\\";s:47:\\\"64bcd959-eb41-48a8-84e3-455f0c4a90ed@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:100;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"6eb80ba7-a97d-460e-9ed8-e31d76e9aaf9\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823265,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823265,
+            "created_at": 1794823265,
+            "sha256": "4443d59ef726e61a73e31cef6a67df55bcc4f1263614e46e2c504affb4f7df38"
+        },
+        {
+            "id": 75,
+            "queue": "default",
+            "payload": "{\"uuid\":\"550fee73-85fa-4490-b261-a6ca532c4a30\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:109;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:69;s:14:\\\"emailMessageId\\\";s:47:\\\"9b7b2fd3-fc37-4e71-a96c-0d7aa92904b8@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:101;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"4eb3a9cd-7df7-4a59-90b8-84915f0ee054\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823268,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823268,
+            "created_at": 1794823268,
+            "sha256": "9e72f7c8f23e2ecf98fc7c297a5a4c848b23c0cb4b3879a55770ec4732192445"
+        },
+        {
+            "id": 76,
+            "queue": "default",
+            "payload": "{\"uuid\":\"79d6deaa-2be8-4d2b-b8d1-a6cddf3cd724\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:112;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:70;s:14:\\\"emailMessageId\\\";s:47:\\\"40495e38-66ab-40a8-bf98-ec458c01ae46@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:102;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"4acd9244-38b7-4991-a589-78a47f3ef399\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823444,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823444,
+            "created_at": 1794823444,
+            "sha256": "86b3efe86ea7da263b2a800c612dbd2867674ab25087268ea46f836db5a65319"
+        },
+        {
+            "id": 77,
+            "queue": "default",
+            "payload": "{\"uuid\":\"88c2d4f4-08b0-4ab9-869d-0878caaeb8c9\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:112;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:71;s:14:\\\"emailMessageId\\\";s:47:\\\"baee5456-acef-4cc1-87ab-e44416b3a22c@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:103;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"ec4a08bc-7987-4e15-877c-7a125bf73e4d\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794823447,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794823447,
+            "created_at": 1794823447,
+            "sha256": "42a788588b711aaca90b082d3072f0937b4e813b8b506269534fa98f850fecc7"
+        },
+        {
+            "id": 78,
+            "queue": "default",
+            "payload": "{\"uuid\":\"597bb0b3-5a7a-433d-a904-bfc2550a87ab\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:115;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:72;s:14:\\\"emailMessageId\\\";s:47:\\\"cc79f594-ce8c-444d-86d6-bdfe57e22ace@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:104;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"e0b617ba-f1f4-4549-a75b-2b9a0b9b6c12\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826352,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826352,
+            "created_at": 1794826352,
+            "sha256": "8e0dc879d9df947b89a5b6098d3f2ca7a602c0064861ea14a3c6bd86318e847b"
+        },
+        {
+            "id": 79,
+            "queue": "default",
+            "payload": "{\"uuid\":\"1cb3b595-44a6-490e-b881-74f06a6db30a\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:115;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:73;s:14:\\\"emailMessageId\\\";s:47:\\\"fb453bd7-059b-445d-902b-316a8f58581f@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:105;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"a2144232-cdd0-44ac-aef2-88182777e365\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826358,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826358,
+            "created_at": 1794826358,
+            "sha256": "796611cc5db185fb25a5eb50ac479727b74381b0e0b6bea2cfd6b0b5da4ca83e"
+        },
+        {
+            "id": 80,
+            "queue": "default",
+            "payload": "{\"uuid\":\"89d5e523-bab8-4bf2-abb3-c6a2ca1fbd92\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:118;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:74;s:14:\\\"emailMessageId\\\";s:47:\\\"74893583-7f8b-4dfd-a338-0e71cc937817@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:106;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"74570d57-ffe7-4d3f-b70b-e1670aad1763\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826568,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826568,
+            "created_at": 1794826568,
+            "sha256": "637ae39de9db37661c99348c9cca19f425146dc6b75c45f9c350896461346d62"
+        },
+        {
+            "id": 81,
+            "queue": "default",
+            "payload": "{\"uuid\":\"920b257b-db1d-49f1-ac4a-51e18e54a295\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:118;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:75;s:14:\\\"emailMessageId\\\";s:47:\\\"299cd149-7527-497a-8146-c95193fef22b@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:107;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"df632890-a6d9-40ea-8542-67a1e9e474cc\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826574,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826574,
+            "created_at": 1794826574,
+            "sha256": "b90835c18354c313ae1bc8adfc6b7ebb9ef4dda80bf76dee042e850dddf4bde2"
+        },
+        {
+            "id": 82,
+            "queue": "default",
+            "payload": "{\"uuid\":\"798d3fe5-b5cb-47d6-b9a3-ad681b504e2f\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:127;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:76;s:14:\\\"emailMessageId\\\";s:47:\\\"9dec282d-8098-4be3-af5f-aa5c22b60b54@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:108;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"0435946b-6c4e-442b-a048-d7391bbe0097\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826682,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826682,
+            "created_at": 1794826682,
+            "sha256": "a4309c5f2e2186bc88fe3089e2ae9bfe318abec83456d0645ab4ebd111cbcc21"
+        },
+        {
+            "id": 83,
+            "queue": "default",
+            "payload": "{\"uuid\":\"4f29a66b-acbb-4ba6-8478-293cd0c3490c\",\"displayName\":\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"60,300,900\",\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\",\"command\":\"O:48:\\\"Illuminate\\\\Notifications\\\\SendQueuedNotifications\\\":4:{s:11:\\\"notifiables\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:20:\\\"App\\\\Core\\\\Models\\\\User\\\";s:2:\\\"id\\\";a:1:{i:0;i:127;}s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:12:\\\"notification\\\";O:40:\\\"App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\\":4:{s:10:\\\"emailLogId\\\";i:77;s:14:\\\"emailMessageId\\\";s:47:\\\"4a42d20c-4e40-4633-a151-e7c96e3fcd2e@leezr.test\\\";s:49:\\\"\\u0000App\\\\Notifications\\\\Billing\\\\InvoiceCreated\\u0000invoice\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:24:\\\"App\\\\Core\\\\Billing\\\\Invoice\\\";s:2:\\\"id\\\";i:109;s:9:\\\"relations\\\";a:1:{i:0;s:7:\\\"company\\\";}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}s:2:\\\"id\\\";s:36:\\\"006a6098-9fc0-475b-9d73-9c2bd98bb809\\\";}s:8:\\\"channels\\\";a:1:{i:0;s:4:\\\"mail\\\";}s:5:\\\"tries\\\";i:3;}\"},\"createdAt\":1794826689,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794826689,
+            "created_at": 1794826689,
+            "sha256": "b2916d5d8808416b8ecc407b197c1f9e786b7429314d6dde38b74705be0f25a6"
+        },
+        {
+            "id": 85,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"53f5e5ff-ad70-44e9-8767-d54ed29616c6\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:31;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794851420,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794851420,
+            "created_at": 1794851420,
+            "sha256": "082c17369979e6108027dfed2d763ff204ee872c623b974a1931b9a4de51e0d0"
+        },
+        {
+            "id": 86,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"7f69fd86-9686-4e93-8bd4-d79743dd77f2\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:33;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794851487,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794851487,
+            "created_at": 1794851487,
+            "sha256": "4b94ffc95f64daaeb12769b9151672542d3e93136c171fdd7c2019d81ba8d89f"
+        },
+        {
+            "id": 87,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"dffaf709-0261-4024-911d-8ddc6fbd6226\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:35;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794851804,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794851804,
+            "created_at": 1794851804,
+            "sha256": "dafa20132304abc432e4e3808b3796d2c45c8cc27f236b45e70e1eb4fc2ff056"
+        },
+        {
+            "id": 88,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"7c6e9776-9b23-4b4b-a69d-510f287e7cb0\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:37;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794851872,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794851872,
+            "created_at": 1794851872,
+            "sha256": "93165c74ce01a30b47a54f449308f740ff8cbc00b937114adbe2905c6d29fa7d"
+        },
+        {
+            "id": 89,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"11a6cbcb-57f7-4f89-a78a-5d2614fcb249\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:39;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794857423,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794857423,
+            "created_at": 1794857423,
+            "sha256": "b213c333dbe39c65db833f63b85ec3c56810609ebdbcf9b79481f55813d59247"
+        },
+        {
+            "id": 90,
+            "queue": "ai",
+            "payload": "{\"uuid\":\"bc7ab845-b14a-4de9-829b-e79ec8c5f6ed\",\"displayName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":\"10,30,60\",\"timeout\":120,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\",\"command\":\"O:39:\\\"App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\\":4:{s:54:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentClass\\\";s:33:\\\"App\\\\Core\\\\Documents\\\\MemberDocument\\\";s:51:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentId\\\";i:39;s:55:\\\"\\u0000App\\\\Jobs\\\\Documents\\\\ProcessDocumentAiJob\\u0000documentTypeId\\\";i:2;s:5:\\\"queue\\\";s:2:\\\"ai\\\";}\"},\"createdAt\":1794857460,\"delay\":null}",
+            "attempts": 0,
+            "reserved_at": null,
+            "available_at": 1794857460,
+            "created_at": 1794857460,
+            "sha256": "78a368bf949c040a58e47047b29a60221b6eac0676bcf08bdcff320ae5d7bbb9"
+        }
+    ]
+}
