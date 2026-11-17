@@ -497,6 +497,8 @@ const advanced = ref(null)
                 color="info"
                 variant="tonal"
                 label
+                class="text-wrap h-auto py-1"
+                style="max-inline-size: 170px;"
                 :data-test="`jd-dependency-${item.key}`"
               >
                 {{ t('jobdomainSimple.requiredBy', { list: names(startDeps[item.key]) }) }}
@@ -513,7 +515,19 @@ const advanced = ref(null)
             />
           </template>
           <template #item.commercial="{ item }">
-            <div class="d-flex flex-wrap gap-1">
+            <VChip
+              v-if="new Set(Object.values(item.commercial)).size === 1"
+              size="small"
+              label
+              variant="tonal"
+              :color="COMMERCIAL_TONE[Object.values(item.commercial)[0]]"
+            >
+              {{ t(`jobdomainSimple.commercialAll.${Object.values(item.commercial)[0]}`) }}
+            </VChip>
+            <div
+              v-else
+              class="d-flex flex-wrap gap-1"
+            >
               <VChip
                 v-for="p in composition.plans"
                 :key="p"

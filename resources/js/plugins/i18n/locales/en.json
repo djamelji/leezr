@@ -11751,7 +11751,12 @@
       "not_included": "no"
     },
     "advancedFamilies": "Advanced initial configuration",
-    "advancedFamiliesHint": "Roles, organisation, suggested requirements and planning starting values — versions and publication."
+    "advancedFamiliesHint": "Roles, organisation, suggested requirements and planning starting values — versions and publication.",
+    "commercialAll": {
+      "included": "Always included",
+      "option": "Paid option",
+      "not_included": "Not in any plan"
+    }
   },
   "planModules": {
     "title": "Plan modules",

@@ -648,6 +648,7 @@ const planLabel = planKey => {
           :value="sec.key"
           :prepend-icon="sec.icon"
           :to="{ name: 'platform-modules-key', params: { key: route.params.key, tab: sec.key === 'general' ? undefined : sec.key } }"
+          exact
           :data-test="`pm-tab-${sec.key}`"
         >
           {{ t(`platformModuleSections.section.${sec.key}`) }}
@@ -1016,50 +1017,7 @@ const planLabel = planKey => {
                 <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.notIncludedByDefault') }}</span>
               </template>
 
-              <VDivider class="mb-4" />
-
-              <!-- Dependencies -->
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.requires') }}
-              </div>
-              <template v-if="mod.requires.length">
-                <div class="d-flex flex-wrap gap-1 mb-4">
-                  <VChip
-                    v-for="req in mod.requires"
-                    :key="req"
-                    size="small"
-                    color="warning"
-                    variant="tonal"
-                    :to="{ name: 'platform-modules-key', params: { key: req } }"
-                  >
-                    {{ req }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2 d-block mb-4">{{ t('platformModules.noDependencies') }}</span>
-              </template>
-
-              <div class="text-body-2 font-weight-medium mb-2">
-                {{ t('platformModules.dependents') }}
-              </div>
-              <template v-if="dependents.length">
-                <div class="d-flex flex-wrap gap-1">
-                  <VChip
-                    v-for="dep in dependents"
-                    :key="dep.key"
-                    size="small"
-                    color="info"
-                    variant="tonal"
-                    :to="{ name: 'platform-modules-key', params: { key: dep.key } }"
-                  >
-                    {{ dep.name }}
-                  </VChip>
-                </div>
-              </template>
-              <template v-else>
-                <span class="text-disabled text-body-2">{{ t('platformModules.noDependents') }}</span>
-              </template>
+              <!-- ADR-821 : dépendances affichées une seule fois (carte « Dépendances », transitive et traduite) -->
             </VCardText>
           </VCard>
           <!-- Save button -->

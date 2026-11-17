@@ -11751,7 +11751,12 @@
       "not_included": "non"
     },
     "advancedFamilies": "Options avancées de la configuration initiale",
-    "advancedFamiliesHint": "Rôles, organisation, exigences suggérées et valeurs initiales du planning — versions et publication."
+    "advancedFamiliesHint": "Rôles, organisation, exigences suggérées et valeurs initiales du planning — versions et publication.",
+    "commercialAll": {
+      "included": "Inclus partout",
+      "option": "Option payante",
+      "not_included": "Hors offre"
+    }
   },
   "planModules": {
     "title": "Modules de l'offre",
