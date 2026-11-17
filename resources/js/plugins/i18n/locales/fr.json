@@ -11820,5 +11820,24 @@
     "dependenciesHint": "Déclarées par les modules ; ajoutées automatiquement à l'activation, contrôlées dans les offres.",
     "needsAll": "Nécessite (y compris indirectement)",
     "usedByAll": "Nécessaire à"
+  },
+  "platformCompanySummary": {
+    "configuration": "Configuration",
+    "identityTitle": "L'entreprise",
+    "jobdomain": "Métier",
+    "subscription": "Abonnement",
+    "owner": "Propriétaire",
+    "market": "Marché",
+    "created": "Créée le",
+    "open": "Ouvrir",
+    "manage": "Gérer",
+    "activeModules": "Modules actifs ({n})",
+    "members": "Membres",
+    "modules": "Modules actifs",
+    "status": {
+      "active": "Active",
+      "suspended": "Suspendue",
+      "pending_payment": "Paiement en attente"
+    }
   }
 }

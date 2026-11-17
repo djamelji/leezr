@@ -33,7 +33,7 @@ const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const actionLoading = ref(false)
-const COMPANY_TABS = ['overview', 'billing', 'modules', 'members', 'activity']
+const COMPANY_TABS = ['overview', 'configuration', 'billing', 'modules', 'members', 'activity'] // ADR-821 : configuration séparée de la synthèse
 // ADR-820 : l'onglet vient du chemin ; les anciens liens `?tab=billing` (jusqu'ici ignorés) sont compris puis réécrits.
 const askedTab = route.params.tab || route.query.tab
 const activeTab = ref(COMPANY_TABS.includes(askedTab) ? askedTab : 'overview')
@@ -422,9 +422,22 @@ const isModuleToggleDisabled = mod => {
   return mod.type === 'core' || !mod.is_entitled || !mod.is_enabled_globally
 }
 
+// ─── ADR-821 : synthèse ─────────────────────────────
+const { moduleName } = useCatalogText()
+const { locale } = useI18n()
+const activeModulesList = computed(() => (modules.value || []).filter(m => m.is_enabled_for_company && m.type !== 'core'))
+const summaryStats = computed(() => [
+  { key: 'status', icon: company.value?.status === 'active' ? 'tabler-circle-check' : 'tabler-player-pause', color: company.value?.status === 'active' ? 'success' : 'warning',
+    value: t(`platformCompanySummary.status.${company.value?.status || 'active'}`), label: t('platformCompanyDetail.companyStatus') },
+  { key: 'members', icon: 'tabler-users', color: 'primary', value: company.value?.memberships_count ?? 0, label: t('platformCompanySummary.members') },
+  { key: 'modules', icon: 'tabler-puzzle', color: 'info', value: activeModulesList.value.length, label: t('platformCompanySummary.modules') },
+  { key: 'plan', icon: 'tabler-receipt', color: 'warning', value: plan.value?.name || company.value?.plan_key || '—', label: t('platformCompanySummary.subscription') },
+])
+
 // ─── Tabs definition ────────────────────────────────
 const tabs = computed(() => [
-  { value: 'overview', icon: 'tabler-building', title: t('platformCompanyDetail.overview') },
+  { value: 'overview', icon: 'tabler-layout-dashboard', title: t('platformCompanyDetail.overview') },
+  { value: 'configuration', icon: 'tabler-settings', title: t('platformCompanySummary.configuration') },
   { value: 'billing', icon: 'tabler-receipt', title: t('platformCompanyDetail.billing.tab') },
   { value: 'modules', icon: 'tabler-puzzle', title: t('platformCompanyDetail.modules') },
   { value: 'members', icon: 'tabler-users', title: t('platformCompanyDetail.members.tab') },
@@ -483,8 +496,114 @@ const tabs = computed(() => [
           </VTabs>
 
           <VWindow v-model="activeTab" class="mt-6 disable-tab-transition" :touch="false">
-            <!-- ─── Overview ──────────────────────── -->
+            <!-- ─── Synthèse (ADR-821) ──────────────── -->
             <VWindowItem value="overview">
+              <VRow class="card-grid card-grid-xs mb-2">
+                <VCol
+                  v-for="k in summaryStats"
+                  :key="k.key"
+                  cols="6"
+                  md="3"
+                >
+                  <VCard :data-test="`pc-stat-${k.key}`">
+                    <VCardText class="d-flex align-center gap-3">
+                      <VAvatar
+                        :color="k.color"
+                        variant="tonal"
+                        rounded
+                        :icon="k.icon"
+                      />
+                      <div>
+                        <div class="text-h6">
+                          {{ k.value }}
+                        </div>
+                        <div class="text-body-2 text-medium-emphasis">
+                          {{ k.label }}
+                        </div>
+                      </div>
+                    </VCardText>
+                  </VCard>
+                </VCol>
+              </VRow>
+              <VCard
+                class="mb-6"
+                data-test="pc-summary"
+              >
+                <VCardItem>
+                  <VCardTitle>{{ t('platformCompanySummary.identityTitle') }}</VCardTitle>
+                </VCardItem>
+                <VList density="compact">
+                  <VListItem
+                    prepend-icon="tabler-briefcase"
+                    :title="t('platformCompanySummary.jobdomain')"
+                    :subtitle="(company.jobdomains || []).map(j => j.label).join(', ') || company.jobdomain_key || '—'"
+                  />
+                  <VListItem
+                    prepend-icon="tabler-receipt"
+                    :title="t('platformCompanySummary.subscription')"
+                    :subtitle="plan?.name || company.plan_key || '—'"
+                  >
+                    <template #append>
+                      <VBtn
+                        size="small"
+                        variant="text"
+                        @click="activeTab = 'billing'"
+                      >
+                        {{ t('platformCompanySummary.open') }}
+                      </VBtn>
+                    </template>
+                  </VListItem>
+                  <VListItem
+                    prepend-icon="tabler-user-star"
+                    :title="t('platformCompanySummary.owner')"
+                    :subtitle="owner ? `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || owner.email : '—'"
+                  />
+                  <VListItem
+                    prepend-icon="tabler-world"
+                    :title="t('platformCompanySummary.market')"
+                    :subtitle="company.market_key || '—'"
+                  />
+                  <VListItem
+                    prepend-icon="tabler-calendar"
+                    :title="t('platformCompanySummary.created')"
+                    :subtitle="company.created_at ? new Date(company.created_at).toLocaleDateString(locale) : '—'"
+                  />
+                </VList>
+              </VCard>
+              <VCard data-test="pc-active-modules">
+                <VCardItem>
+                  <VCardTitle>{{ t('platformCompanySummary.activeModules', { n: activeModulesList.length }) }}</VCardTitle>
+                  <template #append>
+                    <VBtn
+                      size="small"
+                      variant="text"
+                      @click="activeTab = 'modules'"
+                    >
+                      {{ t('platformCompanySummary.manage') }}
+                    </VBtn>
+                  </template>
+                </VCardItem>
+                <VCardText class="d-flex flex-wrap gap-2">
+                  <VChip
+                    v-for="m in activeModulesList"
+                    :key="m.key"
+                    size="small"
+                    label
+                    variant="tonal"
+                    color="primary"
+                  >
+                    {{ moduleName(m.key, m.name) }}
+                  </VChip>
+                  <span
+                    v-if="!activeModulesList.length"
+                    class="text-disabled"
+                  >—</span>
+                </VCardText>
+              </VCard>
+            </VWindowItem>
+
+            <!-- ─── Configuration (identité légale, adresses) ── -->
+            <VWindowItem value="configuration">
               <!-- General info -->
               <VCard flat border>
                 <VCardTitle class="text-subtitle-1 font-weight-medium">

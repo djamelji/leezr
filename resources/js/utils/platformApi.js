@@ -20,7 +20,9 @@ export const $platformApi = ofetch.create({
       }
     }
 
-    const locale = useCookie('language').value
+    // ADR-821 : sans préférence enregistrée, la langue de l'interface (français par défaut) — sinon le serveur
+    // répondait en anglais (libellés de champs « Street », « City » sur une interface française).
+    const locale = useCookie('language').value || document.documentElement.lang || 'fr'
     if (locale) {
       options.headers = options.headers || {}
       if (options.headers instanceof Headers) {

@@ -68,7 +68,7 @@ const subscriptionStatus = computed(() => {
           :color="statusColor"
           size="small"
         >
-          {{ company.status }}
+          {{ $t(`platformCompanySummary.status.${company.status}`) }}
         </VChip>
         <VChip
           :color="planColor"

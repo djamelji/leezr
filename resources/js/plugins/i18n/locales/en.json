@@ -11820,5 +11820,24 @@
     "dependenciesHint": "Declared by the modules; added automatically on activation, checked in plans.",
     "needsAll": "Needs (including indirectly)",
     "usedByAll": "Needed by"
+  },
+  "platformCompanySummary": {
+    "configuration": "Configuration",
+    "identityTitle": "The company",
+    "jobdomain": "Business",
+    "subscription": "Subscription",
+    "owner": "Owner",
+    "market": "Market",
+    "created": "Created on",
+    "open": "Open",
+    "manage": "Manage",
+    "activeModules": "Active modules ({n})",
+    "members": "Members",
+    "modules": "Active modules",
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "pending_payment": "Payment pending"
+    }
   }
 }
