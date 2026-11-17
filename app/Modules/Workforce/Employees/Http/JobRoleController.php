@@ -36,7 +36,7 @@ class JobRoleController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'department_id' => 'nullable|integer|exists:workforce_departments,id',
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $request->attributes->get('company_id'))], // ADR-817 : service de la même société
             'level' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:1000',
             'default_hourly_rate_cents' => 'nullable|integer|min:0',
@@ -61,7 +61,7 @@ class JobRoleController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
-            'department_id' => 'nullable|integer|exists:workforce_departments,id',
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $request->attributes->get('company_id'))], // ADR-817 : service de la même société
             'level' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:1000',
             'default_hourly_rate_cents' => 'nullable|integer|min:0',

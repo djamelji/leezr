@@ -6,6 +6,7 @@ return [
     'imperative_locked' => 'Cette exigence est imposée par une règle obligatoire : elle ne peut pas être retirée.',
     'unknown_definition' => 'Information ou document introuvable dans votre catalogue.',
     'unknown_position' => 'Poste introuvable dans votre entreprise.',
+    'position_required' => 'Choisissez un poste pour voir sa proposition de reprise.',
     'forbidden_section' => 'Vous ne pouvez pas modifier cette partie.',
     'module_not_active' => "Ce module n'est pas actif pour votre entreprise : ses propositions ne peuvent pas être adoptées.",
     'unknown_proposal' => "Proposition inconnue.",

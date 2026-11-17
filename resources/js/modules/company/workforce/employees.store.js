@@ -249,7 +249,11 @@ export const useEmployeesStore = defineStore('workforceEmployees', {
 
     // ── Job Roles ────────────────────────────────────────
     async fetchJobRoles() {
-      const data = await $api('/workforce/job-roles')
+      const raw = await $api('/workforce/job-roles')
+
+      // ADR-817 : sans droit rémunération, le masquage serveur ajoute `compensation_hidden` à la liste
+      // (sérialisée en objet) — on ne garde que les postes.
+      const data = Array.isArray(raw) ? raw : Object.values(raw || {}).filter(r => r && typeof r === 'object' && r.id)
 
       this._jobRoles = data
 

@@ -1,0 +1,262 @@
+{
+  "steps": [
+    {
+      "name": "positions alias opens the Postes tab",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "position created from the UI",
+      "ok": true,
+      "detail": {
+        "positionId": 12
+      }
+    },
+    {
+      "name": "assign employee 1815",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "assign employee 1814",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "assign employee 1811",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "sheet opened from the list",
+      "ok": true,
+      "detail": "http://127.0.0.1:8815/company/workforce/organization/positions/12"
+    },
+    {
+      "name": "owner sees 4 tabs",
+      "ok": true,
+      "detail": [
+        "Informations",
+        "Exigences",
+        "Personnes (3)",
+        "Reprise de l'existant"
+      ]
+    },
+    {
+      "name": "description edited",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "3 people incl. one without account",
+      "ok": true,
+      "detail": [
+        "Charles Chauffeur\nAvec compte",
+        "Sophie Salariee\nAvec compte",
+        "Paul Sanscompte13433\nSans compte"
+      ]
+    },
+    {
+      "name": "takeover lists role rules with origin",
+      "ok": true,
+      "detail": [
+        "Permis de conduire\nJustificatif\nContradiction\nExigé pour le rôle « Driver » (1 personne(s)) par la réglementation du métier\nNon demandé aux personnes des rôles : Dispatcher (1).",
+        "Certificat médical\nJustificatif\nContradiction\nExigé pour le rôle « Driver » (1 personne(s)) par la réglementation du métier\nNon demandé aux personnes des rôles : Dispatcher (1).",
+        "Adresse postale\nInformation\nContradiction\nRendu obligatoire dans le rôle « Driver » (1 personne(s))\nNon demandé aux personnes des rôles : Dispatcher (1).",
+        "Contact d'urgence (nom)\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))",
+        "Contact d'urgence (tél.)\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))",
+        "Date de naissance\nInformation\nContradiction\nRendu obligatoire dans le rôle « Driver » (1 personne(s))\nNon demandé aux personnes des rôles : Dispatcher (1).",
+        "IBAN\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))",
+        "Intitulé de poste\nInformation\nContradiction\nRendu obligatoire dans le rôle « Dispatcher » (1 personne(s))\nNon demandé aux personnes des rôles : Driver (1).",
+        "N° de sécurité sociale (NIR)\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))",
+        "Type de contrat\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))",
+        "Téléphone\nInformation\nÀ reprendre\nRendu obligatoire dans le rôle « Driver » (1 personne(s)) · Rendu obligatoire dans le rôle « Dispatcher » (1 personne(s))"
+      ]
+    },
+    {
+      "name": "takeover preview shown",
+      "ok": true,
+      "detail": "1 exigence(s) seront ajoutées au poste (3 personne(s) concernée(s)).\nConfirmer la reprise"
+    },
+    {
+      "name": "licence now required for the position",
+      "ok": true,
+      "detail": {
+        "before": null,
+        "after": "required"
+      }
+    },
+    {
+      "name": "requirements editor embedded without scope selector",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "optional field saved",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "global requirements page still renders with scope selector",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "active manager accepted",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "name": "owner : no API error on legitimate journeys",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "RH sees all 5 employees",
+      "ok": true,
+      "detail": 5
+    },
+    {
+      "name": "RH reads the owner-side file of a driver",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RH cannot modify",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RH cannot read the takeover",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RH sheet : Informations + Personnes only, no edit",
+      "ok": true,
+      "detail": [
+        "Informations",
+        "Personnes (3)"
+      ]
+    },
+    {
+      "name": "RH sees the 3 people of the position",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "RH : no API error on its screens",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "manager profile",
+      "ok": false,
+      "detail": {
+        "proposal": 200,
+        "employees": 200,
+        "employees_rows": 2,
+        "edit_position": 403,
+        "final": "/company/workforce/organization/positions/12",
+        "tabs": [
+          "Informations",
+          "Exigences",
+          "Personnes (3)",
+          "Reprise de l'existant"
+        ]
+      }
+    },
+    {
+      "name": "salarie profile",
+      "ok": false,
+      "detail": {
+        "proposal": 200,
+        "employees": 403,
+        "employees_rows": 0,
+        "edit_position": 403,
+        "final": "/company/403",
+        "tabs": []
+      }
+    },
+    {
+      "name": "chauffeur profile",
+      "ok": true,
+      "detail": {
+        "proposal": 403,
+        "employees": 403,
+        "employees_rows": 0,
+        "edit_position": 403,
+        "final": "/company/403",
+        "tabs": []
+      }
+    },
+    {
+      "name": "admin-ops profile",
+      "ok": false,
+      "detail": {
+        "proposal": 200,
+        "employees": 200,
+        "employees_rows": 5,
+        "edit_position": 200,
+        "final": "/company/workforce/organization/positions/12",
+        "tabs": [
+          "Informations",
+          "Exigences",
+          "Personnes (3)",
+          "Reprise de l'existant"
+        ]
+      }
+    },
+    {
+      "name": "cross-company refused",
+      "ok": true,
+      "detail": {
+        "proposal": 403,
+        "employees": 403
+      }
+    }
+  ],
+  "owner_api_errors": [],
+  "manager": {
+    "proposal": 200,
+    "employees": 200,
+    "employees_rows": 2,
+    "edit_position": 403,
+    "final": "/company/workforce/organization/positions/12",
+    "tabs": [
+      "Informations",
+      "Exigences",
+      "Personnes (3)",
+      "Reprise de l'existant"
+    ]
+  },
+  "salarie": {
+    "proposal": 200,
+    "employees": 403,
+    "employees_rows": 0,
+    "edit_position": 403,
+    "final": "/company/403",
+    "tabs": []
+  },
+  "chauffeur": {
+    "proposal": 403,
+    "employees": 403,
+    "employees_rows": 0,
+    "edit_position": 403,
+    "final": "/company/403",
+    "tabs": []
+  },
+  "admin-ops": {
+    "proposal": 200,
+    "employees": 200,
+    "employees_rows": 5,
+    "edit_position": 200,
+    "final": "/company/workforce/organization/positions/12",
+    "tabs": [
+      "Informations",
+      "Exigences",
+      "Personnes (3)",
+      "Reprise de l'existant"
+    ]
+  }
+}

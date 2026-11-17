@@ -69,6 +69,19 @@ class RequirementConfigController extends Controller
         return response()->json(['items' => $this->service($request)->legacyMapping()]);
     }
 
+    /**
+     * ADR-817 (L1) — READ-ONLY takeover proposal of the historical role rules for one position.
+     * Adoption goes through `save` (explicit selection), never automatically.
+     */
+    public function proposal(Request $request): JsonResponse
+    {
+        $request->validate(['scope' => 'required|string|max:40']);
+        $job = $this->service($request)->jobRoleOf((string) $request->query('scope'));
+        abort_if($job === null, 422, __('requirements.position_required'));
+
+        return response()->json((new \App\Modules\Workforce\Requirements\PositionRequirementProposal($request->attributes->get('company')))->for($job));
+    }
+
     /** @return array{0: string, 1: array} */
     private function validated(Request $request): array
     {

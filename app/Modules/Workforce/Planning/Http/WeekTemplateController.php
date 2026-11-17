@@ -249,8 +249,7 @@ class WeekTemplateController extends Controller
 
     private function planningScope(Request $request): ?array
     {
-        $viewAll = WorkforceAccess::hasViewAll($request, 'employee')
-            || ($request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish') ?? false);
+        $viewAll = WorkforceAccess::hasViewAll($request, 'planning'); // ADR-817 : périmètre d'ÉCRITURE (view_all n'y entre pas)
 
         return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
     }

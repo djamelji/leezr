@@ -212,8 +212,7 @@ class ScheduledActivityController extends Controller
     /** Scope manager : null si hors périmètre → 403. */
     private function guardScope(Request $request, int $employeeId): ?JsonResponse
     {
-        $viewAll = WorkforceAccess::hasViewAll($request, 'employee')
-            || ($request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish') ?? false);
+        $viewAll = WorkforceAccess::hasViewAll($request, 'planning'); // ADR-817 : périmètre d'ÉCRITURE (view_all n'y entre pas)
         if ($viewAll) {
             return null;
         }

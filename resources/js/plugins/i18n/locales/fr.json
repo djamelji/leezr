@@ -2988,6 +2988,10 @@
       "workforce.timesheet_team_approver": {
         "label": "Validation des feuilles de l'équipe",
         "hint": "Valider ou refuser les feuilles de temps de ses collaborateurs directs uniquement."
+      },
+      "workforce.hr_consultation": {
+        "label": "Dossiers des collaborateurs (consultation)",
+        "hint": "Consulter tous les dossiers des collaborateurs, sans pouvoir les modifier."
       }
     },
     "permissions": {
@@ -11027,5 +11031,55 @@
     "adjustHint": "Pour ajuster avant de confirmer, modifiez le rôle ci-dessous.",
     "confirmed": "Accès confirmés : les personnes concernées peuvent travailler.",
     "stale": "Les accès ont changé : vérifiez la nouvelle liste puis confirmez."
+  },
+  "positions": {
+    "back": "Postes",
+    "subtitle": "Poste métier : ce que fait la personne et ce qui est attendu d'elle. Les droits d'accès au logiciel se règlent à part, dans les rôles.",
+    "saved": "Poste enregistré.",
+    "notFoundTitle": "Poste introuvable",
+    "notFoundMessage": "Ce poste n'existe pas ou n'est pas accessible.",
+    "tabs": {
+      "overview": "Informations",
+      "requirements": "Exigences",
+      "people": "Personnes ({n})",
+      "reprise": "Reprise de l'existant"
+    },
+    "fields": {
+      "title": "Intitulé",
+      "department": "Service",
+      "level": "Niveau",
+      "description": "Missions et responsabilités"
+    },
+    "requirementsStatus": "Ces exigences sont enregistrées pour le poste. Les dossiers et demandes en cours ne changent pas tant que l'activation par poste n'est pas validée : aujourd'hui, les pièces demandées suivent encore la configuration historique.",
+    "noPeople": "Personne n'occupe ce poste.",
+    "withAccount": "Avec compte",
+    "withoutAccount": "Sans compte",
+    "peopleScope": "Seules les personnes de votre périmètre sont listées.",
+    "reprise": {
+      "intro": "Aujourd'hui, certaines pièces et informations sont demandées selon le rôle d'accès de la personne. Voici ce que ces rôles demandent aux personnes de ce poste, en plus de ce qui est demandé à tous. Rien n'est repris sans votre choix.",
+      "people": "{n} personne(s) sur ce poste, dont {a} sans compte et {r} sans rôle d'accès.",
+      "empty": "Les rôles d'accès des personnes de ce poste ne demandent rien de plus que ce qui est demandé à tous.",
+      "rule": {
+        "role_tags": "Exigé pour le rôle « {role} » ({n} personne(s)) par la réglementation du métier",
+        "role_config": "Rendu obligatoire dans le rôle « {role} » ({n} personne(s))"
+      },
+      "kind": {
+        "field": "Information",
+        "document": "Justificatif"
+      },
+      "status": {
+        "new": "À reprendre",
+        "partial": "Contradiction",
+        "configured": "Déjà configuré",
+        "unavailable": "Hors catalogue"
+      },
+      "notFrom": "Non demandé aux personnes des rôles : {roles}.",
+      "notCarried": "{n} règle(s) de visibilité liée(s) aux rôles ne sont pas reprises : elles relèvent des droits d'accès, pas du poste.",
+      "consequences": "Reprendre une exigence l'ajoute au poste. Aucune pièce existante n'est supprimée, aucune demande en cours n'est recréée.",
+      "preview": "Prévisualiser la reprise ({n})",
+      "previewResult": "{n} exigence(s) seront ajoutées au poste ({p} personne(s) concernée(s)).",
+      "adopt": "Confirmer la reprise",
+      "adopted": "{n} exigence(s) reprises pour ce poste."
+    }
   }
 }

@@ -581,6 +581,7 @@ Route::prefix('workforce/requirements')->middleware(['company.access:use-module,
     Route::get('/', [$c, 'index']);
     Route::get('/catalog', [$c, 'catalog']);
     Route::get('/legacy', [$c, 'legacy']);
+    Route::get('/proposal', [$c, 'proposal']); // ADR-817 : reprise des règles des rôles, par poste (lecture seule)
     Route::post('/preview', [$c, 'preview']);
     Route::post('/', [$c, 'save']);
     // ADR-794 (L4) : contributions des modules (aperçu + adoption explicite), même page, même mode parallèle

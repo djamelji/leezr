@@ -2988,6 +2988,10 @@
       "workforce.timesheet_team_approver": {
         "label": "Timesheet team approver",
         "hint": "Approve or reject the timesheets of your direct reports only."
+      },
+      "workforce.hr_consultation": {
+        "label": "Employee files (read-only)",
+        "hint": "Read every employee file, without modifying it."
       }
     },
     "permissions": {
@@ -11027,5 +11031,55 @@
     "adjustHint": "To adjust before confirming, edit the role below.",
     "confirmed": "Access confirmed: the people concerned can work.",
     "stale": "Access changed: check the new list, then confirm."
+  },
+  "positions": {
+    "back": "Positions",
+    "subtitle": "Job position: what the person does and what is expected from them. Software access is set separately, in roles.",
+    "saved": "Position saved.",
+    "notFoundTitle": "Position not found",
+    "notFoundMessage": "This position does not exist or is not accessible.",
+    "tabs": {
+      "overview": "Information",
+      "requirements": "Requirements",
+      "people": "People ({n})",
+      "reprise": "Takeover"
+    },
+    "fields": {
+      "title": "Title",
+      "department": "Department",
+      "level": "Level",
+      "description": "Duties and responsibilities"
+    },
+    "requirementsStatus": "These requirements are saved for the position. Files and ongoing requests do not change until activation by position is validated: today, requested documents still follow the historical configuration.",
+    "noPeople": "Nobody holds this position.",
+    "withAccount": "With account",
+    "withoutAccount": "Without account",
+    "peopleScope": "Only people within your scope are listed.",
+    "reprise": {
+      "intro": "Today, some documents and information are requested according to the person's access role. Here is what those roles require from the people of this position, beyond what everyone is asked. Nothing is taken over without your choice.",
+      "people": "{n} person(s) in this position, {a} without account and {r} without access role.",
+      "empty": "The access roles of the people of this position require nothing beyond what everyone is asked.",
+      "rule": {
+        "role_tags": "Required for role \"{role}\" ({n} person(s)) by the trade regulation",
+        "role_config": "Made mandatory in role \"{role}\" ({n} person(s))"
+      },
+      "kind": {
+        "field": "Information",
+        "document": "Document"
+      },
+      "status": {
+        "new": "To take over",
+        "partial": "Contradiction",
+        "configured": "Already configured",
+        "unavailable": "Not in catalogue"
+      },
+      "notFrom": "Not requested from people with roles: {roles}.",
+      "notCarried": "{n} role-based visibility rule(s) are not taken over: they are access rights, not position requirements.",
+      "consequences": "Taking over a requirement adds it to the position. No existing document is deleted, no ongoing request is recreated.",
+      "preview": "Preview takeover ({n})",
+      "previewResult": "{n} requirement(s) will be added to the position ({p} person(s) concerned).",
+      "adopt": "Confirm takeover",
+      "adopted": "{n} requirement(s) taken over for this position."
+    }
   }
 }

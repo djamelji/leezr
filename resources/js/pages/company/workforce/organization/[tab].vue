@@ -64,7 +64,8 @@ const confirmDelete = async () => {
 }
 
 const currentTab = computed({
-  get: () => route.params.tab || 'departments',
+  // ADR-817 : « positions » est l'adresse lisible de l'onglet Postes (« roles » reste valable).
+  get: () => (route.params.tab === 'positions' ? 'roles' : (route.params.tab || 'departments')),
   set: val => router.replace({ params: { tab: val } }),
 })
 
@@ -634,9 +635,13 @@ onMounted(() => {
                     />
                   </VAvatar>
                   <div>
-                    <div class="font-weight-medium">
+                    <RouterLink
+                      :to="`/company/workforce/organization/positions/${item.id}`"
+                      class="font-weight-medium text-high-emphasis"
+                      data-test="position-open"
+                    >
                       {{ item.title }}
-                    </div>
+                    </RouterLink>
                     <div
                       v-if="item.description"
                       class="text-body-2 text-medium-emphasis"

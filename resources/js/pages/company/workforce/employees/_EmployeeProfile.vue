@@ -36,9 +36,11 @@ const jobRoleItems = computed(() =>
   store.jobRoles.map(r => ({ title: r.title, value: r.id })),
 )
 
+// ADR-817 (D17) : responsables = salariés actifs (ni sortis, ni en cours d'embauche) ; le responsable actuel reste listé.
 const managerItems = computed(() =>
   store.employees
     .filter(e => e.id !== props.employee.id)
+    .filter(e => e.id === props.employee.manager_id || (e.status !== 'terminated' && e.employment_status !== 'preparatory' && !e.preparatory_at))
     .map(e => ({ title: `${e.first_name} ${e.last_name}`, value: e.id })),
 )
 

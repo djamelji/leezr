@@ -64,6 +64,9 @@ class WorkforceModule implements ModuleDefinition
                 ['key' => 'workforce.compensation_read', 'label' => 'View Compensation', 'is_admin' => true, 'hint' => 'View salary and compensation details.'],
                 ['key' => 'workforce.compensation_manage', 'label' => 'Manage Compensation', 'is_admin' => true, 'hint' => 'Modify salary and compensation plans.'],
                 ['key' => 'workforce.sensitive_read', 'label' => 'View Sensitive Data', 'is_admin' => true, 'hint' => 'Access SSN, IBAN, and other sensitive fields.'],
+                // ADR-817 (D4) — CONSULTER tous les dossiers de la Company sans pouvoir les modifier (la modification
+                // reste `workforce.manage`, bornée au périmètre). Jamais ajoutée implicitement à un rôle existant.
+                ['key' => 'workforce.view_all', 'label' => 'View All Employee Files', 'is_admin' => true, 'hint' => 'Read every employee file of the company (no modification).'],
                 ['key' => 'workforce.time_manage', 'label' => 'Manage Time Entries', 'hint' => 'Correct and manage time tracking entries.'],
                 ['key' => 'workforce.time_approve', 'label' => 'Approve Timesheets', 'is_admin' => true, 'hint' => 'Validate and approve employee timesheets.'],
                 ['key' => 'workforce.admin', 'inert' => true /* ADR-807 : guards nothing (ADR-800/806) — kept, see ADR-807 §2 */, 'label' => 'Workforce Administration', 'is_admin' => true, 'hint' => 'Full workforce administration access.'],
@@ -95,6 +98,15 @@ class WorkforceModule implements ModuleDefinition
                     'permissions' => ['workforce.view', 'workforce.contracts', 'workforce.compensation_read', 'workforce.compensation_manage', 'workforce.sensitive_read', 'workforce.admin', 'workforce.import', 'workforce.export', 'workforce.timesheet_view', 'workforce.planning_view'],
                     'is_admin' => true,
                     'sensitive' => true, // ADR-803 : rémunération et données sensibles — présenté à part
+                ],
+                [
+                    // ADR-817 (D4) — consultation seule de tous les dossiers (moindre privilège). Nouveau groupe, à
+                    // attribuer explicitement : aucun groupe ni rôle existant n'est modifié (pas d'élargissement implicite).
+                    'key' => 'workforce.hr_consultation',
+                    'label' => 'Employee Files (read-only)',
+                    'hint' => 'Read every employee file of the company, without modifying it.',
+                    'permissions' => ['workforce.view', 'workforce.view_all'],
+                    'is_admin' => true,
                 ],
                 [
                     'key' => 'workforce.manager',

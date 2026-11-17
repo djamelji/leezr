@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  */
 class RequirementsCompareCommand extends Command
 {
-    protected $signature = 'requirements:compare {--company=* : company ids (default: all)} {--samples : include classified samples}';
+    protected $signature = 'requirements:compare {--company=* : company ids (default: all)} {--samples : include classified samples} {--with-registry : ADR-817 — historical projection + the company requirements registry (positions)}';
 
     protected $description = 'Compare historical and parallel requirement resolution (read-only) — ADR-791';
 
@@ -29,7 +29,7 @@ class RequirementsCompareCommand extends Command
                 $t = microtime(true);
                 DB::enableQueryLog();
                 DB::flushQueryLog();
-                $report = RequirementParityComparator::compare($company);
+                $report = $this->option('with-registry') ? RequirementParityComparator::compareWithRegistry($company) : RequirementParityComparator::compare($company);
                 $report['queries'] = count(DB::getQueryLog());
                 $report['ms'] = (int) round((microtime(true) - $t) * 1000);
                 DB::disableQueryLog();

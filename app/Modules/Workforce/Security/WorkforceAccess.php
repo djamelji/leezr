@@ -18,7 +18,7 @@ class WorkforceAccess
 {
     /**
      * ADR-767 — PÉRIMÈTRE « collaborateurs » d'un acteur, hors requête HTTP (read-models Core) :
-     * null = vue Company (profil RH : `workforce.view` + `workforce.manage`, ou owner) ; sinon la
+     * null = vue Company (profil RH : `workforce.view` + `workforce.manage` ou `workforce.view_all`, ou owner) ; sinon la
      * liste des ids visibles = soi + rapports directs (vide si l'acteur n'a pas de fiche). Même règle
      * que `hasViewAll('employee')` / `visibleEmployeeIds()` — une seule autorité, deux points d'entrée.
      *
@@ -26,7 +26,7 @@ class WorkforceAccess
      */
     public static function employeeScopeFor(Company $company, User $actor): ?array
     {
-        if ($actor->hasCompanyPermission($company, 'workforce.view') && $actor->hasCompanyPermission($company, 'workforce.manage')) {
+        if (static::viewAllWith(fn (string $p) => $actor->hasCompanyPermission($company, $p), 'employee')) { // ADR-817 : règle unique
             return null;
         }
 
@@ -143,8 +143,11 @@ class WorkforceAccess
             'leave' => $has('workforce.leave_view_all') || $has('workforce.leave_approve'),
             'time' => $has('workforce.timesheet_approve') || $has('workforce.time_manage'),
             // 'employee' = capacité RH de voir tous les collaborateurs (et leurs documents individuels).
-            'employee' => $has('workforce.view') && $has('workforce.manage'),
-            // ADR-816 : planning global = RH (employee) ou publication (règle de ShiftController::planningScope).
+            // ADR-817 (D4) : CONSULTER tout le monde = `workforce.view` + (`workforce.manage` OU `workforce.view_all`).
+            // `view_all` ne donne aucune modification : les écritures restent gardées par leurs propres permissions.
+            'employee' => $has('workforce.view') && ($has('workforce.manage') || $has('workforce.view_all')),
+            // ADR-816 : planning global = RH qui gère (view+manage) ou publication. Volontairement SANS view_all :
+            // ce périmètre borne aussi les ÉCRITURES du planning (ShiftController::planningScope).
             'planning' => ($has('workforce.view') && $has('workforce.manage')) || $has('workforce.planning_publish'),
             default => false,
         };

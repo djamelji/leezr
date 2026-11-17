@@ -206,7 +206,7 @@ class EmployeeController extends Controller
             'hire_date' => 'required|date',
             'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
             'job_role_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
-            'manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)],
+            'manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)->where('status', '!=', Employee::STATUS_TERMINATED)], // ADR-817 (D17)
         ]);
 
         $data = new CreateEmployeeData(
@@ -301,7 +301,7 @@ class EmployeeController extends Controller
             'employee_number' => ['sometimes', 'nullable', 'string', 'max:50', \Illuminate\Validation\Rule::unique('workforce_employees', 'employee_number')->where('company_id', $companyId)->ignore($employee->id)], // ADR-787
             'department_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
             'job_role_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
-            'manager_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)],
+            'manager_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)->where(fn ($q) => $q->where('status', '!=', Employee::STATUS_TERMINATED)->orWhere('id', (int) $employee->manager_id))], // ADR-817 (D17) : non sorti, ou le responsable déjà affecté
         ]);
 
         \App\Core\Workforce\EmployeeNumbering::updateTracked($employee, $validated); // ADR-787 : historique du numéro

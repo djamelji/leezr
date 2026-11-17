@@ -146,7 +146,9 @@ final class RequirementParityComparator
                 }
                 [$kind, $id] = explode(':', $key);
                 $code = $kind === 'document' ? ($docCodes[$id] ?? $id) : ($fieldCodes[$id] ?? $id);
-                [$category, $cause] = self::classify($kind, $code, $inOld, $role, $s, array_values(array_intersect($rulesByTarget[$key]['required_by_modules'] ?? [], $staleModules)));
+                // ADR-817 : exigence posée par la société elle-même (poste ou tous les postes) dans le registre.
+                $byCompany = $inNew && collect($newRequired[$key]['contributions'] ?? [])->contains(fn ($c) => ($c['status'] ?? null) === 'applicable' && ($c['source'] ?? null) === 'company');
+                [$category, $cause] = self::classify($kind, $code, $inOld, $role, $s, array_values(array_intersect($rulesByTarget[$key]['required_by_modules'] ?? [], $staleModules)), $byCompany);
                 $report['differences']++;
                 $report['by_category'][$category]++;
                 $sampleKey = $category.'|'.$kind.':'.$code.'|'.($roleKey ?? ($s['user_id'] ? 'sans rôle' : 'sans compte'));
@@ -165,8 +167,20 @@ final class RequirementParityComparator
         return $report;
     }
 
+    /**
+     * ADR-817 (L1) — parity once positions carry requirements : the historical projection (company /
+     * module / jobdomain rules) PLUS the company's own registry rows (positions, « all »). Measures how far
+     * the position-based resolution is from today's role-based operational resolution. Read-only.
+     */
+    public static function compareWithRegistry(Company $company): array
+    {
+        $registry = Requirement::query()->where('company_id', $company->id)->where('subject_scope', Requirement::SUBJECT_PERSON)->get()->all();
+
+        return self::compare($company, array_merge(self::projection($company), $registry));
+    }
+
     /** @return array{0: string, 1: string} */
-    private static function classify(string $kind, string $code, bool $inOld, ?CompanyRole $role, array $s, array $staleModules = []): array
+    private static function classify(string $kind, string $code, bool $inOld, ?CompanyRole $role, array $s, array $staleModules = [], bool $byCompany = false): array
     {
         if ($inOld && $staleModules !== []) {
             return [self::AMBIGUOUS, 'exigé par le module « '.implode(', ', $staleModules).' » marqué actif dans company_modules sans raison d\'activation (inactif pour ModuleGate)'];
@@ -192,6 +206,9 @@ final class RequirementParityComparator
         }
         if ($kind === 'field' && $s['user_id'] === null) {
             return [self::AMBIGUOUS, 'salarié sans compte : les valeurs de champs vivent sur le compte (aucun historique comparable avant L5)'];
+        }
+        if ($byCompany) {
+            return [self::EXPECTED, $s['job_role_id'] ? 'exigé par le poste (configuration de l\'entreprise) — nouveau modèle, absent de l\'historique par rôle' : 'exigé par l\'entreprise pour tous les postes — absent de l\'historique par rôle'];
         }
 
         return [self::BUG, 'exigé par la résolution cible sans cause identifiée'];

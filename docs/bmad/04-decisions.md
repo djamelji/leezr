@@ -29087,3 +29087,19 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - 7 tests de sécurité (4 en échec avant) ;
   - recette navigateur sur 8 profils et isolation inter-sociétés sur clone isolé ;
   - 5 tests adaptés qui figeaient l'ancienne exposition.
+
+## ADR-817 — L1 : poste métier, exigences et rôles d'accès
+
+- **Date** : 2026-11-17, DEV, base `adf2b6ce`. Rapport : `docs/bmad/ADR-817-L1-POSITION-REQUIREMENTS.md`. Lot L1 de la refonte (ADR-815.2), D1 à D17 en option (a). L2 à L10 non commencés.
+- **Décision** :
+  - **Poste** = fonction, missions et exigences professionnelles et documentaires, portées par le registre des exigences (portée `job_role:{id}`). **Rôle** = accès au logiciel uniquement. Aucune table, aucun moteur nouveaux.
+  - **Fiche du poste** dans Organisation › Postes (Informations, Exigences, Personnes, Reprise). L'éditeur d'exigences est **partagé** avec la page globale : une seule configuration.
+  - **Reprise** des règles historiques des rôles (`doc_config`, `required_tags`, `field_config`) par poste, **en lecture seule**, avec origine, contradictions et état courant. L'adoption est explicite, par l'aperçu et l'enregistrement existants. Les règles de visibilité (`visibility_roles`, masquages) sont signalées, jamais reprises.
+  - **Calcul effectif inchangé** (rôle). Parité mesurée par `requirements:compare --with-registry`. Activation proposée par société, puis par poste, derrière un indicateur, pour les nouvelles demandes seulement (non appliquée).
+  - **D4** : nouvelle permission `workforce.view_all`, qui donne la consultation de tous les dossiers sans modification. Nouveau groupe `workforce.hr_consultation`, aucun rôle ni groupe existant élargi ; les périmètres d'écriture du planning sont inchangés.
+  - **D17** : un responsable est un salarié non sorti ; le responsable existant reste accepté.
+- **Conséquences** :
+  - 7 tests ;
+  - recette navigateur sur clone isolé (propriétaire, RH en consultation, manager, salarié, chauffeur, responsable d'exploitation, autre société) ;
+  - aucune demande ni pièce modifiée ;
+  - risque préexistant noté : `documents.configure` est donné par défaut au Dispatcher (D3).
