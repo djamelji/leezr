@@ -1,0 +1,667 @@
+{
+  "profile": "c1-driver-mobile",
+  "home": "http://127.0.0.1:8815/home",
+  "pages": [
+    {
+      "url": "/",
+      "final": "/",
+      "title": "Gérez votre entreprise. Simplement. Professionnellement.",
+      "issues": [],
+      "api": [],
+      "console": [],
+      "shot": "c1-driver-mobile-_.jpg",
+      "snippet": "leezr\n.\nTableau de bord\nGérez votre entreprise. Simplement. Professionnellement.\n\nTous vos clients, votre équipe, vos opérations et votre croissance — au même endroit. L'espace de travail que votre entreprise mérite.\n\nAller au tableau de bord\nTout-en-un\nTout ce dont vous avez besoin pour gérer votre",
+      "probe": false
+    },
+    {
+      "url": "/dashboard",
+      "final": "/home",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_dashboard.jpg",
+      "snippet": "ACCUEIL PERSONNEL\nBonjour, Bob\nMardi 17 Novembre\nMon prochain créneau\nAujourd'hui\n08:45 – 17:30\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n2\nDocuments à régulariser\n1\nCongés en attente\n2\nMes livraisons\nMes soldes de congés\n0 j\nCongés payés\nMes widgets\nM",
+      "probe": false
+    },
+    {
+      "url": "/company/my-deliveries",
+      "final": "/company/my-deliveries",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_my-deliveries.jpg",
+      "snippet": "Mes livraisons\nToutes\nRÉFÉRENCE\n\t\nSTATUT\n\t\nDESTINATION\n\t\nPLANIFIÉE\n\t\nACTIONS\n\nSHP-DEMO-0003\t\nLivrée\n\t15 Quai des Belges, 13001 Marseille\t16 oct. 2026\t\n\nSHP-DEMO-0002\t\nPlanifiée\n\t22 Rue de la Gare, 33000 Bordeaux\t22 oct. 2026\t\n2 livraison(s)",
+      "probe": false
+    },
+    {
+      "url": "/company/my-space/overview",
+      "final": "/company/my-space/overview",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_my-space_overview.jpg",
+      "snippet": "Mon espace\n\nVos documents, bulletins, signatures et informations personnelles dans cette entreprise.\n\nMes documents\nDocuments demandés, déposés, refusés ou à renouveler.\n2 à fournir\nMes bulletins de paie\nConsultation et téléchargement, par année.\nMes signatures\nDocuments à signer et documents signés",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/me",
+      "final": "/company/workforce/me",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_me.jpg",
+      "snippet": "Planning & temps\nActualiser\nVotre pointage du 20/10/2026 est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée.\nAujourd'hui\nNon démarré\nHeures travaillées\n0 min\nTemps de pause\n0 min\nArrivée\n--:--\nMes heures\nSemaine du 16 nov. au 22 nov. · période",
+      "probe": false
+    },
+    {
+      "url": "/home",
+      "final": "/home",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_home.jpg",
+      "snippet": "ACCUEIL PERSONNEL\nBonjour, Bob\nMardi 17 Novembre\nMon prochain créneau\nAujourd'hui\n08:45 – 17:30\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n2\nDocuments à régulariser\n1\nCongés en attente\n2\nMes livraisons\nMes soldes de congés\n0 j\nCongés payés\nMes widgets\nM",
+      "probe": true
+    },
+    {
+      "url": "/dashboard",
+      "final": "/home",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_dashboard.jpg",
+      "snippet": "ACCUEIL PERSONNEL\nBonjour, Bob\nMardi 17 Novembre\nMon prochain créneau\nAujourd'hui\n08:45 – 17:30\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n2\nDocuments à régulariser\n1\nCongés en attente\n2\nMes livraisons\nMes soldes de congés\n0 j\nCongés payés\nMes widgets\nM",
+      "probe": false
+    },
+    {
+      "url": "/company/people",
+      "final": "/company/people",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_people.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\n22 membre(s) avec un profil incomplet\nAfficher\nPersonnes\nPERSONNE\n\t\nACCÈS\n\t\n\n\nAM\nAlice Martin\nadmin@leezr.test\n\t\nCompte connecté\nDispatcher\n\t\n\n\nBD\nBob Dupont\nbob@leezr.test\n\t\nCompte connecté\nDriver\n\t\n\n\nC\nc",
+      "probe": true
+    },
+    {
+      "url": "/company/people/employee-2",
+      "final": "/company/people/employee-2",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_people_employee-2.jpg",
+      "snippet": "Équipe\nAM\nAlice Martin\nCompte connecté\nDispatcher\n admin@leezr.test\nVue d'ensemble\nACCÈS & AUTORISATIONS\nCompte connecté\nDispatcher\nadmin@leezr.test\nCréer un type de document\nCréez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie.\nLibe",
+      "probe": true
+    },
+    {
+      "url": "/company/people/employee-1237",
+      "final": "/company/people/employee-1237",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_people_employee-1237.jpg",
+      "snippet": "Équipe\n?\nsalarie@leezr.test\nInvitation en attente\nSalarie\n salarie@leezr.test\nVue d'ensemble\nACCÈS & AUTORISATIONS\nInvitation en attente\nSalarie\nsalarie@leezr.test\nCréer un type de document\nCréez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la porté",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/todo",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_documents_todo.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/requests",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_documents_requests.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/signatures",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_documents_signatures.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/templates",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_documents_templates.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/roles",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_roles.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/settings",
+      "final": "/company/settings",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_settings.jpg",
+      "snippet": "Réglages\n\nTout ce qui configure votre entreprise, rangé par sujet.\n\nAucun réglage n'est accessible avec vos droits.",
+      "probe": true
+    },
+    {
+      "url": "/company/profile/overview",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_profile_overview.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/modules",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_modules.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/billing/plan",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_billing_plan.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/billing/invoices",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_billing_invoices.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/audit",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_audit.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/notifications",
+      "final": "/company/notifications",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_notifications.jpg",
+      "snippet": "Notifications\n2\nPréférences\nCentre de notifications\nRetrouvez l'historique de toutes vos notifications.\nTout marquer comme lu\nNotifications \n2\nNon lues uniquement\nPlanning publié\nIl y a 13h\n\nVotre planning (2026-11-16 → 2026-11-17) est disponible — 2 créneau(x).\n\nNouveau\nPlanning publié\n06/11/2026\n\n",
+      "probe": true
+    },
+    {
+      "url": "/company/support",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_support.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workflows",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workflows.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/my-space/overview",
+      "final": "/company/my-space/overview",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_my-space_overview.jpg",
+      "snippet": "Mon espace\n\nVos documents, bulletins, signatures et informations personnelles dans cette entreprise.\n\nMes documents\nDocuments demandés, déposés, refusés ou à renouveler.\n2 à fournir\nMes bulletins de paie\nConsultation et téléchargement, par année.\nMes signatures\nDocuments à signer et documents signés",
+      "probe": false
+    },
+    {
+      "url": "/company/my-space/documents",
+      "final": "/company/my-space/documents",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_my-space_documents.jpg",
+      "snippet": "Mon espace\n\nVos documents, bulletins, signatures et informations personnelles dans cette entreprise.\n\nMes documents\n\nDéposez et gérez vos documents requis.\n\nDOCUMENTS\tSTATUT\tOBLIGATOIRE\t\nCarte d'identité\nMax 10 Mo · Formats acceptés : PDF, JPG, JPEG, PNG\nMerci de fournir votre pièce d’identité à jou",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/me",
+      "final": "/company/workforce/me",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_me.jpg",
+      "snippet": "Planning & temps\nActualiser\nVotre pointage du 20/10/2026 est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée.\nAujourd'hui\nNon démarré\nHeures travaillées\n0 min\nTemps de pause\n0 min\nArrivée\n--:--\nMes heures\nSemaine du 16 nov. au 22 nov. · période",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/time",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_time.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/planning",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_planning.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/leave",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_leave.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/payroll",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_payroll.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/dsn",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_dsn.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/organization/departments",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_organization_departments.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/organization/positions",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_organization_positions.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/requirements",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_requirements.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/settings/worktime",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_settings_worktime.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/onboarding",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_onboarding.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/shipments",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_shipments.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/my-deliveries",
+      "final": "/company/my-deliveries",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_my-deliveries.jpg",
+      "snippet": "Mes livraisons\nToutes\nRÉFÉRENCE\n\t\nSTATUT\n\t\nDESTINATION\n\t\nPLANIFIÉE\n\t\nACTIONS\n\nSHP-DEMO-0003\t\nLivrée\n\t15 Quai des Belges, 13001 Marseille\t16 oct. 2026\t\n\nSHP-DEMO-0002\t\nPlanifiée\n\t22 Rue de la Gare, 33000 Bordeaux\t22 oct. 2026\t\n2 livraison(s)",
+      "probe": false
+    },
+    {
+      "url": "/company/dev-lab",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_dev-lab.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/ui-lab",
+      "final": "/ui-lab",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_ui-lab.jpg",
+      "snippet": "Page de référence — Design System Leezr Premium (Phase 0). Toutes les valeurs affichées sont des données de démonstration, jamais des données métier réelles.\nBonjour Djamel\nAperçu du cockpit Company — Leezr Logistics (démo)\n7 j\n30 j\nMois\nPersonnaliser\n+4%\n50\nEffectifs actifs\n+2 ce mois\n-3%\n38 / 50\nP",
+      "probe": true
+    },
+    {
+      "url": "/company/members",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_members.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/members/2",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_members_2.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/employees/2",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce_employees_2.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_workforce.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    },
+    {
+      "url": "/company/plan",
+      "final": "/company/403",
+      "title": "",
+      "issues": [
+        "spinner still visible"
+      ],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-driver-mobile-_company_plan.jpg",
+      "snippet": "Accès refusé\nVous n'avez pas les permissions nécessaires pour accéder à cette page.\n Redirection dans 2s...\nRetour\nAller au tableau de bord",
+      "probe": true
+    }
+  ],
+  "nav": [
+    "/",
+    "/dashboard",
+    "/company/my-deliveries",
+    "/company/my-space/overview",
+    "/company/workforce/me"
+  ]
+}

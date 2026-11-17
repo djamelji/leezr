@@ -1,0 +1,100 @@
+{
+    "owner@leezr.test": {
+        "level": "management",
+        "role": "Propriétaire",
+        "items": [
+            "home › Dashboard → dashboard",
+            "team › Collaborators → company-people",
+            "time › time → []",
+            "documents › Documents → company-documents-tab:todo",
+            "payroll › Payroll → company-workforce-payroll",
+            "activity › Shipments → company-shipments",
+            "modules › Modules → company-modules",
+            "settings › settings → company-settings",
+            "personal_menu › Personal home → home",
+            "personal_menu › My Space → company-my-space-tab:overview",
+            "personal_menu › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "admin@leezr.test": {
+        "level": "management",
+        "role": "Dispatcher",
+        "items": [
+            "home › Dashboard → dashboard",
+            "team › Collaborators → company-people",
+            "documents › Documents → company-documents-tab:todo",
+            "activity › Shipments → company-shipments",
+            "settings › settings → company-settings",
+            "personal_menu › Personal home → home",
+            "personal_menu › My Space → company-my-space-tab:overview",
+            "personal_menu › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "ops@leezr.test": {
+        "level": "management",
+        "role": "Responsable exploitation",
+        "items": [
+            "home › Dashboard → dashboard",
+            "team › Collaborators → company-people",
+            "time › time → []",
+            "settings › settings → company-settings",
+            "personal_menu › Personal home → home",
+            "personal_menu › My Space → company-my-space-tab:overview",
+            "personal_menu › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "manager@leezr.test": {
+        "level": "management",
+        "role": "Manager equipe",
+        "items": [
+            "home › Dashboard → dashboard",
+            "team › Collaborators → company-people",
+            "time › time → []",
+            "settings › settings → company-settings",
+            "personal_menu › Personal home → home",
+            "personal_menu › My Space → company-my-space-tab:overview",
+            "personal_menu › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "rh-nopay@leezr.test": {
+        "level": "management",
+        "role": "RH (sans paie)",
+        "items": [
+            "home › Dashboard → dashboard",
+            "team › Collaborators → company-people",
+            "time › time → []",
+            "documents › Documents → company-documents-tab:todo",
+            "settings › settings → company-settings",
+            "personal_menu › Personal home → home",
+            "personal_menu › My Space → company-my-space-tab:overview",
+            "personal_menu › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "salarie@leezr.test": {
+        "level": "operational",
+        "role": "Salarie",
+        "items": [
+            "home › Dashboard → dashboard",
+            "time › Time Tracking → company-workforce-time",
+            "personal › My Space → company-my-space-tab:overview",
+            "personal › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    },
+    "bob@leezr.test": {
+        "level": "operational",
+        "role": "Driver",
+        "items": [
+            "home › Dashboard → dashboard",
+            "activity › My Deliveries → company-my-deliveries",
+            "personal › My Space → company-my-space-tab:overview",
+            "personal › My Work → company-workforce-me",
+            "personal_menu › Account Settings → account-settings-tab:account"
+        ]
+    }
+}

@@ -1,0 +1,696 @@
+{
+  "profile": "c1-owner",
+  "home": "http://127.0.0.1:8815/dashboard",
+  "pages": [
+    {
+      "url": "/",
+      "final": "/",
+      "title": "Gérez votre entreprise. Simplement. Professionnellement.",
+      "issues": [],
+      "api": [],
+      "console": [],
+      "shot": "c1-owner-_.jpg",
+      "snippet": "leezr\n.\nTableau de bord\nGérez votre entreprise. Simplement. Professionnellement.\n\nTous vos clients, votre équipe, vos opérations et votre croissance — au même endroit. L'espace de travail que votre entreprise mérite.\n\nAller au tableau de bord\nTout-en-un\nTout ce dont vous avez besoin pour gérer votre",
+      "probe": false
+    },
+    {
+      "url": "/dashboard",
+      "final": "/dashboard",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_dashboard.jpg",
+      "snippet": "Bienvenue, Djamel\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nActions\nAjouter une personne\nPréparer le planning\nDemander un document\nDéposer un document\nÀ traiter\n5 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nCongés à approuver\n1\nExpéditions à affecter\n1\nSignatures en atten",
+      "probe": false
+    },
+    {
+      "url": "/company/people",
+      "final": "/company/people",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_people.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\nOutils\nAjouter une personne\nIntégrations en cours\n\nDossiers envoyés aux recrues : avancement, éléments reçus et validations à faire.\n\nAucun dossier d'intégration en cours.\n\nInviter une recrue à compléter s",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/planning",
+      "final": "/company/workforce/planning",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_planning.jpg",
+      "snippet": "Planning & temps\n\nOrganisez les journées : créneaux, modèles et lieux d'intervention\n\nPréférences\nCréation en lot\nNouveau créneau\nPlanning\nTemps & pointages\nAbsences\nMon activité\nSemaine\nJour\nPostes\nMois\nModèles\nPréparer ma semaine\n1\nCréneaux au total\n1\nPubliés\n0\nBrouillons\n8 h\nHeures planifiées\n16 ",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/time",
+      "final": "/company/workforce/time",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_time.jpg",
+      "snippet": "Planning & temps\n\nPrévu, réel et écarts — le travail de l'équipe au même endroit.\n\nPréférences\nPlanning\nTemps & pointages\nAbsences\nMon activité\nAujourd'hui\nPrésences\nFeuilles de temps\nDate\nEmployé\n0\nEn travail\n0\nEn pause\n0\nTerminés\n1\nNon pointés\n0\nIncomplets\n0\nAnomalies\n2\nFeuilles à valider\nEMPLOYÉ\t",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/leave",
+      "final": "/company/workforce/leave",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_leave.jpg",
+      "snippet": "Planning & temps\n\nDemandes, calendrier et soldes de l'équipe\n\nPréférences\nNouvelle demande\nPlanning\nTemps & pointages\nAbsences\nMon activité\nDemandes\nCalendrier\nSoldes\nTypes de congés\n0\nEn attente\n6\nApprouvées\n1\nRefusées\nEMPLOYÉ\n\t\nTYPE\n\t\nDATES\n\t\nDURÉE\n\t\nSTATUT\n\t\n\n\nBD\nBob Dupont\n\t\nCongés payés\n\t25/06/",
+      "probe": false
+    },
+    {
+      "url": "/company/documents/todo",
+      "final": "/company/documents/todo",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_documents_todo.jpg",
+      "snippet": "Documents\nNouveau\nOutils\nÀ traiter\nEntreprise\nCollaborateurs\nSignatures\nÀ suivre\nDemandes en attente de dépôt\n58\nDocuments manquants\n67\nSignatures en attente\n7\nCréer un type de document\nCréez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée ch",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/payroll",
+      "final": "/company/workforce/payroll",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_payroll.jpg",
+      "snippet": "Paie & déclarations\n\nPréparez la paie période par période : collectez, contrôlez, validez.\n\nNouvelle période\nEspace de préparation de la paie — Les montants sont des estimations indicatives (barèmes non exhaustifs), à faire valider par un expert-comptable. Leezr ne transmet aucune déclaration aux or",
+      "probe": false
+    },
+    {
+      "url": "/company/shipments",
+      "final": "/company/shipments",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_shipments.jpg",
+      "snippet": "Expéditions\nMes livraisons\nNouvelle expédition\nToutes\nRÉFÉRENCE\n\t\nSTATUT\n\t\nASSIGNÉE À\n\t\nORIGINE\n\t\nDESTINATION\n\t\nPLANIFIÉE\n\t\nCRÉÉE PAR\n\t\nACTIONS\n\nSHP-20261114-0001\t\nPlanifiée\n\tLucie Durand409095\ttoulouse\tmarseille\t14 nov. 2026\tDjamel\t\n\nSHP-DEMO-0001\t\nBrouillon\n\t—\t12 Rue de Paris, 75001 Paris\t45 Avenu",
+      "probe": false
+    },
+    {
+      "url": "/company/modules",
+      "final": "/company/modules",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_modules.jpg",
+      "snippet": "Modules\n\nDécouvrez les produits Leezr, activez ceux inclus dans votre formule et ajoutez-en de nouveaux.\n\n7 activé(s)\n15 inclus\n1 souscrit(s)\n3 à découvrir\nÀ découvrir\n3\nInclus dans votre formule\n15\nActivés\n7\nTous\nRechercher un module :\nAnalyses logistiques\nMétier\nSuivi en temps réel\n\nPosition des e",
+      "probe": false
+    },
+    {
+      "url": "/company/settings",
+      "final": "/company/settings",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_settings.jpg",
+      "snippet": "Réglages\n\nTout ce qui configure votre entreprise, rangé par sujet.\n\nEntreprise\nOrganisation\nAccès & sécurité\nTravail & RH\nDocuments\nAbonnement\nAutomatisations\nAvancé\nEntreprise\n\nIdentité, coordonnées et informations légales.\n\nProfil de l'entreprise Essentiel\nNom, coordonnées, adresses et information",
+      "probe": false
+    },
+    {
+      "url": "/home",
+      "final": "/home",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_home.jpg",
+      "snippet": "ACCUEIL PERSONNEL\nBonjour, Djamel\nMardi 17 Novembre\nMon prochain créneau\nAucun créneau planifié pour le moment.\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n1\nDocuments à régulariser\n0\nCongés en attente\n0\nMes livraisons\nMes widgets\nAjouter un widget\nEffec",
+      "probe": true
+    },
+    {
+      "url": "/dashboard",
+      "final": "/dashboard",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_dashboard.jpg",
+      "snippet": "Bienvenue, Djamel\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nActions\nAjouter une personne\nPréparer le planning\nDemander un document\nDéposer un document\nÀ traiter\n5 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nCongés à approuver\n1\nExpéditions à affecter\n1\nSignatures en atten",
+      "probe": false
+    },
+    {
+      "url": "/company/people",
+      "final": "/company/people",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_people.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\nOutils\nAjouter une personne\nIntégrations en cours\n\nDossiers envoyés aux recrues : avancement, éléments reçus et validations à faire.\n\nAucun dossier d'intégration en cours.\n\nInviter une recrue à compléter s",
+      "probe": false
+    },
+    {
+      "url": "/company/people/employee-2",
+      "final": "/company/people/employee-2",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_people_employee-2.jpg",
+      "snippet": "Équipe\nAM\nAlice Martin\nCompte connecté\nDispatcher\n admin@leezr.test\n Actif\nModifier\nActions\nVue d'ensemble\nInformations & emploi\nDocuments & contrats\nTemps & absences\nAccès & autorisations\n Intégration du collaborateur\n3 / 5\nInformations du collaborateur\nFait\nContrat de travail\nFait\nSignature du con",
+      "probe": true
+    },
+    {
+      "url": "/company/people/employee-1237",
+      "final": "/company/people/employee-1237",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_people_employee-1237.jpg",
+      "snippet": "Équipe\nSA\nSal Arie\nInvitation en attente\nSalarie\n salarie@leezr.test\n Actif\nModifier\nActions\nVue d'ensemble\nInformations & emploi\nDocuments & contrats\nTemps & absences\nAccès & autorisations\nAucun contrat actif pour ce collaborateur.\n Intégration du collaborateur\n1 / 5\nInformations du collaborateur\nF",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/todo",
+      "final": "/company/documents/todo",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_documents_todo.jpg",
+      "snippet": "Documents\nNouveau\nOutils\nÀ traiter\nEntreprise\nCollaborateurs\nSignatures\nÀ suivre\nDemandes en attente de dépôt\n58\nDocuments manquants\n67\nSignatures en attente\n7\nCréer un type de document\nCréez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée ch",
+      "probe": false
+    },
+    {
+      "url": "/company/documents/requests",
+      "final": "/company/documents/people",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_documents_requests.jpg",
+      "snippet": "Documents\nNouveau\nOutils\nÀ traiter\nEntreprise\nCollaborateurs\nSignatures\nDemandes de documents\nFile des demandes en cours et documents soumis pour vérification\nDemander un document\nEn attente de soumission\n58\nMEMBRE\n\t\nRÔLE\n\t\nDOCUMENT\n\t\nSTATUT\n\t\nDATE DEMANDE\n\t\nACTIONS\n\n\nBD\nBob Dupont\nbob@leezr.test\n\t\n",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/signatures",
+      "final": "/company/documents/signatures",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_documents_signatures.jpg",
+      "snippet": "Documents\nNouveau\nOutils\nÀ traiter\nEntreprise\nCollaborateurs\nSignatures\nNouvelle demande\nSupervision\nEn attente: 12\nExpirées: 0\nÉchecs: 0\nÀ réconcilier: 0\nPréparations expirées: 7\nCerts (émis/révoqués): 23 / 0\nToutes\nEn attente\nEn cours\nTerminées\nRefusées\nExpirées\nDOCUMENT\n\t\nSIGNATAIRES\n\t\nPRESTATAIR",
+      "probe": true
+    },
+    {
+      "url": "/company/documents/templates",
+      "final": "/company/documents/templates",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_documents_templates.jpg",
+      "snippet": "Documents\nNouveau\nOutils\nDocuments\nModèles de contrat\nLes modèles fournis sont des exemples non validés juridiquement. Leezr ne garantit pas leur conformité : adaptez-les à votre situation.\nNOM\tTYPE\tORIGINE\tVERSION\tÉTAT\tVALIDATION\t\nCDI WYSIWYG E2E\tcdi\t\nEntreprise\n\tv1\t\nArchivé\n\t\nExemple non validé\n\t\n",
+      "probe": true
+    },
+    {
+      "url": "/company/roles",
+      "final": "/company/people?tab=roles",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_roles.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\nChamps membre\nChamps actifs\n0\nChamps disponibles\nAucun champ membre activé pour le moment.\nPersonnes\nGestion RH\nRôles & autorisations\nPar capacité\nPar rôle (avancé)\nModule\nParamètres de l'entreprise\nAucune",
+      "probe": true
+    },
+    {
+      "url": "/company/settings",
+      "final": "/company/settings",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_settings.jpg",
+      "snippet": "Réglages\n\nTout ce qui configure votre entreprise, rangé par sujet.\n\nEntreprise\nOrganisation\nAccès & sécurité\nTravail & RH\nDocuments\nAbonnement\nAutomatisations\nAvancé\nEntreprise\n\nIdentité, coordonnées et informations légales.\n\nProfil de l'entreprise Essentiel\nNom, coordonnées, adresses et information",
+      "probe": false
+    },
+    {
+      "url": "/company/profile/overview",
+      "final": "/company/profile/overview",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_profile_overview.jpg",
+      "snippet": "Profil de l'entreprise\n\nIdentité, coordonnées et informations légales de votre entreprise.\n\nParamètres de l'entreprise\n\nLe nom affiché dans Leezr et sur vos documents.\n\nNom de l'entreprise\nTéléphone\nAdresse de l'entreprise\n\nAdresse du siège, utilisée sur les documents générés.\n\nRue\nComplément d'adre",
+      "probe": true
+    },
+    {
+      "url": "/company/modules",
+      "final": "/company/modules",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_modules.jpg",
+      "snippet": "Modules\n\nDécouvrez les produits Leezr, activez ceux inclus dans votre formule et ajoutez-en de nouveaux.\n\n7 activé(s)\n15 inclus\n1 souscrit(s)\n3 à découvrir\nÀ découvrir\n3\nInclus dans votre formule\n15\nActivés\n7\nTous\nRechercher un module :\nAnalyses logistiques\nMétier\nSuivi en temps réel\n\nPosition des e",
+      "probe": false
+    },
+    {
+      "url": "/company/billing/plan",
+      "final": "/company/billing/plan",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_billing_plan.jpg",
+      "snippet": "Abonnement & factures\n\nVotre formule, vos moyens de paiement et vos factures.\n\nAbonnement\nVue d'ensemble\nFactures\nMoyens de paiement\nActivité\n Abonnement actuel\nVotre abonnement actuel est \nPro\n\nFull access to industry modules\n\n29,00 € HT / mensuel\nMembres\n22 / Illimité\nStockage\n3.5 MB / 20 GB\nPério",
+      "probe": true
+    },
+    {
+      "url": "/company/billing/invoices",
+      "final": "/company/billing/invoices",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_billing_invoices.jpg",
+      "snippet": "Abonnement & factures\n\nVotre formule, vos moyens de paiement et vos factures.\n\nAbonnement\nVue d'ensemble\nFactures\nMoyens de paiement\nActivité\nFactures\nAperçu consolidé V2\nTous\nFACTURE N°\n\t\nSTATUT\n\t\nPÉRIODE\n\t\nMONTANT HT\n\t\nTVA\n\t\nMONTANT TTC\n\t\nRESTE DÛ TTC\n\t\nÉMISE LE\n\t\nACTIONS\n\nINV-RECETTE-V2\t\nOuverte\n",
+      "probe": true
+    },
+    {
+      "url": "/company/audit",
+      "final": "/company/audit",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_audit.jpg",
+      "snippet": "Journal d'audit\nHistorique d'activité de cette entreprise\nFiltrer par sévérité\nToutes les sévérités\nHORODATAGE\n\t\nACTION\n\t\nTYPE D'ACTEUR\n\t\nCIBLE\n\t\nID CIBLE\n\t\nSÉVÉRITÉ\n\t\nDÉTAILS\n\n17 nov. 2026, 02:44\tConnexion\t\nuser\n\tuser\t3\t\ninfo\n\t\n\n17 nov. 2026, 02:44\tConnexion\t\nuser\n\tuser\t55\t\ninfo\n\t\n\n17 nov. 2026, 02",
+      "probe": true
+    },
+    {
+      "url": "/company/notifications",
+      "final": "/company/notifications",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_notifications.jpg",
+      "snippet": "Notifications\n5\nPréférences\nCentre de notifications\nRetrouvez l'historique de toutes vos notifications.\nTout marquer comme lu\nToutes\nFacturation\nDocuments\nMembres\nModules\nSécurité\nSupport\nNotifications \n5\nNon lues uniquement\nPlanning modifié\n06/11/2026\n\nVotre planning (2026-11-02) a été modifié.\n\nPl",
+      "probe": true
+    },
+    {
+      "url": "/company/support",
+      "final": "/company/support",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_support.jpg",
+      "snippet": "Mes tickets\nNouveau ticket\nStatut\nTous\n#\n\t\nSUJET\n\t\nSTATUT\n\t\nPRIORITÉ\n\t\nDERNIER MESSAGE\n\n\n\nAucun ticket pour le moment\n\nNouveau ticket\nÉléments par page :\n10\n0-0 sur 0",
+      "probe": true
+    },
+    {
+      "url": "/company/workflows",
+      "final": "/company/workflows",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workflows.jpg",
+      "snippet": "Workflows\nNouveau workflow\nAutomatisez vos processus avec des règles trigger → conditions → actions.\nNOM\n\t\nDÉCLENCHEUR\n\t\nACTIF\n\t\nDERNIÈRE EXÉCUTION\n\t\nEXÉCUTIONS AUJOURD'HUI\n\t\nACTIONS\n\n\nAucune règle d'automatisation\n\nCréez des règles pour automatiser les tâches récurrentes de votre entreprise.\n\nNouve",
+      "probe": true
+    },
+    {
+      "url": "/company/my-space/overview",
+      "final": "/company/my-space/overview",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_my-space_overview.jpg",
+      "snippet": "Mon espace\n\nVos documents, bulletins, signatures et informations personnelles dans cette entreprise.\n\nAperçu\nMes documents\nMes bulletins\nMes signatures\nMes documents\nDocuments demandés, déposés, refusés ou à renouveler.\n1 à fournir\nMes bulletins de paie\nConsultation et téléchargement, par année.\n2\nM",
+      "probe": true
+    },
+    {
+      "url": "/company/my-space/documents",
+      "final": "/company/my-space/documents",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_my-space_documents.jpg",
+      "snippet": "Mon espace\n\nVos documents, bulletins, signatures et informations personnelles dans cette entreprise.\n\nAperçu\nMes documents\nMes bulletins\nMes signatures\nMes documents\n\nDéposez et gérez vos documents requis.\n\nDOCUMENTS\tSTATUT\tOBLIGATOIRE\t\nCarte d'identité\nMax 10 Mo · Formats acceptés : PDF, JPG, JPEG,",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/me",
+      "final": "/company/workforce/me",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_me.jpg",
+      "snippet": "Planning & temps\n\nBonjour, Djamel\n\nPréférences\nCommencer la journée\nActualiser\nPlanning\nTemps & pointages\nAbsences\nMon activité\nAujourd'hui\nNon démarré\nHeures travaillées\n0 min\nTemps de pause\n0 min\nArrivée\n--:--\nMes heures\nSemaine du 16 nov. au 22 nov. · période du 1 nov. au 30 nov.\nCette semaine\n0 ",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/time",
+      "final": "/company/workforce/time",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_time.jpg",
+      "snippet": "Planning & temps\n\nPrévu, réel et écarts — le travail de l'équipe au même endroit.\n\nPréférences\nPlanning\nTemps & pointages\nAbsences\nMon activité\nAujourd'hui\nPrésences\nFeuilles de temps\nDate\nEmployé\n0\nEn travail\n0\nEn pause\n0\nTerminés\n1\nNon pointés\n0\nIncomplets\n0\nAnomalies\n2\nFeuilles à valider\nEMPLOYÉ\t",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/planning",
+      "final": "/company/workforce/planning",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_planning.jpg",
+      "snippet": "Planning & temps\n\nOrganisez les journées : créneaux, modèles et lieux d'intervention\n\nPréférences\nCréation en lot\nNouveau créneau\nPlanning\nTemps & pointages\nAbsences\nMon activité\nSemaine\nJour\nPostes\nMois\nModèles\nPréparer ma semaine\n1\nCréneaux au total\n1\nPubliés\n0\nBrouillons\n8 h\nHeures planifiées\n16 ",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/leave",
+      "final": "/company/workforce/leave",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_leave.jpg",
+      "snippet": "Planning & temps\n\nDemandes, calendrier et soldes de l'équipe\n\nPréférences\nNouvelle demande\nPlanning\nTemps & pointages\nAbsences\nMon activité\nDemandes\nCalendrier\nSoldes\nTypes de congés\n0\nEn attente\n6\nApprouvées\n1\nRefusées\nEMPLOYÉ\n\t\nTYPE\n\t\nDATES\n\t\nDURÉE\n\t\nSTATUT\n\t\n\n\nBD\nBob Dupont\n\t\nCongés payés\n\t25/06/",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/payroll",
+      "final": "/company/workforce/payroll",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_payroll.jpg",
+      "snippet": "Paie & déclarations\n\nPréparez la paie période par période : collectez, contrôlez, validez.\n\nNouvelle période\nEspace de préparation de la paie — Les montants sont des estimations indicatives (barèmes non exhaustifs), à faire valider par un expert-comptable. Leezr ne transmet aucune déclaration aux or",
+      "probe": false
+    },
+    {
+      "url": "/company/workforce/dsn",
+      "final": "/company/workforce/dsn",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_dsn.jpg",
+      "snippet": "DSN - Declarations Sociales\n\nGestion des declarations sociales nominatives\n\nExporter DSN\nMode de transmission DSN — Transmission désactivée (kill-switch) — aucune déclaration n'est envoyée. Les statuts « Transmis »/« Accepté » sont simulés.\nTotal declarations\n0\nTransmises\n0\nAcceptees\n0\nRejetees\n0\nPE",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/organization/departments",
+      "final": "/company/workforce/organization/departments",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_organization_departments.jpg",
+      "snippet": "Organisation\n\nGérez les départements et postes de votre entreprise\n\nAssistant de configuration\nOrganisation proposée\n\nInitialisez votre organisation à partir d'un modèle adapté à votre secteur, puis personnalisez-la librement.\n\nProfil de l'entreprise\nLivraison dernier kilomètre\nEnregistrer le profil",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/organization/positions",
+      "final": "/company/workforce/organization/departments",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_organization_positions.jpg",
+      "snippet": "Organisation\n\nGérez les départements et postes de votre entreprise\n\nAssistant de configuration\nOrganisation proposée\n\nInitialisez votre organisation à partir d'un modèle adapté à votre secteur, puis personnalisez-la librement.\n\nProfil de l'entreprise\nLivraison dernier kilomètre\nEnregistrer le profil",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/requirements",
+      "final": "/company/workforce/requirements",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_requirements.jpg",
+      "snippet": "Informations & documents demandés\n\nCe que vous attendez de vos collaborateurs, selon leur poste.\n\nConfiguration en préparation : elle est enregistrée mais n'a pas encore d'effet sur les fiches, les demandes de documents, la conformité ni les rappels. Les règles actuelles restent appliquées.\nPoste\nTo",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/settings/worktime",
+      "final": "/company/workforce/settings/worktime",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_settings_worktime.jpg",
+      "snippet": "Paramètres RH\n\nConfigurez les règles de votre entreprise en un seul endroit, adaptées à votre pays, votre secteur et vos modules.\n\nGénéral\nTemps de travail & pauses\nContrats de travail\nSignature électronique\nA. Cadre applicable\nB. Rythme\nC. Repos\nD. Horaires\nE. Comportement\n\nIndiquez la convention c",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/onboarding",
+      "final": "/company/workforce/onboarding",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_onboarding.jpg",
+      "snippet": "Assistant de configuration RH\n\nPréparez votre entreprise à gérer ses premiers collaborateurs, étape par étape.\n\nVotre entreprise\nVotre organisation\nResponsabilités et accès\nCongés et absences\nTemps de travail\nPremier collaborateur\nTerminé\nVotre espace RH est prêt\n\nVous pouvez commencer à gérer vos c",
+      "probe": true
+    },
+    {
+      "url": "/company/shipments",
+      "final": "/company/shipments",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_shipments.jpg",
+      "snippet": "Expéditions\nMes livraisons\nNouvelle expédition\nToutes\nRÉFÉRENCE\n\t\nSTATUT\n\t\nASSIGNÉE À\n\t\nORIGINE\n\t\nDESTINATION\n\t\nPLANIFIÉE\n\t\nCRÉÉE PAR\n\t\nACTIONS\n\nSHP-20261114-0001\t\nPlanifiée\n\tLucie Durand409095\ttoulouse\tmarseille\t14 nov. 2026\tDjamel\t\n\nSHP-DEMO-0001\t\nBrouillon\n\t—\t12 Rue de Paris, 75001 Paris\t45 Avenu",
+      "probe": false
+    },
+    {
+      "url": "/company/my-deliveries",
+      "final": "/company/my-deliveries",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_my-deliveries.jpg",
+      "snippet": "Mes livraisons\nToutes\nRÉFÉRENCE\n\t\nSTATUT\n\t\nDESTINATION\n\t\nPLANIFIÉE\n\t\nACTIONS\n\n\nAucune livraison ne vous est assignée.\n0 livraison(s)",
+      "probe": true
+    },
+    {
+      "url": "/company/dev-lab",
+      "final": "/company/dev-lab",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_dev-lab.jpg",
+      "snippet": "Dev UI Lab — non exposé\nSmart Responsive UX — Laboratoire\n\nTeste les primitives adaptatives en faisant varier la largeur du conteneur, les actions et les permissions — sans perte d'état.\n\nSmartActionBar\nCommand bar à overflow piloté par la largeur RÉELLE du conteneur (ResizeObserver)\nLargeur du cont",
+      "probe": true
+    },
+    {
+      "url": "/ui-lab",
+      "final": "/ui-lab",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_ui-lab.jpg",
+      "snippet": "Page de référence — Design System Leezr Premium (Phase 0). Toutes les valeurs affichées sont des données de démonstration, jamais des données métier réelles.\nBonjour Djamel\nAperçu du cockpit Company — Leezr Logistics (démo)\n7 j\n30 j\nMois\nPersonnaliser\n+4%\n50\nEffectifs actifs\n+2 ce mois\n-3%\n38 / 50\nP",
+      "probe": true
+    },
+    {
+      "url": "/company/members",
+      "final": "/company/people",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_members.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\nOutils\nAjouter une personne\nIntégrations en cours\n\nDossiers envoyés aux recrues : avancement, éléments reçus et validations à faire.\n\nAucun dossier d'intégration en cours.\n\nInviter une recrue à compléter s",
+      "probe": true
+    },
+    {
+      "url": "/company/members/2",
+      "final": "/company/people",
+      "title": "",
+      "issues": [],
+      "api": [
+        "404 GET /api/company/people/resolve"
+      ],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "shot": "c1-owner-_company_members_2.jpg",
+      "snippet": "Équipe\n\nToutes les personnes de votre entreprise — accès et données RH selon vos permissions.\n\nOutils\nAjouter une personne\nIntégrations en cours\n\nDossiers envoyés aux recrues : avancement, éléments reçus et validations à faire.\n\nAucun dossier d'intégration en cours.\n\nInviter une recrue à compléter s",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce/employees/2",
+      "final": "/company/people/employee-2",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce_employees_2.jpg",
+      "snippet": "Équipe\nAM\nAlice Martin\nCompte connecté\nDispatcher\n admin@leezr.test\n Actif\nModifier\nActions\nVue d'ensemble\nInformations & emploi\nDocuments & contrats\nTemps & absences\nAccès & autorisations\n Intégration du collaborateur\n3 / 5\nInformations du collaborateur\nFait\nContrat de travail\nFait\nSignature du con",
+      "probe": true
+    },
+    {
+      "url": "/company/workforce",
+      "final": "/dashboard",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_workforce.jpg",
+      "snippet": "Bienvenue, Djamel\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nActions\nAjouter une personne\nPréparer le planning\nDemander un document\nDéposer un document\nÀ traiter\n5 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nCongés à approuver\n1\nExpéditions à affecter\n1\nSignatures en atten",
+      "probe": true
+    },
+    {
+      "url": "/company/plan",
+      "final": "/company/billing/plan",
+      "title": "",
+      "issues": [],
+      "api": [],
+      "console": [
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "shot": "c1-owner-_company_plan.jpg",
+      "snippet": "Abonnement & factures\n\nVotre formule, vos moyens de paiement et vos factures.\n\nAbonnement\nVue d'ensemble\nFactures\nMoyens de paiement\nActivité\n Abonnement actuel\nVotre abonnement actuel est \nPro\n\nFull access to industry modules\n\n29,00 € HT / mensuel\nMembres\n22 / Illimité\nStockage\n3.5 MB / 20 GB\nPério",
+      "probe": true
+    }
+  ],
+  "nav": [
+    "/",
+    "/dashboard",
+    "/company/people",
+    "/company/workforce/planning",
+    "/company/workforce/time",
+    "/company/workforce/leave",
+    "/company/documents/todo",
+    "/company/workforce/payroll",
+    "/company/shipments",
+    "/company/modules",
+    "/company/settings"
+  ]
+}

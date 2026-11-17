@@ -1,0 +1,687 @@
+{
+ "person": {
+  "s": 200,
+  "j": {
+   "person_ref": "employee-2",
+   "user_id": 2,
+   "employee_id": 2,
+   "membership_id": 3,
+   "identity": {
+    "first_name": "Alice",
+    "last_name": "Martin",
+    "display_name": "Alice Martin",
+    "login_email": "admin@leezr.test",
+    "contact_email": null,
+    "phone": null,
+    "avatar": null
+   },
+   "account": {
+    "state": "connected",
+    "invitation": null,
+    "has_access": true,
+    "is_owner": false,
+    "is_admin": true,
+    "role": {
+     "id": 9,
+     "name": "Dispatcher",
+     "is_administrative": true
+    },
+    "effective_permissions": null,
+    "has_account": true,
+    "grant_email": null
+   },
+   "employment": null,
+   "identity_shared": false,
+   "available_sections": [
+    "overview",
+    "personal",
+    "access"
+   ],
+   "can": {
+    "view_access": true,
+    "view_hr": false,
+    "manage_access": false,
+    "change_role": false,
+    "edit_hr": false,
+    "view_compensation": false,
+    "view_history": false,
+    "edit_identity": false,
+    "edit_global_name": false,
+    "manage_credentials": false,
+    "set_password": false,
+    "suspend_access": false,
+    "remove_access": false,
+    "invite": false,
+    "manage_contracts": false,
+    "manage_compensation": false,
+    "generate_contract": false,
+    "view_signatures": false,
+    "view_payslips": false,
+    "create_hr_record": false,
+    "link_account": false
+   }
+  }
+ },
+ "people": {
+  "s": 200,
+  "j": {
+   "note": "truncated",
+   "first": [
+    {
+     "person_ref": "user-2",
+     "user_id": 2,
+     "employee_id": null,
+     "name": "Alice Martin",
+     "email": "admin@leezr.test",
+     "avatar": null,
+     "account_state": "connected",
+     "role": {
+      "id": 9,
+      "name": "Dispatcher",
+      "is_administrative": true
+     },
+     "is_owner": false,
+     "employment_status": null,
+     "job_role": null,
+     "department": null
+    },
+    {
+     "person_ref": "user-3",
+     "user_id": 3,
+     "employee_id": null,
+     "name": "Bob Dupont",
+     "email": "bob@leezr.test",
+     "avatar": null,
+     "account_state": "connected",
+     "role": {
+      "id": 7,
+      "name": "Driver",
+      "is_administrative": false
+     },
+     "is_owner": false,
+     "employment_status": null,
+     "job_role": null,
+     "department": null
+    }
+   ]
+  }
+ },
+ "members": {
+  "s": 200,
+  "j": {
+   "note": "truncated"
+  }
+ },
+ "docs": {
+  "s": 403,
+  "j": {
+   "message": "Permission required: documents.view",
+   "debug": {
+    "ability": "use-permission",
+    "key": "documents.view",
+    "company_id": 1,
+    "user_id": 3
+   }
+  }
+ },
+ "history": {
+  "s": 403,
+  "j": {
+   "message": "Not authorized to view history.",
+   "exception": "Symfony\\Component\\HttpKernel\\Exception\\HttpException",
+   "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Application.php",
+   "line": 1440,
+   "trace": [
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/helpers.php",
+     "line": 67,
+     "function": "abort",
+     "class": "Illuminate\\Foundation\\Application",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Modules/Core/People/Http/PersonController.php",
+     "line": 100,
+     "function": "abort"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Controller.php",
+     "line": 54,
+     "function": "history",
+     "class": "App\\Modules\\Core\\People\\Http\\PersonController",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php",
+     "line": 43,
+     "function": "callAction",
+     "class": "Illuminate\\Routing\\Controller",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+     "line": 265,
+     "function": "dispatch",
+     "class": "Illuminate\\Routing\\ControllerDispatcher",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Route.php",
+     "line": 211,
+     "function": "runController",
+     "class": "Illuminate\\Routing\\Route",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+     "line": 822,
+     "function": "run",
+     "class": "Illuminate\\Routing\\Route",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 180,
+     "function": "Illuminate\\Routing\\{closure}",
+     "class": "Illuminate\\Routing\\Router",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Company/Http/Middleware/EnsureCompanyAccess.php",
+     "line": 73,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Company\\Http\\Middleware\\EnsureCompanyAccess",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Company/Http/Middleware/EnsureCompanyAccess.php",
+     "line": 73,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Company\\Http\\Middleware\\EnsureCompanyAccess",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Http/Middleware/SessionGovernance.php",
+     "line": 59,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Http\\Middleware\\SessionGovernance",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Company/Http/Middleware/EnsureBusinessAccess.php",
+     "line": 54,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Company\\Http\\Middleware\\EnsureBusinessAccess",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Company/Http/Middleware/SetCompanyContext.php",
+     "line": 80,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Company\\Http\\Middleware\\SetCompanyContext",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Http/Middleware/SecurityHeadersMiddleware.php",
+     "line": 13,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Http\\Middleware\\SecurityHeadersMiddleware",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Http/Middleware/NoCacheHeaders.php",
+     "line": 13,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Http\\Middleware\\NoCacheHeaders",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Http/Middleware/AddBuildVersion.php",
+     "line": 13,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Http\\Middleware\\AddBuildVersion",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/app/Http/Middleware/CorrelationIdMiddleware.php",
+     "line": 21,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "App\\Http\\Middleware\\CorrelationIdMiddleware",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php",
+     "line": 50,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php",
+     "line": 63,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Auth\\Middleware\\Authenticate",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/sanctum/src/Http/Middleware/EnsureFrontendRequestsAreStateful.php",
+     "line": 26,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 180,
+     "function": "Laravel\\Sanctum\\Http\\Middleware\\{closure}",
+     "class": "Laravel\\Sanctum\\Http\\Middleware\\EnsureFrontendRequestsAreStateful",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/sanctum/src/Http/Middleware/AuthenticateSession.php",
+     "line": 60,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Laravel\\Sanctum\\Http\\Middleware\\AuthenticateSession",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/VerifyCsrfToken.php",
+     "line": 87,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\VerifyCsrfToken",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+     "line": 120,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Session/Middleware/StartSession.php",
+     "line": 63,
+     "function": "handleStatefulRequest",
+     "class": "Illuminate\\Session\\Middleware\\StartSession",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Session\\Middleware\\StartSession",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/AddQueuedCookiesToResponse.php",
+     "line": 36,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Cookie\\Middleware\\AddQueuedCookiesToResponse",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Cookie/Middleware/EncryptCookies.php",
+     "line": 74,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Cookie\\Middleware\\EncryptCookies",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/sanctum/src/Http/Middleware/EnsureFrontendRequestsAreStateful.php",
+     "line": 61,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 201,
+     "function": "Laravel\\Sanctum\\Http\\Middleware\\{closure}",
+     "class": "Laravel\\Sanctum\\Http\\Middleware\\EnsureFrontendRequestsAreStateful",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 137,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/sanctum/src/Http/Middleware/EnsureFrontendRequestsAreStateful.php",
+     "line": 25,
+     "function": "then",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Laravel\\Sanctum\\Http\\Middleware\\EnsureFrontendRequestsAreStateful",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 137,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+     "line": 821,
+     "function": "then",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+     "line": 800,
+     "function": "runRouteWithinStack",
+     "class": "Illuminate\\Routing\\Router",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+     "line": 764,
+     "function": "runRoute",
+     "class": "Illuminate\\Routing\\Router",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Routing/Router.php",
+     "line": 753,
+     "function": "dispatchToRoute",
+     "class": "Illuminate\\Routing\\Router",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+     "line": 200,
+     "function": "dispatch",
+     "class": "Illuminate\\Routing\\Router",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 180,
+     "function": "Illuminate\\Foundation\\Http\\{closure}",
+     "class": "Illuminate\\Foundation\\Http\\Kernel",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+     "line": 21,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php",
+     "line": 31,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php",
+     "line": 21,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php",
+     "line": 51,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php",
+     "line": 27,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Http\\Middleware\\ValidatePostSize",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php",
+     "line": 109,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php",
+     "line": 74,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Http\\Middleware\\HandleCors",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php",
+     "line": 58,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Http\\Middleware\\TrustProxies",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php",
+     "line": 22,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php",
+     "line": 26,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 219,
+     "function": "handle",
+     "class": "Illuminate\\Http\\Middleware\\ValidatePathEncoding",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php",
+     "line": 137,
+     "function": "Illuminate\\Pipeline\\{closure}",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+     "line": 175,
+     "function": "then",
+     "class": "Illuminate\\Pipeline\\Pipeline",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php",
+     "line": 144,
+     "function": "sendRequestThroughRouter",
+     "class": "Illuminate\\Foundation\\Http\\Kernel",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/Application.php",
+     "line": 1220,
+     "function": "handle",
+     "class": "Illuminate\\Foundation\\Http\\Kernel",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/public/index.php",
+     "line": 20,
+     "function": "handleRequest",
+     "class": "Illuminate\\Foundation\\Application",
+     "type": "->"
+    },
+    {
+     "file": "/Users/djamel/Sites.noindex/leezr/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php",
+     "line": 23,
+     "function": "require_once"
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,755 @@
+{
+  "owner": {
+    "email": "owner@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "compliance.rate",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "compliance.roles",
+        "billing.plan_badge"
+      ],
+      "catalog": [
+        "compliance.rate",
+        "compliance.pending",
+        "compliance.overdue",
+        "compliance.roles",
+        "compliance.types",
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts",
+        "onboarding.setup",
+        "billing.plan_badge",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "shipments.today",
+        "shipments.in_transit",
+        "shipments.late",
+        "drivers.active"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/company/jobdomain [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/my-deliveries [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/public/plans [C1]",
+        "200 GET /api/workforce/me/shifts [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]",
+        "200 GET /api/workforce/me/leaves [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour, Djamel\nMardi 17 Novembre\nMon prochain créneau\nAucun créneau planifié pour le moment.\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n1\nDocuments à régulariser\n0\nCongés en attente\n0\nMes livraisons\nMes widgets\nAjouter un widget\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nTaux de conformité\n0 total\nAucun document requis configuré\nSynthèse expéditions\n5 expéditions au total\n"
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "compliance.rate",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "compliance.roles",
+        "billing.plan_badge"
+      ],
+      "catalog": [
+        "compliance.rate",
+        "compliance.pending",
+        "compliance.overdue",
+        "compliance.roles",
+        "compliance.types",
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts",
+        "onboarding.setup",
+        "billing.plan_badge",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "shipments.today",
+        "shipments.in_transit",
+        "shipments.late",
+        "drivers.active"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 GET /api/dashboard/onboarding [C1]",
+        "200 GET /api/company/documents/compliance [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/public/plans [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue, Djamel\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nActions\nAjouter une personne\nPréparer le planning\nDemander un document\nDéposer un document\nÀ traiter\n5 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nCongés à approuver\n1\nExpéditions à affecter\n1\nSignatures en attente\n7\nVue d'ensemble\nPersonnaliser\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nTaux de conformité\n126 total\nconformes\n2%\nConformes\n3\nBientôt ex"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "workforce.leave_pending",
+        "workforce.timesheet_pending",
+        "drivers.active"
+      ],
+      "denied": [
+        "deliveries.my_today",
+        "deliveries.next"
+      ]
+    }
+  },
+  "alice-admin": {
+    "email": "admin@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 1,
+      "layout": [
+        "compliance.rate",
+        "shipments.overview",
+        "logistics.fleet",
+        "compliance.roles",
+        "documents.detail"
+      ],
+      "catalog": [
+        "compliance.rate",
+        "compliance.pending",
+        "compliance.overdue",
+        "compliance.roles",
+        "compliance.types",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "shipments.today",
+        "shipments.in_transit",
+        "shipments.late",
+        "shipments.unassigned",
+        "drivers.active"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-deliveries [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/workforce/me/shifts [C1]",
+        "200 GET /api/workforce/me/leaves [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour, Alice\nMardi 17 Novembre\nMon prochain créneau\nAucun créneau planifié pour le moment.\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n1\nDocuments à régulariser\n0\nCongés en attente\n0\nMes livraisons\nMes widgets\nTaux de conformité\n0 total\nAucun document requis configuré\nSynthèse expéditions\n5 expéditions au total\nBrouillon\nPlanifiées\nLivrées\nTotal\n5\nFlotte & livraisons\n0\nChauffeurs actifs\nLivraisons du jour\n0 / 0\nProchaine livraison\nAucune livraison planifiée\nConformité par rôle\nAucun document requis configuré\nDocuments à régulariser\nAucun document requis configuré\nWidgets disponibles\nDocuments manquants\nNombre de documents requ"
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 1,
+      "layout": [
+        "compliance.rate",
+        "shipments.overview",
+        "logistics.fleet",
+        "compliance.roles",
+        "documents.detail"
+      ],
+      "catalog": [
+        "compliance.rate",
+        "compliance.pending",
+        "compliance.overdue",
+        "compliance.roles",
+        "compliance.types",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "shipments.today",
+        "shipments.in_transit",
+        "shipments.late",
+        "shipments.unassigned",
+        "drivers.active"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/company/documents/compliance [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue, Alice\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nActions\nAjouter une personne\nDemander un document\nDéposer un document\nÀ traiter\n1 sujet\nExpéditions à affecter\n1\nVue d'ensemble\nPersonnaliser\nTaux de conformité\n126 total\nconformes\n2%\nConformes\n3\nBientôt expirés\n0\nManquants\n67\nExpirés\n0\nRôle le plus exposé\nNon spécifié\nSynthèse expéditions\n5 expéditions au total\nBrouillon\nPlanifiées\nLivrées\nTotal\n5\nFlotte & livraisons\n0\nChauffeurs actifs\nLivraisons du jour\n0 / 0\nProchaine livraison\nAucune livraison planifiée\nConformité par rôle\nAucun rôle1 membre(s)\n37 Manquants\n0%\nDispatcher3 membre(s)\n33.3%\nDriver12 membre(s)\n22 Manquants\n2.8%\nPropriétaire1 membre(s)\n100%\nSalarie1 membre(s)\n"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "drivers.active"
+      ],
+      "denied": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "billing.plan_badge",
+        "workforce.leave_pending",
+        "workforce.timesheet_pending",
+        "deliveries.my_today",
+        "deliveries.next"
+      ]
+    }
+  },
+  "ops-admin": {
+    "email": "ops@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "422 PUT /api/dashboard/layout [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour\nMardi 17 Novembre\n1\nDocuments à régulariser\nMes widgets\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nEffectifs\n52\nAucun en congé\nAnomalies de pointage\n0\nAucune anomalie\nFeuilles à valider\n2\nValider\nHeures travaillées\n7 derniers jours\n0\nh · Total sur la période\nAucune heure saisie sur la période\nPlanning de la semaine\n1\nTous les créneaux assignés\nWidgets disponibles\nTous les widgets sont ajoutés."
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 PUT /api/dashboard/layout [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue,\n\nLeezr Logistics E2E 1792412257425\n\nActions\nPréparer le planning\nÀ traiter\n2 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nVue d'ensemble\nPersonnaliser\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nFeuilles de temps à valider\nFeuilles de temps soumises en attente de validation"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "workforce.timesheet_pending"
+      ],
+      "denied": [
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "workforce.leave_pending",
+        "deliveries.my_today",
+        "deliveries.next",
+        "drivers.active"
+      ]
+    }
+  },
+  "manager": {
+    "email": "manager@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend"
+      ],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour\nMardi 17 Novembre\n1\nDocuments à régulariser\nMes widgets\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nFeuilles de temps à valider\nFeuilles de temps soumises en attente de validation\nCongés à approuver\nDemandes de congé en attente d’approbation"
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend"
+      ],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.timesheet_pending",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue,\n\nLeezr Logistics E2E 1792412257425\n\nActions\nPréparer le planning\nÀ traiter\n3 sujets\nIntégrations à compléter\n14\nFeuilles de temps à valider\n2\nCongés à approuver\n1\nVue d'ensemble\nPersonnaliser\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nFeuilles de temps à valider\nFeuilles de temps soumises en attente de validation\nCongés à approuver\nDemandes de congé en attente d’approbation"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "workforce.leave_pending",
+        "workforce.timesheet_pending"
+      ],
+      "denied": [
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "deliveries.my_today",
+        "deliveries.next",
+        "drivers.active"
+      ]
+    }
+  },
+  "driver-bob": {
+    "email": "bob@leezr.test",
+    "landing": "http://127.0.0.1:8815/home",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "deliveries.my_today",
+        "deliveries.next",
+        "deliveries.completed_today"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/my-deliveries [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/workforce/me/shifts [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]",
+        "200 GET /api/workforce/me/leaves [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour, Bob\nMardi 17 Novembre\nMon prochain créneau\nAujourd'hui\n08:45 – 17:30\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n2\nDocuments à régulariser\n1\nCongés en attente\n2\nMes livraisons\nMes soldes de congés\n0 j\nCongés payés\nMes widgets\nMes livraisons du jour\n0\nVos livraisons planifiées pour aujourd'hui\nProchaine livraison\nAucune livraison à venir\nComplétées aujourd'hui\n0 / 0\nVos livraisons complétées aujourd'hui\nWidgets disponibles\nTous les widgets sont ajoutés."
+    },
+    "/dashboard": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "deliveries.my_today",
+        "deliveries.next",
+        "deliveries.completed_today"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/notifications [C1]",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/my-deliveries [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]",
+        "200 GET /api/workforce/me/shifts [C1]",
+        "200 GET /api/workforce/me/leaves [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour, Bob\nMardi 17 Novembre\nMon prochain créneau\nAujourd'hui\n08:45 – 17:30\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n2\nDocuments à régulariser\n1\nCongés en attente\n2\nMes livraisons\nMes soldes de congés\n0 j\nCongés payés\nMes widgets\nMes livraisons du jour\n0\nVos livraisons planifiées pour aujourd'hui\nProchaine livraison\nAucune livraison à venir\nComplétées aujourd'hui\n0 / 0\nVos livraisons complétées aujourd'hui\nWidgets disponibles\nTous les widgets sont ajoutés."
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "deliveries.my_today",
+        "deliveries.next"
+      ],
+      "denied": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "workforce.leave_pending",
+        "workforce.timesheet_pending",
+        "drivers.active"
+      ]
+    }
+  },
+  "rh": {
+    "email": "rh-nopay@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend"
+      ],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour\nMardi 17 Novembre\n1\nDocuments à régulariser\nMes widgets\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nCongés à approuver\nDemandes de congé en attente d’approbation"
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend"
+      ],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.headcount",
+        "workforce.anomalies",
+        "workforce.leave_pending",
+        "workforce.hours_trend",
+        "planning.shifts"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue,\n\nLeezr Logistics E2E 1792412257425\n\nÀ traiter\n2 sujets\nIntégrations à compléter\n14\nCongés à approuver\n1\nVue d'ensemble\nPersonnaliser\nEffectifs\n52\nAucun en congé\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nPlanning de la semaine\n1\nTous les créneaux assignés\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nCongés à approuver\nDemandes de congé en attente d’approbation"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "workforce.headcount",
+        "workforce.clock_live",
+        "planning.shifts",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "workforce.leave_pending"
+      ],
+      "denied": [
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "workforce.timesheet_pending",
+        "deliveries.my_today",
+        "deliveries.next",
+        "drivers.active"
+      ]
+    }
+  },
+  "salarie": {
+    "email": "salarie@leezr.test",
+    "landing": "http://127.0.0.1:8815/dashboard",
+    "/home": {
+      "final": "/home",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.anomalies",
+        "workforce.leave_pending",
+        "workforce.hours_trend"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]",
+        "200 GET /api/workforce/me/shifts [C1]",
+        "200 GET /api/workforce/me/leaves [C1]"
+      ],
+      "text_excerpt": "ACCUEIL PERSONNEL\nBonjour\nMardi 17 Novembre\nMon prochain créneau\nAucun créneau planifié pour le moment.\nVoir mon planning\nMon pointage\nNon pointé\n0 min\ntravaillées aujourd'hui\nPointer l'arrivée\n1\nDocuments à régulariser\n0\nCongés en attente\nMes widgets\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nAnomalies de pointage\n0\nAucune anomalie\nCongés à approuver\n1\nApprouver\nHeures travaillées\n7 derniers jours\n0\nh · Total sur la période\nAucune heure saisie sur la période\nWidgets disponibles\nTous les widgets sont ajoutés."
+    },
+    "/dashboard": {
+      "final": "/dashboard",
+      "heading": "",
+      "alice_mentions": 0,
+      "layout": [],
+      "catalog": [
+        "workforce.clock_live",
+        "workforce.anomalies",
+        "workforce.leave_pending",
+        "workforce.hours_trend"
+      ],
+      "widget_errors": [],
+      "widget_data_alice": [],
+      "calls": [
+        "200 GET /api/public/world",
+        "200 GET /api/me [C1]",
+        "200 GET /api/notifications/unread-count [C1]",
+        "200 GET /api/realtime/stream",
+        "200 GET /api/public/theme",
+        "200 GET /api/my-invitations [C1]",
+        "200 GET /api/dashboard/suggestions [C1]",
+        "200 GET /api/dashboard/priorities [C1]",
+        "200 GET /api/profile/space [C1]",
+        "200 GET /api/dashboard/layout [C1]",
+        "200 GET /api/workforce/me [C1]",
+        "200 GET /api/dashboard/widgets/catalog [C1]",
+        "200 POST /api/dashboard/widgets/data [C1]"
+      ],
+      "text_excerpt": "Bienvenue,\n\nLeezr Logistics E2E 1792412257425\n\nMon activité\nÀ traiter\nRien à traiter\nAucune action en attente pour le moment.\nVue d'ensemble\nPrésents aujourd'hui\n0\n0 en pause · 1 attendus\nAnomalies de pointage\n0\nAucune anomalie\nHeures travaillées\n7 derniers jours\n0 h\nTotal sur la période\n—\nMoyenne / jour actif\n—\nMeilleur jour\nAucune heure saisie sur la période\nWidgets disponibles\nCongés à approuver\nDemandes de congé en attente d’approbation"
+    },
+    "direct_widgets": {
+      "status": 200,
+      "allowed": [
+        "workforce.clock_live",
+        "workforce.anomalies",
+        "workforce.hours_trend",
+        "workforce.leave_pending"
+      ],
+      "denied": [
+        "workforce.headcount",
+        "planning.shifts",
+        "compliance.rate",
+        "compliance.roles",
+        "compliance.overdue",
+        "compliance.pending",
+        "shipments.overview",
+        "logistics.fleet",
+        "documents.detail",
+        "billing.plan_badge",
+        "workforce.timesheet_pending",
+        "deliveries.my_today",
+        "deliveries.next",
+        "drivers.active"
+      ]
+    }
+  }
+}

@@ -1,0 +1,590 @@
+{
+  "salarie@leezr.test": {
+    "/modules": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"modules\":[{\"key\":\"core.dashboard\",\"name\":\"Dashboard\",\"description\":\"Company dashboard with customizable widget grid\",\"is_enabled_globally\":true,\"is_enabled_fo"
+    },
+    "/modules/workforce/settings": {
+      "s": 200,
+      "size": 93,
+      "sample": "{\"module_key\":\"workforce\",\"settings\":{},\"mandatory_fields\":[],\"incomplete_profiles_count\":22}"
+    },
+    "/modules/quote?keys[]=workforce_payroll": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"total\":0,\"currency\":\"EUR\",\"lines\":[{\"key\":\"workforce_payroll\",\"title\":\"Paie & Déclarations\",\"amount\":0,\"pricing_model\":\"per_seat\"}],\"included\":[{\"key\":\"workfo"
+    },
+    "/modules/workforce/deactivation-preview": {
+      "s": 200,
+      "size": 19,
+      "sample": "{\"has_addon\":false}"
+    },
+    "/company": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"base_fields\":{\"id\":1,\"name\":\"Leezr Logistics E2E 1792412257425\",\"slug\":\"leezr-logistics\",\"status\":\"active\"},\"dynamic_fields\":[{\"code\":\"siret\",\"label\":\"SIRET\","
+    },
+    "/company/field-definitions": {
+      "s": 200,
+      "size": 25,
+      "sample": "{\"custom_definitions\":[]}"
+    },
+    "/company/field-activations": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"field_activations\":[{\"id\":51,\"company_id\":1,\"field_definition_id\":17,\"enabled\":true,\"required_override\":false,\"order\":0,\"created_at\":\"2026-10-17T00:13:28.0000"
+    },
+    "/company/legal-structure": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"market_name\":\"France\",\"legal_status_key\":\"sas\",\"legal_statuses\":[{\"key\":\"sas\",\"name\":\"SAS\",\"description\":\"Société par Actions Simplifiée\"},{\"key\":\"sasu\",\"name"
+    },
+    "/dashboard/priorities": {
+      "s": 200,
+      "size": 34,
+      "sample": "{\"priorities\":[],\"unavailable\":[]}"
+    },
+    "/dashboard/onboarding": {
+      "s": 403,
+      "size": 25,
+      "sample": "{\"message\":\"Owner only.\"}"
+    },
+    "/company/members": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: members.view|documents.manage|shipments.assign\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"members.view|do"
+    },
+    "/company/people": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: members.view|workforce.view\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"members.view|workforce.view\",\"comp"
+    },
+    "/company/people/employee-2": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: members.view|workforce.view\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"members.view|workforce.view\",\"comp"
+    },
+    "/company/roles": {
+      "s": 403,
+      "size": 129,
+      "sample": "{\"message\":\"Permission required: roles.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"roles.view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/company/audit-logs": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/audit-logs could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/Users/"
+    },
+    "/company/document-requests": {
+      "s": 405,
+      "size": 160,
+      "sample": "{\"message\":\"The GET method is not supported for route api/company/document-requests. Supported methods: POST.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exce"
+    },
+    "/workforce/employees": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/workforce/requirements": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: settings.manage|documents.configure\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"settings.manage|documents."
+    },
+    "/workforce/onboarding-files": {
+      "s": 403,
+      "size": 141,
+      "sample": "{\"message\":\"Permission required: workforce.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.manage\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/workforce/job-roles": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/workforce/organization/profile": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/billing/invoices": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: billing.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"billing.manage\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/company/billing/invoices": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/billing/invoices could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/"
+    },
+    "/workforce/timesheets": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[],\"first_page_url\":\"http://127.0.0.1:8815/api/workforce/timesheets?page=1\",\"from\":null,\"last_page\":1,\"last_page_url\":\"http://127.0.0.1"
+    },
+    "/workforce/leaves": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"Not authorized to view the approval queue.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\HttpException\",\"file\":\"/Users/djamel/Sites.noind"
+    },
+    "/workforce/planning/shifts": {
+      "s": 403,
+      "size": 155,
+      "sample": "{\"message\":\"Permission required: workforce.planning_view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.planning_view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/shipments": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: shipments.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"shipments.view\",\"company_id\":1,\"user_id\":54}}"
+    },
+    "/feature-flags": {
+      "s": 200,
+      "size": 2,
+      "sample": "[]"
+    },
+    "/nav": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"groups\":[{\"key\":\"home\",\"titleKey\":\"\",\"placement\":\"nav\",\"items\":[{\"key\":\"dashboard\",\"title\":\"Dashboard\",\"to\":{\"name\":\"dashboard\"},\"icon\":\"tabler-smart-home\",\"p"
+    }
+  },
+  "bob@leezr.test": {
+    "/modules": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"modules\":[{\"key\":\"core.dashboard\",\"name\":\"Dashboard\",\"description\":\"Company dashboard with customizable widget grid\",\"is_enabled_globally\":true,\"is_enabled_fo"
+    },
+    "/modules/workforce/settings": {
+      "s": 200,
+      "size": 93,
+      "sample": "{\"module_key\":\"workforce\",\"settings\":{},\"mandatory_fields\":[],\"incomplete_profiles_count\":22}"
+    },
+    "/modules/quote?keys[]=workforce_payroll": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"total\":0,\"currency\":\"EUR\",\"lines\":[{\"key\":\"workforce_payroll\",\"title\":\"Paie & Déclarations\",\"amount\":0,\"pricing_model\":\"per_seat\"}],\"included\":[{\"key\":\"workfo"
+    },
+    "/modules/workforce/deactivation-preview": {
+      "s": 200,
+      "size": 19,
+      "sample": "{\"has_addon\":false}"
+    },
+    "/company": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"base_fields\":{\"id\":1,\"name\":\"Leezr Logistics E2E 1792412257425\",\"slug\":\"leezr-logistics\",\"status\":\"active\"},\"dynamic_fields\":[{\"code\":\"siret\",\"label\":\"SIRET\","
+    },
+    "/company/field-definitions": {
+      "s": 200,
+      "size": 25,
+      "sample": "{\"custom_definitions\":[]}"
+    },
+    "/company/field-activations": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"field_activations\":[{\"id\":51,\"company_id\":1,\"field_definition_id\":17,\"enabled\":true,\"required_override\":false,\"order\":0,\"created_at\":\"2026-10-17T00:13:28.0000"
+    },
+    "/company/legal-structure": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"market_name\":\"France\",\"legal_status_key\":\"sas\",\"legal_statuses\":[{\"key\":\"sas\",\"name\":\"SAS\",\"description\":\"Société par Actions Simplifiée\"},{\"key\":\"sasu\",\"name"
+    },
+    "/dashboard/priorities": {
+      "s": 200,
+      "size": 34,
+      "sample": "{\"priorities\":[],\"unavailable\":[]}"
+    },
+    "/dashboard/onboarding": {
+      "s": 403,
+      "size": 25,
+      "sample": "{\"message\":\"Owner only.\"}"
+    },
+    "/company/members": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"members\":[{\"id\":1,\"user\":{\"id\":1,\"first_name\":\"Djamel\",\"last_name\":\"\",\"display_name\":\"Djamel\",\"email\":\"owner@leezr.test\",\"avatar\":null,\"status\":\"active\"},\"rol"
+    },
+    "/company/people": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"data\":[{\"person_ref\":\"user-2\",\"user_id\":2,\"employee_id\":null,\"name\":\"Alice Martin\",\"email\":\"admin@leezr.test\",\"avatar\":null,\"account_state\":\"connected\",\"role\""
+    },
+    "/company/people/employee-2": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"person_ref\":\"employee-2\",\"user_id\":2,\"employee_id\":2,\"membership_id\":3,\"identity\":{\"first_name\":\"Alice\",\"last_name\":\"Martin\",\"display_name\":\"Alice Martin\",\"lo"
+    },
+    "/company/roles": {
+      "s": 403,
+      "size": 128,
+      "sample": "{\"message\":\"Permission required: roles.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"roles.view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/company/audit-logs": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/audit-logs could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/Users/"
+    },
+    "/company/document-requests": {
+      "s": 405,
+      "size": 160,
+      "sample": "{\"message\":\"The GET method is not supported for route api/company/document-requests. Supported methods: POST.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exce"
+    },
+    "/workforce/employees": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/workforce/requirements": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: settings.manage|documents.configure\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"settings.manage|documents."
+    },
+    "/workforce/onboarding-files": {
+      "s": 403,
+      "size": 140,
+      "sample": "{\"message\":\"Permission required: workforce.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.manage\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/workforce/job-roles": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/workforce/organization/profile": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/billing/invoices": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: billing.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"billing.manage\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/company/billing/invoices": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/billing/invoices could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/"
+    },
+    "/workforce/timesheets": {
+      "s": 403,
+      "size": 156,
+      "sample": "{\"message\":\"Permission required: workforce.timesheet_view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.timesheet_view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/workforce/leaves": {
+      "s": 403,
+      "size": 154,
+      "sample": "{\"message\":\"Permission required: workforce.leave_request\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.leave_request\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/workforce/planning/shifts": {
+      "s": 403,
+      "size": 154,
+      "sample": "{\"message\":\"Permission required: workforce.planning_view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.planning_view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/shipments": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: shipments.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"shipments.view\",\"company_id\":1,\"user_id\":3}}"
+    },
+    "/feature-flags": {
+      "s": 200,
+      "size": 2,
+      "sample": "[]"
+    },
+    "/nav": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"groups\":[{\"key\":\"home\",\"titleKey\":\"\",\"placement\":\"nav\",\"items\":[{\"key\":\"dashboard\",\"title\":\"Dashboard\",\"to\":{\"name\":\"dashboard\"},\"icon\":\"tabler-smart-home\",\"p"
+    }
+  },
+  "manager@leezr.test": {
+    "/modules": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"modules\":[{\"key\":\"core.dashboard\",\"name\":\"Dashboard\",\"description\":\"Company dashboard with customizable widget grid\",\"is_enabled_globally\":true,\"is_enabled_fo"
+    },
+    "/modules/workforce/settings": {
+      "s": 200,
+      "size": 93,
+      "sample": "{\"module_key\":\"workforce\",\"settings\":{},\"mandatory_fields\":[],\"incomplete_profiles_count\":22}"
+    },
+    "/modules/quote?keys[]=workforce_payroll": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"total\":0,\"currency\":\"EUR\",\"lines\":[{\"key\":\"workforce_payroll\",\"title\":\"Paie & Déclarations\",\"amount\":0,\"pricing_model\":\"per_seat\"}],\"included\":[{\"key\":\"workfo"
+    },
+    "/modules/workforce/deactivation-preview": {
+      "s": 200,
+      "size": 19,
+      "sample": "{\"has_addon\":false}"
+    },
+    "/company": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"base_fields\":{\"id\":1,\"name\":\"Leezr Logistics E2E 1792412257425\",\"slug\":\"leezr-logistics\",\"status\":\"active\"},\"dynamic_fields\":[{\"code\":\"siret\",\"label\":\"SIRET\","
+    },
+    "/company/field-definitions": {
+      "s": 200,
+      "size": 25,
+      "sample": "{\"custom_definitions\":[]}"
+    },
+    "/company/field-activations": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"field_activations\":[{\"id\":51,\"company_id\":1,\"field_definition_id\":17,\"enabled\":true,\"required_override\":false,\"order\":0,\"created_at\":\"2026-10-17T00:13:28.0000"
+    },
+    "/company/legal-structure": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"market_name\":\"France\",\"legal_status_key\":\"sas\",\"legal_statuses\":[{\"key\":\"sas\",\"name\":\"SAS\",\"description\":\"Société par Actions Simplifiée\"},{\"key\":\"sasu\",\"name"
+    },
+    "/dashboard/priorities": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"priorities\":[{\"key\":\"onboarding_incomplete\",\"count\":14,\"severity\":\"warning\",\"icon\":\"tabler-user-plus\",\"to\":{\"name\":\"company-people\"},\"space\":\"team\"},{\"key\":\"t"
+    },
+    "/dashboard/onboarding": {
+      "s": 403,
+      "size": 25,
+      "sample": "{\"message\":\"Owner only.\"}"
+    },
+    "/company/members": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: members.view|documents.manage|shipments.assign\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"members.view|do"
+    },
+    "/company/people": {
+      "s": 200,
+      "size": 102,
+      "sample": "{\"data\":[],\"total\":0,\"per_page\":20,\"current_page\":1,\"last_page\":0,\"facets\":{\"access\":false,\"hr\":true}}"
+    },
+    "/company/people/employee-2": {
+      "s": 404,
+      "size": 47,
+      "sample": "{\"message\":\"Person not found in this company.\"}"
+    },
+    "/company/roles": {
+      "s": 403,
+      "size": 129,
+      "sample": "{\"message\":\"Permission required: roles.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"roles.view\",\"company_id\":1,\"user_id\":55}}"
+    },
+    "/company/audit-logs": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/audit-logs could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/Users/"
+    },
+    "/company/document-requests": {
+      "s": 405,
+      "size": 160,
+      "sample": "{\"message\":\"The GET method is not supported for route api/company/document-requests. Supported methods: POST.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exce"
+    },
+    "/workforce/employees": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[],\"first_page_url\":\"http://127.0.0.1:8815/api/workforce/employees?page=1\",\"from\":null,\"last_page\":1,\"last_page_url\":\"http://127.0.0.1:"
+    },
+    "/workforce/requirements": {
+      "s": 403,
+      "size": 160,
+      "sample": "{\"message\":\"One of these permissions is required: settings.manage|documents.configure\",\"debug\":{\"ability\":\"use-any-permission\",\"key\":\"settings.manage|documents."
+    },
+    "/workforce/onboarding-files": {
+      "s": 403,
+      "size": 141,
+      "sample": "{\"message\":\"Permission required: workforce.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.manage\",\"company_id\":1,\"user_id\":55}}"
+    },
+    "/workforce/job-roles": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"0\":{\"id\":4,\"company_id\":1,\"department_id\":3,\"title\":\"Gestionnaire administratif\",\"level\":\"agent\",\"description\":null,\"metadata\":null,\"created_at\":\"2026-10-28T0"
+    },
+    "/workforce/organization/profile": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"org_profile_key\":\"last_mile_delivery\",\"org_profile_label\":\"Livraison dernier kilomètre\",\"available_profiles\":[{\"key\":\"last_mile_delivery\",\"label\":\"Livraison d"
+    },
+    "/billing/invoices": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: billing.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"billing.manage\",\"company_id\":1,\"user_id\":55}}"
+    },
+    "/company/billing/invoices": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/billing/invoices could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/"
+    },
+    "/workforce/timesheets": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[{\"id\":135,\"company_id\":1,\"employee_id\":1338,\"period_start\":\"2026-10-26T00:00:00.000000Z\",\"period_end\":\"2026-11-01T00:00:00.000000Z\",\"s"
+    },
+    "/workforce/leaves": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[{\"id\":2,\"company_id\":1,\"employee_id\":3,\"leave_type_id\":1,\"date_from\":\"2028-06-25T00:00:00.000000Z\",\"date_to\":\"2028-06-27T00:00:00.0000"
+    },
+    "/workforce/planning/shifts": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[],\"first_page_url\":\"http://127.0.0.1:8815/api/workforce/planning/shifts?page=1\",\"from\":null,\"last_page\":1,\"last_page_url\":\"http://127."
+    },
+    "/shipments": {
+      "s": 403,
+      "size": 137,
+      "sample": "{\"message\":\"Permission required: shipments.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"shipments.view\",\"company_id\":1,\"user_id\":55}}"
+    },
+    "/feature-flags": {
+      "s": 200,
+      "size": 2,
+      "sample": "[]"
+    },
+    "/nav": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"groups\":[{\"key\":\"home\",\"titleKey\":\"\",\"placement\":\"nav\",\"items\":[{\"key\":\"dashboard\",\"title\":\"Dashboard\",\"to\":{\"name\":\"dashboard\"},\"icon\":\"tabler-smart-home\",\"p"
+    }
+  },
+  "admin@leezr.test": {
+    "/modules": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"modules\":[{\"key\":\"core.dashboard\",\"name\":\"Dashboard\",\"description\":\"Company dashboard with customizable widget grid\",\"is_enabled_globally\":true,\"is_enabled_fo"
+    },
+    "/modules/workforce/settings": {
+      "s": 200,
+      "size": 93,
+      "sample": "{\"module_key\":\"workforce\",\"settings\":{},\"mandatory_fields\":[],\"incomplete_profiles_count\":22}"
+    },
+    "/modules/quote?keys[]=workforce_payroll": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"total\":0,\"currency\":\"EUR\",\"lines\":[{\"key\":\"workforce_payroll\",\"title\":\"Paie & Déclarations\",\"amount\":0,\"pricing_model\":\"per_seat\"}],\"included\":[{\"key\":\"workfo"
+    },
+    "/modules/workforce/deactivation-preview": {
+      "s": 200,
+      "size": 19,
+      "sample": "{\"has_addon\":false}"
+    },
+    "/company": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"base_fields\":{\"id\":1,\"name\":\"Leezr Logistics E2E 1792412257425\",\"slug\":\"leezr-logistics\",\"status\":\"active\"},\"dynamic_fields\":[{\"code\":\"siret\",\"label\":\"SIRET\","
+    },
+    "/company/field-definitions": {
+      "s": 200,
+      "size": 25,
+      "sample": "{\"custom_definitions\":[]}"
+    },
+    "/company/field-activations": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"field_activations\":[{\"id\":51,\"company_id\":1,\"field_definition_id\":17,\"enabled\":true,\"required_override\":false,\"order\":0,\"created_at\":\"2026-10-17T00:13:28.0000"
+    },
+    "/company/legal-structure": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"market_name\":\"France\",\"legal_status_key\":\"sas\",\"legal_statuses\":[{\"key\":\"sas\",\"name\":\"SAS\",\"description\":\"Société par Actions Simplifiée\"},{\"key\":\"sasu\",\"name"
+    },
+    "/dashboard/priorities": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"priorities\":[{\"key\":\"shipments_unassigned\",\"count\":1,\"severity\":\"warning\",\"icon\":\"tabler-user-question\",\"to\":{\"name\":\"company-shipments\"},\"space\":\"activity\"}]"
+    },
+    "/dashboard/onboarding": {
+      "s": 403,
+      "size": 25,
+      "sample": "{\"message\":\"Owner only.\"}"
+    },
+    "/company/members": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"members\":[{\"id\":1,\"user\":{\"id\":1,\"first_name\":\"Djamel\",\"last_name\":\"\",\"display_name\":\"Djamel\",\"email\":\"owner@leezr.test\",\"avatar\":null,\"status\":\"active\"},\"rol"
+    },
+    "/company/people": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"data\":[{\"person_ref\":\"user-2\",\"user_id\":2,\"employee_id\":null,\"name\":\"Alice Martin\",\"email\":\"admin@leezr.test\",\"avatar\":null,\"account_state\":\"connected\",\"role\""
+    },
+    "/company/people/employee-2": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"person_ref\":\"employee-2\",\"user_id\":2,\"employee_id\":2,\"membership_id\":3,\"identity\":{\"first_name\":\"Alice\",\"last_name\":\"Martin\",\"display_name\":\"Alice Martin\",\"lo"
+    },
+    "/company/roles": {
+      "s": 403,
+      "size": 128,
+      "sample": "{\"message\":\"Permission required: roles.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"roles.view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/company/audit-logs": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/audit-logs could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/Users/"
+    },
+    "/company/document-requests": {
+      "s": 405,
+      "size": 160,
+      "sample": "{\"message\":\"The GET method is not supported for route api/company/document-requests. Supported methods: POST.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exce"
+    },
+    "/workforce/employees": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/workforce/requirements": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"parallel_mode\":true,\"scope\":\"all\",\"scopes\":[{\"key\":\"all\",\"label\":null,\"job_role_id\":null,\"people\":52,\"accountless\":36},{\"key\":\"job_role:4\",\"label\":\"Gestionnai"
+    },
+    "/workforce/onboarding-files": {
+      "s": 403,
+      "size": 140,
+      "sample": "{\"message\":\"Permission required: workforce.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.manage\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/workforce/job-roles": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/workforce/organization/profile": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: workforce.view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/billing/invoices": {
+      "s": 403,
+      "size": 136,
+      "sample": "{\"message\":\"Permission required: billing.manage\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"billing.manage\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/company/billing/invoices": {
+      "s": 404,
+      "size": 160,
+      "sample": "{\"message\":\"The route api/company/billing/invoices could not be found.\",\"exception\":\"Symfony\\\\Component\\\\HttpKernel\\\\Exception\\\\NotFoundHttpException\",\"file\":\"/"
+    },
+    "/workforce/timesheets": {
+      "s": 403,
+      "size": 156,
+      "sample": "{\"message\":\"Permission required: workforce.timesheet_view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.timesheet_view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/workforce/leaves": {
+      "s": 403,
+      "size": 154,
+      "sample": "{\"message\":\"Permission required: workforce.leave_request\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.leave_request\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/workforce/planning/shifts": {
+      "s": 403,
+      "size": 154,
+      "sample": "{\"message\":\"Permission required: workforce.planning_view\",\"debug\":{\"ability\":\"use-permission\",\"key\":\"workforce.planning_view\",\"company_id\":1,\"user_id\":2}}"
+    },
+    "/shipments": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"current_page\":1,\"data\":[{\"id\":5,\"company_id\":1,\"created_by_user_id\":1,\"assigned_to_user_id\":36,\"reference\":\"SHP-20261114-0001\",\"status\":\"planned\",\"origin_addr"
+    },
+    "/feature-flags": {
+      "s": 200,
+      "size": 2,
+      "sample": "[]"
+    },
+    "/nav": {
+      "s": 200,
+      "size": 160,
+      "sample": "{\"groups\":[{\"key\":\"home\",\"titleKey\":\"\",\"placement\":\"nav\",\"items\":[{\"key\":\"dashboard\",\"title\":\"Dashboard\",\"to\":{\"name\":\"dashboard\"},\"icon\":\"tabler-smart-home\",\"p"
+    }
+  }
+}

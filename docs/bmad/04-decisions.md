@@ -29031,3 +29031,25 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - **Conséquences** :
   - aucune modification de code applicatif, de migration, de Billing ou de paie ;
   - décision attendue sur les 61 tâches vouées à l'échec.
+
+## ADR-815 — Audit directeur de l'espace Company (audit uniquement)
+
+- **Date** : 2026-11-17, base DEV `70ec3dbe`. Rapport : `docs/bmad/ADR-815-COMPANY-GLOBAL-AUDIT.md`, annexes `docs/bmad/adr815/`.
+- **Contexte** : l'espace Company est jugé incohérent malgré les lots précédents ; `/home` et `/dashboard` affichent des widgets « d'Alice ».
+- **Méthode** : code, lecture seule de la base DEV, recette navigateur et sondes HTTP sur un **clone isolé** (`leezr_audit815`). Empreinte de la base DEV identique avant et après l'audit.
+- **Constats principaux** :
+  - **« Alice »** : le navigateur est connecté avec `admin@leezr.test`, qui **est** Alice (cause G). La confusion est aggravée par une grille commune à `/home` et `/dashboard`.
+  - **P0** : agrégats d'entreprise servis à un salarié sous des droits personnels.
+  - **Droits** : le chauffeur lit l'annuaire complet, alors qu'un rôle RH ne voit aucune fiche (`workforce.view` sans `workforce.manage`).
+  - **Rôle RBAC** : il porte, en plus des droits, l'atterrissage, les widgets, les pièces et les champs.
+  - **Exigences** : trois autorités (société, rôle, poste) ; la page des exigences par poste est déclarée « sans effet ».
+  - **Embauche** : deux créations de salarié ; six chemins de création de demandes, dont une écriture lors d'une lecture.
+  - **Vocabulaire** : quatre sens du mot « onboarding ».
+- **Proposition (non décidée)** :
+  - le poste porte les exigences, sur la table `requirements` existante ;
+  - un assistant « Embaucher », sur place ou à distance, sur le moteur d'intégration existant ;
+  - une file documentaire unique ;
+  - un seul accueil à blocs gardés par permission.
+  
+  Lots R1 (P0) à R8 (P4) ; décisions produit D1 à D8.
+- **Conséquences** : aucune modification applicative, aucune migration, aucune donnée modifiée. Implémentation soumise à validation produit.
