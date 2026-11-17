@@ -4445,7 +4445,9 @@
       "delivered": "Livrées",
       "canceled": "Annulées",
       "draft": "Brouillon"
-    }
+    },
+    "plan": "Planifier",
+    "planned": "Planification enregistrée."
   },
   "deliveries": {
     "title": "Mes livraisons",

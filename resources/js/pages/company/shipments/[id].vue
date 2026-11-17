@@ -1,5 +1,6 @@
 <script setup>
 import { formatDate } from '@/utils/datetime'
+import { $api } from '@/utils/api'
 import { useAuthStore } from '@/core/stores/auth'
 import { useMembersStore } from '@/modules/company/members/members.store'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
@@ -134,6 +135,28 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+// ADR-818 (chantier H) — planification après création (date, adresses, notes) tant que l'expédition n'est pas partie.
+const canPlan = computed(() => auth.hasPermission('shipments.create') && ['draft', 'planned'].includes(shipment.value?.status))
+const planOpen = ref(false)
+const planSaving = ref(false)
+const planForm = ref({})
+const openPlan = () => {
+  planForm.value = { scheduled_at: shipment.value.scheduled_at ? String(shipment.value.scheduled_at).slice(0, 16) : '', origin_address: shipment.value.origin_address || '', destination_address: shipment.value.destination_address || '', notes: shipment.value.notes || '' }
+  planOpen.value = true
+}
+const savePlan = async () => {
+  planSaving.value = true
+  errorMessage.value = ''
+  try {
+    await $api(`/shipments/${shipment.value.id}`, { method: 'PUT', body: { ...planForm.value, scheduled_at: planForm.value.scheduled_at || null } })
+    await shipmentStore.fetchShipment(shipment.value.id)
+    successMessage.value = t('shipments.planned')
+    planOpen.value = false
+  }
+  catch (e) { errorMessage.value = Object.values(e?.data?.errors || {})[0]?.[0] || e?.data?.message || t('common.error') }
+  finally { planSaving.value = false }
+}
 </script>
 
 <template>
@@ -157,7 +180,64 @@ onMounted(async () => {
       >
         {{ statusLabel(shipment.status) }}
       </VChip>
+      <VSpacer />
+      <VBtn
+        v-if="canPlan"
+        variant="tonal"
+        prepend-icon="tabler-calendar-event"
+        data-test="shipment-plan"
+        @click="openPlan"
+      >
+        {{ t('shipments.plan') }}
+      </VBtn>
     </div>
+
+    <AppDialog
+      v-model="planOpen"
+      :title="t('shipments.plan')"
+      :max-width="560"
+    >
+      <AppTextField
+        v-model="planForm.scheduled_at"
+        type="datetime-local"
+        :label="t('shipments.scheduledDate')"
+        class="mb-3"
+        data-test="shipment-plan-date"
+      />
+      <AppTextarea
+        v-model="planForm.origin_address"
+        rows="2"
+        :label="t('shipments.originAddress')"
+        class="mb-3"
+      />
+      <AppTextarea
+        v-model="planForm.destination_address"
+        rows="2"
+        :label="t('shipments.destinationAddress')"
+        class="mb-3"
+      />
+      <AppTextarea
+        v-model="planForm.notes"
+        rows="2"
+        :label="t('shipments.notes')"
+      />
+      <template #actions>
+        <VBtn
+          variant="text"
+          @click="planOpen = false"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          :loading="planSaving"
+          data-test="shipment-plan-save"
+          @click="savePlan"
+        >
+          {{ t('common.save') }}
+        </VBtn>
+      </template>
+    </AppDialog>
 
     <VProgressLinear
       v-if="isLoading"

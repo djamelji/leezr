@@ -534,6 +534,9 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
     // ADR-806/807 — explicit server scopes. COLLECTIVE (any shipment of the company) = shipments.view + the
     // operation permission. OWN (« my deliveries ») = shipments.view_own + the operation, AND the resource
     // rule « assigned to me » checked on the locked row. A permission never replaces the assignment rule.
+    // ADR-818 (chantier H) : planification (date, adresses, notes) tant que l'expédition n'est pas partie.
+    Route::put('/shipments/{id}', [ShipmentController::class, 'update'])
+        ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.create']);
     Route::put('/shipments/{id}/status', [ShipmentController::class, 'changeStatus'])
         ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.manage_status']);
     Route::post('/shipments/{id}/assign', [ShipmentController::class, 'assign'])

@@ -4445,7 +4445,9 @@
       "delivered": "Delivered",
       "canceled": "Canceled",
       "draft": "Draft"
-    }
+    },
+    "plan": "Plan",
+    "planned": "Planning saved."
   },
   "deliveries": {
     "title": "My Deliveries",

@@ -449,4 +449,21 @@ class ShipmentWorkflowTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors('status');
     }
+
+    /** ADR-818 (chantier H) — a shipment is planned / rescheduled until it leaves ; never once on the road ; tenant-scoped. */
+    public function test_shipment_is_rescheduled_until_it_leaves(): void
+    {
+        $shipment = $this->createShipment();
+        $at = now()->addDays(3)->setTime(9, 30)->toIso8601String();
+        $this->actAs($this->owner)->putJson("/api/shipments/{$shipment->id}", ['scheduled_at' => $at, 'destination_address' => '1 Quai Neuf'])
+            ->assertOk()->assertJsonPath('shipment.destination_address', '1 Quai Neuf');
+        $this->assertSame(now()->addDays(3)->setTime(9, 30)->format('Y-m-d H:i'), $shipment->fresh()->scheduled_at->format('Y-m-d H:i'));
+
+        $shipment->update(['status' => Shipment::STATUS_IN_TRANSIT]);
+        $this->actAs($this->owner)->putJson("/api/shipments/{$shipment->id}", ['notes' => 'x'])->assertStatus(422);
+
+        $other = Company::create(['name' => 'Other', 'slug' => 'other-'.uniqid(), 'jobdomain_key' => 'logistique']);
+        $foreign = Shipment::create(['company_id' => $other->id, 'created_by_user_id' => $this->owner->id, 'reference' => Shipment::generateReference($other->id), 'status' => Shipment::STATUS_DRAFT]);
+        $this->actAs($this->owner)->putJson("/api/shipments/{$foreign->id}", ['notes' => 'x'])->assertNotFound();
+    }
 }

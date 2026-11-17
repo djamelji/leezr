@@ -53,6 +53,21 @@ class ShipmentController
         ]);
     }
 
+    /** ADR-818 (chantier H) — plan / reschedule a shipment that is not on the road yet. */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'origin_address' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'destination_address' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'scheduled_at' => ['sometimes', 'nullable', 'date'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
+        ]);
+        $company = $request->attributes->get('company');
+        \App\Modules\Logistics\Shipments\UseCases\RescheduleShipment::handle($company, $request->user(), $id, $data);
+
+        return response()->json(['shipment' => ShipmentReadModel::find(company: $company, id: $id)]);
+    }
+
     public function assign(AssignShipmentRequest $request, int $id): JsonResponse
     {
         try {
