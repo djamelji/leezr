@@ -38,7 +38,10 @@ const docLabel = d => (te(`documents.type.${d.code}`) ? t(`documents.type.${d.co
 
 const ORIGIN_TONE = { standard: 'secondary', jobdomain: 'info', module: 'primary', custom: 'success' }
 const STATUS_TONE = { active: 'success', available: 'secondary', recommended: 'info' }
-const originLabel = o => (o.kind === 'module' ? o.name : o.kind === 'jobdomain' && o.recommended ? t('catalogs.origin.jobdomainRecommended') : t(`catalogs.origin.${o.kind}`))
+const { moduleName } = useCatalogText()
+// ADR-820 : « Standard » n'est affiché que s'il est la seule origine (moins de bruit), modules traduits.
+const shownOrigins = list => (list.length > 1 ? list.filter(o => o.kind !== 'standard') : list)
+const originLabel = o => (o.kind === 'module' ? moduleName(o.module, o.name) : o.kind === 'jobdomain' && o.recommended ? t('catalogs.origin.jobdomainRecommended') : t(`catalogs.origin.${o.kind}`))
 
 const rows = computed(() => {
   const list = (tab.value === 'fields' ? data.value?.fields : data.value?.documents) || []
@@ -259,7 +262,7 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
         <template #item.origins="{ item }">
           <div class="d-flex flex-wrap gap-1">
             <VChip
-              v-for="(o, i) in item.origins"
+              v-for="(o, i) in shownOrigins(item.origins)"
               :key="i"
               size="small"
               label
@@ -293,8 +296,8 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
             </VChip>
             <span
               v-if="!item.used_by.everyone && !item.required_for_everyone && !item.used_by.positions.length"
-              class="text-caption text-disabled"
-            >{{ t('catalogs.notRequired') }}</span>
+              class="text-disabled"
+            >—</span>
           </div>
         </template>
         <template #item.status="{ item }">

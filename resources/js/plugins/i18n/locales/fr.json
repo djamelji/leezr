@@ -2744,7 +2744,13 @@
       "submittedHint": "Une nouvelle version a été déposée et attend sa validation.",
       "rejected": "Refusé",
       "rejectedHint": "La version déposée a été refusée : déposez-en une nouvelle."
-    }
+    },
+    "ownerTitle": "Types de documents",
+    "ownerHint": "{member} types de documents de personne et {company} de l'entreprise sont disponibles. Disponible ne veut pas dire demandé : rien n'est réclamé sans règle explicite.",
+    "ownerCatalog": "Gérer les types disponibles",
+    "ownerCatalogHint": "Catalogues : activer, créer et retrouver où chaque type est utilisé.",
+    "ownerRequirements": "Décider de ce qui est demandé",
+    "ownerRequirementsHint": "Règles de l'entreprise et exigences par poste, avec aperçu des personnes concernées."
   },
   "fieldGroups": {
     "identity": "Identité",

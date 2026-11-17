@@ -188,6 +188,7 @@ final class VersionedCompanyInitializer
             DB::table('company_document_settings')->where('company_id', $company->id)
                 ->update(['requirements_authority' => \App\Core\Requirements\RequirementAuthority::POSITION, 'requirements_authority_at' => now(), 'requirements_authority_by' => $actorId, 'updated_at' => now()]);
             \App\Core\Requirements\RequirementAuthority::flush($company->id);
+            \App\Core\Fields\MandatoryContext::flush();
             self::cloneCompanyDashboard($company, $jd);
             $summary['pending_access'] = self::holdOperationalAccess($company, $summary['modules']['activated']);
             app(AuditLogger::class)->logCompany($company->id, 'company.versioned_initialized', 'company', (string) $company->id, ['actorId' => $actorId,

@@ -169,6 +169,9 @@ const saveAiSettings = async () => {
 }
 
 const isLoading = computed(() => store.loading.activations || store.loading.settings)
+// ADR-820 — modèle cible : les types se gèrent dans le catalogue, les exigences dans les postes et les règles
+// de l'entreprise. Une société historique (autorité « rôle ») garde son écran tel quel (compatibilité).
+const targetModel = computed(() => store.documentActivations.requirements_authority === 'position')
 </script>
 
 <template>
@@ -176,6 +179,44 @@ const isLoading = computed(() => store.loading.activations || store.loading.sett
     v-if="isLoading"
     type="card, card, card"
   />
+  <VCard
+    v-else-if="targetModel"
+    data-test="documents-types-owner"
+  >
+    <VCardItem>
+      <template #prepend>
+        <VAvatar
+          color="info"
+          variant="tonal"
+          rounded
+        >
+          <VIcon icon="tabler-file-settings" />
+        </VAvatar>
+      </template>
+      <VCardTitle>{{ t('companyDocuments.ownerTitle') }}</VCardTitle>
+      <VCardSubtitle class="text-wrap">
+        {{ t('companyDocuments.ownerHint', { member: activeMemberCount, company: activeCompanyCount }) }}
+      </VCardSubtitle>
+    </VCardItem>
+    <VList class="py-0">
+      <VListItem
+        :to="{ name: 'company-catalogs-tab', params: { tab: 'documents' } }"
+        prepend-icon="tabler-books"
+        :title="t('companyDocuments.ownerCatalog')"
+        :subtitle="t('companyDocuments.ownerCatalogHint')"
+        append-icon="tabler-chevron-right"
+        data-test="documents-owner-catalog"
+      />
+      <VListItem
+        :to="{ name: 'company-workforce-requirements' }"
+        prepend-icon="tabler-checklist"
+        :title="t('companyDocuments.ownerRequirements')"
+        :subtitle="t('companyDocuments.ownerRequirementsHint')"
+        append-icon="tabler-chevron-right"
+        data-test="documents-owner-requirements"
+      />
+    </VList>
+  </VCard>
   <VCard v-else>
     <VCardItem>
       <template #prepend>

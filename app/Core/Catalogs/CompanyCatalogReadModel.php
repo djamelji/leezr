@@ -30,6 +30,9 @@ use App\Core\Workforce\JobRole;
  */
 final class CompanyCatalogReadModel
 {
+    /** ADR-820 — standard fields replaced by a better standard one (hidden unless the company already uses them). */
+    public const SUPERSEDED = ['address' => 'personal_address_street'];
+
     public static function forCompany(Company $company): array
     {
         $market = $company->market_key;
@@ -116,6 +119,9 @@ final class CompanyCatalogReadModel
             ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $company->id))
             ->orderBy('default_order')->get()
             ->filter(fn ($d) => $inMarket($d->validation_rules ?? []))
+            // ADR-820 : l'ancienne adresse sur une ligne (`address`) double l'adresse structurée ; elle n'est plus
+            // proposée, sauf à une société qui l'utilise déjà (ses valeurs restent intactes).
+            ->reject(fn ($d) => isset(self::SUPERSEDED[$d->code]) && $d->company_id === null && ! $activeFields->has($d->id))
             ->map(function (FieldDefinition $d) use ($company, $activeFields, $jdFields, $moduleRefs, $origins, $status, $usedBy, $locale) {
                 $jd = $jdFields->get($d->code);
                 $mods = $moduleRefs['fields'][$d->code] ?? [];

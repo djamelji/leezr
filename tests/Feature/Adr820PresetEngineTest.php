@@ -102,6 +102,13 @@ class Adr820PresetEngineTest extends TestCase
         $this->assertSame([], $required, 'a new company requires nothing until a process is configured');
         $this->assertSame($before, FieldActivation::where('company_id', $existing->id)->count(), 'existing company untouched');
 
+        // Lot 3 : ni le métier ni le rôle d'accès ne rendent un champ obligatoire au modèle cible ; l'ancienne société garde ses règles.
+        \App\Core\Fields\MandatoryContext::flush();
+        $hire = FieldDefinition::whereNull('company_id')->where('code', 'hire_date')->sole();
+        $this->assertFalse(\App\Core\Fields\MandatoryContext::isMandatory($hire, \App\Core\Fields\MandatoryContext::load($c->id)));
+        $this->assertTrue(\App\Core\Fields\MandatoryContext::isMandatory($hire, \App\Core\Fields\MandatoryContext::load($existing->id)), 'historical company unchanged');
+        $this->assertSame('position', \App\Core\Documents\ReadModels\CompanyDocumentActivationReadModel::get($c)['requirements_authority']);
+
         // A new library version published after creation never changes the company.
         $v2 = \App\Core\Presets\Preset::where('family_key', 'lg_lib')->sole()->nextVersion(null);
         PresetService::updateDraft($v2, ['content' => ['fields' => [['code' => 'birth_date', 'subject' => 'person', 'included' => true]]]], null);

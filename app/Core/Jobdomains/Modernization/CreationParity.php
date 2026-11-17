@@ -33,6 +33,7 @@ final class CreationParity
         'roles.doc_config' => 'Per-role document prescriptions are not carried : a role is not a position (ADR-797).',
         'requirements_registry' => 'The versioned creation also records the requirements in the registry (parallel, non operational).',
         'modules.not_entitled' => 'Recommended modules the company is not entitled to are not activated (no implicit purchase, no ambiguous flag).',
+        'fields.structured_address' => 'The one-line address is replaced by the structured personal address in the starting library (ADR-820).',
     ];
 
     public static function measure(string $jobdomainKey, ?string $marketKey, ?string $planKey = null, bool $fromLegacy = false, ?array $confirmRoles = null): array
@@ -131,7 +132,8 @@ final class CreationParity
         };
         foreach (['settings', 'owner_role', 'field_activations', 'document_activations', 'dashboards', 'planning'] as $dim) {
             foreach (self::diffKeys($a[$dim], $b[$dim]) as [$item, $l, $v]) {
-                $push($dim, $item, $l, $v);
+                $structured = $dim === 'field_activations' && ($item === 'address' || str_starts_with((string) $item, 'personal_address_'));
+                $push($dim, $item, $l, $v, $structured ? 'fields.structured_address' : null);
             }
         }
         foreach (array_unique(array_merge(array_keys($a['roles']), array_keys($b['roles']))) as $key) {

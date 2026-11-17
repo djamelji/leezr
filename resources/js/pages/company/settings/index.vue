@@ -79,8 +79,8 @@ onMounted(async () => {
 })
 const statusOf = e => (e.settings?.status ? status.value[e.settings.status] : null)
 
-// ── ADR-782 (UX6) — composition : rubriques à gauche (desktop) ou en barre défilante (mobile),
-//    rubrique active suivie au défilement. Aucune donnée en plus, aucune requête en plus. ───────────
+// ── ADR-820 — composition Vuexy : rubriques en VList (desktop) / VTabs défilants (mobile), une VCard par
+//    rubrique, entrées en VListItem. Rubrique active suivie au défilement. Aucune donnée ni requête en plus. ──
 const { mdAndUp } = useDisplay()
 const navItems = computed(() => [
   ...sections.value.map(s => ({ key: s.key, label: t(`settingsHub.sections.${s.key}`), icon: SECTION_ICONS[s.key], count: s.items.length })),
@@ -100,186 +100,217 @@ const observe = () => {
     const visible = list.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
     if (visible[0]) activeKey.value = visible[0].target.id.replace('settings-', '')
   }, { rootMargin: '-96px 0px -55% 0px' })
-  document.querySelectorAll('.settings-content > section[id^="settings-"]').forEach(el => observer.observe(el))
+  document.querySelectorAll('[data-settings-section]').forEach(el => observer.observe(el))
 }
 watch(navItems, () => nextTick(observe), { flush: 'post' })
 onMounted(() => nextTick(observe))
 onBeforeUnmount(() => observer?.disconnect())
+const advancedPanel = computed({ get: () => (advancedOpen.value ? 0 : null), set: v => { advancedOpen.value = v === 0 } })
 </script>
 
 <template>
-  <div class="settings-page">
-    <AppPageHeader
-      :title="t('settingsHub.title')"
-      :description="t('settingsHub.subtitle')"
-    >
-      <template #actions>
-        <AppTextField
-          v-model="search"
-          :placeholder="t('settingsHub.search')"
-          prepend-inner-icon="tabler-search"
-          clearable
-          density="compact"
-          class="settings-search"
-          data-test="settings-search"
-        />
-      </template>
-    </AppPageHeader>
-
-    <div
-      v-if="!entries.length"
-      class="settings-empty"
-      data-test="settings-empty"
-    >
-      <VIcon
-        icon="tabler-settings-off"
-        size="28"
-        class="mb-2"
+  <div>
+    <div class="d-flex flex-wrap align-center gap-4 mb-6">
+      <div class="flex-grow-1">
+        <h4 class="text-h4 mb-1">
+          {{ t('settingsHub.title') }}
+        </h4>
+        <p class="text-body-1 mb-0">
+          {{ t('settingsHub.subtitle') }}
+        </p>
+      </div>
+      <AppTextField
+        v-model="search"
+        :placeholder="t('settingsHub.search')"
+        prepend-inner-icon="tabler-search"
+        clearable
+        :style="{ inlineSize: mdAndUp ? '300px' : '100%' }"
+        data-test="settings-search"
       />
-      <div>{{ t('settingsHub.empty') }}</div>
     </div>
 
-    <div
-      v-else
-      class="settings-layout"
-      :class="{ 'settings-layout--single': navItems.length <= 1 }"
+    <VCard
+      v-if="!entries.length"
+      data-test="settings-empty"
     >
-      <!-- Rubriques : colonne à gauche (desktop), barre défilante (mobile) -->
-      <nav
-        v-if="navItems.length > 1"
-        class="settings-nav"
-        :class="{ 'settings-nav--bar': !mdAndUp }"
-        :aria-label="t('settingsHub.title')"
+      <VCardText class="text-center py-12 text-medium-emphasis">
+        <VIcon
+          icon="tabler-settings-off"
+          size="28"
+          class="mb-2"
+        />
+        <div>{{ t('settingsHub.empty') }}</div>
+      </VCardText>
+    </VCard>
+
+    <VRow v-else>
+      <!-- Rubriques : liste à gauche (desktop), onglets défilants (mobile) -->
+      <VCol
+        v-if="navItems.length > 1 && mdAndUp"
+        cols="12"
+        md="3"
       >
-        <button
-          v-for="n in navItems"
-          :key="n.key"
-          type="button"
-          class="settings-nav__item"
-          :class="{ 'settings-nav__item--active': activeKey === n.key }"
-          :data-test="`settings-nav-${n.key}`"
-          @click="goTo(n.key)"
+        <VCard
+          class="position-sticky"
+          style="inset-block-start: 88px;"
         >
-          <VIcon
-            :icon="n.icon"
-            size="18"
-          />
-          <span class="settings-nav__label">{{ n.label }}</span>
-        </button>
-      </nav>
-
-      <div class="settings-content">
-        <div
-          v-if="!sections.length && !advanced.length"
-          class="settings-empty"
+          <VList
+            nav
+            density="compact"
+            :aria-label="t('settingsHub.title')"
+          >
+            <VListItem
+              v-for="n in navItems"
+              :key="n.key"
+              :prepend-icon="n.icon"
+              :title="n.label"
+              :active="activeKey === n.key"
+              color="primary"
+              :data-test="`settings-nav-${n.key}`"
+              @click="goTo(n.key)"
+            />
+          </VList>
+        </VCard>
+      </VCol>
+      <VCol
+        cols="12"
+        :md="navItems.length > 1 ? 9 : 12"
+      >
+        <VTabs
+          v-if="navItems.length > 1 && !mdAndUp"
+          :model-value="activeKey"
+          show-arrows
+          class="border-b mb-4"
         >
-          {{ t('settingsHub.noMatch') }}
-        </div>
+          <VTab
+            v-for="n in navItems"
+            :key="n.key"
+            :value="n.key"
+            :prepend-icon="n.icon"
+            :data-test="`settings-nav-${n.key}`"
+            @click="goTo(n.key)"
+          >
+            {{ n.label }}
+          </VTab>
+        </VTabs>
 
-        <AppSettingsGroup
+        <VCard v-if="!sections.length && !advanced.length">
+          <VCardText class="text-center py-12 text-medium-emphasis">
+            {{ t('settingsHub.noMatch') }}
+          </VCardText>
+        </VCard>
+
+        <VCard
           v-for="s in sections"
           :id="`settings-${s.key}`"
           :key="s.key"
-          :title="t(`settingsHub.sections.${s.key}`)"
-          :description="t(`settingsHub.sectionHints.${s.key}`)"
+          data-settings-section
+          class="mb-6"
           :data-test="`settings-section-${s.key}`"
         >
-          <AppSettingRow
-            v-for="e in s.items"
-            :key="e.key"
-            :to="e.to"
-            :icon="e.icon"
-            :title="e.label"
-            :description="e.hint"
-            :hint="e.level === 'essential' ? t('settingsHub.levels.essential') : ''"
-            :status="statusOf(e)"
-            :status-test="`settings-status-${e.key}`"
-            :data-test="`settings-entry-${e.key}`"
-          />
-        </AppSettingsGroup>
+          <VCardItem>
+            <template #prepend>
+              <VAvatar
+                :icon="SECTION_ICONS[s.key]"
+                color="primary"
+                variant="tonal"
+                rounded
+              />
+            </template>
+            <VCardTitle>{{ t(`settingsHub.sections.${s.key}`) }}</VCardTitle>
+            <VCardSubtitle class="text-wrap">
+              {{ t(`settingsHub.sectionHints.${s.key}`) }}
+            </VCardSubtitle>
+          </VCardItem>
+          <VDivider />
+          <VList class="py-0">
+            <template
+              v-for="(e, i) in s.items"
+              :key="e.key"
+            >
+              <VDivider v-if="i" />
+              <VListItem
+                :to="e.to"
+                :prepend-icon="e.icon"
+                lines="two"
+                class="py-3"
+                :data-test="`settings-entry-${e.key}`"
+              >
+                <VListItemTitle class="font-weight-medium">
+                  {{ e.label }}
+                  <VChip
+                    v-if="e.level === 'essential'"
+                    size="x-small"
+                    label
+                    variant="tonal"
+                    color="primary"
+                    class="ms-2"
+                  >
+                    {{ t('settingsHub.levels.essential') }}
+                  </VChip>
+                </VListItemTitle>
+                <VListItemSubtitle class="text-wrap">
+                  {{ e.hint }}
+                </VListItemSubtitle>
+                <template #append>
+                  <VChip
+                    v-if="statusOf(e)"
+                    size="small"
+                    label
+                    variant="tonal"
+                    :color="statusOf(e).tone"
+                    class="me-2"
+                    :data-test="`settings-status-${e.key}`"
+                  >
+                    {{ statusOf(e).text }}
+                  </VChip>
+                  <VIcon
+                    icon="tabler-chevron-right"
+                    size="18"
+                    class="text-disabled"
+                  />
+                </template>
+              </VListItem>
+            </template>
+          </VList>
+        </VCard>
 
-        <!-- Administration avancée : discrète, repliée -->
-        <AppSettingsGroup
+        <!-- Administration avancée : repliée -->
+        <VExpansionPanels
           v-if="advanced.length"
           id="settings-advanced"
-          :title="t('settingsHub.advanced')"
-          :description="t('settingsHub.advancedHint')"
-          quiet
+          v-model="advancedPanel"
+          data-settings-section
           data-test="settings-advanced"
         >
-          <button
-            v-if="!advancedOpen"
-            type="button"
-            class="settings-advanced-toggle"
-            data-test="settings-advanced-toggle"
-            :aria-expanded="advancedOpen"
-            @click="advancedOpen = true"
-          >
-            {{ t('settingsHub.showAdvanced', { n: advanced.length }) }}
-            <VIcon
-              icon="tabler-chevron-down"
-              size="16"
-            />
-          </button>
-          <template v-else>
-            <AppSettingRow
-              v-for="e in advanced"
-              :key="e.key"
-              :to="e.to"
-              :icon="e.icon"
-              :title="e.label"
-              :description="e.hint"
-              :data-test="`settings-entry-${e.key}`"
-            />
-          </template>
-        </AppSettingsGroup>
-      </div>
-    </div>
+          <VExpansionPanel>
+            <VExpansionPanelTitle data-test="settings-advanced-toggle">
+              <div>
+                <div class="text-body-1 font-weight-medium">
+                  {{ t('settingsHub.advanced') }}
+                </div>
+                <div class="text-body-2 text-medium-emphasis">
+                  {{ t('settingsHub.advancedHint') }}
+                </div>
+              </div>
+            </VExpansionPanelTitle>
+            <VExpansionPanelText class="px-0">
+              <VList class="py-0">
+                <VListItem
+                  v-for="e in advanced"
+                  :key="e.key"
+                  :to="e.to"
+                  :prepend-icon="e.icon"
+                  :title="e.label"
+                  :subtitle="e.hint"
+                  append-icon="tabler-chevron-right"
+                  :data-test="`settings-entry-${e.key}`"
+                />
+              </VList>
+            </VExpansionPanelText>
+          </VExpansionPanel>
+        </VExpansionPanels>
+      </VCol>
+    </VRow>
   </div>
 </template>
-
-<style scoped>
-.settings-page { max-inline-size: 1024px; }
-.settings-search { inline-size: 300px; max-inline-size: 100%; }
-.settings-layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 32px; align-items: start; }
-/* ADR-786 : une seule rubrique → pas de colonne de navigation ; le contenu occupe toute la largeur. */
-.settings-layout--single { grid-template-columns: minmax(0, 1fr); }
-.settings-nav { position: sticky; inset-block-start: 88px; display: flex; flex-direction: column; gap: 2px; }
-.settings-nav__item {
-  display: flex; align-items: center; gap: 10px; inline-size: 100%;
-  padding: 7px 10px; border-radius: 8px; text-align: start; white-space: nowrap;
-  font-size: 0.875rem; line-height: 1.3;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-  transition: background-color 0.12s ease, color 0.12s ease;
-}
-.settings-nav__item:hover { background: rgba(var(--v-theme-on-surface), 0.04); color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
-.settings-nav__item--active { background: rgba(var(--v-theme-primary), 0.08); color: rgb(var(--v-theme-primary)); font-weight: 500; }
-.settings-nav__item:focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 1px; }
-.settings-nav__label { flex: 1 1 auto; min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
-.settings-nav__count { font-size: 0.75rem; color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity)); }
-.settings-content { min-inline-size: 0; }
-.settings-empty { padding: 48px 16px; text-align: center; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
-.settings-advanced-toggle {
-  display: flex; align-items: center; justify-content: space-between; inline-size: 100%;
-  padding: 12px 18px; font-size: 0.875rem;
-  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-}
-.settings-advanced-toggle:hover { background: rgba(var(--v-theme-on-surface), 0.035); }
-
-/* Mobile / tablette : les rubriques deviennent une barre défilante (le défilement reste DANS la barre). */
-@media (max-width: 959px) {
-  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .settings-search { inline-size: 100%; }
-  .settings-nav--bar {
-    position: sticky; inset-block-start: 64px; z-index: 2; flex-direction: row; gap: 6px;
-    overflow-x: auto; scrollbar-width: none; margin-inline: -4px; padding: 6px 4px;
-    background: rgb(var(--v-theme-background));
-  }
-  .settings-nav--bar::-webkit-scrollbar { display: none; }
-  .settings-nav--bar .settings-nav__item {
-    inline-size: auto; flex: none; white-space: nowrap; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  }
-  .settings-content { max-inline-size: none; }
-}
-</style>

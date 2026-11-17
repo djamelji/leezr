@@ -95,6 +95,7 @@ final class RequirementAuthoritySwitch
         DB::table('company_document_settings')->where('company_id', $this->company->id)
             ->update(['requirements_authority' => $authority, 'requirements_authority_at' => now(), 'requirements_authority_by' => $actor->id, 'updated_at' => now()]);
         RequirementAuthority::flush($this->company->id);
+        \App\Core\Fields\MandatoryContext::flush(); // ADR-820 : les obligations implicites dépendent de l'autorité
         app(AuditLogger::class)->logCompany($this->company->id, 'requirements.authority_switched', 'company', (string) $this->company->id, [
             'actorId' => $actor->id, 'actorType' => 'user',
             'metadata' => ['authority' => $authority, 'accepted_losses' => $preview ? array_column($preview['lost'], 'code') : [], 'people' => $preview['people'] ?? null],

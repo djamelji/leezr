@@ -42,7 +42,8 @@ class CompanyProfileReadModel
      */
     private static function mandatoryFieldsByJobdomain(Company $company): array
     {
-        if (!$company->jobdomain_key) {
+        // ADR-820 : au modèle cible, le métier n'exige rien — aucune carte « exigé par votre secteur ».
+        if (!$company->jobdomain_key || \App\Core\Requirements\RequirementAuthority::isPosition($company->id)) {
             return [];
         }
 

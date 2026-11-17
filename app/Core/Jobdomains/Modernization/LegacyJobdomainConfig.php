@@ -112,7 +112,27 @@ final class LegacyJobdomainConfig
             }
         }
 
+        $content['fields'] = self::structuredAddress($content['fields']);
+
         return ['content' => $content, 'items' => (new \App\Core\Presets\Adapters\CatalogPresetAdapter())->items($content), 'skipped' => $skipped];
+    }
+
+    /** ADR-820 — the one-line `address` doubles the structured personal address (used by the DSN) : replaced. */
+    public static function structuredAddress(array $fields): array
+    {
+        $out = [];
+        foreach ($fields as $f) {
+            if (($f['code'] ?? null) === 'address' && ($f['subject'] ?? 'person') === 'person') {
+                foreach (['personal_address_street', 'personal_address_postal_code', 'personal_address_city', 'personal_address_country_code'] as $i => $code) {
+                    $out[] = array_filter(['code' => $code, 'subject' => 'person', 'included' => $f['included'] ?? true, 'order' => isset($f['order']) ? (int) $f['order'] + $i : null], fn ($v) => $v !== null);
+                }
+
+                continue;
+            }
+            $out[] = $f;
+        }
+
+        return collect($out)->unique(fn ($f) => ($f['subject'] ?? 'person').'>'.$f['code'])->values()->all();
     }
 
     /** @return array{content: array, items: array<string, array>} PLANNING family (same shape as workforce_presets) */

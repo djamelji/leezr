@@ -2744,7 +2744,13 @@
       "submittedHint": "A new version was uploaded and is awaiting validation.",
       "rejected": "Rejected",
       "rejectedHint": "The uploaded version was rejected: upload a new one."
-    }
+    },
+    "ownerTitle": "Document types",
+    "ownerHint": "{member} person document types and {company} company document types are available. Available does not mean requested: nothing is requested without an explicit rule.",
+    "ownerCatalog": "Manage available types",
+    "ownerCatalogHint": "Catalogues: activate, create and see where each type is used.",
+    "ownerRequirements": "Decide what is requested",
+    "ownerRequirementsHint": "Company rules and per-position requirements, with a preview of the people concerned."
   },
   "fieldGroups": {
     "identity": "Identity",

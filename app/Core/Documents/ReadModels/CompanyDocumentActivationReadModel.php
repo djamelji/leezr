@@ -95,6 +95,9 @@ class CompanyDocumentActivationReadModel
         return [
             'company_user_documents' => $companyUserDocs,
             'company_documents' => $companyDocs,
+            // ADR-820 : au modèle cible (autorité « poste »), une activation n'est jamais une obligation — l'écran
+            // propriétaire des types est le catalogue, celui des exigences les postes / règles de la société.
+            'requirements_authority' => \App\Core\Requirements\RequirementAuthority::of($company->id),
         ];
     }
 }
