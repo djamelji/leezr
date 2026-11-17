@@ -180,6 +180,17 @@ class Adr821ModuleDependencyTest extends TestCase
         $this->assertTrue($plan['coherent']);
     }
 
+    public function test_paid_option_listed_by_the_business_is_never_given_away_but_historical_rights_stay(): void
+    {
+        $historical = $this->company('H');
+        ModuleActivationEngine::enable($historical, 'workforce'); // actif AVANT que le module devienne payant
+        PlatformModule::where('key', 'workforce')->update(['addon_pricing' => ['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 10]]]);
+        $e = \App\Core\Modules\EntitlementResolver::check($this->company, 'workforce');
+        $this->assertNotSame('jobdomain', $e['source'], 'a paid option is not granted by the business list');
+        $this->assertTrue(ModuleGate::isActive($historical, 'workforce'), 'historical right kept');
+        $this->assertSame('jobdomain', \App\Core\Modules\EntitlementResolver::check($historical, 'workforce')['source']);
+    }
+
     public function test_preview_endpoints_are_tenant_scoped_and_guarded(): void
     {
         $other = $this->company('B');

@@ -58,7 +58,11 @@ class EntitlementResolver
         }
 
         // Gate 4: Source — is the module available via jobdomain?
-        $defaultModules = $company->jobdomain->default_modules ?? [];
+        // ADR-821 : le Plan gouverne les droits commerciaux — une OPTION PAYANTE (addon_pricing) prévue par le métier
+        // n'est plus accordée gratuitement par cette source, sauf si la société l'a déjà (droit historique conservé).
+        $paidOption = $pm?->addon_pricing !== null
+            && ! CompanyModule::where('company_id', $company->id)->where('module_key', $moduleKey)->where('is_enabled_for_company', true)->exists();
+        $defaultModules = $paidOption ? [] : ($company->jobdomain->default_modules ?? []);
 
         if (in_array($moduleKey, $defaultModules, true)) {
             return ['entitled' => true, 'source' => 'jobdomain', 'reason' => null];
