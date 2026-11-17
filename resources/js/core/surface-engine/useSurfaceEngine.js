@@ -27,6 +27,8 @@ export function createSurfaceEngine(config) {
   const _dataLoading = ref(false)
   const _dirty = ref(false)
   const _fetchLayoutSucceeded = ref(false)
+  // ADR-816 : a layout exists server-side (possibly filtered to empty by permissions) — never auto-replace it.
+  const _layoutStored = ref(false)
 
   // ── Getters ────────────────────────────────────────────────────────
 
@@ -76,6 +78,7 @@ export function createSurfaceEngine(config) {
       const data = await apiFn('/dashboard/layout')
 
       _layout.value = data.layout
+      _layoutStored.value = data.stored === true
       _dirty.value = false
       _fetchLayoutSucceeded.value = true
     }
@@ -206,7 +209,7 @@ export function createSurfaceEngine(config) {
   return {
     // Internal refs (for surface-specific extensions to access)
     _catalog, _catalogLoading, _layout, _layoutLoading,
-    _widgetData, _widgetErrors, _dataLoading, _dirty, _saveError, _fetchLayoutSucceeded,
+    _widgetData, _widgetErrors, _dataLoading, _dirty, _saveError, _fetchLayoutSucceeded, _layoutStored,
 
     // Getters
     catalog, catalogLoading, layout, layoutLoading,

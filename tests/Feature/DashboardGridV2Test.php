@@ -212,7 +212,7 @@ class DashboardGridV2Test extends TestCase
     public function test_company_layout_put_saves(): void
     {
         $layout = [
-            ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'company', 'config' => []],
+            ['key' => 'compliance.rate', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 4, 'scope' => 'company', 'config' => []],
         ];
 
         $response = $this->actAsCompany($this->owner)
@@ -226,7 +226,7 @@ class DashboardGridV2Test extends TestCase
             ->getJson('/api/dashboard/layout');
 
         $response->assertOk();
-        $this->assertEquals('billing.revenue_trend', $response->json('layout.0.key'));
+        $this->assertEquals('compliance.rate', $response->json('layout.0.key'));
     }
 
     // ── Company: manage-structure guard ──
@@ -281,10 +281,12 @@ class DashboardGridV2Test extends TestCase
         $catalog->assertOk();
         $this->assertCount(8, $catalog->json('widgets'), 'Company catalog must include 8 company-audience widgets (5 compliance + documents.detail + onboarding + plan badge). ADR-745.');
 
-        // 2. Layout CRUD still works (seeded/jobdomain layouts may reference any widget)
+        // 2. Layout CRUD still works. ADR-816 : GET only returns widgets of the user's AUTHORISED company
+        // catalogue (a platform widget stored in a company layout could never resolve there anyway).
         $layout = [
-            ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'company', 'config' => ['period' => '30d']],
-            ['key' => 'billing.refund_ratio', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'company', 'config' => []],
+            ['key' => 'compliance.rate', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 4, 'scope' => 'company', 'config' => ['period' => '30d']],
+            ['key' => 'billing.plan_badge', 'x' => 0, 'y' => 4, 'w' => 12, 'h' => 3, 'scope' => 'company', 'config' => []],
+            ['key' => 'billing.refund_ratio', 'x' => 6, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'company', 'config' => []],
         ];
 
         $this->actAsCompany($this->owner)

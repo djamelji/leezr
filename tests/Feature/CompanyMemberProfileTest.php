@@ -84,18 +84,21 @@ class CompanyMemberProfileTest extends TestCase
         $response = $this->actAs($this->member)
             ->getJson('/api/company/members');
 
+        // ADR-816 : `members.view` seul = annuaire (projection minimale, sans e-mail de connexion ni état).
         $response->assertOk()
             ->assertJsonStructure([
                 'members' => [
                     '*' => [
                         'id',
-                        'user' => ['id', 'first_name', 'last_name', 'display_name', 'email', 'status'],
+                        'user' => ['id', 'first_name', 'last_name', 'display_name'],
                         'role',
                         'company_role',
-                        'created_at',
                     ],
                 ],
             ]);
+        foreach ($response->json('members') as $row) {
+            $this->assertArrayNotHasKey('email', $row['user']);
+        }
 
         $this->assertCount(3, $response->json('members'));
     }

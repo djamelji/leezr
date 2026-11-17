@@ -124,7 +124,7 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     //   3. Smart default builder (frontend, fallback when no DB layout at all)
     // Only if fetchLayout succeeded — never overwrite on fetch error (ADR-326)
     // Only auto-save if user can manage-structure (PUT /dashboard/layout requires it)
-    if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
+    if (engine._fetchLayoutSucceeded.value && !engine._layoutStored.value && !engine._layout.value.length && engine._catalog.value.length) { // ADR-816 : never replace a stored layout
       buildSmartDefaultLayout()
 
       const auth = useAuthStore()

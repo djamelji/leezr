@@ -15,7 +15,8 @@ onMounted(async () => {
   catch { loaded.value = false }
 })
 
-const incomplete = computed(() => store.members.filter(m => !m.profile_completeness?.complete))
+// ADR-816 : la complétude n'est servie qu'à l'administration des accès ; sans elle, aucune alerte inventée.
+const incomplete = computed(() => store.members.filter(m => m.profile_completeness && !m.profile_completeness.complete))
 const limitReached = computed(() => store.memberLimit !== null && store.memberCount >= store.memberLimit)
 </script>
 

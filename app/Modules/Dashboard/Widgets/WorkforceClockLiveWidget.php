@@ -3,6 +3,7 @@
 namespace App\Modules\Dashboard\Widgets;
 
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
+use App\Modules\Dashboard\Contracts\CollectiveWidget;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 use App\Modules\Workforce\ReadModels\TimeCockpitReadModel;
 use Illuminate\Support\Carbon;
@@ -12,7 +13,7 @@ use Illuminate\Support\Carbon;
  * Server-resolved sur le read-model réel ; gated par workforce.timesheet_view
  * (catalogue + batch API). Drill-down vers le cockpit temps.
  */
-class WorkforceClockLiveWidget implements WidgetManifest
+class WorkforceClockLiveWidget implements WidgetManifest, CollectiveWidget
 {
     use WidgetLayoutDefaults;
 
@@ -80,7 +81,7 @@ class WorkforceClockLiveWidget implements WidgetManifest
 
     public function permissions(): array
     {
-        return ['workforce.timesheet_view'];
+        return []; // ADR-816 : a personal right is not a prerequisite ; authority = collectiveDomain()
     }
 
     public function capabilities(): array
@@ -109,5 +110,11 @@ class WorkforceClockLiveWidget implements WidgetManifest
     public function archetypes(): ?array
     {
         return ['management', 'operations_center'];
+    }
+
+    /** ADR-816 — company-wide aggregate : requires the « see all » authority of this domain. */
+    public function collectiveDomain(): string
+    {
+        return 'time';
     }
 }

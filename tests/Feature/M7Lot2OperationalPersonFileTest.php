@@ -194,7 +194,10 @@ class M7Lot2OperationalPersonFileTest extends TestCase
 
     public function test_access_facet_alone_never_carries_hr_data(): void
     {
-        $res = $this->file($this->viewer, "user-{$this->manager->id}")->assertOk();
+        // ADR-816 : la facette ACCÈS exige l'administration des accès ou des rôles ; `members.view` seul
+        // (annuaire) n'ouvre que le nom — vérifié dans Adr816CompanySecurityTest.
+        $accessReader = $this->member('accessreader', $this->role('accessreader', ['members.view', 'roles.view'], true));
+        $res = $this->file($accessReader, "user-{$this->manager->id}")->assertOk();
 
         $res->assertJsonPath('can.view_access', true)->assertJsonPath('can.view_hr', false)
             ->assertJsonPath('can.edit_identity', false)->assertJsonPath('can.suspend_access', false)
@@ -518,8 +521,11 @@ class M7Lot2OperationalPersonFileTest extends TestCase
         // The profile and the dynamic fields stay closed to a selector profile.
         $this->as($this->docManager)->getJson('/api/company/members/'.$this->membershipOf($this->viewer)->id)->assertStatus(403);
 
-        // The members facet keeps the full directory.
-        $full = collect($this->as($this->viewer)->getJson('/api/company/members')->assertOk()->json('members'))->firstWhere('user.id', $this->viewer->id);
+        // ADR-816 : the directory alone (`members.view`) gets the same minimal projection ;
+        // the full directory belongs to access administration.
+        $dir = collect($this->as($this->viewer)->getJson('/api/company/members')->assertOk()->json('members'))->firstWhere('user.id', $this->viewer->id);
+        $this->assertArrayNotHasKey('email', $dir['user']);
+        $full = collect($this->as($this->accessAdmin)->getJson('/api/company/members')->assertOk()->json('members'))->firstWhere('user.id', $this->viewer->id);
         $this->assertSame($this->viewer->email, $full['user']['email']);
         $this->assertArrayHasKey('profile_completeness', $full);
     }

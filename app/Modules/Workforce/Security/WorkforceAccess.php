@@ -128,11 +128,24 @@ class WorkforceAccess
     /** Capacité « voir tout » pour un domaine donné (réutilise les permissions existantes). */
     public static function hasViewAll(Request $request, string $domain): bool
     {
+        return static::viewAllWith(fn (string $permission) => static::has($request, $permission), $domain);
+    }
+
+    /**
+     * ADR-816 — THE single « see everyone » rule of each domain, independent of the HTTP request so the
+     * dashboard catalogue (permission list) and the controllers apply exactly the same authority.
+     *
+     * @param  callable(string): bool  $has
+     */
+    public static function viewAllWith(callable $has, string $domain): bool
+    {
         return match ($domain) {
-            'leave' => static::has($request, 'workforce.leave_view_all') || static::has($request, 'workforce.leave_approve'),
-            'time' => static::has($request, 'workforce.timesheet_approve') || static::has($request, 'workforce.time_manage'),
+            'leave' => $has('workforce.leave_view_all') || $has('workforce.leave_approve'),
+            'time' => $has('workforce.timesheet_approve') || $has('workforce.time_manage'),
             // 'employee' = capacité RH de voir tous les collaborateurs (et leurs documents individuels).
-            'employee' => static::has($request, 'workforce.view') && static::has($request, 'workforce.manage'),
+            'employee' => $has('workforce.view') && $has('workforce.manage'),
+            // ADR-816 : planning global = RH (employee) ou publication (règle de ShiftController::planningScope).
+            'planning' => ($has('workforce.view') && $has('workforce.manage')) || $has('workforce.planning_publish'),
             default => false,
         };
     }

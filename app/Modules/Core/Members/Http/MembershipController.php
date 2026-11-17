@@ -30,8 +30,11 @@ class MembershipController extends Controller
 
         // ADR-768 : annuaire PAR FACETTE — un appelant « sélecteur » (documents.manage /
         // shipments.assign sans members.view) ne reçoit que le minimum pour choisir une personne.
+        // ADR-816 : le payload COMPLET (e-mail de connexion, état du compte, complétude, lien RH, quota) est
+        // une lecture d'administration des accès ; `members.view` seul (annuaire des rôles de terrain)
+        // reçoit la projection minimale existante.
         return response()->json(\App\Modules\Core\Members\ReadModels\MemberDirectoryReadModel::list(
-            $company, $request->user()->hasCompanyPermission($company, 'members.view'),
+            $company, \App\Company\RBAC\MembershipSecurityPolicy::canSeeAccountDetails($company, $request->user()),
         ));
     }
 

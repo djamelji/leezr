@@ -3,12 +3,13 @@
 namespace App\Modules\Dashboard\Widgets;
 
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
+use App\Modules\Dashboard\Contracts\CollectiveWidget;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 use Illuminate\Support\Carbon;
 
 
 /** ADR-744 (P1) — widget workforce.timesheet_pending (server-resolved, données réelles, gated workforce.timesheet_approve). */
-class WorkforceTimesheetPendingWidget implements WidgetManifest
+class WorkforceTimesheetPendingWidget implements WidgetManifest, CollectiveWidget
 {
     use WidgetLayoutDefaults;
 
@@ -36,5 +37,11 @@ class WorkforceTimesheetPendingWidget implements WidgetManifest
         } catch (\Throwable $e) {
             return ['error' => true];
         }
+    }
+
+    /** ADR-816 — company-wide aggregate : requires the « see all » authority of this domain. */
+    public function collectiveDomain(): string
+    {
+        return 'time';
     }
 }

@@ -56,8 +56,12 @@ class PersonFileReadModel
         // les DONNÉES RH (emploi/contrat/temps/congés) sont deux facettes indépendantes : un RH
         // (`workforce.view`) voit l'emploi sans l'accès ; un admin des accès (`members.view`) gère
         // les comptes sans les données RH. Gating serveur strict, jamais d'élargissement implicite.
+        // ADR-816 : `members.view` = ANNUAIRE (qui est qui : nom, photo) — accordé aux rôles de terrain ;
+        // la facette ACCÈS (e-mail de connexion, état, rôle d'accès, drapeaux, rattachement) exige en plus
+        // l'administration des accès (MembershipSecurityPolicy::canSeeAccountDetails). Rien n'est élargi.
+        $directory = $actor->hasCompanyPermission($company, 'members.view');
         $can = [
-            'view_access' => $actor->hasCompanyPermission($company, 'members.view'),       // facette ACCÈS
+            'view_access' => $directory && \App\Company\RBAC\MembershipSecurityPolicy::canSeeAccountDetails($company, $actor), // facette ACCÈS
             // ADR-770 : la facette RH porte sur une FICHE RH. Sans fiche, `workforce.view` ne donne aucun
             // droit sur la personne (un manager ou un RH sans facette ACCÈS ouvrait la fiche — nom, e-mail
             // de connexion, état du compte — de n'importe quel compte sans fiche salarié).
@@ -73,7 +77,7 @@ class PersonFileReadModel
         // ADR-767 : l'acteur doit détenir AU MOINS UNE facette SUR CETTE PERSONNE. Une fiche RH hors
         // périmètre (ni soi, ni rapport direct, ni profil RH) n'est pas consultable par `workforce.view`
         // seul ; elle ne reste visible que par sa facette ACCÈS (compte), sans aucune donnée RH.
-        if (! $can['view_hr'] && ! ($can['view_access'] && $membership)) {
+        if (! $can['view_hr'] && ! ($directory && $membership)) {
             return null;
         }
 
@@ -107,7 +111,7 @@ class PersonFileReadModel
 
         // ── Identité : User prioritaire (compte), repli sur la fiche RH. Les champs d'origine RH
         // (téléphone, e-mail de contact RH) ne sont exposés qu'avec la facette RH. ──
-        $identity = self::identity($user, $employee, $can['view_hr'], $can['view_access']);
+        $identity = self::identity($user, $employee, $can['view_hr'], $can['view_access'], $directory);
 
         // ── Accès & autorisations ──
         $account = self::account($company, $user, $membership, $employee, $can['view_access'], $actor->hasCompanyPermission($company, 'roles.view'));
@@ -189,13 +193,15 @@ class PersonFileReadModel
      * Un acteur RH sans facette comptes ne voit que l'identité RH ; un gestionnaire de comptes sans
      * facette RH ne voit que l'identité du compte.
      */
-    private static function identity(?User $user, ?Employee $employee, bool $canHr, bool $canViewAccess): array
+    private static function identity(?User $user, ?Employee $employee, bool $canHr, bool $canViewAccess, bool $directory = false): array
     {
         $account = $canViewAccess ? $user : null;
+        // ADR-816 : l'annuaire montre le NOM du compte (et sa photo), jamais son e-mail de connexion.
+        $named = ($canViewAccess || $directory) ? $user : null;
         $record = $canHr ? $employee : null;
         // Le nom du compte prime quand il est visible (parcours unifié) ; sinon le nom de la fiche RH.
-        $first = $account?->first_name ?: ($record?->first_name ?: $account?->first_name);
-        $last = $account?->last_name ?: ($record?->last_name ?: $account?->last_name);
+        $first = $named?->first_name ?: ($record?->first_name ?: $named?->first_name);
+        $last = $named?->last_name ?: ($record?->last_name ?: $named?->last_name);
 
         return [
             'first_name' => $first,

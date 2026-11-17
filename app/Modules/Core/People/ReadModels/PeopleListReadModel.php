@@ -22,6 +22,9 @@ class PeopleListReadModel
     public static function list(Company $company, User $actor, array $filters = [], int $perPage = 20, int $page = 1): array
     {
         $canAccess = $actor->hasCompanyPermission($company, 'members.view');
+        // ADR-816 : l'annuaire (`members.view`) liste les comptes ; leurs DÉTAILS (e-mail de connexion, état,
+        // rôle d'accès, propriétaire) restent une lecture d'administration des accès.
+        $details = \App\Company\RBAC\MembershipSecurityPolicy::canSeeAccountDetails($company, $actor);
         $canHr = $actor->hasCompanyPermission($company, 'workforce.view');
         $hasWorkforce = ModuleGate::isActive($company, 'workforce');
 
@@ -37,7 +40,7 @@ class PeopleListReadModel
                 if (! $m->user) {
                     continue;
                 }
-                $persons['u'.$m->user_id] = self::rowFromMembership($m);
+                $persons['u'.$m->user_id] = self::rowFromMembership($m, $details);
             }
         }
 
@@ -51,7 +54,7 @@ class PeopleListReadModel
                 ->with(['department:id,name', 'jobRole:id,title'])->get();
             foreach ($employees as $e) {
                 $key = $e->user_id ? 'u'.$e->user_id : 'e'.$e->id;
-                $persons[$key] = array_merge($persons[$key] ?? self::emptyRow(), self::rowFromEmployee($e, $canAccess, $persons[$key] ?? null));
+                $persons[$key] = array_merge($persons[$key] ?? self::emptyRow(), self::rowFromEmployee($e, $canAccess && $details, $persons[$key] ?? null));
             }
         }
 
@@ -77,7 +80,7 @@ class PeopleListReadModel
             'per_page' => $perPage,
             'current_page' => $page,
             'last_page' => (int) ceil($total / $perPage),
-            'facets' => ['access' => $canAccess, 'hr' => $canHr],
+            'facets' => ['access' => $canAccess, 'account_details' => $details, 'hr' => $canHr],
         ];
     }
 
@@ -87,12 +90,12 @@ class PeopleListReadModel
             'account_state' => null, 'role' => null, 'employment_status' => null, 'job_role' => null, 'department' => null];
     }
 
-    private static function rowFromMembership(Membership $m): array
+    private static function rowFromMembership(Membership $m, bool $details = true): array
     {
         $u = $m->user;
         $state = $m->isPendingAcceptance() ? (\App\Company\Security\MembershipInvitation::isExpired($m) ? 'invitation_expired' : 'pending_acceptance') : ($m->isSuspended() ? 'suspended' : (! $u->password_set_at ? 'invited' : ($u->last_login_at ? 'connected' : 'active')));
 
-        return [
+        $row = [
             'person_ref' => (string) PersonRef::forUser($u->id),
             'user_id' => $u->id,
             'employee_id' => null,
@@ -106,6 +109,10 @@ class PeopleListReadModel
             'job_role' => null,
             'department' => null,
         ];
+
+        // ADR-816 : projection annuaire — qui est qui, sans les détails de compte.
+        return $details ? $row : array_merge($row, ['email' => null, 'account_state' => null, 'role' => null, 'is_owner' => null,
+            'name' => trim($u->first_name.' '.$u->last_name) ?: '—']); // jamais l'e-mail en repli du nom
     }
 
     /** Fusionne les colonnes RH sur une ligne (existante si personne reliée). */

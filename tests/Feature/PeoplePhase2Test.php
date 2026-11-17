@@ -47,7 +47,8 @@ class PeoplePhase2Test extends TestCase
         $this->hrOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['workforce.view', 'workforce.manage'])->pluck('id')->all());
 
         $this->accessOnlyRole = CompanyRole::create(['company_id' => $this->company->id, 'key' => 'accessonly', 'name' => 'Access', 'is_administrative' => false]);
-        $this->accessOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view'])->pluck('id')->all());
+        // ADR-816 : la facette ACCÈS (compte, rôle) = annuaire + administration des accès (members.invite).
+        $this->accessOnlyRole->syncPermissionsSafe(CompanyPermission::whereIn('key', ['members.view', 'members.invite'])->pluck('id')->all());
 
         $this->hrOnly = User::factory()->create();
         $this->accessOnly = User::factory()->create();

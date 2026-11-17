@@ -29074,3 +29074,16 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - **Organisation** : gestion et espace personnel mélangés ; deux accueils.
 - **Proposition (non décidée)** : refonte par résultats utilisateurs, lots L0 (sécurité immédiate) à L10, sans nouveau moteur ni migration de schéma ; décisions produit D1 à D17.
 - **Conséquences** : aucune modification applicative, aucune migration, aucune donnée DEV modifiée.
+
+## ADR-816 — L0 : sécurité Company (fuites de données)
+
+- **Date** : 2026-11-17, DEV, base `05107040`. Rapport : `docs/bmad/ADR-816-L0-COMPANY-SECURITY.md`. Premier lot de la refonte validée en ADR-815.2. L1 à L10 non commencés.
+- **Décision** :
+  - **Agrégats** : un indicateur d'entreprise exige l'autorité « voir tout » de son domaine. Source unique : `WorkforceAccess::viewAllWith()`, qui reçoit aussi le domaine `planning` ; widgets déclarés par `CollectiveWidget`. Un droit personnel ne l'accorde jamais. Une disposition enregistrée ne montre que le catalogue autorisé, sans être modifiée, et n'est jamais remplacée automatiquement (`stored`).
+  - **Annuaire** : les détails de compte sont réservés à l'administration des accès ou des rôles (`MembershipSecurityPolicy::canSeeAccountDetails`) ; `members.view` = qui est qui.
+  - **Modules** : réglages, devis et impact de désactivation exigent `modules.manage` ; le catalogue reste ouvert.
+- **Conséquences** :
+  - aucun élargissement, aucune migration, aucun écran nouveau ;
+  - 7 tests de sécurité (4 en échec avant) ;
+  - recette navigateur sur 8 profils et isolation inter-sociétés sur clone isolé ;
+  - 5 tests adaptés qui figeaient l'ancienne exposition.

@@ -47,7 +47,7 @@ export const useOperationalHomeStore = defineStore('operationalHome', () => {
     //   2. Role-specific default (DB, user_id=NULL, company_role_id=X) → backend resolveForUser fallback
     //   3. Company default (DB, user_id=NULL, company_role_id=NULL) → backend fallback
     //   4. Compact builder (frontend, fallback when no DB layout at all)
-    if (engine._fetchLayoutSucceeded.value && !engine._layout.value.length && engine._catalog.value.length) {
+    if (engine._fetchLayoutSucceeded.value && !engine._layoutStored.value && !engine._layout.value.length && engine._catalog.value.length) { // ADR-816 : never replace a stored layout
       buildCompactDefaultLayout()
 
       // N'enregistrer QUE si l'utilisateur a réellement le droit (PUT /dashboard/layout

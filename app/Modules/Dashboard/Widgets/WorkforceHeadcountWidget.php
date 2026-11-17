@@ -3,12 +3,13 @@
 namespace App\Modules\Dashboard\Widgets;
 
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
+use App\Modules\Dashboard\Contracts\CollectiveWidget;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 use Illuminate\Support\Carbon;
 
 
 /** ADR-744 (P1) — widget workforce.headcount (server-resolved, données réelles, gated workforce.view). */
-class WorkforceHeadcountWidget implements WidgetManifest
+class WorkforceHeadcountWidget implements WidgetManifest, CollectiveWidget
 {
     use WidgetLayoutDefaults;
 
@@ -40,5 +41,11 @@ class WorkforceHeadcountWidget implements WidgetManifest
         } catch (\Throwable $e) {
             return ['error' => true];
         }
+    }
+
+    /** ADR-816 — company-wide aggregate : requires the « see all » authority of this domain. */
+    public function collectiveDomain(): string
+    {
+        return 'employee';
     }
 }

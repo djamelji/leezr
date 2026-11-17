@@ -4,7 +4,9 @@ namespace App\Modules\Dashboard;
 
 use App\Core\Models\Company;
 use App\Core\Modules\ModuleGate;
+use App\Modules\Dashboard\Contracts\CollectiveWidget;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
+use App\Modules\Workforce\Security\WorkforceAccess;
 
 /**
  * ADR-357 + ADR-369: Provides filtered widget catalogs.
@@ -14,6 +16,7 @@ use App\Modules\Dashboard\Contracts\WidgetManifest;
  *   2. scope (company/both)
  *   3. module activation (ModuleGate)
  *   4. user permissions (widget.permissions() ⊆ userPermissions)
+ *   4b. ADR-816 : collective widgets → « see everyone » authority of their domain (WorkforceAccess)
  *   5. archetype (optional further narrowing)
  *
  * Owner bypasses permission check (has all permissions implicitly).
@@ -60,6 +63,13 @@ class DashboardCatalogService
                             return false;
                         }
                     }
+                }
+
+                // ADR-816 — a company-wide aggregate requires the « see everyone » authority of its
+                // domain (same rule as the Workforce controllers). A personal right never grants it.
+                if (!$isOwner && $w instanceof CollectiveWidget
+                    && !WorkforceAccess::viewAllWith(fn (string $p) => in_array($p, $userPermissions, true), $w->collectiveDomain())) {
+                    return false;
                 }
 
                 // Archetype filtering

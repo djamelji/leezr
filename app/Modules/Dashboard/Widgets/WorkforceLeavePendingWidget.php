@@ -3,12 +3,13 @@
 namespace App\Modules\Dashboard\Widgets;
 
 use App\Modules\Dashboard\Contracts\WidgetLayoutDefaults;
+use App\Modules\Dashboard\Contracts\CollectiveWidget;
 use App\Modules\Dashboard\Contracts\WidgetManifest;
 use Illuminate\Support\Carbon;
 
 
 /** ADR-744 (P1) — widget workforce.leave_pending (server-resolved, données réelles, gated workforce.leave_request). */
-class WorkforceLeavePendingWidget implements WidgetManifest
+class WorkforceLeavePendingWidget implements WidgetManifest, CollectiveWidget
 {
     use WidgetLayoutDefaults;
 
@@ -23,7 +24,10 @@ class WorkforceLeavePendingWidget implements WidgetManifest
     public function audience(): string { return 'company'; }
     public function scope(): string { return 'company'; }
     public function resolution(): string { return 'server'; }
-    public function permissions(): array { return ['workforce.leave_request']; }
+    public function permissions(): array
+    {
+        return []; // ADR-816 : a personal right is not a prerequisite ; authority = collectiveDomain()
+    }
     public function capabilities(): array { return []; }
     public function defaultConfig(): array { return []; }
     public function archetypes(): ?array { return ['management','operations_center']; }
@@ -36,5 +40,11 @@ class WorkforceLeavePendingWidget implements WidgetManifest
         } catch (\Throwable $e) {
             return ['error' => true];
         }
+    }
+
+    /** ADR-816 — company-wide aggregate : requires the « see all » authority of this domain. */
+    public function collectiveDomain(): string
+    {
+        return 'leave';
     }
 }

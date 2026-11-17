@@ -281,7 +281,7 @@ class M7Lot4PerformanceTest extends TestCase
 
         // ── Absolute query budgets at 800 people (current values + headroom ; a regression must be deliberate). ──
         $budgets = [
-            'people.list' => 25, 'people.search' => 25, 'people.filter+sort' => 25, 'people.file' => 90, 'campaigns.preview' => 40, 'people.history' => 25,
+            'people.list' => 25, 'people.search' => 25, 'people.filter+sort' => 25, 'people.file' => 92, /* ADR-816 : +1 lecture d'autorisation (facette comptes ≠ annuaire), constante */ 'campaigns.preview' => 40, 'people.history' => 25,
             'people.payslips' => 25, 'members.directory' => 30, 'documents.vault' => 40, 'documents.activity' => 30, 'profile.space' => 25, 'self.payslips' => 20, 'self.documents' => 30,
             'documents.compliance' => 80, 'campaigns.list' => 20, 'payslip.batches' => 20, 'workforce.employees' => 25,
         ];

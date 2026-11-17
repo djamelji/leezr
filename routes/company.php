@@ -489,7 +489,9 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
         ->middleware('company.access:use-permission,modules.manage');
     Route::put('/modules/{key}/disable', [CompanyModuleController::class, 'disable'])
         ->middleware('company.access:use-permission,modules.manage');
-    Route::get('/modules/{key}/settings', [CompanyModuleController::class, 'getSettings']);
+    // ADR-816 : réglages d'un module = lecture d'administration (comme leur écriture).
+    Route::get('/modules/{key}/settings', [CompanyModuleController::class, 'getSettings'])
+        ->middleware('company.access:use-permission,modules.manage');
     Route::put('/modules/{key}/settings', [CompanyModuleController::class, 'updateSettings'])
         ->middleware('company.access:use-permission,modules.manage');
 
@@ -504,8 +506,12 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
         Route::post('/modules/{key}/setup/confirm', [$ms, 'confirm']);
         Route::get('/modules/{key}/deactivation-impact', [$ms, 'deactivationImpact']); // ADR-805
     });
-    Route::get('/modules/quote', ModuleQuoteController::class);
-    Route::get('/modules/{key}/deactivation-preview', ModuleDeactivationPreviewController::class);
+    // ADR-816 : devis et impact de désactivation = opérations d'administration ; le catalogue public
+    // (GET /modules, états d'activation lus par toute l'application) reste ouvert.
+    Route::get('/modules/quote', ModuleQuoteController::class)
+        ->middleware('company.access:use-permission,modules.manage');
+    Route::get('/modules/{key}/deactivation-preview', ModuleDeactivationPreviewController::class)
+        ->middleware('company.access:use-permission,modules.manage');
 });
 
 // ─── Audit log (module-gated, admin permission) ─────────

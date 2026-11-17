@@ -172,6 +172,36 @@ class MembershipSecurityPolicy
     }
 
     /** Vrai si le rôle attribué est sensible (administratif) → audit renforcé côté appelant. */
+    /**
+     * ADR-816 — account details of the OTHER members (login e-mail, account state, access role,
+     * owner/admin flags, membership id) are an ACCESS-ADMINISTRATION read. `members.view` is the team
+     * directory — granted to field roles (bundle `members.team_view`) — and only shows who is who.
+     * `roles.view` (role administration) keeps the role facet it already relied on (ADR-786).
+     * Owner bypass is carried by hasCompanyPermission().
+     */
+    public static function canSeeAccountDetails(Company $company, ?User $actor): bool
+    {
+        if (! $actor) {
+            return false;
+        }
+        // Same guards as User::hasCompanyPermission() (owner bypass, suspension), with a single membership read.
+        $membership = $actor->membershipFor($company);
+        if ($membership?->role === 'owner') {
+            return true;
+        }
+        if (! $membership || ! $membership->company_role_id || $membership->isSuspended()) {
+            return false;
+        }
+        // Access administration, or role administration (who holds which role is part of it).
+        foreach (['members.invite', 'members.manage', 'members.credentials', 'roles.view'] as $permission) {
+            if ($membership->companyRole->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function isSensitiveRole(CompanyRole $role): bool
     {
         return (bool) $role->is_administrative;

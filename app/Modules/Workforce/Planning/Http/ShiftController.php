@@ -146,8 +146,7 @@ class ShiftController extends Controller
      */
     private function planningScope(Request $request): ?array
     {
-        $viewAll = WorkforceAccess::hasViewAll($request, 'employee')
-            || ($request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.planning_publish') ?? false);
+        $viewAll = WorkforceAccess::hasViewAll($request, 'planning'); // ADR-816 : même règle, désormais centralisée
 
         return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
     }

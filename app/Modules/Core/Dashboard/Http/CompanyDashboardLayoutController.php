@@ -28,10 +28,23 @@ class CompanyDashboardLayoutController extends Controller
             $user->id,
             $membership?->company_role_id
         );
-        $tiles = $layout?->layout_json ?? [];
+        // ADR-816 : une disposition enregistrée ne montre que les widgets du catalogue AUTORISÉ de
+        // l'utilisateur (même filtre que batchResolve) ; la disposition stockée n'est pas modifiée.
+        $isOwner = $user->isOwnerOf($company);
+        $allowed = collect(\App\Modules\Dashboard\DashboardCatalogService::forArchetype(
+            $company,
+            $membership?->companyRole?->archetype,
+            $isOwner ? [] : ($membership?->companyRole?->effectivePermissionKeys() ?? []),
+            $isOwner,
+        ))->map(fn ($w) => $w->key())->all();
+
+        $tiles = array_values(array_filter($layout?->layout_json ?? [], fn ($t) => in_array($t['key'] ?? null, $allowed, true)));
 
         return response()->json([
-            'layout' => DashboardWidgetRegistry::filterLayout($tiles, $company),
+            'layout' => DashboardWidgetRegistry::filterLayout($tiles, $company), // filtre module + compaction
+            // ADR-816 : une disposition existe en base (même si le filtrage la vide) → l'interface ne doit
+            // pas la remplacer par une disposition par défaut lors d'un simple affichage.
+            'stored' => $layout !== null,
         ]);
     }
 
