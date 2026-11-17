@@ -1,0 +1,386 @@
+[
+  {
+    "url": "/platform/jobdomains/1/general",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/general",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/general",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/general",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/modules",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/modules",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/modules",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/modules",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/experience",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/experience",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/experience",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/experience",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/presets",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/presets",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/presets",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/presets",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/publication",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/publication",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/publication",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/jobdomains/1/publication",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/companies/101/billing",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/companies/101/billing",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/companies/101/billing",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/platform/companies/101/billing",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/settings",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/settings",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/settings",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/settings",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/catalogs/fields",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/catalogs/fields",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/catalogs/fields",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/catalogs/fields",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/settings",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/settings",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/settings",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/settings",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/modules/logistics_shipments",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/modules/logistics_shipments",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/modules/logistics_shipments",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/modules/logistics_shipments",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/roles",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/roles",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/roles",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/roles",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/profile/overview",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/profile/overview",
+    "lang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/profile/overview",
+    "lang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/profile/overview",
+    "lang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  }
+]

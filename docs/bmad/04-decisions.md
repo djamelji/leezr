@@ -29162,3 +29162,35 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - E2E principaux du dépôt rejoués sur le clone.
 - DEV : empreinte inchangée hors la ligne de migration 000004.
 - Non fait : aucune société basculée en calcul par poste ; module Parrainage non tarifé ; pas de refonte profonde des pages existantes jugées conformes par la revue.
+
+## ADR-820 — Platform & Company 3.0 : presets effectifs, bibliothèque sans obligation, besoins de données des modules, onglets dans le chemin
+
+**Date** : 2026-11-17 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-PLATFORM-COMPANY-3-0-FINAL.md`
+
+**Contexte**
+- Les presets versionnés édités dans Platform ne gouvernaient aucune création ; le registre PHP historique, non éditable, décidait.
+- Activer un type de document dans le catalogue le rendait obligatoire (`required_override`).
+- Quatre sources d'obligation coexistaient (catalogue, activation, rôle d'accès, poste).
+- Des onglets étaient pilotés par `?tab=`, contrairement à ADR-475.
+
+**Décision**
+1. **Bibliothèque de départ** (preset `catalog`) : disponible ≠ demandé. Aucune clé d'obligation n'est acceptée.
+2. **Chemin de création** : l'initialisation versionnée devient le chemin effectif.
+   - Les presets publiés s'appliquent ; brouillons et nouvelles versions ne s'appliquent jamais rétroactivement.
+   - Repli historique sans bibliothèque ni rôles publiés ; retour arrière : `JOBDOMAIN_VERSIONED_INIT=false`.
+3. **Nouvelles sociétés à l'autorité « poste »** : ni le métier, ni le rôle d'accès, ni le catalogue ne créent d'obligation. Les sociétés existantes sont inchangées.
+4. **Profil d'expérience du JobDomain** (`experience`, `recommended_modules`) : il ordonne la navigation sans en changer le contenu, et met en avant des modules sans les activer.
+5. **Besoins de données des modules** (`dataNeeds`) :
+   - associés par la société à ses champs, par identifiant stable ;
+   - confirmation explicite, aucune copie de valeur ;
+   - seule l'opération dépendante est bloquée.
+6. **Routing** : les onglets navigables vont dans le chemin ; les anciens `?tab=` sont redirigés ; un test empêche leur retour.
+7. **Un écran propriétaire par règle** :
+   - catalogue = disponible ;
+   - postes et règles de la société = demandé ;
+   - assistant du module = données du module.
+
+**Conséquences**
+- Tests ADR-820 (moteur de presets, mapping, routing) ; tests de doctrine adaptés.
+- Recette navigateur sur clone : 38/38 ; routing : 17/17 ; 48 variantes visuelles sans débordement.
+- Pages non refondues listées dans le rapport (§15).

@@ -1,0 +1,87 @@
+[
+  {
+    "from": "/company/people/roles",
+    "landed": "/company/people/roles",
+    "ok": true
+  },
+  {
+    "from": "/company/people?tab=roles",
+    "landed": "/company/people/roles",
+    "ok": true
+  },
+  {
+    "from": "/company/people?tab=hr&q=a",
+    "landed": "/company/people/hr?q=a",
+    "ok": true
+  },
+  {
+    "from": "/company/people/hr",
+    "landed": "/company/people/hr",
+    "ok": true
+  },
+  {
+    "from": "/company/workforce/employees",
+    "landed": "/company/people/hr",
+    "ok": true
+  },
+  {
+    "from": "/company/roles",
+    "landed": "/company/people/roles",
+    "ok": true
+  },
+  {
+    "from": "/company/people/employee-1812/documents",
+    "landed": "/company/people/employee-1812/documents",
+    "ok": true
+  },
+  {
+    "from": "/company/people/employee-1812?tab=documents",
+    "landed": "/company/people/employee-1812/documents",
+    "ok": true
+  },
+  {
+    "from": "/company/workforce/time/timesheets",
+    "landed": "/company/workforce/time/timesheets",
+    "ok": true
+  },
+  {
+    "from": "/company/workforce/time?tab=entries",
+    "landed": "/company/workforce/time/entries",
+    "ok": true
+  },
+  {
+    "from": "/company/workforce/leave/calendar",
+    "landed": "/company/workforce/leave/calendar",
+    "ok": true
+  },
+  {
+    "from": "/company/workforce/leave?tab=config",
+    "landed": "/company/workforce/leave/config",
+    "ok": true
+  },
+  {
+    "from": "click Équipe › Rôles",
+    "landed": "/company/people/roles",
+    "ok": true
+  },
+  {
+    "from": "/platform/companies/101?tab=billing",
+    "landed": "/platform/companies/101/billing",
+    "ok": true
+  },
+  {
+    "from": "/platform/companies/101/members",
+    "landed": "/platform/companies/101/members",
+    "ok": true
+  },
+  {
+    "from": "/platform/jobdomains/1?tab=roles",
+    "landed": "/platform/jobdomains/1/presets",
+    "ok": true
+  },
+  {
+    "from": "/platform/jobdomains/1",
+    "landed": "/platform/jobdomains/1/general",
+    "ok": true
+  }
+]
