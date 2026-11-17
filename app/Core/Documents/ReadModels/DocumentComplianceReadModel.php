@@ -122,6 +122,10 @@ class DocumentComplianceReadModel
                 ->get()
                 ->keyBy($subjectKey);
 
+            // ADR-819 — sources de satisfaction (ex. contrat signé dans Workforce) : consultées seulement
+            // quand aucune pièce déposée ne satisfait déjà l'exigence. Aucune copie, aucune écriture.
+            $proofs = \App\Core\Documents\Satisfaction\DocumentProofRegistry::forEmployees($company, $population->pluck('employee_id')->filter()->all());
+
             foreach ($population as $i => $person) {
                 /** @var \App\Core\Documents\DocumentSubject $subject */
                 $subject = $person['subject'];
@@ -132,12 +136,17 @@ class DocumentComplianceReadModel
                     $doc = $docsBySubject->get($k);
                     $requestStatus = $requestsBySubject->get($k)?->status;
                     $state = State::evaluate($doc, $requestStatus);
+                    $proof = (! $state['satisfies_obligation'] && $person['employee_id']) ? ($proofs[$person['employee_id'].':'.$type?->code] ?? null) : null;
+                    if ($proof) {
+                        $state = State::fromProof();
+                    }
 
                     $slot = self::slot($typeId, $type, DocumentType::SCOPE_COMPANY_USER, $person['role_key'], $person['role_name'], $person['user_id'], $state);
                     $slot['subject'] = (string) $subject;
                     $slot['employee_id'] = $person['employee_id'];
                     $slot['department_id'] = $person['department_id'];
                     $slot['account_less'] = $person['account_less'];
+                    $slot['satisfied_by'] = $proof ? $proof['source'] : null;
                     $allSlots[] = $slot;
                 }
             }

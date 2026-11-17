@@ -446,6 +446,17 @@ defineExpose({ openRequest: () => { if (requestableDocTypes.value.length) reques
               >
                 {{ t('documents.expiresAt') }} {{ new Date(doc.upload.expires_at).toLocaleDateString() }}
               </div>
+              <!-- ADR-819 : exigence satisfaite par une autre source compatible (ex. contrat signé dans Leezr). -->
+              <div
+                v-if="doc.satisfied_by"
+                class="text-caption text-success mt-1 d-flex align-center gap-1"
+                :data-test="`document-proof-${doc.code}`"
+              >
+                <VIcon
+                  icon="tabler-rosette-discount-check"
+                  size="14"
+                />{{ doc.satisfied_by.label }}
+              </div>
             </td>
             <!-- UNE action principale selon l'état ; le reste dans un menu libellé — rien n'est coupé. -->
             <td>

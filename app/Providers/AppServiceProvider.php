@@ -94,6 +94,8 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Core\Notifications\Listeners\PlatformPaymentCollectedNotifier::register(); // ADR-781
         \App\Modules\Workforce\Employees\Listeners\PositionChangeRequests::register(); // ADR-818
+        \App\Core\Documents\Satisfaction\DocumentProofRegistry::register(\App\Modules\Workforce\Documents\SignedContractProof::class); // ADR-819
+        \App\Modules\Workforce\Documents\SignedContractProof::register(); // ADR-819
 
         Relation::enforceMorphMap([
             'user' => User::class,

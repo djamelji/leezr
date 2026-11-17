@@ -78,6 +78,12 @@ class MemberDocumentWorkflowReadModel
 
         $policy = app(DocumentAccessPolicy::class);
 
+        // ADR-819 — preuves apportées par les modules (ex. contrat signé dans Workforce).
+        $proofs = \App\Core\Documents\Satisfaction\DocumentProofRegistry::forSubjects($company, array_values(array_filter([
+            $mergeEmployeeId !== null ? DocumentSubject::employee($mergeEmployeeId) : null,
+            DocumentSubject::user($member->id),
+        ])));
+
         // 4. Enrich each document with workflow data
         foreach ($documents as &$doc) {
             $type = $typesByCode->get($doc['code']);
@@ -117,6 +123,16 @@ class MemberDocumentWorkflowReadModel
 
             // ADR-757/758 (DMS M1/M1.1): état consolidé + confidentialité + accès effectif + redaction.
             $state = State::evaluateFromParts($doc['has_file'], $doc['request_status'], $doc['lifecycle_status'] ?? 'missing');
+            $doc['satisfied_by'] = null;
+            if (! $state['satisfies_obligation'] && ($proof = $proofs[$doc['code']] ?? null)) {
+                // Exigence satisfaite par une autre source compatible : rien à redemander.
+                $state = State::fromProof();
+                $doc['satisfied_by'] = $proof;
+                if ($doc['request_pending_creation']) {
+                    $doc['request_status'] = null;
+                    $doc['request_pending_creation'] = false;
+                }
+            }
             $doc['compliance_status'] = $state['consolidated'];
             $doc['satisfies_obligation'] = $state['satisfies_obligation'];
             $doc['confidentiality'] = DocumentConfidentiality::forTypeCode($doc['code']);

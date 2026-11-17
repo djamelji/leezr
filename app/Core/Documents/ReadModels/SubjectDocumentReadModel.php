@@ -87,6 +87,7 @@ class SubjectDocumentReadModel
         }
 
         $policy = app(DocumentAccessPolicy::class);
+        $proofs = \App\Core\Documents\Satisfaction\DocumentProofRegistry::forSubjects($company, $subjects); // ADR-819
 
         foreach ($documents as &$doc) {
             $type = $typesByCode->get($doc['code']);
@@ -107,6 +108,11 @@ class SubjectDocumentReadModel
 
             $hasFile = $upload !== null && ! empty($upload->file_path);
             $state = State::evaluateFromParts($hasFile, $request?->status, $doc['lifecycle_status'] ?? 'missing');
+            $doc['satisfied_by'] = null;
+            if (! $state['satisfies_obligation'] && ($proof = $proofs[$doc['code']] ?? null)) {
+                $state = State::fromProof(); // ADR-819 : satisfaite par une autre source compatible
+                $doc['satisfied_by'] = $proof;
+            }
 
             $doc['request_status'] = $request?->status;
             $doc['request_review_note'] = $request?->review_note;
@@ -144,6 +150,7 @@ class SubjectDocumentReadModel
         $doc['lifecycle_status'] = 'missing';
         $doc['satisfies_obligation'] = false;
         $doc['restricted'] = true;
+        $doc['satisfied_by'] = null; // ADR-819 : la source d'une preuve n'est pas révélée non plus
 
         return $doc;
     }

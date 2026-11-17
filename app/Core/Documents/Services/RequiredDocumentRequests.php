@@ -37,6 +37,7 @@ final class RequiredDocumentRequests
         $map = DocumentResolverService::subjectMap($company->id, $roleKey, $jobRoleId, $company->market_key, DocumentType::SCOPE_COMPANY_USER);
         $service = app(DocumentRequestService::class);
         $created = [];
+        $proofs = \App\Core\Documents\Satisfaction\DocumentProofRegistry::forSubjects($company, [$subject]); // ADR-819
         foreach ($map as $typeId => $entry) {
             if (! $entry['visible'] || ! $entry['required']) {
                 continue;
@@ -47,8 +48,8 @@ final class RequiredDocumentRequests
             $hasFile = \App\Core\Documents\MemberDocument::where('company_id', $company->id)->where('document_type_id', $typeId)
                 ->where(fn ($q) => $q->where(fn ($s) => $s->where('document_subject_type', $subject->type)->where('document_subject_id', $subject->id))
                     ->when($subject->is(DocumentSubject::TYPE_USER), fn ($q2) => $q2->orWhere('user_id', $subject->id)))->exists();
-            if ($hasFile) {
-                continue; // déjà détenue : rien à demander
+            if ($hasFile || isset($proofs[$entry['type']->code])) {
+                continue; // déjà détenue, ou prouvée par une autre source (ex. contrat signé) : rien à demander
             }
             $service->open($company->id, $subject, $entry['type'], $actor);
             $created[] = $entry['type']->code;

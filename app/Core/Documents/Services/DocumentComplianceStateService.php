@@ -115,6 +115,15 @@ class DocumentComplianceStateService
      * Réduit les 4 dimensions en UNE étiquette priorisée (un document ne peut afficher qu'un
      * état dominant). Un refus/une attente priment sur la validité ; l'absence prime sur tout.
      */
+    /**
+     * ADR-819 — state of a requirement satisfied by a module proof (e.g. contract signed in Workforce) :
+     * a finalised artefact, valid, nothing to validate, the obligation is met.
+     */
+    public static function fromProof(): array
+    {
+        return self::evaluateFromParts(true, 'approved', DocumentLifecycleService::STATUS_VALID);
+    }
+
     public static function consolidate(bool $hasFile, string $validation, string $validity, string $request): string
     {
         if (! $hasFile) {
