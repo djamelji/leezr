@@ -29053,3 +29053,24 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   
   Lots R1 (P0) à R8 (P4) ; décisions produit D1 à D8.
 - **Conséquences** : aucune modification applicative, aucune migration, aucune donnée modifiée. Implémentation soumise à validation produit.
+
+## ADR-815.2 — Audit produit global et plan de refonte intégrale de l'espace Company (audit et conception uniquement)
+
+- **Date** : 2026-11-17, base DEV `6b7cb5ef`. Rapport : `docs/bmad/ADR-815.2-COMPANY-PRODUCT-REDESIGN-AUDIT.md`, annexes `docs/bmad/adr8152/` (00 à 10).
+- **Contexte** : ADR-815 avait approfondi les anomalies signalées. Le produit demande la remise à plat de **100 %** de l'expérience Company.
+- **Méthode** :
+  - inventaire généré depuis le code : 26 modules, 57 pages, dialogues, API, onglets, liens ;
+  - fiche UX par page (Q1–Q20) ;
+  - 26 parcours rejoués en 4 passages sur une société neuve dans un **clone isolé**, avec mesure des clics, saisies, choix et pages ;
+  - matrice de cohérence transversale ;
+  - empreinte de la base DEV identique avant et après.
+- **Constats principaux** :
+  - **Confidentialité** : P0 agrégats d'entreprise servis à un salarié.
+  - **Impasses** : oubli de sortie non corrigeable ; congés impossibles si le module est activé après le contrat ; personne ré-invitée face à des écrans vides et des 400.
+  - **Embauche** : éclatée (deux créations de salarié).
+  - **Fiche personne** : 3 formulaires dans un onglet ; poste, date et type de contrat en double.
+  - **Modèle** : le rôle d'accès fait office de métier ; trois autorités d'exigences.
+  - **Vocabulaire** : un module porte jusqu'à 3 noms.
+  - **Organisation** : gestion et espace personnel mélangés ; deux accueils.
+- **Proposition (non décidée)** : refonte par résultats utilisateurs, lots L0 (sécurité immédiate) à L10, sans nouveau moteur ni migration de schéma ; décisions produit D1 à D17.
+- **Conséquences** : aucune modification applicative, aucune migration, aucune donnée DEV modifiée.
