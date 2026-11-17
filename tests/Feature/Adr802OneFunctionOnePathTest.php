@@ -106,9 +106,8 @@ class Adr802OneFunctionOnePathTest extends TestCase
         $this->assertStringContainsString('data-test="preset-open-jobdomain"', $cat);
         $tab = $this->page('platform/jobdomains/_JobdomainPresetTab.vue');
         $this->assertStringContainsString("emit('link', shareChoice)", $tab);
-        foreach (['rbac', 'requirements', 'planning'] as $k) {
-            $this->assertStringContainsString("@link=\"fk => linkFamily('{$k}', fk)\"", $this->page('platform/jobdomains/[id].vue'));
-        }
+        // ADR-820 : une seule section « Presets » ; chaque famille se lie au domaine par le même chemin.
+        $this->assertStringContainsString('@link="fk => linkFamily(family, fk)"', $this->page('platform/jobdomains/[id]/[tab].vue'));
         $this->assertStringNotContainsString("'key' => 'organization-presets'", file_get_contents(app_path('Modules/Platform/Jobdomains/JobdomainsModule.php')));
     }
 

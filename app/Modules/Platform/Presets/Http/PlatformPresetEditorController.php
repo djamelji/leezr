@@ -31,11 +31,12 @@ class PlatformPresetEditorController extends Controller
             'key' => $b['key'], 'label' => $b['label'], 'module' => $m->name, 'is_admin' => (bool) ($b['is_admin'] ?? false),
             'sensitive' => collect($b['permissions'] ?? [])->contains(fn ($p) => isset($adminPerms[$p])), 'permissions' => count($b['permissions'] ?? []),
         ]))->values();
-        $label = fn ($d) => method_exists($d, 'resolvedLabel') ? $d->resolvedLabel(app()->getLocale()) : ($d->label ?? $d->code);
+        $locale = substr((string) (\App\Core\Fields\FieldResolverService::requestLocale() ?? app()->getLocale()), 0, 2); // ADR-820 : langue de l'interface
+        $label = fn ($d) => method_exists($d, 'resolvedLabel') ? $d->resolvedLabel($locale) : ($d->label ?? $d->code);
         $fields = FieldDefinition::whereNull('company_id')->whereIn('scope', [FieldDefinition::SCOPE_COMPANY, FieldDefinition::SCOPE_COMPANY_USER])->orderBy('code')->get()
             ->map(fn ($d) => ['code' => $d->code, 'label' => $label($d), 'subject' => $d->scope === FieldDefinition::SCOPE_COMPANY ? 'company' : 'person', 'sensitive' => (bool) ($d->validation_rules['sensitive'] ?? false)]);
         $documents = DocumentType::where('is_system', true)->whereIn('scope', [DocumentType::SCOPE_COMPANY, DocumentType::SCOPE_COMPANY_USER])->orderBy('code')->get()
-            ->map(fn ($d) => ['code' => $d->code, 'label' => $d->validation_rules['translations'][app()->getLocale()] ?? $d->label, 'subject' => $d->scope === DocumentType::SCOPE_COMPANY ? 'company' : 'person']);
+            ->map(fn ($d) => ['code' => $d->code, 'label' => $d->validation_rules['translations'][$locale] ?? $d->label, 'subject' => $d->scope === DocumentType::SCOPE_COMPANY ? 'company' : 'person']);
         // Postes connus : ceux des presets d'organisation publiés (clés stables utilisées par les sociétés).
         $positions = OrganizationPreset::where('status', 'published')->get()->flatMap(fn ($p) => collect($p->structure['job_roles'] ?? $p->structure['positions'] ?? [])
             ->map(fn ($j) => ['key' => $j['key'] ?? $j['preset_item_key'] ?? null, 'label' => $j['title'] ?? $j['label'] ?? null]))->filter(fn ($j) => $j['key'])->unique('key')->values();

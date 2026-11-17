@@ -20,18 +20,17 @@ const can = p => auth.hasPermission('manage_jobdomains') || auth.hasPermission(p
 // publie depuis la fiche de ce JobDomain (onglet de la famille) ; le catalogue y renvoie. Le catalogue garde
 // la bibliothèque (familles non rattachées), l'historique, les écarts, l'aperçu société et l'archivage.
 const ownedByDomain = computed(() => (detail.value?.recommended_by?.length || 0) > 0)
-const KIND_TAB = { rbac: 'roles', requirements: 'requirements', planning: 'planning' }
 const jdIds = ref({})
 onMounted(async () => {
   try { jdIds.value = Object.fromEntries(((await $platformApi('/jobdomains')).jobdomains || []).map(j => [j.key, j.id])) }
   catch { jdIds.value = {} }
 })
-const domainLink = key => jdIds.value[key] ? { path: `/platform/jobdomains/${jdIds.value[key]}`, query: { tab: KIND_TAB[detail.value?.preset?.kind] || 'general' } } : null
+const domainLink = key => jdIds.value[key] ? { name: 'platform-jobdomains-id-tab', params: { id: jdIds.value[key], tab: 'presets' } } : null // ADR-820
 const editor = ref(false)
 const editing = ref(null)
 const blocked = ref(null)
 
-const KINDS = ['rbac', 'requirements', 'planning']
+const KINDS = ['catalog', 'rbac', 'requirements', 'planning']
 const kind = ref(KINDS.includes(route.query.kind) ? route.query.kind : null)
 const presets = ref([])
 const loading = ref(false)

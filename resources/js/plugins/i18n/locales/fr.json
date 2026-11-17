@@ -10613,7 +10613,8 @@
       "rbac": "Rôles et droits (RBAC)",
       "organization": "Organisation",
       "requirements": "Exigences",
-      "planning": "Planning"
+      "planning": "Planning",
+      "catalog": "Bibliothèque de départ"
     },
     "pinned": "épinglée",
     "latest": "dernière publiée",
@@ -10858,7 +10859,21 @@
     "schedule": "Horaire",
     "headcount": "Effectif",
     "addLine": "+ Ajouter un besoin",
-    "archiveBlocked": "Archivage refusé : cette version est utilisée par la recommandation de {list}. Publiez d’abord une version de remplacement, ou modifiez la recommandation du domaine."
+    "archiveBlocked": "Archivage refusé : cette version est utilisée par la recommandation de {list}. Publiez d’abord une version de remplacement, ou modifiez la recommandation du domaine.",
+    "libraryHint": "La bibliothèque met des champs et des types de documents à disposition des nouvelles sociétés. Rien n'est demandé pour autant : une exigence se configure explicitement, par la société ou par poste.",
+    "libraryFields": "Champs ({n})",
+    "libraryDocuments": "Types de documents ({n})",
+    "libraryAdd": "Ajouter un élément du catalogue Platform",
+    "librarySearch": "Rechercher",
+    "libraryItem": "Élément",
+    "librarySubjectLabel": "Concerne",
+    "libraryIncluded": "À la création",
+    "libraryActive": "Actif",
+    "librarySuggested": "Proposé",
+    "librarySubject": {
+      "person": "Personne",
+      "company": "Société"
+    }
   },
   "jobdomainTabs": {
     "tab": {
@@ -10911,7 +10926,18 @@
     "sharedPublishText": "Ce modèle est aussi suivi par : {list}. Publier le modifiera pour ces domaines. Vous pouvez aussi en faire une variante propre à ce domaine, sans effet sur les autres.",
     "publishVariant": "Créer une variante pour ce domaine",
     "publishShared": "Publier pour tous",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "summary": {
+      "fieldsActive": "champs actifs",
+      "fieldsSuggested": "champs proposés",
+      "documentsActive": "documents disponibles",
+      "documentsSuggested": "documents proposés"
+    },
+    "andMore": "et {n} autres",
+    "bundleCount": "{n} ensembles de droits",
+    "requirementsSummary": "{n} exigences suggérées, dont {positions} liées à un poste.",
+    "requirementsNotApplied": "Aucune exigence n'est appliquée à la création : la société les adopte depuis ses postes.",
+    "planningSummary": "{schedules} horaires types · {weeks} semaines types"
   },
   "workingTime": {
     "section": {
@@ -11545,5 +11571,75 @@
       "retentionHint": "Ensuite, l'identité des candidats non retenus est effacée.",
       "saved": "Réglages enregistrés."
     }
+  },
+  "jobdomainExperience": {
+    "section": {
+      "general": "Général",
+      "modules": "Modules",
+      "experience": "Expérience",
+      "presets": "Presets",
+      "publication": "Publication"
+    },
+    "openToSignup": "Ouvert à l'inscription",
+    "identityTitle": "Identité du métier",
+    "identityHint": "Nom et description présentés aux sociétés qui choisissent ce métier.",
+    "modulesTitle": "Modules du métier",
+    "modulesHint": "Inclus : activés à la création d'une société (sans achat). Recommandés : mis en avant dans son catalogue, jamais activés ni achetés pour elle. La compatibilité se règle sur la fiche du module.",
+    "search": "Rechercher",
+    "module": "Module",
+    "compatibility": "Compatibilité",
+    "includedCol": "Inclus au démarrage",
+    "recommendedCol": "Recommandé",
+    "compatible": "Compatible",
+    "incompatible": "Non compatible",
+    "coreModules": "Toujours présents : {list}.",
+    "navTitle": "Navigation métier",
+    "navHint": "Ordonne le menu des sociétés de ce métier. Aucune entrée n'est ajoutée ni retirée : les droits et les modules de chaque société décident toujours de ce qui est visible.",
+    "groupOrder": "Groupes affichés en premier",
+    "groupOrderHint": "Dans l'ordre choisi ; les autres groupes suivent dans l'ordre habituel.",
+    "entryPoints": "Points d'entrée métier",
+    "entryPointsHint": "Jusqu'à six entrées placées en tête de leur groupe.",
+    "vocabulary": "Vocabulaire",
+    "vocabularyHint": "Les mots du métier utilisés dans l'interface des sociétés.",
+    "preview": "Aperçu du menu",
+    "previewHint": "Premiers groupes, tels qu'une société les verra si elle a les droits et les modules.",
+    "presetsHint": "Ce qu'une nouvelle société de ce métier reçoit à sa création. Seules les versions publiées sont appliquées ; une société existante n'est jamais modifiée.",
+    "draft": "Brouillon en cours",
+    "publishedV": "Publié · v{v}",
+    "none": "Aucun",
+    "family": {
+      "catalog": "Bibliothèque de départ",
+      "rbac": "Rôles d'accès",
+      "organization": "Organisation et postes",
+      "requirements": "Exigences suggérées",
+      "planning": "Valeurs initiales du planning"
+    },
+    "familyHint": {
+      "catalog": "Champs et documents disponibles",
+      "rbac": "Rôles créés à l'inscription",
+      "organization": "Services et postes métier",
+      "requirements": "Proposées, jamais imposées",
+      "planning": "Module Planning"
+    },
+    "familyDetail": {
+      "catalog": "Disponible n'est pas demandé : ces éléments enrichissent les catalogues de la société, aucune pièce n'est réclamée pour autant.",
+      "rbac": "Les rôles définissent l'accès au logiciel. Ils ne décident jamais des informations demandées aux personnes.",
+      "organization": "Services et postes proposés à la société. Ses postes porteront ensuite ses propres exigences.",
+      "requirements": "Exigences que la société peut adopter, par poste. Elles ne sont jamais appliquées automatiquement à la création.",
+      "planning": "Horaires et semaines types proposés au module Planning, qui en reste propriétaire. Le temps de travail se règle dans la société."
+    },
+    "orgSummary": "{departments} services · {positions} postes",
+    "publicationTitle": "Disponibilité",
+    "publicationHint": "Les sociétés existantes ne sont jamais affectées.",
+    "activeLabel": "Métier actif",
+    "activeHint": "Un métier inactif n'est plus attribuable.",
+    "signupHint": "Proposé aux nouvelles inscriptions.",
+    "creationTitle": "Création d'une société",
+    "creationHint": "Ce qui initialise une nouvelle société, par marché.",
+    "path": {
+      "versioned": "Presets publiés",
+      "historical": "Configuration historique"
+    },
+    "historicalHint": "Publiez une bibliothèque de départ et des rôles comprenant le propriétaire pour que les presets s'appliquent."
   }
 }

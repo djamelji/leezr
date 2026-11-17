@@ -10613,7 +10613,8 @@
       "rbac": "Roles and permissions (RBAC)",
       "organization": "Organisation",
       "requirements": "Requirements",
-      "planning": "Planning"
+      "planning": "Planning",
+      "catalog": "Starting library"
     },
     "pinned": "pinned",
     "latest": "latest published",
@@ -10858,7 +10859,21 @@
     "schedule": "Schedule",
     "headcount": "Headcount",
     "addLine": "+ Add a need",
-    "archiveBlocked": "Archiving refused: this version is used by the recommendation of {list}. First publish a replacement version, or change the domain recommendation."
+    "archiveBlocked": "Archiving refused: this version is used by the recommendation of {list}. First publish a replacement version, or change the domain recommendation.",
+    "libraryHint": "The library makes fields and document types available to new companies. Nothing is requested because of it: a requirement is configured explicitly, by the company or per position.",
+    "libraryFields": "Fields ({n})",
+    "libraryDocuments": "Document types ({n})",
+    "libraryAdd": "Add an item from the Platform catalogue",
+    "librarySearch": "Search",
+    "libraryItem": "Item",
+    "librarySubjectLabel": "Applies to",
+    "libraryIncluded": "At creation",
+    "libraryActive": "Active",
+    "librarySuggested": "Suggested",
+    "librarySubject": {
+      "person": "Person",
+      "company": "Company"
+    }
   },
   "jobdomainTabs": {
     "tab": {
@@ -10911,7 +10926,18 @@
     "sharedPublishText": "This model is also followed by: {list}. Publishing will change it for those domains. You can instead make a variant for this domain only, with no effect on the others.",
     "publishVariant": "Create a variant for this domain",
     "publishShared": "Publish for all",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "summary": {
+      "fieldsActive": "active fields",
+      "fieldsSuggested": "suggested fields",
+      "documentsActive": "available documents",
+      "documentsSuggested": "suggested documents"
+    },
+    "andMore": "and {n} more",
+    "bundleCount": "{n} right bundles",
+    "requirementsSummary": "{n} suggested requirements, {positions} tied to a position.",
+    "requirementsNotApplied": "No requirement is applied at creation: the company adopts them from its positions.",
+    "planningSummary": "{schedules} shift templates · {weeks} week templates"
   },
   "workingTime": {
     "section": {
@@ -11545,5 +11571,75 @@
       "retentionHint": "Afterwards the identity of non-retained candidates is erased.",
       "saved": "Settings saved."
     }
+  },
+  "jobdomainExperience": {
+    "section": {
+      "general": "General",
+      "modules": "Modules",
+      "experience": "Experience",
+      "presets": "Presets",
+      "publication": "Publication"
+    },
+    "openToSignup": "Open to sign-up",
+    "identityTitle": "Business identity",
+    "identityHint": "Name and description shown to companies choosing this business.",
+    "modulesTitle": "Business modules",
+    "modulesHint": "Included: activated when a company is created (no purchase). Recommended: highlighted in its catalogue, never activated nor bought for it. Compatibility is set on the module page.",
+    "search": "Search",
+    "module": "Module",
+    "compatibility": "Compatibility",
+    "includedCol": "Included at start",
+    "recommendedCol": "Recommended",
+    "compatible": "Compatible",
+    "incompatible": "Not compatible",
+    "coreModules": "Always present: {list}.",
+    "navTitle": "Business navigation",
+    "navHint": "Orders the menu of the companies of this business. No entry is added or removed: each company's rights and modules still decide what is visible.",
+    "groupOrder": "Groups shown first",
+    "groupOrderHint": "In the chosen order; other groups follow in the usual order.",
+    "entryPoints": "Business entry points",
+    "entryPointsHint": "Up to six entries placed at the top of their group.",
+    "vocabulary": "Vocabulary",
+    "vocabularyHint": "The business words used in the companies' interface.",
+    "preview": "Menu preview",
+    "previewHint": "First groups, as a company will see them if it has the rights and modules.",
+    "presetsHint": "What a new company of this business receives when it is created. Only published versions are applied; an existing company is never changed.",
+    "draft": "Draft in progress",
+    "publishedV": "Published · v{v}",
+    "none": "None",
+    "family": {
+      "catalog": "Starting library",
+      "rbac": "Access roles",
+      "organization": "Organisation and positions",
+      "requirements": "Suggested requirements",
+      "planning": "Planning starting values"
+    },
+    "familyHint": {
+      "catalog": "Available fields and documents",
+      "rbac": "Roles created at sign-up",
+      "organization": "Departments and positions",
+      "requirements": "Suggested, never imposed",
+      "planning": "Planning module"
+    },
+    "familyDetail": {
+      "catalog": "Available is not requested: these items enrich the company catalogues, no document is requested because of them.",
+      "rbac": "Roles define access to the software. They never decide what is requested from people.",
+      "organization": "Departments and positions offered to the company. Its positions will then carry its own requirements.",
+      "requirements": "Requirements the company can adopt, per position. They are never applied automatically at creation.",
+      "planning": "Shift and week templates offered to the Planning module, which owns them. Working time is set by the company."
+    },
+    "orgSummary": "{departments} departments · {positions} positions",
+    "publicationTitle": "Availability",
+    "publicationHint": "Existing companies are never affected.",
+    "activeLabel": "Active business",
+    "activeHint": "An inactive business can no longer be assigned.",
+    "signupHint": "Offered to new sign-ups.",
+    "creationTitle": "Company creation",
+    "creationHint": "What initialises a new company, per market.",
+    "path": {
+      "versioned": "Published presets",
+      "historical": "Historical configuration"
+    },
+    "historicalHint": "Publish a starting library and roles including the owner for presets to apply."
   }
 }

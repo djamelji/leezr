@@ -210,7 +210,8 @@ class PageModuleAlignmentTest extends TestCase
             'platform-modules-key' => $base . '/platform/modules/[key].vue',
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
             'platform-companies-id' => $base . '/platform/companies/[id].vue',
-            'platform-jobdomains-id' => $base . '/platform/jobdomains/[id].vue',
+            'platform-jobdomains-id' => $base . '/platform/jobdomains/[id]/index.vue',
+            'platform-jobdomains-id-tab' => $base . '/platform/jobdomains/[id]/[tab].vue', // ADR-820
             // W-HYGIENE-GOV : noms composés (répertoire `organization-presets`) — pages réelles présentes (ADR-638 W-E2).
             'platform-organization-presets' => $base . '/platform/organization-presets/index.vue',
             'platform-organization-presets-id' => $base . '/platform/organization-presets/[id].vue',

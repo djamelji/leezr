@@ -24,12 +24,11 @@ const busy = ref(false)
 const shown = computed(() => props.state.draft || props.state.published)
 const content = computed(() => shown.value?.content || {})
 
-const bundleLabel = key => props.meta?.bundles?.find(b => b.key === key)?.label || key
 const targetLabel = i => {
   const list = i.kind === 'document' ? props.meta?.documents : props.meta?.fields
   const hit = list?.find(x => x.code === i.code)
 
-  return hit?.label || (i.kind === 'document' && te(`documents.type.${i.code}`) ? t(`documents.type.${i.code}`) : i.code)
+  return (i.kind === 'document' && te(`documents.type.${i.code}`) ? t(`documents.type.${i.code}`) : null) || hit?.label || i.code // ADR-820 : libellé traduit d'abord
 }
 
 const edit = async () => {
@@ -60,7 +59,17 @@ const publish = async (mode = null) => {
   }
   finally { busy.value = false }
 }
-const DAY = d => t(`presetEditor.day.${d}`)
+// ADR-820 — résumé de la bibliothèque (jamais la liste complète sur l'écran principal)
+const catalogItems = computed(() => [...(content.value.fields || []).map(i => ({ ...i, kind: 'field', subject: i.subject || 'person', included: i.included !== false })),
+  ...(content.value.documents || []).map(i => ({ ...i, kind: 'document', subject: i.subject || 'person', included: i.included !== false }))])
+const catalogSummary = computed(() => [
+  { key: 'fieldsActive', n: catalogItems.value.filter(i => i.kind === 'field' && i.included).length },
+  { key: 'fieldsSuggested', n: catalogItems.value.filter(i => i.kind === 'field' && !i.included).length },
+  { key: 'documentsActive', n: catalogItems.value.filter(i => i.kind === 'document' && i.included).length },
+  { key: 'documentsSuggested', n: catalogItems.value.filter(i => i.kind === 'document' && !i.included).length },
+])
+const catalogSample = computed(() => catalogItems.value.filter(i => i.included).slice(0, 10))
+const catalogMore = computed(() => catalogItems.value.length - catalogSample.value.length)
 
 // ADR-802 — partager un preset entre domaines depuis la fiche (avant : seulement par l'API). Liste des
 // familles PUBLIÉES de la même famille (`GET /platform/presets?kind=`), enregistrement par le parent via
@@ -139,83 +148,81 @@ onMounted(async () => {
       </VBtn>
     </div>
 
-    <!-- Contenu lisible (brouillon en cours s'il existe, sinon version en vigueur) -->
-    <template v-if="kind === 'rbac' && content.roles?.length">
-      <div
-        v-for="r in content.roles"
-        :key="r.key"
-        class="jd-row"
-      >
-        <div class="flex-grow-1">
-          <div class="text-body-1">
-            {{ r.name }}<span
-              v-if="r.is_administrative"
-              class="text-body-2 text-warning"
-            > · {{ t('presetEditor.administrative') }}</span>
+    <!-- ADR-820 : ce que le preset FOURNIT, en résumé ; le détail s'ouvre dans l'éditeur -->
+    <template v-if="kind === 'catalog' && (content.fields?.length || content.documents?.length)">
+      <VRow class="card-grid card-grid-xs mb-2">
+        <VCol
+          v-for="b in catalogSummary"
+          :key="b.key"
+          cols="6"
+          md="3"
+        >
+          <div class="text-h5">
+            {{ b.n }}
           </div>
           <div class="text-body-2 text-medium-emphasis">
-            {{ (r.bundles || []).map(bundleLabel).join(' · ') || '—' }}
+            {{ t(`jobdomainTabs.summary.${b.key}`) }}
           </div>
-        </div>
+        </VCol>
+      </VRow>
+      <div class="d-flex flex-wrap gap-2">
+        <VChip
+          v-for="i in catalogSample"
+          :key="`${i.kind}:${i.code}`"
+          size="small"
+          :variant="i.included ? 'tonal' : 'outlined'"
+        >
+          {{ targetLabel(i) }}
+        </VChip>
+        <span
+          v-if="catalogMore > 0"
+          class="text-body-2 text-medium-emphasis align-self-center"
+        >{{ t('jobdomainTabs.andMore', { n: catalogMore }) }}</span>
       </div>
     </template>
-    <template v-else-if="kind === 'requirements' && content.items?.length">
-      <div
-        v-for="s in ['company', 'person', 'legal_representative']"
-        :key="s"
+    <VList
+      v-else-if="kind === 'rbac' && content.roles?.length"
+      density="compact"
+      class="py-0"
+    >
+      <VListItem
+        v-for="r in content.roles"
+        :key="r.key"
+        :title="r.name"
+        :subtitle="t('jobdomainTabs.bundleCount', { n: (r.bundles || []).length })"
       >
-        <template v-if="content.items.some(i => (i.subject || 'person') === s)">
-          <div class="text-overline mt-2">
-            {{ t(`jobdomainTabs.subject.${s}`) }}
-          </div>
-          <div
-            v-for="(i, n) in content.items.filter(x => (x.subject || 'person') === s)"
-            :key="n"
-            class="jd-row"
+        <template #append>
+          <VChip
+            v-if="r.is_administrative"
+            size="small"
+            color="warning"
+            variant="tonal"
           >
-            <div class="flex-grow-1 text-body-2">
-              {{ targetLabel(i) }} · {{ i.kind === 'document' ? t('presetEditor.document') : t('presetEditor.field') }}<template v-if="i.job_role_keys?.length">
-                · {{ i.job_role_keys.join(', ') }}
-              </template>
-            </div>
-            <AppStatusText
-              :tone="i.level === 'configurable_required' ? 'warning' : 'info'"
-              :text="t(`presetEditor.level.${i.level}`)"
-            />
-          </div>
+            {{ t('presetEditor.administrative') }}
+          </VChip>
         </template>
-      </div>
-    </template>
-    <template v-else-if="kind === 'planning' && (content.schedule_templates?.length || content.week_templates?.length)">
-      <div class="text-overline">
-        {{ t('presetEditor.schedules', { n: content.schedule_templates?.length || 0 }) }}
-      </div>
-      <div
-        v-for="s in content.schedule_templates || []"
-        :key="s.code"
-        class="jd-row"
-      >
-        <div class="flex-grow-1 text-body-2">
-          {{ s.name }} · {{ s.start_time }} – {{ s.end_time }}
-        </div>
-      </div>
-      <div class="text-overline mt-3">
-        {{ t('presetEditor.weeks', { n: content.week_templates?.length || 0 }) }}
-      </div>
-      <div
-        v-for="w in content.week_templates || []"
-        :key="w.code"
-        class="jd-row"
-      >
-        <div class="flex-grow-1 text-body-2">
-          {{ w.name }} · {{ [...new Set((w.lines || []).map(l => l.day_index))].map(DAY).join(', ') }}
-        </div>
-      </div>
+      </VListItem>
+    </VList>
+    <template v-else-if="kind === 'requirements' && content.items?.length">
+      <p class="text-body-2 mb-2">
+        {{ t('jobdomainTabs.requirementsSummary', { n: content.items.length, positions: content.items.filter(i => i.job_role_keys?.length).length }) }}
+      </p>
       <VAlert
         type="info"
         variant="tonal"
         density="compact"
-        class="mt-3"
+      >
+        {{ t('jobdomainTabs.requirementsNotApplied') }}
+      </VAlert>
+    </template>
+    <template v-else-if="kind === 'planning' && (content.schedule_templates?.length || content.week_templates?.length)">
+      <p class="text-body-2 mb-2">
+        {{ t('jobdomainTabs.planningSummary', { schedules: content.schedule_templates?.length || 0, weeks: content.week_templates?.length || 0 }) }}
+      </p>
+      <VAlert
+        type="info"
+        variant="tonal"
+        density="compact"
       >
         {{ t('jobdomainTabs.planningNotPolicy') }}
       </VAlert>
@@ -278,8 +285,3 @@ onMounted(async () => {
     />
   </div>
 </template>
-
-<style scoped>
-.jd-row { display: flex; align-items: center; gap: 12px; padding-block: 8px; flex-wrap: wrap; }
-.jd-row + .jd-row { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
-</style>

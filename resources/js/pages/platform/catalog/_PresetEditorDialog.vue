@@ -11,7 +11,7 @@ const props = defineProps({
   preset: { type: Object, default: null }, // brouillon existant, ou { kind } pour une création
 })
 const emit = defineEmits(['update:isDialogVisible', 'saved'])
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { toast } = useAppToast()
 
 const meta = ref(null)
@@ -21,6 +21,10 @@ const conflict = ref(false)
 const form = ref({ label: '', family_key: '', description: '' })
 const roles = ref([])
 const items = ref([])
+const library = ref({ fields: [], documents: [] }) // ADR-820 — bibliothèque de départ
+const libraryList = ref('fields')
+const librarySearch = ref('')
+const libraryPick = ref(null)
 const planning = ref({ coverage_categories: [], activity_presets: [], schedule_templates: [], week_templates: [] })
 
 const kind = computed(() => props.preset?.kind)
@@ -38,6 +42,7 @@ watch(() => props.isDialogVisible, async v => {
   form.value = { label: props.preset?.label || '', family_key: props.preset?.family_key || '', description: props.preset?.description || '' }
   roles.value = (c.roles || []).map(r => ({ ...r, bundles: r.bundles || [] }))
   items.value = (c.items || []).map(i => ({ subject: 'person', job_role_keys: [], ...i }))
+  library.value = { fields: (c.fields || []).map(i => ({ subject: 'person', included: true, ...i })), documents: (c.documents || []).map(i => ({ subject: 'person', included: true, ...i })) }
   planning.value = { coverage_categories: c.coverage_categories || [], activity_presets: c.activity_presets || [], schedule_templates: c.schedule_templates || [], week_templates: c.week_templates || [] }
 }, { immediate: true })
 
@@ -60,6 +65,32 @@ const positionItems = computed(() => (meta.value?.positions || []).map(p => ({ v
 const addItem = () => items.value.push({ subject: 'person', kind: 'document', code: null, level: 'recommended', job_role_keys: [], origin: 'manual' })
 const onSubject = i => { i.code = null; if (i.subject === 'company') i.job_role_keys = [] }
 
+// ── Bibliothèque (ADR-820) : disponible ≠ demandé — aucune notion d'obligation ici ──
+const libraryKind = computed(() => (libraryList.value === 'fields' ? 'field' : 'document'))
+const metaFor = (list, i) => (list === 'fields' ? meta.value?.fields : meta.value?.documents)?.find(x => x.code === i.code && x.subject === i.subject)
+const docLabel = code => (te(`documents.type.${code}`) ? t(`documents.type.${code}`) : null)
+const libraryRows = computed(() => library.value[libraryList.value].map((i, idx) => ({ ...i, idx, label: (libraryList.value === 'documents' && docLabel(i.code)) || metaFor(libraryList.value, i)?.label || i.code })))
+const libraryChoices = computed(() => {
+  const taken = new Set(library.value[libraryList.value].map(i => `${i.subject}>${i.code}`))
+
+  return ((libraryList.value === 'fields' ? meta.value?.fields : meta.value?.documents) || [])
+    .filter(x => (x.subject === 'person' || x.subject === 'company') && !taken.has(`${x.subject}>${x.code}`))
+    .map(x => ({ value: `${x.subject}>${x.code}`, title: (libraryList.value === 'documents' && docLabel(x.code)) || x.label, subtitle: t(`presetEditor.librarySubject.${x.subject}`) }))
+})
+const addLibraryItem = () => {
+  if (!libraryPick.value) return
+  const [subject, code] = libraryPick.value.split('>')
+
+  library.value[libraryList.value].push({ code, subject, included: true })
+  libraryPick.value = null
+}
+const LIBRARY_HEADERS = computed(() => [
+  { title: t('presetEditor.libraryItem'), key: 'label' },
+  { title: t('presetEditor.librarySubjectLabel'), key: 'subject', width: 160 },
+  { title: t('presetEditor.libraryIncluded'), key: 'included', width: 190, sortable: false },
+  { title: '', key: 'actions', width: 56, sortable: false },
+])
+
 // ── Planning ──
 const scheduleCodes = computed(() => planning.value.schedule_templates.map(s => ({ value: s.code, title: s.name || s.code })))
 const categoryCodes = computed(() => planning.value.coverage_categories.map(s => ({ value: s.code, title: s.name || s.code })))
@@ -70,6 +101,7 @@ const addLine = w => w.lines.push({ kind: 'needs', day_index: 0, headcount: 1, s
 
 const content = () => {
   if (kind.value === 'rbac') return { roles: roles.value.map(r => ({ ...r, key: r.key || slug(r.name) })) }
+  if (kind.value === 'catalog') return { fields: library.value.fields.map(({ code, subject, included, order }) => ({ code, subject, included, ...(order != null ? { order } : {}) })), documents: library.value.documents.map(({ code, subject, included, order }) => ({ code, subject, included, ...(order != null ? { order } : {}) })) }
   if (kind.value === 'requirements') {
     return { items: items.value.map(i => {
       const out = { ...i }
@@ -263,6 +295,85 @@ const err = path => Object.entries(errors.value).filter(([k]) => k === path || k
       </template>
 
       <!-- ── Exigences ── -->
+      <template v-else-if="kind === 'catalog'">
+        <p class="text-body-2 text-medium-emphasis mt-4 mb-2">
+          {{ t('presetEditor.libraryHint') }}
+        </p>
+        <VTabs
+          v-model="libraryList"
+          class="border-b mb-3"
+          density="compact"
+        >
+          <VTab value="fields">
+            {{ t('presetEditor.libraryFields', { n: library.fields.length }) }}
+          </VTab>
+          <VTab value="documents">
+            {{ t('presetEditor.libraryDocuments', { n: library.documents.length }) }}
+          </VTab>
+        </VTabs>
+        <div class="d-flex flex-wrap gap-2 align-center mb-3">
+          <AppAutocomplete
+            v-model="libraryPick"
+            :items="libraryChoices"
+            item-props
+            :placeholder="t('presetEditor.libraryAdd')"
+            style="flex: 1 1 280px"
+            data-test="library-pick"
+          />
+          <VBtn
+            variant="tonal"
+            prepend-icon="tabler-plus"
+            :disabled="!libraryPick"
+            data-test="library-add"
+            @click="addLibraryItem"
+          >
+            {{ t('presetEditor.addItem') }}
+          </VBtn>
+          <AppTextField
+            v-model="librarySearch"
+            prepend-inner-icon="tabler-search"
+            :placeholder="t('presetEditor.librarySearch')"
+            style="flex: 0 1 220px"
+          />
+        </div>
+        <VDataTable
+          :headers="LIBRARY_HEADERS"
+          :items="libraryRows"
+          :search="librarySearch"
+          :items-per-page="8"
+          density="compact"
+          class="text-no-wrap"
+          data-test="library-table"
+        >
+          <template #item.subject="{ item }">
+            {{ t(`presetEditor.librarySubject.${item.subject}`) }}
+          </template>
+          <template #item.included="{ item }">
+            <VSwitch
+              :model-value="item.included"
+              :label="item.included ? t('presetEditor.libraryActive') : t('presetEditor.librarySuggested')"
+              density="compact"
+              hide-details
+              @update:model-value="v => (library[libraryList][item.idx].included = !!v)"
+            />
+          </template>
+          <template #item.actions="{ item }">
+            <IconBtn
+              :aria-label="t('presetEditor.remove')"
+              @click="library[libraryList].splice(item.idx, 1)"
+            >
+              <VIcon icon="tabler-trash" />
+            </IconBtn>
+          </template>
+        </VDataTable>
+        <div
+          v-if="err('fields') || err('documents')"
+          class="text-error text-body-2 mt-2"
+        >
+          {{ err('fields') }} {{ err('documents') }}
+        </div>
+      </template>
+
       <template v-else-if="kind === 'requirements'">
         <VAlert
           type="info"

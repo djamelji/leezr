@@ -29,12 +29,20 @@ class JobdomainModernizationController extends Controller
         $jd = Jobdomain::findOrFail($id);
 
         return response()->json([
-            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'convention_refs', 'is_active', 'signup_available', 'allow_custom_fields']),
+            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'convention_refs', 'is_active', 'signup_available', 'allow_custom_fields', 'recommended_modules', 'experience']),
+            // ADR-820 — profil d'expérience : ce que le domaine peut ordonner (groupes et entrées des modules ; jamais d'ajout)
+            'nav_catalog' => self::navCatalog(),
+            // ADR-820 — chemin de création effectif par marché actif (versionné = presets publiés ; sinon historique)
+            'creation' => Market::where('is_active', true)->orderBy('key')->pluck('key')->map(fn ($m) => ['market_key' => $m,
+                'path' => VersionedCompanyInitializer::shouldUse($jd->key, $m) ? 'versioned' : 'historical'])->values(),
             'markets' => Market::orderBy('key')->get(['key', 'name', 'is_active'])->map(fn ($m) => $m->only(['key', 'name', 'is_active'])
                 + ['has_override' => $jd->overlays()->where('market_key', $m->key)->exists()])->values(),
             'modules' => VersionedCompanyInitializer::classifyModules((array) $jd->default_modules, $jd->key),
             'available_modules' => collect(ModuleRegistry::forScope('company'))->map(fn ($m) => ['key' => $m->key, 'name' => $m->name, 'type' => $m->type,
-                'min_plan' => $m->minPlan, 'requires' => $m->requires, 'core' => str_starts_with($m->key, 'core.')])->values(),
+                'min_plan' => $m->minPlan, 'requires' => $m->requires, 'core' => str_starts_with($m->key, 'core.'),
+                // ADR-820 : compatibilité déclarée par le module (son écran propriétaire la modifie), lue ici
+                'compatible' => ($c = (\App\Core\Modules\PlatformModule::where('key', $m->key)->value('compatible_jobdomains_override') ?? $m->compatibleJobdomains)) === null
+                    || in_array($jd->key, (array) (is_string($c) ? json_decode($c, true) : $c), true)])->values(),
             'recommendations' => PresetService::recommendationsFor($jd->key),
             'workspace' => \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::state($jd), // ADR-799 : onglets
             'conventions' => \App\Core\Workforce\ConventionCollective::active()->orderBy('market_key')->orderBy('short_name')->get(['id', 'idcc', 'short_name', 'market_key', 'verified_at'])
@@ -44,6 +52,22 @@ class JobdomainModernizationController extends Controller
             'legacy' => ['roles' => (array) $jd->default_roles, 'documents' => (array) $jd->default_documents, 'fields' => (array) $jd->default_fields,
                 'planning' => array_map(fn ($v) => is_array($v) ? count($v) : $v, (array) $jd->workforce_presets), 'editable' => (bool) config('jobdomains.legacy_editing')],
         ]);
+    }
+
+    /** @return list<array{key: string, items: list<array{key: string, title: string, module: string}>}> company nav groups and entries declared by modules */
+    private static function navCatalog(): array
+    {
+        $groups = [];
+        foreach (ModuleRegistry::forScope('company') as $m) {
+            foreach ($m->capabilities->navItems ?? [] as $item) {
+                $g = $item['group'] ?? 'main';
+                $groups[$g][] = ['key' => $item['key'], 'title' => $item['title'] ?? $item['key'], 'module' => $m->key];
+            }
+        }
+        $order = \App\Core\Navigation\NavGroupRegistry::orderedKeys('company');
+        uksort($groups, fn ($a, $b) => (array_search($a, $order, true) === false ? 99 : array_search($a, $order, true)) <=> (array_search($b, $order, true) === false ? 99 : array_search($b, $order, true)));
+
+        return collect($groups)->map(fn ($items, $key) => ['key' => $key, 'items' => $items])->values()->all();
     }
 
     public function legacyDraft(Request $request, int $id): JsonResponse
