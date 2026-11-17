@@ -35,7 +35,8 @@ final class JobdomainComposition
                 'key' => $m->key, 'name' => $m->name, 'requires' => ModuleDependencyResolver::requiresOf($m->key),
                 'compatible' => self::isCompatible($m->key, $jd->key),
                 'start' => in_array($m->key, $start, true),
-                'start_dependency_of' => $startResolution['added'][$m->key] ?? [],
+                // ADR-821 : requis par un autre module du démarrage (même s'il est enregistré dans la liste)
+                'start_dependency_of' => ModuleDependencyResolver::dependents($m->key, array_values(array_diff($start, [$m->key]))),
                 'recommended' => in_array($m->key, $recommended, true),
                 'commercial' => collect($plans)->mapWithKeys(fn ($p) => [$p => ModuleDependencyResolver::commercialStatus($m->key, $p)])->all(),
             ];

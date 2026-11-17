@@ -257,6 +257,13 @@ class ModuleActivationEngine
             foreach ($deactivated as $moduleKey) {
                 static::syncCache($company, $moduleKey);
             }
+            // ADR-821 : les dépendants désactivés en cascade (raison directe retirée) ont aussi leur cache resynchronisé
+            foreach ($dependents as $dep) {
+                static::syncCache($company, $dep);
+                if (! static::hasAnyReason($company, $dep) && ! in_array($dep, $deactivated, true)) {
+                    $deactivated[] = $dep;
+                }
+            }
         });
 
         // The requested module may or may not have been deactivated

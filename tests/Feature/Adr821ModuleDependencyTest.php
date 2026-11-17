@@ -124,6 +124,8 @@ class Adr821ModuleDependencyTest extends TestCase
         $this->assertEqualsCanonicalizing(['workforce_planning', 'workforce_leave'], $refused['data']['dependents'], 'module used by several others');
         $this->assertTrue(ModuleGate::isActive($this->company, 'workforce_planning'));
         $this->assertTrue(ModuleActivationEngine::disable($this->company, 'workforce', true)['success']);
+        $this->assertSame(0, CompanyModule::where('company_id', $this->company->id)->where('is_enabled_for_company', true)
+            ->whereIn('module_key', ['workforce', 'workforce_planning', 'workforce_leave'])->count(), 'cache synced for cascaded dependents');
         foreach (['workforce', 'workforce_planning', 'workforce_leave'] as $k) {
             $this->assertFalse(ModuleGate::isActive($this->company, $k), $k);
         }

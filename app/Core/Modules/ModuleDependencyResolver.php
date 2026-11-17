@@ -162,7 +162,11 @@ final class ModuleDependencyResolver
             $blocked[] = ['module' => $key, 'reason' => 'dependency_cycle'];
         }
 
-        return ['module' => $key, 'already_active' => $already, 'to_activate' => $toActivate,
+        // Options payantes : les activer revient à les acheter (la facturation crée l'abonnement) — annoncé avant.
+        $plan = \App\Core\Billing\CompanyEntitlements::planKey($company);
+        $purchase = array_values(array_filter($toActivate, fn ($k) => self::commercialStatus($k, $plan) === 'option'));
+
+        return ['module' => $key, 'already_active' => $already, 'to_activate' => $toActivate, 'purchase' => $purchase,
             'added' => array_intersect_key($r['added'], array_flip($toActivate)), 'blocked' => $blocked, 'can_activate' => $blocked === []];
     }
 
