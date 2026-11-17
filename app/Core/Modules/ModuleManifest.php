@@ -52,5 +52,10 @@ final class ModuleManifest
         // Les capacités affichées sont les `bundles` du module (source unique des permissions) ; un bundle peut
         // préciser 'scope' => 'own' (ses propres données) et 'sensitive' => true. Sans contrat : parcours historique.
         public readonly array $setup = [],
+        // ADR-820 — BESOINS DE DONNÉES fonctionnels du module (jamais un nom de champ imposé) : la société les
+        // associe à SES champs (assistant), par identifiant stable. Forme validée par ModuleDataNeeds::NEED_KEYS :
+        // ['key', 'label', 'hint', 'type' (string|number|date|boolean|select), 'population' => ['permission' => …],
+        //  'unique' => bool, 'blocks' => opération qui en dépend (seule elle est bloquée si la valeur manque)].
+        public readonly array $dataNeeds = [],
     ) {}
 }

@@ -22,6 +22,8 @@ final class ShipmentsSetupReadiness implements ModuleDeactivationImpact, ModuleR
         return [
             ['key' => 'access_decided', 'ok' => in_array('access', $setup->completed_steps ?? [], true)],
             ['key' => 'delivery_assigned', 'required' => false, 'ok' => DocumentsSetupReadiness::nonOwnerHolds($company, 'shipments.view_own')],
+            // ADR-820 : identifiant chauffeur associé à un champ de la société (recommandé : seule l'affectation en dépend)
+            ['key' => 'data_mapped', 'required' => false, 'ok' => \App\Core\Modules\Data\ModuleDataNeeds::allMapped($company, 'logistics_shipments')],
         ];
     }
 

@@ -243,6 +243,7 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
           <component
             :is="stepComponents[s]"
             v-if="stepComponents[s]"
+            :module-key="moduleKey"
             @saved="markStep(s)"
           />
           <div class="d-flex gap-2 mt-4">

@@ -4241,7 +4241,8 @@
     "metricPlural_api_calls": "API calls",
     "metricPlural_storage_gb": "GB",
     "metricPlural_employees": "employees",
-    "metricPlural_units": "units"
+    "metricPlural_units": "units",
+    "recommendedForYou": "Recommended for your business"
   },
   "contactSales": {
     "title": "Premium module",
@@ -11044,7 +11045,9 @@
       "contract_templates": "Contract templates",
       "contract_templatesHint": "Review the published templates",
       "signature_settings": "Signature settings",
-      "signature_settingsHint": "Review the provider"
+      "signature_settingsHint": "Review the provider",
+      "data": "Data",
+      "dataHint": "Fields used by the module"
     },
     "groups": {
       "collective": "Access to the team or the company",
@@ -11093,7 +11096,8 @@
       "contract_template_default": "A default contract template is set",
       "signature_provider_available": "A signature provider is available",
       "signature_provider_production": "The provider is not a test tool",
-      "delivery_assigned": "A role (other than the owner) can see the deliveries assigned to it"
+      "delivery_assigned": "A role (other than the owner) can see the deliveries assigned to it",
+      "data_mapped": "The data used by the module is linked to your fields"
     },
     "notReady": "The module cannot be declared ready yet: complete the flagged items.",
     "confirm": "Confirm: the module is ready",
@@ -11641,5 +11645,41 @@
       "historical": "Historical configuration"
     },
     "historicalHint": "Publish a starting library and roles including the owner for presets to apply."
+  },
+  "moduleData": {
+    "intro": "The module needs a few pieces of information about the people concerned. Link each one to a field you already have: its values are reused as they are, nothing is copied. You can also create the field here.",
+    "need": {
+      "driver_identifier": {
+        "label": "Driver identifier",
+        "hint": "Each driver's identifier on rounds and for the shipper (for example the identifier given by your customer)."
+      }
+    },
+    "boundTo": "Linked to “{field}”",
+    "notBound": "To link",
+    "type": {
+      "string": "Text",
+      "number": "Number",
+      "date": "Date",
+      "boolean": "Yes / no",
+      "select": "Choice list"
+    },
+    "unique": "Unique per person",
+    "blocks": {
+      "assign": "Needed to assign a delivery"
+    },
+    "chooseField": "Which field holds this information?",
+    "yourField": "your field",
+    "standardField": "standard field",
+    "noCandidate": "None of your fields has the right type. Create it below.",
+    "confirmField": "Use this field",
+    "createField": "Create a new field",
+    "newFieldLabel": "Field name",
+    "createAndUse": "Create and use",
+    "bound": "Field linked.",
+    "created": "Field created and linked.",
+    "filled": "people filled in",
+    "missing": "{n} person(s) without this information: only assigning a delivery is blocked for them.",
+    "duplicate": "The value “{value}” is used by several people: {people}.",
+    "noPopulation": "Nobody has a delivery role yet."
   }
 }

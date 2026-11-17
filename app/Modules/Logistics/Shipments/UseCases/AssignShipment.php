@@ -26,6 +26,8 @@ class AssignShipment
             if (!$isMember) {
                 throw new \InvalidArgumentException('User is not a member of this company.');
             }
+            // ADR-820 : seule l'affectation dépend de l'identifiant chauffeur, et seulement si la société l'a associé.
+            (new \App\Core\Modules\Data\ModuleDataNeeds($company))->assertAvailable('logistics_shipments', 'assign', $userId);
         }
 
         $shipment->update(['assigned_to_user_id' => $userId]);

@@ -342,6 +342,10 @@ const savePlan = async () => {
                   <div class="text-body-1">
                     <template v-if="shipment.assigned_to">
                       {{ shipment.assigned_to.display_name }}
+                      <span
+                        v-if="shipment.driver_identifier"
+                        class="text-body-2 text-medium-emphasis"
+                      > · {{ shipment.driver_identifier }}</span>
                     </template>
                     <span
                       v-else

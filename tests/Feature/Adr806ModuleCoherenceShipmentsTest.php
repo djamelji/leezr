@@ -96,7 +96,7 @@ class Adr806ModuleCoherenceShipmentsTest extends TestCase
         $before = [$this->perms($this->dispatch), $this->perms($this->driver)];
         $s = $this->as($this->owner)->getJson('/api/modules/logistics_shipments/setup')->assertOk()->json();
 
-        $this->assertSame(['access'], $s['steps'], 'the module executes no setting : no settings step');
+        $this->assertSame(['access', 'data'], $s['steps'], 'no settings step ; ADR-820 : the data step binds the driver identifier to a company field');
         $this->assertSame([$this->perms($this->dispatch), $this->perms($this->driver)], $before, 'nothing granted at activation');
         $caps = collect($s['capabilities'])->keyBy('key');
         $this->assertSame('collective', $caps['shipments.operations']['scope']);

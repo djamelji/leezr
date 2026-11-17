@@ -511,6 +511,11 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
         Route::post('/modules/{key}/setup/steps', [$ms, 'step']);
         Route::post('/modules/{key}/setup/confirm', [$ms, 'confirm']);
         Route::get('/modules/{key}/deactivation-impact', [$ms, 'deactivationImpact']); // ADR-805
+        // ADR-820 — besoins de données du module ↔ champs de la société (aucune copie, confirmation explicite)
+        $md = \App\Modules\Core\Modules\Http\ModuleDataNeedsController::class;
+        Route::get('/modules/{key}/data-needs', [$md, 'show']);
+        Route::put('/modules/{key}/data-needs/{need}', [$md, 'bind'])->where('need', '[a-z0-9_]+');
+        Route::post('/modules/{key}/data-needs/{need}/field', [$md, 'createField'])->where('need', '[a-z0-9_]+');
     });
     // ADR-816 : devis et impact de désactivation = opérations d'administration ; le catalogue public
     // (GET /modules, états d'activation lus par toute l'application) reste ouvert.

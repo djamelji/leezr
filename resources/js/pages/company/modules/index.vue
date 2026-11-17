@@ -837,6 +837,17 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <h6 class="text-h6 mb-1">
                         {{ modName(mod) }}
                       </h6>
+                      <VChip
+                        v-if="mod.recommended_for_jobdomain && !mod.is_active"
+                        size="small"
+                        color="primary"
+                        variant="tonal"
+                        prepend-icon="tabler-star"
+                        class="mb-2"
+                        :data-test="`module-recommended-${mod.key}`"
+                      >
+                        {{ t('companyModules.recommendedForYou') }}
+                      </VChip>
 
                       <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
                       <VChip
@@ -982,6 +993,17 @@ const doToggle = async (key, isCurrentlyEnabled) => {
                       <h6 class="text-h6 mb-1">
                         {{ modName(mod) }}
                       </h6>
+                      <VChip
+                        v-if="mod.recommended_for_jobdomain && !mod.is_active"
+                        size="small"
+                        color="primary"
+                        variant="tonal"
+                        prepend-icon="tabler-star"
+                        class="mb-2"
+                        :data-test="`module-recommended-${mod.key}`"
+                      >
+                        {{ t('companyModules.recommendedForYou') }}
+                      </VChip>
 
                       <!-- ADR-803 : état de configuration guidée. ADR-806 : aussi « Configuration historique » (modules inclus activés à la création, sans événement) : sinon aucun accès à l’assistant -->
                       <VChip

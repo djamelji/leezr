@@ -61,7 +61,14 @@ class ShipmentsModule implements ModuleDefinition
             type: 'addon',
             compatibleJobdomains: ['logistique'],
             // ADR-806 — common module assistant : access only (the module executes no setting).
-            setup: ['steps' => ['access'], 'readiness' => \App\Modules\Logistics\Shipments\Setup\ShipmentsSetupReadiness::class],
+            setup: ['steps' => ['access', 'data'], 'readiness' => \App\Modules\Logistics\Shipments\Setup\ShipmentsSetupReadiness::class],
+            // ADR-820 — l'exploitation identifie chaque chauffeur par l'identifiant que lui donne le client
+            // donneur d'ordre (ex. un identifiant transporteur). Le module ne présume aucun nom de champ.
+            dataNeeds: [[
+                'key' => 'driver_identifier', 'label' => 'Driver identifier', 'type' => 'string',
+                'hint' => 'Identifier of the driver used on delivery rounds and partner exports.',
+                'population' => ['permission' => 'shipments.view_own'], 'unique' => true, 'blocks' => 'assign',
+            ]],
         );
     }
 }

@@ -178,6 +178,10 @@ const onPageChange = page => {
         <template #item.assigned_to="{ item }">
           <span v-if="item.assigned_to">
             {{ item.assigned_to.display_name }}
+            <div
+              v-if="item.driver_identifier"
+              class="text-caption text-medium-emphasis"
+            >{{ item.driver_identifier }}</div>
           </span>
           <span
             v-else

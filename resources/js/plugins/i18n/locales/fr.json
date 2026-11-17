@@ -4241,7 +4241,8 @@
     "metricPlural_api_calls": "appels API",
     "metricPlural_storage_gb": "Go",
     "metricPlural_employees": "salariés",
-    "metricPlural_units": "unités"
+    "metricPlural_units": "unités",
+    "recommendedForYou": "Recommandé pour votre activité"
   },
   "contactSales": {
     "title": "Module premium",
@@ -11044,7 +11045,9 @@
       "contract_templates": "Modèles de contrat",
       "contract_templatesHint": "Vérifier les modèles publiés",
       "signature_settings": "Réglages de signature",
-      "signature_settingsHint": "Vérifier le prestataire"
+      "signature_settingsHint": "Vérifier le prestataire",
+      "data": "Données",
+      "dataHint": "Champs utilisés par le module"
     },
     "groups": {
       "collective": "Accès à l'équipe ou à l'entreprise",
@@ -11093,7 +11096,8 @@
       "contract_template_default": "Un modèle de contrat par défaut est défini",
       "signature_provider_available": "Un prestataire de signature est disponible",
       "signature_provider_production": "Le prestataire n'est pas un outil de test",
-      "delivery_assigned": "Un rôle (autre que le propriétaire) peut voir les livraisons qui lui sont assignées"
+      "delivery_assigned": "Un rôle (autre que le propriétaire) peut voir les livraisons qui lui sont assignées",
+      "data_mapped": "Les données utilisées par le module sont associées à vos champs"
     },
     "notReady": "Le module ne peut pas encore être déclaré prêt : complétez les points signalés.",
     "confirm": "Confirmer : le module est prêt",
@@ -11641,5 +11645,41 @@
       "historical": "Configuration historique"
     },
     "historicalHint": "Publiez une bibliothèque de départ et des rôles comprenant le propriétaire pour que les presets s'appliquent."
+  },
+  "moduleData": {
+    "intro": "Le module a besoin de quelques informations sur les personnes concernées. Associez chacune à un champ que vous avez déjà : ses valeurs sont réutilisées telles quelles, rien n'est recopié. Vous pouvez aussi créer le champ ici.",
+    "need": {
+      "driver_identifier": {
+        "label": "Identifiant chauffeur",
+        "hint": "L'identifiant de chaque chauffeur sur les tournées et chez le donneur d'ordre (par exemple l'identifiant attribué par votre client)."
+      }
+    },
+    "boundTo": "Associé à « {field} »",
+    "notBound": "À associer",
+    "type": {
+      "string": "Texte",
+      "number": "Nombre",
+      "date": "Date",
+      "boolean": "Oui / non",
+      "select": "Liste de choix"
+    },
+    "unique": "Unique par personne",
+    "blocks": {
+      "assign": "Nécessaire pour affecter une livraison"
+    },
+    "chooseField": "Quel champ contient cette information ?",
+    "yourField": "votre champ",
+    "standardField": "champ standard",
+    "noCandidate": "Aucun de vos champs n'a le bon type. Créez-le ci-dessous.",
+    "confirmField": "Utiliser ce champ",
+    "createField": "Créer un nouveau champ",
+    "newFieldLabel": "Nom du champ",
+    "createAndUse": "Créer et utiliser",
+    "bound": "Champ associé.",
+    "created": "Champ créé et associé.",
+    "filled": "personnes renseignées",
+    "missing": "{n} personne(s) sans cette information : seule l'affectation d'une livraison leur est bloquée.",
+    "duplicate": "La valeur « {value} » est utilisée par plusieurs personnes : {people}.",
+    "noPopulation": "Aucune personne n'a encore de rôle de livraison."
   }
 }
