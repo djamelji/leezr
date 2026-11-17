@@ -22,7 +22,7 @@ class MembersModule implements ModuleDefinition
                     // portée par le Core. Visible dès qu'une facette est autorisée (accès OU RH).
                     ['key' => 'people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'anyPermission' => ['members.view', 'workforce.view', 'roles.view'], 'surface' => 'structure', 'group' => 'team', 'sort' => 10],
                 ],
-                routeNames: ['company-people', 'company-members', 'company-members-id'],
+                routeNames: ['company-people', 'company-people-hr', 'company-people-roles', 'company-members', 'company-members-id'], // ADR-820 : vues de l'espace Équipe dans le chemin
                 actions: [ // ADR-775
                     ['key' => 'team.add-person', 'space' => 'team', 'icon' => 'tabler-user-plus', 'to' => ['name' => 'company-people', 'query' => ['action' => 'invite']], 'permission' => 'members.invite', 'home' => true, 'primary' => true, 'sort' => 10],
                 ],

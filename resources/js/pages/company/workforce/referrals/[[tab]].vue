@@ -5,7 +5,8 @@
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
-definePage({ meta: { module: 'workforce_referral', permission: 'workforce_referral.review' } })
+// ADR-820 — onglet dans le chemin (/referrals/settings), nom historique conservé.
+definePage({ name: 'company-workforce-referrals', meta: { module: 'workforce_referral', permission: 'workforce_referral.review' } })
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -13,7 +14,8 @@ const router = useRouter()
 const { can } = useCan()
 const { toast } = useAppToast()
 
-const tab = ref(route.query.tab === 'settings' && can('workforce_referral.manage') ? 'settings' : 'applications')
+const tab = ref((route.params.tab || route.query.tab) === 'settings' && can('workforce_referral.manage') ? 'settings' : 'applications')
+watch(tab, v => router.replace({ name: 'company-workforce-referrals', params: { tab: v === 'settings' ? 'settings' : undefined } }), { immediate: !!route.query.tab })
 const queue = ref({ items: [], awaiting_consent: 0 })
 const loading = ref(true)
 const filter = ref('open')

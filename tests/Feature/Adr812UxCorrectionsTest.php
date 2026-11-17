@@ -112,7 +112,7 @@ class Adr812UxCorrectionsTest extends TestCase
         $me = file_get_contents(resource_path('js/pages/company/workforce/me.vue'));
         $this->assertStringContainsString('data-test="me-leave-no-balance"', $me);
         $this->assertStringContainsString(':disabled="!leaveTypeOptions.length"', $me);
-        $file = file_get_contents(resource_path('js/pages/company/people/[personRef].vue'));
+        $file = file_get_contents(resource_path('js/pages/company/people/_PersonFile.vue'));
         $this->assertStringContainsString('[403, 404].includes(store.errorStatus)', $file);
     }
 }

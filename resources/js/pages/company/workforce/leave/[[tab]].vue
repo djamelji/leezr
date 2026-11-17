@@ -11,7 +11,8 @@ import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
 import LeaveCalendar from './_LeaveCalendar.vue'
 import LeaveRequestDetailDialog from './_LeaveRequestDetailDialog.vue'
 
-definePage({ meta: { module: 'workforce_leave', permission: 'workforce.leave_request', anyPermission: ['workforce.leave_view_all', 'workforce.leave_approve'] } })
+// ADR-820 — onglet dans le chemin (/leave/{calendar|config}), nom historique conservé, ancien `?tab=` réécrit.
+definePage({ name: 'company-workforce-leave', meta: { module: 'workforce_leave', permission: 'workforce.leave_request', anyPermission: ['workforce.leave_view_all', 'workforce.leave_approve'] } })
 
 const { t, locale } = useI18n()
 const { width: viewportWidth } = useDisplay()
@@ -489,10 +490,11 @@ const confirmDeleteType = async () => {
 // INIT
 // ══════════════════════════════════════════════════════════════
 const route = useRoute()
+const router = useRouter()
 
 onMounted(async () => {
   // W-G3 : deep-link depuis la fiche collaborateur (?tab=calendar&employee=<id>).
-  if (route.query.tab) activeTab.value = String(route.query.tab)
+  if (route.params.tab || route.query.tab) activeTab.value = String(route.params.tab || route.query.tab)
   if (route.query.employee) calEmployee.value = Number(route.query.employee)
 
   await Promise.all([
@@ -518,6 +520,9 @@ const carryOverDays = computed({
 const configLoaded = ref(false)
 
 watch(activeTab, tab => {
+  const { tab: _, ...query } = route.query
+  const param = tab === 'requests' ? undefined : tab
+  if (route.params.tab !== param || route.query.tab !== undefined) router.replace({ name: 'company-workforce-leave', params: { tab: param }, query })
   if (tab === 'calendar' && !calendarLoaded.value) {
     calendarLoaded.value = true
     // Options de filtre (le calendrier se charge lui-même via datesSet, scope serveur).

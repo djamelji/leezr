@@ -5,12 +5,14 @@
 // Aucun détail RBAC n'est éditable ici : les rôles n'apparaissent que comme ORIGINE d'une règle historique.
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
-import RequirementsEditor from '../../requirements/_RequirementsEditor.vue'
+import RequirementsEditor from '../../../requirements/_RequirementsEditor.vue'
 
-definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
+// ADR-820 — onglet dans le chemin (/positions/{id}/{fields|documents|people|history}), nom historique conservé.
+definePage({ name: 'company-workforce-organization-positions-id', meta: { module: 'workforce', permission: 'workforce.view' } })
 
 const { t, te } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { can } = useCan()
 const { toast } = useAppToast()
 const docLabel = (code, fallback) => (te(`documents.type.${code}`) ? t(`documents.type.${code}`) : fallback)
@@ -18,7 +20,12 @@ const docLabel = (code, fallback) => (te(`documents.type.${code}`) ? t(`document
 const id = computed(() => Number(route.params.id))
 const position = ref(null)
 const notFound = ref(false)
-const tab = ref(route.query.tab === 'requirements' ? 'documents' : (route.query.tab || 'overview')) // ADR-819 : ancien onglet « Exigences »
+const askedTab = route.params.tab || route.query.tab
+const tab = ref(askedTab === 'requirements' ? 'documents' : (askedTab || 'overview')) // ADR-819 : ancien onglet « Exigences »
+watch(tab, v => {
+  const { tab: _, ...query } = route.query
+  router.replace({ name: 'company-workforce-organization-positions-id', params: { id: route.params.id, tab: v === 'overview' ? undefined : v }, query })
+}, { immediate: !!route.query.tab || route.params.tab === 'requirements' })
 const canEditInfo = computed(() => can('workforce.manage'))
 const canConfigure = computed(() => can('settings.manage') || can('documents.configure'))
 

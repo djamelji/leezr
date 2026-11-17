@@ -209,7 +209,12 @@ class PageModuleAlignmentTest extends TestCase
             'platform-markets-key' => $base . '/platform/markets/[key].vue',
             'platform-modules-key' => $base . '/platform/modules/[key].vue',
             'platform-plans-key' => $base . '/platform/plans/[key].vue',
-            'platform-companies-id' => $base . '/platform/companies/[id].vue',
+            'platform-companies-id' => $base . '/platform/companies/[id]/[[tab]].vue', // ADR-820 : onglet dans le chemin (nom conservé)
+            'company-workforce-referrals' => $base . '/company/workforce/referrals/[[tab]].vue', // ADR-820
+            'company-workforce-time' => $base . '/company/workforce/time/[[tab]].vue', // ADR-820
+            'company-workforce-payroll' => $base . '/company/workforce/payroll/[[tab]].vue', // ADR-820
+            'company-workforce-leave' => $base . '/company/workforce/leave/[[tab]].vue', // ADR-820
+            'company-workforce-organization-positions-id' => $base . '/company/workforce/organization/positions/[id]/[[tab]].vue', // ADR-820
             'platform-jobdomains-id' => $base . '/platform/jobdomains/[id]/index.vue',
             'platform-jobdomains-id-tab' => $base . '/platform/jobdomains/[id]/[tab].vue', // ADR-820
             // W-HYGIENE-GOV : noms composés (répertoire `organization-presets`) — pages réelles présentes (ADR-638 W-E2).

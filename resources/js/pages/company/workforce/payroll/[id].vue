@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import PayrollDisclaimer from './_PayrollDisclaimer.vue'
 import EmployeePreparationPanel from './_EmployeePreparationPanel.vue'
 
-definePage({ meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } })
+definePage({ path: '/company/workforce/payroll/:id(\\d+)', meta: { module: 'workforce_payroll', permission: 'workforce.payroll_prepare' } }) // ADR-820
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
@@ -197,11 +197,11 @@ const returnUrl = computed(() => `/company/workforce/payroll/${route.params.id}$
 // Contextual navigation to the SOURCE, carrying a return path to this period.
 function goTimesheet() {
   if (!panelEmployeeId.value) return
-  router.push({ name: 'company-workforce-time', query: { tab: 'timesheets', employee_id: panelEmployeeId.value, return: returnUrl.value } })
+  router.push({ name: 'company-workforce-time', params: { tab: 'timesheets' }, query: { employee_id: panelEmployeeId.value, return: returnUrl.value } })
 }
 function goContract() {
   if (!panelEmployeeId.value) return
-  router.push({ name: 'company-workforce-employees-id', params: { id: panelEmployeeId.value }, query: { tab: 'contract' } })
+  router.push({ path: `/company/people/employee-${panelEmployeeId.value}/contract` }) // ADR-820 : rubrique dans le chemin
 }
 function goFiche() {
   if (!panelEmployeeId.value) return

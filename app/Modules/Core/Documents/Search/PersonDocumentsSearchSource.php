@@ -74,7 +74,7 @@ class PersonDocumentsSearchSource implements DocumentSearchSource
             $rows[] = DocumentSearchRow::make('person', (int) $doc->id, $doc->documentType?->label ?: (string) $doc->file_name, $code, $doc->documentType?->label,
                 ['ref' => $ref, 'name' => $names[$ref] ?? ''], self::status(Lifecycle::computeStatus(['expires_at' => $doc->expires_at])),
                 $doc->expires_at?->toDateString(), $doc->updated_at?->toIso8601String(),
-                ['name' => 'company-people-person-ref', 'params' => ['personRef' => $ref], 'query' => ['tab' => 'documents']],
+                ['name' => 'company-people-person-ref', 'params' => ['personRef' => $ref, 'tab' => 'documents']],
                 $code ? "/company/people/{$ref}/documents/{$code}/download" : null);
         }
 

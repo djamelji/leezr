@@ -56,7 +56,7 @@ const enabled = computed(() => types.value.filter(x => x.enabled))
       class="mt-3"
       variant="text"
       prepend-icon="tabler-external-link"
-      to="/company/workforce/leave?tab=config"
+      to="/company/workforce/leave/config"
       data-test="leave-types-manage"
     >
       {{ t('moduleSetup.leaveTypesManage') }}

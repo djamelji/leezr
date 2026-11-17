@@ -61,7 +61,7 @@ class HomePrioritiesReadModel
                 ->when($timeScope !== null, fn ($q) => $q->whereIn('employee_id', $timeScope))
                 ->count();
             $priorities[] = self::item('timesheets_to_approve', $count, 'warning', 'tabler-file-time', [
-                'name' => 'company-workforce-time', 'query' => ['tab' => 'timesheets'],
+                'name' => 'company-workforce-time', 'params' => ['tab' => 'timesheets'],
             ]);
         }
 

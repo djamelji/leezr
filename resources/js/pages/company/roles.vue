@@ -41,7 +41,7 @@ const fieldActivationsLoaded = ref(false)
 onMounted(async () => {
   // Standalone → une seule entrée : rediriger vers l'espace Collaborateurs (onglet Rôles).
   if (!props.embedded) {
-    router.replace({ name: 'company-people', query: { tab: 'roles' } })
+    router.replace({ name: 'company-people-roles' })
 
     return
   }

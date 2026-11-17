@@ -30,7 +30,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
     public static function redirects(): array
     {
         return [
-            'liste RH' => ['company/workforce/employees/index.vue', "definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })", "path: '/company/people'"],
+            'liste RH' => ['company/workforce/employees/index.vue', "definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })", "name: 'company-people-hr'"],
             'liste membres' => ['company/members/index.vue', "definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })", "path: '/company/people'"],
             'signatures' => ['company/workforce/signature/index.vue', "permission: 'workforce_signature.view'", "'/company/documents/signatures'"],
             'modèles de contrat' => ['company/workforce/contract/templates.vue', "definePage({ meta: { module: 'workforce_contract', permission: 'workforce_contract.view' } })", "'/company/documents/templates'"],
@@ -54,7 +54,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
         foreach (['q', 'status', 'dept', 'role', 'manager', 'contract'] as $k) {
             $this->assertStringContainsString("'{$k}'", $src);
         }
-        $this->assertStringContainsString("tab: 'hr'", $src);
+        $this->assertStringContainsString("name: 'company-people-hr'", $src); // ADR-820 : vue dans le chemin
     }
 
     public function test_former_pages_are_views_without_route_metadata(): void
@@ -67,7 +67,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
 
     public function test_team_page_hosts_the_specialised_views_with_their_original_guards(): void
     {
-        $src = $this->page('company/people/index.vue');
+        $src = $this->page('company/people/_PeopleSpace.vue'); // ADR-820 : espace monté par /people, /people/hr, /people/roles
         $this->assertStringContainsString("moduleStore.isActive('workforce') && can('workforce.view')", $src); // ex-page RH
         $this->assertStringContainsString('<PeopleHrTools v-if="tab === \'hr\' && canHr"', $src);
         $this->assertStringContainsString("can('members.view') && can('settings.manage')", $src); // garde de l'API des champs
@@ -79,7 +79,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
         $hr = $this->page('company/people/_PeopleHrTools.vue');
         $this->assertStringNotContainsString('createEmployee(', $hr);
         $this->assertStringContainsString("emit('create')", $hr);
-        $this->assertStringContainsString("tab: 'hr'", $hr);
+        $this->assertStringNotContainsString("tab: 'hr'", $hr, 'ADR-820 : la vue RH est dans le chemin (/company/people/hr), ses filtres seuls en query');
     }
 
     public function test_documents_space_embeds_the_views(): void

@@ -14,7 +14,9 @@ import { formatMinutes } from '@/utils/workUnits'
 // ici : il a sa propre entrée de premier niveau (company-workforce-planning). Pas de 2ᵉ moteur.
 import { useCan } from '@/composables/useCan'
 
-definePage({ meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view'] } })
+// ADR-820 — l'activité est dans le CHEMIN (ADR-475) : /company/workforce/time/{entries|timesheets} ; le nom de
+// route historique est conservé (liens existants), un ancien `?tab=` est réécrit en chemin.
+definePage({ name: 'company-workforce-time', meta: { module: 'workforce', anyPermission: ['workforce.timesheet_view', 'workforce.planning_view'] } })
 
 const { t, locale } = useI18n()
 const { toast } = useAppToast()
@@ -35,7 +37,7 @@ const tabAccess = computed(() => ({ cockpit: canTimesheet.value && managesTime.v
 // ADR-729 (M6.A) — dédoublonnage « Planning → Planning ». On REDIRIGE (synchronement, avant que VTabs
 // ne corrige vers le 1er onglet) les anciens deep-links `?tab=planning` ET les utilisateurs planning-only
 // (sans lecture pointage) vers la page Planning autonome → favoris/notifications préservés, zéro lien mort.
-if (route.query.tab === 'planning' || (canPlanning.value && !canTimesheet.value)) {
+if (route.query.tab === 'planning' || route.params.tab === 'planning' || (canPlanning.value && !canTimesheet.value)) {
   router.replace({ name: 'company-workforce-planning' })
 }
 
@@ -44,7 +46,7 @@ if (route.query.tab === 'planning' || (canPlanning.value && !canTimesheet.value)
 const returnTo = computed(() => (typeof route.query.return === 'string' ? route.query.return : null))
 const goBackToPayroll = () => { if (returnTo.value) router.push(returnTo.value) }
 
-// ── Tab navigation (deep-link ?tab=) ─────────────────────────
+// ── Tab navigation (ADR-820 : onglet dans le chemin) ─────────
 const TABS = ['cockpit', 'entries', 'timesheets']
 
 // E3-B (ADR-697) → ADR-729 (M6.A) — 3 activités « Temps & présences » via AppSectionNavigation
@@ -56,13 +58,16 @@ const timeSections = computed(() => [
 ].filter(s => s.show))
 
 const firstAccessibleTab = () => TABS.find(tb => tabAccess.value[tb]) || 'cockpit'
-const activeTab = ref(TABS.includes(route.query.tab) && tabAccess.value[route.query.tab] ? route.query.tab : firstAccessibleTab())
-watch(activeTab, v => {
-  const q = { ...route.query }
-  if (v === 'cockpit') delete q.tab
-  else q.tab = v
-  router.replace({ query: q })
-})
+const requested = route.params.tab || route.query.tab
+const activeTab = ref(TABS.includes(requested) && tabAccess.value[requested] ? requested : firstAccessibleTab())
+const syncTabPath = v => {
+  const { tab: _, ...query } = route.query
+  const tab = v === 'cockpit' ? undefined : v
+  if (route.params.tab !== tab || route.query.tab !== undefined) router.replace({ name: 'company-workforce-time', params: { tab }, query })
+}
+watch(activeTab, syncTabPath)
+if (route.query.tab && route.query.tab !== 'planning') syncTabPath(activeTab.value)
+watch(() => route.params.tab, v => { const want = v || firstAccessibleTab(); if (TABS.includes(want) && tabAccess.value[want] && want !== activeTab.value) activeTab.value = want })
 
 // ══════════════════════════════════════════════════════════════
 // TAB 1 — POINTAGES (Time Entries)

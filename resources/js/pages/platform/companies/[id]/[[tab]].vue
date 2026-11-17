@@ -9,12 +9,13 @@ import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
-import CompanyBioPanel from './_CompanyBioPanel.vue'
-import CompanyBillingTab from './_CompanyBillingTab.vue'
-import CompanyMembersTab from './_CompanyMembersTab.vue'
-import CompanyActivityTab from './_CompanyActivityTab.vue'
+import CompanyBioPanel from '../_CompanyBioPanel.vue'
+import CompanyBillingTab from '../_CompanyBillingTab.vue'
+import CompanyMembersTab from '../_CompanyMembersTab.vue'
+import CompanyActivityTab from '../_CompanyActivityTab.vue'
 
 definePage({
+  name: 'platform-companies-id', // ADR-820 : onglet dans le chemin (/platform/companies/{id}/{billing|modules|members|activity})
   meta: {
     layout: 'platform',
     platform: true,
@@ -32,7 +33,10 @@ const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const actionLoading = ref(false)
-const activeTab = ref('overview')
+const COMPANY_TABS = ['overview', 'billing', 'modules', 'members', 'activity']
+// ADR-820 : l'onglet vient du chemin ; les anciens liens `?tab=billing` (jusqu'ici ignorés) sont compris puis réécrits.
+const askedTab = route.params.tab || route.query.tab
+const activeTab = ref(COMPANY_TABS.includes(askedTab) ? askedTab : 'overview')
 
 // ─── Profile data ───────────────────────────────────
 const company = ref(null)
@@ -114,7 +118,8 @@ onMounted(async () => {
 
     applyProfile(profileData)
 
-    // If arriving with ?tab=billing, load billing data immediately
+    // ADR-820 : arrivée directe sur /billing (ou ancien ?tab=billing) → données de facturation chargées
+    if (route.query.tab) router.replace({ name: 'platform-companies-id', params: { id: route.params.id, tab: activeTab.value === 'overview' ? undefined : activeTab.value } })
     if (activeTab.value === 'billing')
       loadBilling()
   }
@@ -218,6 +223,8 @@ const refreshActivity = () => {
 }
 
 watch(activeTab, tab => {
+  const { tab: _, ...query } = route.query
+  router.replace({ name: 'platform-companies-id', params: { id: route.params.id, tab: tab === 'overview' ? undefined : tab }, query })
   if (tab === 'billing') loadBilling()
   else if (tab === 'members') loadMembers()
   else if (tab === 'activity') loadActivity()

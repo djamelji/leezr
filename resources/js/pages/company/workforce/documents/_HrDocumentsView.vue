@@ -221,13 +221,8 @@ const route = useRoute()
 const router = useRouter()
 const canTemplates = computed(() => can('workforce_contract.view'))
 const canSignatures = computed(() => can('workforce_signature.view'))
-const activeTab = ref(props.only || (['templates', 'signatures'].includes(route.query.tab) ? route.query.tab : 'documents'))
-watch(activeTab, v => {
-  const q = { ...route.query }
-  if (v === 'documents') delete q.tab
-  else q.tab = v
-  router.replace({ query: q })
-})
+// ADR-820 : vue toujours montée par l'espace Documents (`only`) ; l'onglet vit dans le chemin de cet espace.
+const activeTab = ref(props.only || 'documents')
 </script>
 
 <template>

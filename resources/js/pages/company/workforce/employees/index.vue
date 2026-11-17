@@ -9,9 +9,9 @@ const router = useRouter()
 const KEPT = ['q', 'status', 'dept', 'role', 'manager', 'contract']
 
 onMounted(() => {
-  const query = { tab: 'hr' }
+  const query = {}
   for (const k of KEPT) if (route.query[k] != null && route.query[k] !== '') query[k] = route.query[k]
-  router.replace({ path: '/company/people', query })
+  router.replace({ name: 'company-people-hr', query }) // ADR-820 : vue dans le chemin
 })
 </script>
 

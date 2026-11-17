@@ -41,7 +41,7 @@ onMounted(async () => {
       <div v-else class="text-center text-disabled py-4">{{ t('employeeFile.noLeave') }}</div>
       <div class="d-flex gap-2 mt-3 flex-wrap">
         <VBtn variant="text" size="small" append-icon="tabler-arrow-right" @click="router.push('/company/workforce/leave')">{{ t('employeeFile.seeAll') }}</VBtn>
-        <VBtn variant="text" size="small" prepend-icon="tabler-calendar" @click="router.push({ path: '/company/workforce/leave', query: { tab: 'calendar', employee: employeeId } })">{{ t('employeeFile.openCalendar') }}</VBtn>
+        <VBtn variant="text" size="small" prepend-icon="tabler-calendar" @click="router.push({ path: '/company/workforce/leave/calendar', query: { employee: employeeId } })">{{ t('employeeFile.openCalendar') }}</VBtn>
       </div>
     </template>
   </div>

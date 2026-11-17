@@ -17,6 +17,6 @@ class PendingAccessHomePriorities implements HomePriorityProvider
         }
         $roles = count(PendingModuleAccess::summary($home->company, null)['roles']);
 
-        return [HomePriority::make('access_to_confirm', $roles, 'warning', 'tabler-shield-check', ['name' => 'company-people', 'query' => ['tab' => 'roles']], 'team')];
+        return [HomePriority::make('access_to_confirm', $roles, 'warning', 'tabler-shield-check', ['name' => 'company-people-roles'], 'team')];
     }
 }

@@ -290,7 +290,7 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
               :key="p.id"
               size="small"
               label
-              :to="`/company/workforce/organization/positions/${p.id}?tab=${tab}`"
+              :to="`/company/workforce/organization/positions/${p.id}/${tab}`"
             >
               {{ p.title }}
             </VChip>

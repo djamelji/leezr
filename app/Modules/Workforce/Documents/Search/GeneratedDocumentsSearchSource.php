@@ -75,7 +75,7 @@ class GeneratedDocumentsSearchSource implements DocumentSearchSource
                 $employeeId ? ['ref' => "employee-{$employeeId}", 'name' => $names[$employeeId] ?? ''] : null,
                 $signature === GeneratedDocument::SIGNATURE_SIGNED ? 'signed' : (in_array($signature, ['pending', 'in_progress'], true) ? 'pending_signature' : 'generated'),
                 null, $doc->generated_at?->toIso8601String(),
-                $employeeId ? ['name' => 'company-people-person-ref', 'params' => ['personRef' => "employee-{$employeeId}"], 'query' => ['tab' => 'documents']]
+                $employeeId ? ['name' => 'company-people-person-ref', 'params' => ['personRef' => "employee-{$employeeId}", 'tab' => 'documents']]
                     : ['name' => 'company-documents-tab', 'params' => ['tab' => 'people']],
                 "/workforce/documents/{$doc->id}/download");
         }

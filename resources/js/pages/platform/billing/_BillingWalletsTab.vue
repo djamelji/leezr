@@ -83,7 +83,7 @@ onMounted(() => load())
         <template #item.company="{ item }">
           <RouterLink
             v-if="item.company?.id"
-            :to="{ path: `/platform/companies/${item.company.id}`, query: { tab: 'billing' } }"
+            :to="{ name: 'platform-companies-id', params: { id: item.company.id, tab: 'billing' } }"
             class="font-weight-medium text-high-emphasis text-decoration-none"
           >
             {{ item.company.name }}

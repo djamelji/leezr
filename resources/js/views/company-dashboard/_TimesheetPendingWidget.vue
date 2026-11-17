@@ -18,7 +18,7 @@ const pending = computed(() => d.value.pending ?? 0)
     :loading="loading" :error="d.error"
   >
     <template #action>
-      <VBtn v-if="pending > 0" :to="{ name: 'company-workforce-time', query: { tab: 'timesheets' } }" variant="flat" size="x-small" class="lzr-cta">
+      <VBtn v-if="pending > 0" :to="{ name: 'company-workforce-time', params: { tab: 'timesheets' } }" variant="flat" size="x-small" class="lzr-cta">
         {{ t('workforce.widgets.actionValidate') }}
       </VBtn>
     </template>

@@ -22,7 +22,7 @@ class RolesModule implements ModuleDefinition
                 // enregistrée comme ALIAS (redirige côté front vers People, onglet Rôles).
                 // ADR-781 (UX5) — contributed to the Settings hub only (the Settings space never lists it in the menu).
                 navItems: [
-                    ['key' => 'settings-roles', 'title' => 'Roles & permissions', 'to' => ['name' => 'company-people', 'query' => ['tab' => 'roles']], 'icon' => 'tabler-shield-lock', 'permission' => 'roles.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 40, 'settings' => ['section' => 'access', 'level' => 'regular']],
+                    ['key' => 'settings-roles', 'title' => 'Roles & permissions', 'to' => ['name' => 'company-people-roles'], 'icon' => 'tabler-shield-lock', 'permission' => 'roles.view', 'surface' => 'structure', 'group' => 'settings', 'sort' => 40, 'settings' => ['section' => 'access', 'level' => 'regular']],
                 ],
                 routeNames: ['company-roles'],
                 priorityProviders: [\App\Modules\Core\Roles\Home\PendingAccessHomePriorities::class], // ADR-809

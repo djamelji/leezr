@@ -203,7 +203,7 @@ const statusColor = s => ({ ready: 'success', in_progress: 'info', to_configure:
               class="text-medium-emphasis"
             >{{ t('moduleSetup.relatedNobody') }}</span>
             <RouterLink
-              :to="{ path: '/company/people', query: { tab: 'roles', module: r.module } }"
+              :to="{ name: 'company-people-roles', query: { module: r.module } }"
               class="text-primary"
             >
               {{ t('moduleSetup.relatedEdit') }}

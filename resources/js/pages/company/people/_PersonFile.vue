@@ -33,7 +33,8 @@ import SignatureWizard from '@/pages/company/workforce/signature/_SignatureWizar
 import { $api } from '@/utils/api'
 
 // ADR-767 : même règle que l'API (`members.view` OU `workforce.view`).
-definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'workforce.view'] } })
+// ADR-820 — sous-composant monté par /company/people/{ref} et /company/people/{ref}/{rubrique} : la rubrique
+// est dans le CHEMIN (ADR-475) ; les anciens liens `?tab=` restent compris et sont réécrits en chemin.
 
 const { t, te } = useI18n()
 const route = useRoute()
@@ -228,7 +229,7 @@ async function reload() {
 
   // Référence canonique (la fiche RH prime) : l'URL suit, sans perdre l'onglet demandé.
   if (store.personRef && store.personRef !== personRef.value) {
-    router.replace({ params: { personRef: store.personRef }, query: route.query })
+    router.replace({ name: route.name, params: { ...route.params, personRef: store.personRef }, query: route.query })
 
     return
   }
@@ -253,23 +254,27 @@ watch(personRef, reload)
 // ne porte jamais une valeur absente de la navigation (elle la réinitialisait, et l'adresse avec).
 const requestedTab = ref(null)
 onMounted(async () => {
-  if (typeof route.query.tab === 'string') requestedTab.value = route.query.tab
+  // ADR-820 : un ancien lien `?tab=` est d'abord réécrit en chemin, puis traité comme tel.
+  if (typeof route.query.tab === 'string' && !route.params.tab) {
+    const { tab, ...query } = route.query
+
+    await router.replace({ name: 'company-people-person-ref', params: { personRef: personRef.value, tab }, query })
+  }
+  if (typeof route.params.tab === 'string') requestedTab.value = route.params.tab
   await reload()
 })
 onBeforeUnmount(() => employeesStore.clearCurrentEmployee())
 
-// Deep-link : l'onglet courant vit dans l'URL (retour navigateur et partage de lien).
+// Deep-link (ADR-820) : la rubrique courante vit dans le CHEMIN (retour navigateur et partage de lien).
+// Un ancien `?tab=` (section ou rubrique) est compris à l'ouverture puis réécrit en chemin.
+const tabRoute = tab => ({ name: 'company-people-person-ref', params: { personRef: personRef.value, tab: tab === 'overview' ? undefined : tab } })
 watch(currentTab, tab => {
-  // Un ancien lien (`?tab=contract`, `?tab=personal`…) reste tel quel tant qu'il désigne une section
-  // de la rubrique affichée : les liens partagés et les favoris ne changent pas d'adresse.
-  if (groups.value.find(g => g.key === tab)?.sections.includes(route.query.tab)) return
-  const q = { ...route.query }
-  if (tab === 'overview') delete q.tab
-  else q.tab = tab
-  if (q.tab !== route.query.tab) router.replace({ query: q })
+  const { tab: _, ...query } = route.query
+  const sameTab = (route.params.tab || 'overview') === tab
+  if (!sameTab || route.query.tab !== undefined) router.replace({ ...tabRoute(tab), query })
 })
-// Un lien interne vers la même fiche avec un autre `?tab=` change bien de rubrique (ADR-774, constat).
-watch(() => route.query.tab, tab => {
+// Un lien interne vers la même fiche avec une autre rubrique change bien de rubrique (ADR-774, constat).
+watch(() => route.params.tab || route.query.tab, tab => {
   if (typeof tab === 'string' && tab !== currentTab.value && store.data) openSection(tab)
 })
 // Historique en libellés métier (ADR-778) ; un code inconnu reste lisible (« shift.updated » → « Shift updated »).
@@ -289,7 +294,7 @@ const go = target => {
 }
 const goBack = () => (window.history.state?.back ? router.back() : router.push({ name: 'company-people' }))
 const onRemoved = () => router.push({ name: 'company-people' })
-const onHrLinked = newRef => { if (newRef) router.replace({ params: { personRef: newRef } }); else reload() }
+const onHrLinked = newRef => { if (newRef) router.replace({ name: route.name, params: { ...route.params, personRef: newRef } }); else reload() }
 const initials = computed(() => `${(store.identity.first_name || '?').charAt(0)}${(store.identity.last_name || '').charAt(0)}`.toUpperCase())
 
 // ADR-818 (chantier C) — « Demander les pièces manquantes » : demandes créées par une action explicite.

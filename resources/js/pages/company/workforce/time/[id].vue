@@ -10,7 +10,8 @@ import { useDisplay } from 'vuetify'
 import StatusChip from '@/core/components/StatusChip.vue'
 import AppAdaptiveDialog from '@/core/components/AppAdaptiveDialog.vue'
 
-definePage({ meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
+// ADR-820 : identifiant numérique — /time/{entries|timesheets} désigne l'activité de l'espace Temps.
+definePage({ path: '/company/workforce/time/:id(\\d+)', meta: { module: 'workforce', permission: 'workforce.timesheet_view' } })
 
 const store = useTimesheetsStore()
 const route = useRoute()
@@ -217,7 +218,7 @@ const actionLabel = a => t(`timesheets.history.${a}`, a)
 
 <template>
   <div>
-    <VBtn variant="text" :to="{ name: 'company-workforce-time', query: { tab: 'timesheets' } }" prepend-icon="tabler-arrow-left" class="mb-4">
+    <VBtn variant="text" :to="{ name: 'company-workforce-time', params: { tab: 'timesheets' } }" prepend-icon="tabler-arrow-left" class="mb-4">
       {{ $t('timesheets.backToList') }}
     </VBtn>
 

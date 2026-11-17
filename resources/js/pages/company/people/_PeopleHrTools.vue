@@ -1,5 +1,5 @@
 <script setup>
-// ADR-802 — vue « Gestion RH » de la page Équipe (`/company/people?tab=hr`), reprise de l'ancienne liste
+// ADR-802 — vue « Gestion RH » de la page Équipe (`/company/people/hr`, ADR-820), reprise de l'ancienne liste
 // `/company/workforce/employees` (désormais redirigée ici). Sous-composant — pas de definePage.
 // W-G2 (ADR-642) — liste collaborateurs : filtres avancés serveur, URL sync, multi-sélection +
 // actions groupées, import guidé et export sécurisé. Gérer 100 collaborateurs comme 5.
@@ -84,7 +84,6 @@ const showSkeleton = computed(() => loading.value && firstLoad.value)
 // ── Data fetching + URL sync ─────────────────────────────────
 const syncUrl = () => {
   router.replace({ query: {
-    tab: 'hr', // ADR-802 : reste sur la vue Gestion RH d'Équipe
     ...(search.value ? { q: search.value } : {}),
     ...(statusFilter.value ? { status: statusFilter.value } : {}),
     ...(departmentFilter.value ? { dept: departmentFilter.value } : {}),

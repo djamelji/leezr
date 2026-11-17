@@ -451,7 +451,7 @@ const scanTone = s => ({ ingested: 'success', quarantined: 'info', scan_failed: 
         />
       </div>
       <RouterLink
-        :to="`/company/people/${file.person_ref}?tab=documents`"
+        :to="`/company/people/${file.person_ref}/documents`"
         class="text-body-2 d-inline-block mt-2"
       >
         {{ t('onboardingFile.openDocuments') }}
