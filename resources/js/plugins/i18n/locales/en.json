@@ -7907,7 +7907,7 @@
     "noDocuments": "No documents",
     "noLeaveBalances": "No leave balances available",
     "requestLeave": "Request Leave",
-    "noLeaveBalance": "No leave balance is open for you yet. Your company must first activate your contract; you can then request leave here.",
+    "noLeaveBalance": "No leave balance is open for you yet. It opens once your contract is active and your company has configured leave types; contact your manager if your contract is already active.",
     "leaveRequested": "Leave request submitted",
     "leaveRequestFailed": "Leave request failed",
     "viewAllDocuments": "View all documents",

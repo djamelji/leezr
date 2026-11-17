@@ -125,6 +125,20 @@ class LeaveLifecycleTest extends TestCase
         $this->assertGreaterThan(0, (int) $bal['accrued'], 'le salarié dispose d\'un solde dès l\'activation du contrat');
     }
 
+    /** ADR-818 (chantier G) — Leave enabled AFTER the contracts : active employees get their balance opened, once. */
+    public function test_enabling_leave_after_contracts_opens_balances_once(): void
+    {
+        $emp = $this->activeEmployee();
+        $listener = new \App\Modules\Workforce\Listeners\SeedLeaveTypesOnModuleEnabled;
+        $listener->handle(new \App\Core\Events\ModuleEnabled($this->company, 'workforce_leave', true));
+        $type = LeaveType::withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', 'annual_leave')->firstOrFail();
+        $first = (int) LeaveLedger::computeBalance($this->company->id, $emp->id, $type->id)['accrued'];
+        $this->assertGreaterThan(0, $first, 'the active contract is recognised : a balance is open');
+
+        $listener->handle(new \App\Core\Events\ModuleEnabled($this->company, 'workforce_leave'));
+        $this->assertSame($first, (int) LeaveLedger::computeBalance($this->company->id, $emp->id, $type->id)['accrued'], 'idempotent : re-enabling never credits twice');
+    }
+
     public function test_hire_mid_month_accrual_is_prorated(): void
     {
         $this->annualLeaveType(); // CP annuel 2500 → part mensuelle floor(2500/12)=208

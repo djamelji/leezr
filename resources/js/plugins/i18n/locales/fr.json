@@ -7907,7 +7907,7 @@
     "noDocuments": "Aucun document",
     "noLeaveBalances": "Aucun solde de congés disponible",
     "requestLeave": "Demander un congé",
-    "noLeaveBalance": "Aucun solde de congés n'est ouvert pour vous. Votre entreprise doit d'abord activer votre contrat ; vous pourrez ensuite demander un congé ici.",
+    "noLeaveBalance": "Aucun solde de congés n'est encore ouvert pour vous. Il s'ouvre dès que votre contrat est actif et que votre entreprise a configuré les types de congés ; contactez votre responsable si votre contrat est déjà actif.",
     "leaveRequested": "Demande de congé envoyée",
     "leaveRequestFailed": "Échec de la demande de congé",
     "viewAllDocuments": "Voir tous mes documents",

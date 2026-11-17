@@ -29,5 +29,21 @@ class SeedLeaveTypesOnModuleEnabled
             $event->company->id,
             $event->company->market_key ?: 'FR',
         );
+
+        // ADR-818 (chantier G) — Congés activé APRÈS les contrats : les salariés déjà sous contrat actif
+        // n'avaient aucun solde (« activez votre contrat » alors qu'il l'est). On ouvre leur part du mois
+        // courant avec le MÊME moteur et la même clé idempotente que l'activation d'un contrat : aucune règle
+        // de calcul modifiée, aucun double avec le cumul mensuel. Non bloquant : l'activation du module réussit.
+        $period = now()->format('Y-m');
+        $employees = \App\Core\Workforce\EmploymentContract::withoutGlobalScopes()
+            ->where('company_id', $event->company->id)->where('is_current', true)
+            ->where('status', \App\Core\Workforce\EmploymentContract::STATUS_ACTIVE)->pluck('employee_id')->unique();
+        foreach ($employees as $employeeId) {
+            try {
+                app(\App\Modules\Workforce\UseCases\AccrueLeaveUseCase::class)->executeForEmployee($event->company->id, (int) $employeeId, $period);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
     }
 }
