@@ -19,7 +19,10 @@ class CompanyInvitationNotification extends Notification implements ShouldQueue
         public string $companyName,
         public ?string $inviterName,
         public string $url,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in French only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'fr';
+    }
 
     public function via(object $notifiable): array
     {

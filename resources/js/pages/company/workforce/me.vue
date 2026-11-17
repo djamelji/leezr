@@ -618,6 +618,7 @@ function signatureChipProps(status) {
             <p
               v-else-if="!documents.length"
               class="me-empty"
+              data-test="me-documents-empty"
             >
               {{ t('workforceMe.hours.noDocuments') }}
             </p>

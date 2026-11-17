@@ -3,13 +3,15 @@
 namespace App\Platform\Models;
 
 use Database\Factories\PlatformUserFactory;
+use App\Core\Notifications\MailLocale;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class PlatformUser extends Authenticatable
+class PlatformUser extends Authenticatable implements HasLocalePreference
 {
     use HasFactory, Notifiable;
 
@@ -86,5 +88,11 @@ class PlatformUser extends Authenticatable
         ResetPassword::createUrlUsing(fn ($notifiable, $token) => url("/platform/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForPasswordReset())));
 
         $this->notify(new ResetPassword($token));
+    }
+
+    /** ADR-813 — platform staff : the default market's language. */
+    public function preferredLocale(): string
+    {
+        return MailLocale::fallback();
     }
 }

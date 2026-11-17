@@ -2,6 +2,7 @@
 
 namespace App\Modules\Workforce\Onboarding;
 
+use App\Core\Notifications\MailLocale;
 use App\Core\Documents\DocumentConfidentiality;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\MemberDocument;
@@ -256,7 +257,7 @@ final class OnboardingPortalService
             return $code;
         });
         try {
-            Notification::route('mail', $this->inv->candidate_email)->notifyNow(new OnboardingCodeNotification($this->company()->name, $code, self::CODE_MINUTES));
+            Notification::route('mail', $this->inv->candidate_email)->notifyNow((new OnboardingCodeNotification($this->company()->name, $code, self::CODE_MINUTES))->locale(MailLocale::forCompany($this->company()))); // ADR-813
         } catch (\Throwable $e) {
             $this->inv->forceFill(['code_hash' => null, 'code_expires_at' => null])->save(); // un code non transmis n'existe pas
             app(\App\Core\Audit\AuditLogger::class)->logCompany($this->inv->company_id, 'onboarding.code_delivery_failed', 'onboarding_invitation', (string) $this->inv->id,

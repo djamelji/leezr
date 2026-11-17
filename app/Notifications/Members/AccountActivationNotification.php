@@ -18,7 +18,10 @@ class AccountActivationNotification extends Notification
         public string $token,
         public string $email,
         public int $expiresInMinutes,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in French only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'fr';
+    }
 
     public function via(object $notifiable): array
     {

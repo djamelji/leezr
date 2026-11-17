@@ -20,6 +20,7 @@ const hostRef = ref(null)
 const measuredW = ref(0)
 let ro = null
 const ready = computed(() => measuredW.value > 0)
+// ADR-813 — a width/height change remounts the gauge (vue3-apexcharts 1.5.3 destroys without recreating).
 onMounted(() => {
   if (!hostRef.value) return
   ro = new ResizeObserver(entries => {
@@ -71,6 +72,6 @@ const series = computed(() => [Math.max(0, Math.min(100, props.value))])
 
 <template>
   <div ref="hostRef" class="lzr-gauge-host" :style="{ inlineSize: '100%', blockSize: typeof height === 'number' ? height + 'px' : height }">
-    <VueApexCharts v-if="ready" type="radialBar" :width="measuredW" :height="height" :options="options" :series="series" />
+    <VueApexCharts v-if="ready" :key="`${measuredW}-${height}`" type="radialBar" :width="measuredW" :height="height" :options="options" :series="series" />
   </div>
 </template>

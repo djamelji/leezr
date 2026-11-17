@@ -29005,3 +29005,17 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
   - C4 (noms de rôles par défaut en anglais) reste une décision produit ;
   - 4 nouveaux tests, tous en échec sans le correctif ; tests d'invitation adaptés ;
   - vérification au navigateur de chaque correction.
+
+## ADR-813 — Finitions UX et hygiène DEV
+
+- **Date** : 2026-11-17, DEV, base `2345b37c`. Rapport : `docs/bmad/ADR-813-UX-FINISHING.md`.
+- **Décision** :
+  - **Rôles par défaut (C4)** : noms métier français alignés sur le preset Logistique publié (Responsable, Répartiteur, Chauffeur-livreur, Responsable d'exploitation). Appliqués aux **nouvelles sociétés seulement** ; une réassignation du métier ne renomme plus jamais un rôle existant. Clés, droits et rôles des sociétés existantes inchangés.
+  - **E-mails** : langue = marché de la Company, puis marché commun des sociétés du destinataire, puis marché par défaut, puis `app.locale` (`MailLocale`). Traduction française du gabarit Laravel (`lang/fr.json`). Les notifications rédigées uniquement en français fixent leur gabarit en français.
+  - **P3** : libellés d'audit (le code reste dans le détail) ; cause de l'erreur ApexCharts corrigée dans l'enveloppe Leezr ; formats acceptés affichés depuis la règle réellement appliquée ; bloc « Documents reçus » clarifié.
+  - **Worker DEV** : inventaire en lecture seule et procédure d'isolement par file dédiée. Rien n'a été exécuté.
+  - **Société 101** : conservée et identifiable ; registre de ses identifiants exacts.
+- **Conséquences** :
+  - une migration non destructive, sur la définition du métier seulement ;
+  - aucun changement Billing, paie, droits, `@core` ;
+  - 10 nouveaux tests, tous en échec sur le code d'origine.

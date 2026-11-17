@@ -286,7 +286,7 @@ class Adr797JobdomainModernizationTest extends TestCase
         $this->assertGreaterThan(0, $r['modules']['active']);
         $this->assertSame(['records' => 2, 'without_position' => 1, 'without_account' => 1, 'preparatory' => 0, 'multi_company_accounts' => 1],
             array_diff_key($r['people'], ['position_role_pairs' => 1]));
-        $this->assertSame([['pair' => 'Livreur × Driver', 'count' => 1]], $r['people']['position_role_pairs'], 'couple soumis, jamais corrigé');
+        $this->assertSame([['pair' => 'Livreur × Chauffeur-livreur', 'count' => 1]], $r['people']['position_role_pairs'], 'couple soumis, jamais corrigé (nom par défaut ADR-813)');
         $this->assertSame('DocumentResolverService (historique)', $r['requirements']['authority']);
         $this->assertGreaterThan(0, $r['requirements']['parallel_required'], 'exigence par poste vue par la résolution parallèle');
         $this->assertTrue($r['guarantees']['read_only']);

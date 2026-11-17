@@ -1,0 +1,378 @@
+{
+    "company": {
+        "id": 101,
+        "name": "E2E Recette 8091 433828",
+        "slug": "e2e-recette-8091-433828-FDYY",
+        "status": "active",
+        "plan_key": "starter",
+        "market_key": "FR",
+        "created_at": "2026-11-16 21:27:31"
+    },
+    "tables": {
+        "company_addon_subscriptions": [
+            54,
+            55,
+            56
+        ],
+        "company_audit_logs": [
+            "01m7k443mqx51avjzvzj5bc5s4",
+            "01m7k47v8wzjayc55wzhxp2fvy",
+            "01m7k4npdxc24j1w2eapzz5w0w",
+            "01m7k4p47zj3s4c6x5pkwrz8pw",
+            "01m7k4pnw365hdbpqszvtbzrfe",
+            "01m7k4pvy0f9et5tvr6h6k1v71",
+            "01m7k4qv8hrqcjqx7nbr4yyv31",
+            "01m7k4qx10j5n96mqjt4gzhyve",
+            "01m7k4qx558s932cnd5tt5662w",
+            "01m7k4qx89hjbmw5fch5dnp4se",
+            "01m7k4qxagsaw6e6ret2qn88x5",
+            "01m7k4qxchy77c1q62fphb5q9v",
+            "01m7k4saqacdxngkxw35m09sqs",
+            "01m7k4sw1z36bpsd2p1kn7sjct",
+            "01m7k4v19eqfs29qxbrrjmae6v",
+            "01m7k4vdsj9gh9zkcmys7h7sfx",
+            "01m7k4vkzqd47kjjw77ysc1d33",
+            "01m7k582bqej1kr3648peangmv",
+            "01m7k58gxwt66bwe81hq5wk3nt",
+            "01m7k58rszh9qwg2r017t3krd1",
+            "01m7k58rvqe1dc2tgaeh3a31z4",
+            "01m7k59221ce2tkj5pdeg6tk2z",
+            "01m7k5923q6512dbwc7v2crpm8",
+            "01m7k59bb2zh2bmvmj408m8h0z",
+            "01m7k59bcva9h2sjqqvnn9yvxm",
+            "01m7k59mjtv59ty9gqgaa07n5t",
+            "01m7k59mm8qawxapa4xnswpcpw",
+            "01m7k5aqhysrfywbprnengncfm",
+            "01m7k5aqqw2rerzes6zj2cqcch",
+            "01m7k5aqxbv2bg55nvah96ss4v",
+            "01m7k5ar30b19gmxtr2g167xke",
+            "01m7k5cyjvw0t22k2w0wwya0wz",
+            "01m7k5ngyeyd1k9x59k6ezyy3h",
+            "01m7k5xhk4f690aabqqqgt7dk2",
+            "01m7k65d77p2m26t80c3wkdy59",
+            "01m7k67a5wcmhnj3dd725c97ah",
+            "01m7k6d5mm81dznkkghamkhc05",
+            "01m7k6e8pr4a7253rvpw2v1r1m",
+            "01m7k6f9ekqqppw51zbyxa1trr",
+            "01m7k6g7xrdpcbdg0bjaadbjp3",
+            "01m7k6m448r0m2c9p9ywrzt1p1",
+            "01m7k6n4zqamxyejbv5wg5rnwa",
+            "01m7k6n4zw1fbz8ed7jy70x8d3",
+            "01m7k6p38rn1b7ck7rd7txkhbm",
+            "01m7k6qm1epba9sfxb2rz5ednx",
+            "01m7k6s1p7atrcqnhgbe4psjd4",
+            "01m7k6t0z29mwf91kjadc4sycp",
+            "01m7k6vy788j6f9t8007wfrspe",
+            "01m7k6xvxzb6dhcc8bt6ngfjhf",
+            "01m7k6yvdsdctde2qrfg6xyeg8",
+            "01m7k6zpszeywhbffnbvtyen9e",
+            "01m7k71jqzfq94q0r2nay559fe",
+            "01m7k71qj83q7yy9pnvy26gky0",
+            "01m7k74hmmxgksapz3r0dnpp8y",
+            "01m7k76enf56wz7ddzfj4dnkge",
+            "01m7k78b7wp665tyf3jqk4nd12",
+            "01m7k7ac0xdxmy5kbg0s56wgnz",
+            "01m7k7b68szmrfpt9h3vftaepp",
+            "01m7k7c3sb2631808h1dy4dj1e",
+            "01m7k7dgma39ph0gj91jrzmyqk",
+            "01m7k7dyq8hs1a6a3m75jx5yme",
+            "01m7k810783m3a5gaz60apdwgf",
+            "01m7k827qjy6z0ven787cfm0cz",
+            "01m7k82kadnb6s6wpykbjzc8sr",
+            "01m7k836g12tknsm4g4xrcaray",
+            "01m7k83gzgbnhnjbzb51zyakv9",
+            "01m7k83gzte5phhm45vg8ke0sp",
+            "01m7k83gzzdz3e8a970sefz3hf",
+            "01m7k83tszgfzveb73bgnnyj24",
+            "01m7k83za3egezf3tm2abkw7rp",
+            "01m7k84380hrwdadn88xtf7c71",
+            "01m7k8p4d4v16m3ta4rp15cnp7",
+            "01m7k8pee1bk09n65d8pzam5yz",
+            "01m7k8pjazk030hy86cw3ck8f0",
+            "01m7k8ptbvsdvk407ww2eb3cgd",
+            "01m7k8ptbyt1m33jj7274vnean",
+            "01m7k8xx9wtzx9btctb69sym4f",
+            "01m7k97mpp9k1e47j4c5cxhwt8",
+            "01m7k98rkfv5tsh3zbn8wwpj9m",
+            "01m7k99x2c8bd1ffhpx0y26797",
+            "01m7k9a61s1f7zkrtds6f6ssr4",
+            "01m7k9dzrvrn4cqjjecy5nxdnx",
+            "01m7k9g1vvvcv8wn56npkvfwje",
+            "01m7k9h1020k0h6bs0rg38srst",
+            "01m7k9h9qh49p8ab75kzzmyxjk",
+            "01m7k9j668jmjrbw47ebd3mqph",
+            "01m7k9jjaayshczvqf20jnvzka"
+        ],
+        "company_dashboard_layouts": [
+            179,
+            180,
+            181,
+            182,
+            183
+        ],
+        "company_document_settings": [
+            12
+        ],
+        "company_jobdomain": [
+            "rows:1"
+        ],
+        "company_module_activation_reasons": [
+            352,
+            353,
+            354,
+            355,
+            356,
+            357,
+            358,
+            359,
+            360,
+            361,
+            362,
+            363,
+            364,
+            365,
+            366,
+            367,
+            368,
+            369,
+            370
+        ],
+        "company_module_setups": [
+            69,
+            70,
+            71,
+            72,
+            73,
+            74
+        ],
+        "company_modules": [
+            320,
+            321,
+            322,
+            323,
+            324,
+            325,
+            326,
+            327,
+            328,
+            329,
+            330,
+            331
+        ],
+        "company_preset_snapshots": [
+            19
+        ],
+        "company_roles": [
+            170,
+            171,
+            172,
+            173,
+            174
+        ],
+        "company_sequences": [
+            2
+        ],
+        "company_wallets": [
+            41
+        ],
+        "document_request_events": [
+            129,
+            130
+        ],
+        "document_requests": [
+            99,
+            100,
+            101
+        ],
+        "document_type_activations": [
+            164,
+            165,
+            166,
+            167,
+            168
+        ],
+        "email_logs": [
+            79,
+            80,
+            81,
+            82
+        ],
+        "field_activations": [
+            1068,
+            1069,
+            1070,
+            1071,
+            1072,
+            1073,
+            1074,
+            1075,
+            1076,
+            1077,
+            1078,
+            1079,
+            1080,
+            1081,
+            1082,
+            1083,
+            1084,
+            1085,
+            1086,
+            1087,
+            1088,
+            1089,
+            1090,
+            1091,
+            1092,
+            1093,
+            1094,
+            1095,
+            1096,
+            1097,
+            1098,
+            1099,
+            1100,
+            1101,
+            1102,
+            1103
+        ],
+        "financial_ledger_entries": [
+            179,
+            180,
+            181,
+            182,
+            183,
+            184,
+            185,
+            186,
+            187
+        ],
+        "invoices": [
+            110,
+            111,
+            112
+        ],
+        "member_documents": [
+            40
+        ],
+        "memberships": [
+            186,
+            187,
+            188,
+            189,
+            190
+        ],
+        "notification_events": [
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59
+        ],
+        "registration_funnel_events": [
+            6
+        ],
+        "shipments": [
+            15,
+            16
+        ],
+        "subscriptions": [
+            52
+        ],
+        "workforce_compensation_plans": [
+            4
+        ],
+        "workforce_employees": [
+            1811,
+            1812,
+            1813,
+            1814,
+            1815
+        ],
+        "workforce_employment_contracts": [
+            549
+        ],
+        "workforce_leave_balances": [
+            39,
+            40
+        ],
+        "workforce_leave_ledger_entries": [
+            72,
+            73,
+            74
+        ],
+        "workforce_leave_requests": [
+            79
+        ],
+        "workforce_leave_types": [
+            104,
+            105,
+            106,
+            107,
+            108,
+            109
+        ],
+        "workforce_planning_notification_outbox": [
+            14
+        ],
+        "workforce_planning_operations": [
+            304
+        ],
+        "workforce_shifts": [
+            6608
+        ],
+        "workforce_time_entries": [
+            1347
+        ]
+    },
+    "users": [
+        {
+            "id": 174,
+            "email": "e2e.8091.owner.433828@leezr.invalid"
+        },
+        {
+            "id": 175,
+            "email": "e2e.811.admin.42700@leezr.invalid"
+        },
+        {
+            "id": 176,
+            "email": "e2e.811.manager.42700@leezr.invalid"
+        },
+        {
+            "id": 177,
+            "email": "e2e.811.employee.42700@leezr.invalid"
+        },
+        {
+            "id": 178,
+            "email": "e2e.811.driver.42700@leezr.invalid"
+        }
+    ],
+    "invoices": [
+        {
+            "id": 110,
+            "number": "INV-2026-000051",
+            "status": "open",
+            "amount": 3480,
+            "parent_invoice_id": null
+        },
+        {
+            "id": 111,
+            "number": null,
+            "status": "open",
+            "amount": 2280,
+            "parent_invoice_id": 110
+        },
+        {
+            "id": 112,
+            "number": null,
+            "status": "open",
+            "amount": 1080,
+            "parent_invoice_id": 110
+        }
+    ]
+}

@@ -47,6 +47,21 @@ let ro = null; let rTimer = null; let settleTimer = null
 
 const ready = computed(() => measuredW.value > 0)
 
+// ADR-813 — vue3-apexcharts 1.5.3 handles a change of its `height`/`width`/`type` props by destroying the
+// chart WITHOUT recreating it (its init returns early while the destroyed instance is still referenced) :
+// the chart went blank and the next options update threw « Cannot read properties of null (reading
+// 'forceXAxisUpdate') ». Widgets compute their height after layout (chartPx) → such a change remounts
+// the chart cleanly instead. ApexCharts' destroy() also leaves its 150 ms resize timer armed, which then
+// re-renders the destroyed instance (« attribute height: NaN ») : it is cancelled before every remount.
+const chartKey = computed(() => `${instanceKey.value}-${props.type}-${props.height}`)
+const apexRef = ref(null)
+const disarm = () => {
+  const g = apexRef.value?.chart?.w?.globals
+  if (g?.resizeTimer) { clearTimeout(g.resizeTimer); g.resizeTimer = null }
+}
+watch(chartKey, disarm, { flush: 'pre' })
+onBeforeUnmount(disarm)
+
 onMounted(() => {
   if (!hostRef.value) return
   ro = new ResizeObserver(entries => {
@@ -180,7 +195,8 @@ const options = computed(() => {
   >
     <VueApexCharts
       v-if="ready"
-      :key="instanceKey"
+      ref="apexRef"
+      :key="chartKey"
       :type="type === 'radial' ? 'radialBar' : type"
       width="100%"
       :height="height"

@@ -64,7 +64,7 @@ class UploadOwnDocumentUseCase
         // 5. File domain validation (from validation_rules)
         $rules = $type->validation_rules ?? [];
         $maxSizeMb = $rules['max_file_size_mb'] ?? 10;
-        $acceptedTypes = $rules['accepted_types'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
+        $acceptedTypes = \App\Core\Documents\Services\SubjectDocumentUploadService::acceptedTypes($rules); // ADR-813
 
         $fileSizeBytes = $data->file->getSize();
         if ($fileSizeBytes > $maxSizeMb * 1024 * 1024) {

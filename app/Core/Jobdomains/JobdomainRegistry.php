@@ -147,7 +147,7 @@ class JobdomainRegistry
                         ],
                     ],
                     'manager' => [
-                        'name' => 'Manager',
+                        'name' => 'Responsable',
                         'archetype' => 'management',
                         'is_administrative' => true,
                         'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active'],
@@ -196,7 +196,7 @@ class JobdomainRegistry
                         ],
                     ],
                     'dispatcher' => [
-                        'name' => 'Dispatcher',
+                        'name' => 'Répartiteur',
                         'archetype' => 'operations_center',
                         'is_administrative' => true, // ADR-373: surface access for structure pages (billing still blocked by use-permission)
                         'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'shipments.unassigned', 'drivers.active'],
@@ -243,7 +243,7 @@ class JobdomainRegistry
                         ],
                     ],
                     'driver' => [
-                        'name' => 'Driver',
+                        'name' => 'Chauffeur-livreur',
                         'archetype' => 'field_worker',
                         'dashboard_widgets' => ['compliance.rate', 'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today'],
                         'bundles' => [
@@ -291,7 +291,7 @@ class JobdomainRegistry
                         ],
                     ],
                     'ops_manager' => [
-                        'name' => 'Operations Manager',
+                        'name' => 'Responsable d’exploitation',
                         'archetype' => 'management',
                         'is_administrative' => true,
                         'dashboard_widgets' => ['compliance.rate', 'compliance.pending', 'compliance.roles', 'shipments.today', 'shipments.in_transit', 'shipments.late', 'drivers.active'],

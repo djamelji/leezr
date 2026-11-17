@@ -2,7 +2,10 @@
 import { useCompanyAuditStore } from '@/modules/company/audit/audit.store'
 import { formatDateTime } from '@/utils/datetime'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+// ADR-813 — readable label for an audit action ; the technical code stays in the details row.
+const actionLabel = code => (code && te(`audit.actions.${code}`) ? t(`audit.actions.${code}`) : code)
 
 definePage({ meta: { module: 'core.audit', surface: 'structure', permission: 'audit.view' } })
 
@@ -105,7 +108,10 @@ onMounted(() => loadData())
         </template>
 
         <template #item.action="{ item }">
-          <code class="text-body-2">{{ item.action }}</code>
+          <span
+            class="text-body-2"
+            data-test="audit-action-label"
+          >{{ actionLabel(item.action) }}</span>
         </template>
 
         <template #item.actor_type="{ item }">
@@ -133,6 +139,7 @@ onMounted(() => loadData())
             <td :colspan="columns.length">
               <div class="pa-4">
                 <div class="d-flex gap-4 flex-wrap mb-2">
+                  <span class="text-caption"><strong>{{ t('audit.actionCode') }} :</strong> <code data-test="audit-action-code">{{ item.action }}</code></span>
                   <span class="text-caption"><strong>{{ t('audit.ipAddress') }}:</strong> {{ item.ip_address ?? '—' }}</span>
                 </div>
                 <div

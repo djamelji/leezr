@@ -5559,7 +5559,259 @@
     "noLogs": "Aucun journal d'audit trouvé",
     "info": "Info",
     "warning": "Avertissement",
-    "critical": "Critique"
+    "critical": "Critique",
+    "actions": {
+      "activity_preset": {
+        "created": "Modèle d’activité créé",
+        "updated": "Modèle d’activité modifié"
+      },
+      "auth": {
+        "login": "Connexion",
+        "login_failed": "Échec de connexion",
+        "logout": "Déconnexion",
+        "register": "Inscription de l’entreprise"
+      },
+      "automation": {
+        "run_manual": "Automatisation lancée manuellement",
+        "task_disabled": "Automatisation désactivée",
+        "task_enabled": "Automatisation activée"
+      },
+      "billing": {
+        "auto_repair_applied": "Facturation : correction automatique appliquée",
+        "credit_note_issued": "Avoir émis",
+        "credit_note_manual": "Avoir manuel émis",
+        "drift_detected": "Facturation : écart détecté",
+        "dunning_force_retry": "Relance de paiement forcée",
+        "financial_freeze_disabled": "Gel financier levé",
+        "financial_freeze_enabled": "Gel financier activé",
+        "invoice_dunning_forced": "Relance de facture forcée",
+        "invoice_marked_paid": "Facture marquée payée",
+        "invoice_notes_updated": "Notes de facture modifiées",
+        "invoice_voided": "Facture annulée",
+        "invoice_written_off": "Facture passée en perte",
+        "period_closed": "Période de facturation clôturée",
+        "policy_updated": "Politique de facturation modifiée",
+        "provider_collection_attempted": "Tentative d’encaissement",
+        "refund": "Remboursement",
+        "wallet_admin_credit": "Crédit ajouté au portefeuille"
+      },
+      "company": {
+        "reactivated": "Entreprise réactivée",
+        "settings_updated": "Réglages de l’entreprise modifiés",
+        "suspended": "Entreprise suspendue"
+      },
+      "contract_template": {
+        "duplicated": "Modèle de contrat dupliqué",
+        "published": "Modèle de contrat publié",
+        "updated": "Modèle de contrat modifié",
+        "versioned": "Nouvelle version du modèle de contrat"
+      },
+      "contract": {
+        "activated": "Contrat activé",
+        "created": "Contrat créé"
+      },
+      "coverage_category": {
+        "created": "Catégorie de couverture créée"
+      },
+      "coverage_requirement": {
+        "created": "Besoin de couverture créé",
+        "updated": "Besoin de couverture modifié"
+      },
+      "document_type": {
+        "archived": "Type de document archivé",
+        "created": "Type de document créé",
+        "restored": "Type de document restauré",
+        "updated": "Type de document modifié"
+      },
+      "document": {
+        "batch_requested": "Documents demandés en lot",
+        "company_withdrawn": "Document retiré par l’entreprise",
+        "confidential_access": "Accès à un document confidentiel",
+        "generated": "Document généré",
+        "request_cancelled": "Demande de document annulée",
+        "requested": "Document demandé"
+      },
+      "employee": {
+        "account_linked": "Compte relié au salarié",
+        "bulk_updated": "Salariés modifiés en lot",
+        "created": "Salarié créé",
+        "imported": "Salariés importés",
+        "number_assigned": "Matricule attribué"
+      },
+      "field": {
+        "created": "Champ créé",
+        "deleted": "Champ supprimé",
+        "updated": "Champ modifié"
+      },
+      "jobdomain": {
+        "changed": "Métier modifié"
+      },
+      "leave_ledger": {
+        "accrual": "Acquisition de congés",
+        "reservation": "Congés réservés"
+      },
+      "leave_request": {
+        "approved": "Congé validé",
+        "cancelled": "Congé annulé",
+        "created": "Congé demandé",
+        "rejected": "Congé refusé"
+      },
+      "member": {
+        "access_revoked": "Accès retiré",
+        "added": "Membre ajouté",
+        "invitation_accepted": "Invitation acceptée",
+        "invitation_declined": "Invitation refusée",
+        "invitation_delivered": "Invitation envoyée par e-mail",
+        "invitation_delivery_failed": "Échec d’envoi de l’invitation",
+        "invitation_expired": "Invitation expirée",
+        "invitation_renewed": "Invitation renouvelée",
+        "invitation_sent": "Invitation créée",
+        "profile_updated": "Profil du membre modifié",
+        "reactivated": "Membre réactivé",
+        "removed": "Membre retiré",
+        "role_changed": "Rôle du membre modifié",
+        "suspended": "Membre suspendu"
+      },
+      "module": {
+        "access_configured": "Accès du module configurés",
+        "disabled": "Module désactivé",
+        "enabled": "Module activé",
+        "settings_updated": "Réglages du module modifiés",
+        "synced": "Module synchronisé"
+      },
+      "onboarding": {
+        "created": "Dossier d’intégration créé",
+        "fixture_removed": "Dossier de recette supprimé",
+        "invitation_mailed": "Lien d’intégration envoyé",
+        "link_issued": "Lien d’intégration émis",
+        "submitted": "Dossier d’intégration transmis",
+        "upload_ingested": "Pièce d’intégration enregistrée",
+        "upload_quarantined": "Pièce d’intégration mise en quarantaine",
+        "validated": "Dossier d’intégration validé"
+      },
+      "payroll_calculations": {
+        "computed": "Calculs de paie effectués"
+      },
+      "payroll_run": {
+        "computed": "Paie calculée",
+        "created": "Paie créée",
+        "exported": "Paie exportée",
+        "validated": "Paie validée"
+      },
+      "plan": {
+        "changed": "Offre modifiée"
+      },
+      "planning": {
+        "operation_redone": "Action de planning rétablie",
+        "operation_undone": "Action de planning annulée"
+      },
+      "platform_auth": {
+        "login": "Connexion Platform",
+        "login_failed": "Échec de connexion Platform",
+        "logout": "Déconnexion Platform"
+      },
+      "platform_user": {
+        "created": "Utilisateur Platform créé",
+        "deleted": "Utilisateur Platform supprimé",
+        "password_set": "Mot de passe Platform défini",
+        "updated": "Utilisateur Platform modifié"
+      },
+      "realtime": {
+        "channels_flushed": "Canaux temps réel vidés",
+        "kill_switch_activated": "Temps réel coupé",
+        "kill_switch_auto_activated": "Temps réel coupé automatiquement",
+        "kill_switch_deactivated": "Temps réel rétabli"
+      },
+      "role": {
+        "capabilities_changed": "Droits du rôle modifiés",
+        "created": "Rôle créé",
+        "deleted": "Rôle supprimé",
+        "permission_revoked": "Droit retiré du rôle",
+        "updated": "Rôle modifié"
+      },
+      "schedule_template": {
+        "created": "Modèle d’horaire créé",
+        "updated": "Modèle d’horaire modifié"
+      },
+      "scheduled_activity": {
+        "created": "Activité planifiée créée",
+        "revised_add": "Activité planifiée complétée"
+      },
+      "security": {
+        "alert_acknowledged": "Alerte de sécurité prise en compte",
+        "alert_resolved": "Alerte de sécurité résolue"
+      },
+      "shift": {
+        "cancelled": "Créneau annulé",
+        "created": "Créneau créé",
+        "overstaffing_confirmed": "Sureffectif confirmé",
+        "updated": "Créneau modifié"
+      },
+      "shifts": {
+        "bulk_applied": "Créneaux appliqués en lot",
+        "bulk_overstaffing_confirmed": "Sureffectif confirmé en lot",
+        "copied": "Créneaux copiés",
+        "published": "Planning publié"
+      },
+      "signature": {
+        "cancelled": "Signature annulée",
+        "completed": "Signature terminée",
+        "declined": "Signature refusée",
+        "expired": "Signature expirée",
+        "failed": "Échec de la signature",
+        "requested": "Signature demandée",
+        "sent": "Demande de signature envoyée",
+        "signed": "Document signé"
+      },
+      "subscription": {
+        "cancel_executed": "Abonnement résilié",
+        "cancel_requested": "Résiliation demandée",
+        "paid_now": "Abonnement payé immédiatement",
+        "plan_change_cancelled": "Changement d’offre annulé",
+        "plan_change_executed": "Changement d’offre appliqué",
+        "plan_change_requested": "Changement d’offre demandé"
+      },
+      "theme": {
+        "visibility_updated": "Visibilité du thème modifiée"
+      },
+      "time_entry": {
+        "break_end": "Fin de pause",
+        "break_start": "Début de pause",
+        "clock_in": "Début de journée pointé",
+        "clock_out": "Fin de journée pointée",
+        "updated": "Pointage corrigé"
+      },
+      "timesheet": {
+        "approved": "Feuille de temps validée",
+        "generated": "Feuille de temps générée",
+        "locked": "Feuille de temps verrouillée",
+        "rejected": "Feuille de temps refusée",
+        "submitted": "Feuille de temps transmise"
+      },
+      "user": {
+        "avatar_updated": "Photo de profil modifiée",
+        "password_changed": "Mot de passe modifié",
+        "profile_updated": "Profil modifié"
+      },
+      "webhook": {
+        "dispute_created": "Litige de paiement reçu",
+        "payment_failed": "Échec de paiement signalé",
+        "payment_synced": "Paiement synchronisé",
+        "refund_synced": "Remboursement synchronisé",
+        "setup_intent_synced": "Moyen de paiement synchronisé",
+        "signature_synced": "Signature synchronisée"
+      },
+      "week_template": {
+        "created": "Semaine type créée"
+      },
+      "work_location": {
+        "created": "Lieu de travail créé"
+      },
+      "workforce_presets": {
+        "imported": "Modèles RH importés"
+      }
+    },
+    "actionCode": "Code technique"
   },
   "security": {
     "alertsTab": "Alertes",
@@ -6030,7 +6282,8 @@
     },
     "replaceFile": "Remplacer le fichier",
     "moreActions": "Plus d'actions",
-    "replacedOn": "Remplacé le {date}"
+    "replacedOn": "Remplacé le {date}",
+    "acceptedFormatsList": "Formats acceptés : {types}"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",
@@ -7690,8 +7943,8 @@
       "caption": "Semaine du {weekFrom} au {weekTo} · période du {periodFrom} au {periodTo}",
       "note": "Heures pointées, pauses déduites. Les heures validées par votre entreprise ne sont pas encore des heures payées.",
       "inProgressNote": "Un pointage est en cours : il sera compté une fois terminé. Les heures validées ne sont pas encore des heures payées.",
-      "documentsTitle": "Mes documents et bulletins",
-      "noDocuments": "Aucun document pour le moment.",
+      "documentsTitle": "Documents reçus",
+      "noDocuments": "Vos bulletins de paie et les documents que votre entreprise vous transmet apparaîtront ici. Les pièces que vous devez fournir sont dans « Tout voir ».",
       "leaveDetail": "Pris {consumed} · acquis {accrued}",
       "seeAll": "Tout voir"
     }

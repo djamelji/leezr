@@ -165,7 +165,7 @@ const handleViewerDownload = () => {
                 <td class="font-weight-medium">
                   {{ te(`documents.type.${doc.code}`) ? t(`documents.type.${doc.code}`) : doc.label }}
                   <div class="text-body-2 text-disabled">
-                    {{ t('documents.maxSize', { size: doc.max_file_size_mb }) }} · {{ t('documents.acceptedTypes', { types: doc.accepted_types.join(', ') }) }}
+                    {{ t('documents.maxSize', { size: doc.max_file_size_mb }) }} · <span data-test="self-doc-formats">{{ t('documents.acceptedFormatsList', { types: doc.accepted_types.map(x => x.toUpperCase()).join(', ') }) }}</span>
                   </div>
                   <!-- ADR-759 (M2) : message + échéance + motif de refus destinés au collaborateur -->
                   <div

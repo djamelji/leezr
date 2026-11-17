@@ -2,6 +2,7 @@
 
 namespace App\Modules\Workforce\Onboarding;
 
+use App\Core\Notifications\MailLocale;
 use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentType;
@@ -116,8 +117,10 @@ final class OnboardingInvitationService
         });
         $url = $this->issueLink($inv->refresh(), $days);
         try {
-            Notification::route('mail', $inv->candidate_email)->notifyNow(new OnboardingInvitationNotification(
-                $this->company->name, $url, $inv->refresh()->expires_at->locale(app()->getLocale())->isoFormat('LL')));
+            // ADR-813 — a candidate has no account : the e-mail speaks the language of the company's market.
+            $locale = MailLocale::forCompany($this->company);
+            Notification::route('mail', $inv->candidate_email)->notifyNow((new OnboardingInvitationNotification(
+                $this->company->name, $url, $inv->refresh()->expires_at->locale($locale)->isoFormat('LL')))->locale($locale));
         } catch (\Throwable $e) {
             $error = Str::limit(preg_replace('#https?://\S+#', '[link]', trim(preg_replace('/\s+/', ' ', $e->getMessage()))) ?: class_basename($e), 250, '…');
             $inv->forceFill(['delivery_status' => 'failed', 'delivery_error' => $error])->save();

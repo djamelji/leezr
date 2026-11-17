@@ -19,7 +19,10 @@ class SignatureInvitationNotification extends Notification
         public readonly string $signUrl,
         public readonly ?string $companyName = null,
         public readonly ?string $expiresAt = null,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in French only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'fr';
+    }
 
     public function via(object $notifiable): array
     {

@@ -20,7 +20,10 @@ class PlanningPublishedNotification extends Notification implements ShouldQueue
         public int $shiftCount,
         public string $url,
         public bool $isChange = false,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in French only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'fr';
+    }
 
     public function via(object $notifiable): array
     {

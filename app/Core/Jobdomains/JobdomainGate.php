@@ -247,10 +247,14 @@ class JobdomainGate
                     $requiredTags = $archetypes[$archetype]['default_tags'] ?? [];
                 }
 
+                // ADR-813 — the default name is applied when the role is CREATED only : a re-assignment
+                // never renames a role an existing company already has (its name may be customised).
+                $existingName = CompanyRole::where('company_id', $company->id)->where('key', $roleKey)->value('name');
+
                 $role = CompanyRole::updateOrCreate(
                     ['company_id' => $company->id, 'key' => $roleKey],
                     [
-                        'name' => $roleDef['name'],
+                        'name' => $existingName ?? $roleDef['name'],
                         'is_system' => true,
                         'is_administrative' => $roleDef['is_administrative'] ?? false,
                         'archetype' => $archetype,

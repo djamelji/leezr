@@ -152,7 +152,7 @@ class DocumentResolverService
                 'mandatory' => $entry['mandatory'],
                 'requires_expiration' => (bool) $type->requires_expiration,
                 'max_file_size_mb' => $rules['max_file_size_mb'] ?? 10,
-                'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
+                'accepted_types' => \App\Core\Documents\Services\SubjectDocumentUploadService::acceptedTypes($rules), // ADR-813 : as enforced
                 'order' => $entry['order'],
                 'upload' => $uploadData,
                 'lifecycle_status' => DocumentLifecycleService::computeStatus($uploadData),

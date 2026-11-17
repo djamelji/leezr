@@ -183,7 +183,7 @@ class MemberDocumentWorkflowReadModel
             'required' => false,
             'mandatory' => false,
             'requires_expiration' => (bool) $type->requires_expiration,
-            'accepted_types' => $rules['accepted_types'] ?? ['pdf', 'jpg', 'png'],
+            'accepted_types' => \App\Core\Documents\Services\SubjectDocumentUploadService::acceptedTypes($rules), // ADR-813 : as enforced
             'max_file_size_mb' => $rules['max_file_size_mb'] ?? 10,
             'lifecycle_status' => $lifecycle,
             'upload' => [

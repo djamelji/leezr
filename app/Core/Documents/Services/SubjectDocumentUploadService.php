@@ -21,12 +21,21 @@ use Illuminate\Support\Facades\Storage;
  */
 final class SubjectDocumentUploadService
 {
+    /** ADR-813 — formats accepted when a type defines none : the ONE default, enforced and displayed. */
+    public const DEFAULT_ACCEPTED_TYPES = ['pdf', 'jpg', 'jpeg', 'png'];
+
+    /** ADR-813 — formats actually enforced for a type's validation_rules (also what the UI displays). */
+    public static function acceptedTypes(?array $rules): array
+    {
+        return $rules['accepted_types'] ?? self::DEFAULT_ACCEPTED_TYPES;
+    }
+
     /** Validation rules of a type, identical for every caller. */
     public static function fileRules(DocumentType $type): array
     {
         $rules = $type->validation_rules ?? [];
         $maxSize = ($rules['max_file_size_mb'] ?? 10) * 1024;
-        $accepted = $rules['accepted_types'] ?? ['pdf', 'jpg', 'jpeg', 'png'];
+        $accepted = self::acceptedTypes($rules);
 
         return ['file', "max:{$maxSize}", 'mimes:'.implode(',', $accepted)];
     }

@@ -3,7 +3,9 @@
 namespace App\Core\Models;
 
 use Database\Factories\UserFactory;
+use App\Core\Notifications\MailLocale;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -148,5 +150,11 @@ class User extends Authenticatable
         ResetPassword::createUrlUsing(fn ($notifiable, $token) => url("/reset-password?token={$token}&email=" . urlencode($notifiable->getEmailForPasswordReset())));
 
         $this->notify(new ResetPassword($token));
+    }
+
+    /** ADR-813 — e-mails (and Laravel's mail layout) in the language of the recipient's company market. */
+    public function preferredLocale(): string
+    {
+        return MailLocale::forUser($this);
     }
 }

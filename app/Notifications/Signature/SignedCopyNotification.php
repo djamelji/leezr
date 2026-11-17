@@ -18,7 +18,10 @@ class SignedCopyNotification extends Notification
         public readonly string $documentLabel,
         public readonly string $downloadUrl,
         public readonly ?string $companyName = null,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in French only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'fr';
+    }
 
     public function via(object $notifiable): array
     {

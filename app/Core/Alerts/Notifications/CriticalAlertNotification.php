@@ -19,7 +19,10 @@ class CriticalAlertNotification extends Notification implements ShouldQueue
     public function __construct(
         public PlatformAlert $alert,
         public int $escalationCount = 0,
-    ) {}
+    ) {
+        // ADR-813 — the content is written in English only : the Laravel layout (greeting, subcopy, footer) follows it.
+        $this->locale = 'en';
+    }
 
     public function via(mixed $notifiable): array
     {

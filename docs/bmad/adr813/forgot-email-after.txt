@@ -1,0 +1,19 @@
+Leezr: https://leezr.test
+
+# Bonjour,
+
+Vous recevez cet e-mail car une réinitialisation du mot de passe de votre compte a été demandée.
+
+Réinitialiser le mot de passe: https://leezr.test/reset-password?token=[redacted]&email=e2e.811.driver.42700%40leezr.invalid
+
+Ce lien de réinitialisation expire dans 60 minutes.
+
+Si vous n'êtes pas à l'origine de cette demande, aucune action n'est nécessaire.
+
+Cordialement,
+Leezr
+
+Si le bouton « Réinitialiser le mot de passe » ne fonctionne pas, copiez et collez le lien ci-dessous
+dans votre navigateur : [https://leezr.test/reset-password?token=[redacted]&email=e2e.811.driver.42700%40leezr.invalid](https://leezr.test/reset-password?token=[redacted]&email=e2e.811.driver.42700%40leezr.invalid)
+
+© 2026 Leezr. Tous droits réservés.

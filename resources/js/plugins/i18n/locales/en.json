@@ -5559,7 +5559,259 @@
     "noLogs": "No audit logs found",
     "info": "Info",
     "warning": "Warning",
-    "critical": "Critical"
+    "critical": "Critical",
+    "actions": {
+      "activity_preset": {
+        "created": "Activity preset created",
+        "updated": "Activity preset updated"
+      },
+      "auth": {
+        "login": "Sign-in",
+        "login_failed": "Failed sign-in",
+        "logout": "Sign-out",
+        "register": "Company sign-up"
+      },
+      "automation": {
+        "run_manual": "Automation run manually",
+        "task_disabled": "Automation disabled",
+        "task_enabled": "Automation enabled"
+      },
+      "billing": {
+        "auto_repair_applied": "Billing: automatic repair applied",
+        "credit_note_issued": "Credit note issued",
+        "credit_note_manual": "Manual credit note issued",
+        "drift_detected": "Billing: drift detected",
+        "dunning_force_retry": "Payment retry forced",
+        "financial_freeze_disabled": "Financial freeze lifted",
+        "financial_freeze_enabled": "Financial freeze enabled",
+        "invoice_dunning_forced": "Invoice dunning forced",
+        "invoice_marked_paid": "Invoice marked as paid",
+        "invoice_notes_updated": "Invoice notes updated",
+        "invoice_voided": "Invoice voided",
+        "invoice_written_off": "Invoice written off",
+        "period_closed": "Billing period closed",
+        "policy_updated": "Billing policy updated",
+        "provider_collection_attempted": "Collection attempted",
+        "refund": "Refund",
+        "wallet_admin_credit": "Wallet credit added"
+      },
+      "company": {
+        "reactivated": "Company reactivated",
+        "settings_updated": "Company settings updated",
+        "suspended": "Company suspended"
+      },
+      "contract_template": {
+        "duplicated": "Contract template duplicated",
+        "published": "Contract template published",
+        "updated": "Contract template updated",
+        "versioned": "Contract template new version"
+      },
+      "contract": {
+        "activated": "Contract activated",
+        "created": "Contract created"
+      },
+      "coverage_category": {
+        "created": "Coverage category created"
+      },
+      "coverage_requirement": {
+        "created": "Coverage need created",
+        "updated": "Coverage need updated"
+      },
+      "document_type": {
+        "archived": "Document type archived",
+        "created": "Document type created",
+        "restored": "Document type restored",
+        "updated": "Document type updated"
+      },
+      "document": {
+        "batch_requested": "Documents requested in batch",
+        "company_withdrawn": "Document withdrawn by the company",
+        "confidential_access": "Confidential document accessed",
+        "generated": "Document generated",
+        "request_cancelled": "Document request cancelled",
+        "requested": "Document requested"
+      },
+      "employee": {
+        "account_linked": "Account linked to employee",
+        "bulk_updated": "Employees updated in bulk",
+        "created": "Employee created",
+        "imported": "Employees imported",
+        "number_assigned": "Employee number assigned"
+      },
+      "field": {
+        "created": "Field created",
+        "deleted": "Field deleted",
+        "updated": "Field updated"
+      },
+      "jobdomain": {
+        "changed": "Business line changed"
+      },
+      "leave_ledger": {
+        "accrual": "Leave accrued",
+        "reservation": "Leave reserved"
+      },
+      "leave_request": {
+        "approved": "Leave approved",
+        "cancelled": "Leave cancelled",
+        "created": "Leave requested",
+        "rejected": "Leave rejected"
+      },
+      "member": {
+        "access_revoked": "Access revoked",
+        "added": "Member added",
+        "invitation_accepted": "Invitation accepted",
+        "invitation_declined": "Invitation declined",
+        "invitation_delivered": "Invitation e-mailed",
+        "invitation_delivery_failed": "Invitation delivery failed",
+        "invitation_expired": "Invitation expired",
+        "invitation_renewed": "Invitation renewed",
+        "invitation_sent": "Invitation created",
+        "profile_updated": "Member profile updated",
+        "reactivated": "Member reactivated",
+        "removed": "Member removed",
+        "role_changed": "Member role changed",
+        "suspended": "Member suspended"
+      },
+      "module": {
+        "access_configured": "Module access configured",
+        "disabled": "Module disabled",
+        "enabled": "Module enabled",
+        "settings_updated": "Module settings updated",
+        "synced": "Module synced"
+      },
+      "onboarding": {
+        "created": "Onboarding file created",
+        "fixture_removed": "Test onboarding file removed",
+        "invitation_mailed": "Onboarding link e-mailed",
+        "link_issued": "Onboarding link issued",
+        "submitted": "Onboarding file submitted",
+        "upload_ingested": "Onboarding file stored",
+        "upload_quarantined": "Onboarding file quarantined",
+        "validated": "Onboarding file validated"
+      },
+      "payroll_calculations": {
+        "computed": "Payroll calculations computed"
+      },
+      "payroll_run": {
+        "computed": "Payroll run computed",
+        "created": "Payroll run created",
+        "exported": "Payroll run exported",
+        "validated": "Payroll run validated"
+      },
+      "plan": {
+        "changed": "Plan changed"
+      },
+      "planning": {
+        "operation_redone": "Planning action redone",
+        "operation_undone": "Planning action undone"
+      },
+      "platform_auth": {
+        "login": "Platform sign-in",
+        "login_failed": "Failed platform sign-in",
+        "logout": "Platform sign-out"
+      },
+      "platform_user": {
+        "created": "Platform user created",
+        "deleted": "Platform user deleted",
+        "password_set": "Platform password set",
+        "updated": "Platform user updated"
+      },
+      "realtime": {
+        "channels_flushed": "Realtime channels flushed",
+        "kill_switch_activated": "Realtime kill switch on",
+        "kill_switch_auto_activated": "Realtime kill switch auto-activated",
+        "kill_switch_deactivated": "Realtime kill switch off"
+      },
+      "role": {
+        "capabilities_changed": "Role capabilities changed",
+        "created": "Role created",
+        "deleted": "Role deleted",
+        "permission_revoked": "Role permission revoked",
+        "updated": "Role updated"
+      },
+      "schedule_template": {
+        "created": "Schedule template created",
+        "updated": "Schedule template updated"
+      },
+      "scheduled_activity": {
+        "created": "Scheduled activity created",
+        "revised_add": "Scheduled activity extended"
+      },
+      "security": {
+        "alert_acknowledged": "Security alert acknowledged",
+        "alert_resolved": "Security alert resolved"
+      },
+      "shift": {
+        "cancelled": "Shift cancelled",
+        "created": "Shift created",
+        "overstaffing_confirmed": "Overstaffing confirmed",
+        "updated": "Shift updated"
+      },
+      "shifts": {
+        "bulk_applied": "Shifts applied in bulk",
+        "bulk_overstaffing_confirmed": "Overstaffing confirmed in bulk",
+        "copied": "Shifts copied",
+        "published": "Schedule published"
+      },
+      "signature": {
+        "cancelled": "Signature cancelled",
+        "completed": "Signature completed",
+        "declined": "Signature declined",
+        "expired": "Signature expired",
+        "failed": "Signature failed",
+        "requested": "Signature requested",
+        "sent": "Signature request sent",
+        "signed": "Document signed"
+      },
+      "subscription": {
+        "cancel_executed": "Subscription cancelled",
+        "cancel_requested": "Cancellation requested",
+        "paid_now": "Subscription paid now",
+        "plan_change_cancelled": "Plan change cancelled",
+        "plan_change_executed": "Plan change applied",
+        "plan_change_requested": "Plan change requested"
+      },
+      "theme": {
+        "visibility_updated": "Theme visibility updated"
+      },
+      "time_entry": {
+        "break_end": "Break ended",
+        "break_start": "Break started",
+        "clock_in": "Clocked in",
+        "clock_out": "Clocked out",
+        "updated": "Time entry corrected"
+      },
+      "timesheet": {
+        "approved": "Timesheet approved",
+        "generated": "Timesheet generated",
+        "locked": "Timesheet locked",
+        "rejected": "Timesheet rejected",
+        "submitted": "Timesheet submitted"
+      },
+      "user": {
+        "avatar_updated": "Avatar updated",
+        "password_changed": "Password changed",
+        "profile_updated": "Profile updated"
+      },
+      "webhook": {
+        "dispute_created": "Payment dispute received",
+        "payment_failed": "Payment failure reported",
+        "payment_synced": "Payment synced",
+        "refund_synced": "Refund synced",
+        "setup_intent_synced": "Payment method synced",
+        "signature_synced": "Signature synced"
+      },
+      "week_template": {
+        "created": "Week template created"
+      },
+      "work_location": {
+        "created": "Work location created"
+      },
+      "workforce_presets": {
+        "imported": "HR presets imported"
+      }
+    },
+    "actionCode": "Technical code"
   },
   "security": {
     "alertsTab": "Alerts",
@@ -6030,7 +6282,8 @@
     },
     "replaceFile": "Replace the file",
     "moreActions": "More actions",
-    "replacedOn": "Replaced on {date}"
+    "replacedOn": "Replaced on {date}",
+    "acceptedFormatsList": "Accepted formats: {types}"
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "EU Intra-Community Reverse Charge",
   "billing.tax_exemption.export_extra_eu": "VAT Exempt — Export outside EU",
@@ -7690,8 +7943,8 @@
       "caption": "Week of {weekFrom} to {weekTo} · period {periodFrom} to {periodTo}",
       "note": "Clocked hours, breaks deducted. Hours approved by your company are not yet paid hours.",
       "inProgressNote": "A clock-in is in progress: it will be counted once finished. Approved hours are not yet paid hours.",
-      "documentsTitle": "My documents and payslips",
-      "noDocuments": "No documents yet.",
+      "documentsTitle": "Documents received",
+      "noDocuments": "Your payslips and the documents your company sends you will appear here. The documents you need to provide are under “See all”.",
       "leaveDetail": "Taken {consumed} · accrued {accrued}",
       "seeAll": "See all"
     }
