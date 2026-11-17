@@ -29194,3 +29194,25 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Tests ADR-820 (moteur de presets, mapping, routing) ; tests de doctrine adaptés.
 - Recette navigateur sur clone : 38/38 ; routing : 17/17 ; 48 variantes visuelles sans débordement.
 - Pages non refondues listées dans le rapport (§15).
+
+## ADR-821 — Leezr 3.1 : JobDomain simple, une seule résolution des dépendances, offres cohérentes
+
+**Date** : 2026-11-17 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-PLATFORM-COMPANY-3-1-FINAL.md`
+
+**Contexte** : la fiche JobDomain (cinq sections) était trop technique. Les dépendances des modules étaient résolues à l'activation sans aperçu ni contrôle d'offre. Désactiver un module requis « réussissait » sans effet. Une option payante prévue par un métier était accordée gratuitement.
+
+**Décision**
+1. **Responsabilités** :
+   - JobDomain = métier (compatibilité, démarrage, recommandations) ;
+   - Module = fonctionnalités, dépendances, données ;
+   - Plan = droits commerciaux (lus depuis le module) ;
+   - Company = activation et configuration ;
+   - RBAC = permissions.
+2. **`ModuleDependencyResolver`**, seule résolution, lue dans les manifestes (transitive, cycles, modules inconnus). Il est utilisé par le JobDomain, les offres et l'activation Company. Les anciens chemins lui délèguent.
+3. **Activation Company** : aperçu (déjà actifs, à activer, achats, blocages) puis confirmation.
+   - Désactivation d'un module requis : refus (409), sauf cascade explicite.
+4. **Offres** : un module inclus exige ses dépendances incluses ; une modification qui crée un écart est refusée.
+   - Une option payante n'est plus accordée par la source « JobDomain », sauf droit déjà actif.
+5. **Valeurs initiales du planning** : profil « planning » publié et versionné. Workforce possède les objets importés.
+
+**Conséquences** : 10 tests de dépendances ; recette navigateur dépendances 23/23 et scénario métier 38/38 ; pages non refondues listées au rapport (§20).

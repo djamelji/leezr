@@ -1,0 +1,242 @@
+{
+  "steps": [
+    {
+      "name": "1-2. modules inclus et recommandés enregistrés depuis Platform",
+      "ok": true,
+      "detail": {
+        "m": [
+          "core.theme",
+          "core.members",
+          "core.settings",
+          "core.documents",
+          "core.documentation",
+          "workforce_planning",
+          "logistics_shipments",
+          "workforce_documents",
+          "workforce"
+        ],
+        "r": [
+          "workforce_leave"
+        ]
+      }
+    },
+    {
+      "name": "1. profil d’expérience enregistré (point d’entrée métier)",
+      "ok": true,
+      "detail": "{\"group_order\": [], \"entry_points\": [\"shipments\"]}"
+    },
+    {
+      "name": "3-4. bibliothèque modifiée dans Platform (document « Assurance RC professionnelle » ajouté) puis publiée",
+      "ok": true,
+      "detail": "3:published:6"
+    },
+    {
+      "name": "4. chemin de création effectif : presets publiés",
+      "ok": true,
+      "detail": "Presets publiés"
+    },
+    {
+      "name": "Platform : aucune erreur API",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "5. inscription par l’endpoint réel",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "6. presets publiés appliqués (bibliothèque + rôles), tracés",
+      "ok": true,
+      "detail": "catalog@v3,rbac@v2"
+    },
+    {
+      "name": "6. modules inclus par Platform activés (Workforce, Documents RH), aucun achat",
+      "ok": true,
+      "detail": "core.documentation,core.documents,core.members,core.settings,core.theme,logistics_shipments,workforce,workforce_documents,workforce_planning"
+    },
+    {
+      "name": "7. catalogue documentaire reçu, dont le type ajouté dans Platform (company_insurance)",
+      "ok": true,
+      "detail": {
+        "docs": "5/0",
+        "lastDoc": "company_insurance"
+      }
+    },
+    {
+      "name": "8. aucun document exigé par sa seule présence au catalogue (required_override = 0)",
+      "ok": true,
+      "detail": "5/0"
+    },
+    {
+      "name": "8. autorité « poste » : le rôle d’accès ne décide d’aucune exigence",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Adresse : plus de doublon (adresse structurée, pas de ligne libre)",
+      "ok": true,
+      "detail": "billing_address,company_address,personal_address_city,personal_address_country_code,personal_address_postal_code,personal_address_street"
+    },
+    {
+      "name": "Navigation adaptée au métier : « Expéditions » en tête de son groupe",
+      "ok": true,
+      "detail": "leezr | . | Accueil | Équipe | Planning & temps | Documents | Expéditions | Modules | Réglages"
+    },
+    {
+      "name": "Documents › Réglages : écrans propriétaires, plus de colonne « Obligatoire »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Profil société : aucune carte « exigé par votre secteur »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Société : aucune erreur API",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "9. champ « ID AMZL » créé par la société",
+      "ok": true,
+      "detail": "47"
+    },
+    {
+      "name": "10-11. l’assistant présente le besoin et propose le champ existant (aucune association automatique)",
+      "ok": true,
+      "detail": "ID AMZL\nvotre champ"
+    },
+    {
+      "name": "11. champ sensible (IBAN, NIR) jamais proposé",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "12. mapping confirmé, stocké par identifiant stable du champ",
+      "ok": true,
+      "detail": "47"
+    },
+    {
+      "name": "8 bis. personnes concernées sans valeur signalées (sans tout bloquer)",
+      "ok": true,
+      "detail": "1 personne(s) sans cette information : seule l'affectation d'une livraison leur est bloquée.\nYanis Chauffeur51718"
+    },
+    {
+      "name": "13. valeur existante réutilisée par Expéditions (affectation + identifiant affiché)",
+      "ok": true,
+      "detail": {
+        "write": 200,
+        "assign": 200,
+        "ident": "AMZ-820"
+      }
+    },
+    {
+      "name": "13. aucune donnée recopiée (une seule valeur ajoutée : la saisie sur la fiche)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Compl. champ renommé après mapping : la donnée reste lue",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "14. champ manquant créé depuis l’assistant, associé, jamais obligatoire",
+      "ok": true,
+      "detail": "matricule_tournee|string|0"
+    },
+    {
+      "name": "Compl. accès inter-société refusé (en-tête d’une autre société)",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "15. poste : exigence visible dans l’onglet Champs (chemin /positions/{id}/fields)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "16. éléments proposés = configuration effective du poste (pas tout le JobDomain)",
+      "ok": true,
+      "detail": [
+        "personal_address_postal_code"
+      ]
+    },
+    {
+      "name": "16. dossier ouvert et lien personnel émis",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "l": 200
+      }
+    },
+    {
+      "name": "17. le candidat complète à distance et soumet",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "18. RH valident puis finalisent : salarié actif sur son poste, sans compte logiciel",
+      "ok": true,
+      "detail": {
+        "val": 200,
+        "fin": 200,
+        "emp": "active|none|11"
+      }
+    },
+    {
+      "name": "18. la valeur saisie à distance est sur la fiche du salarié (aucune ressaisie)",
+      "ok": true,
+      "detail": "\"69007\""
+    },
+    {
+      "name": "19. avant confirmation : aucun droit implicite pour le chauffeur",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "19. la propriétaire confirme les accès préparés (décision groupée)",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "19. le salarié accède à ses livraisons, pas à l’administration (RH, rôles, modules)",
+      "ok": true,
+      "detail": {
+        "own": 200,
+        "forbidden": [
+          403,
+          403,
+          403
+        ]
+      }
+    },
+    {
+      "name": "ancienne société 101 : toujours au calcul par rôle, documents historiques intacts",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ancienne société 101 : ses obligations historiques conservées (required_override inchangé)",
+      "ok": true,
+      "detail": "3"
+    },
+    {
+      "name": "aucun brouillon appliqué (seules les versions publiées le sont)",
+      "ok": true,
+      "detail": {
+        "drafts": "0"
+      }
+    }
+  ]
+}

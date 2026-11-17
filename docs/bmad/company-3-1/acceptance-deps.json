@@ -1,0 +1,142 @@
+{
+  "steps": [
+    {
+      "name": "Planning coché → Ressources humaines sélectionné automatiquement, avec la raison",
+      "ok": true,
+      "detail": "requis par Planning"
+    },
+    {
+      "name": "message compréhensible à l’enregistrement",
+      "ok": true,
+      "detail": "Planning nécessite également Ressources humaines : ce module a été ajouté automatiquement."
+    },
+    {
+      "name": "configuration cohérente enregistrée (Planning + Ressources humaines au démarrage)",
+      "ok": true,
+      "detail": "[\"core.theme\", \"core.members\", \"core.settings\", \"core.documents\", \"core.documentation\", \"logistics_shipments\", \"workforce_planning\", \"workforce\"]"
+    },
+    {
+      "name": "après rechargement : la dépendance reste affichée",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "JobDomain n’accorde pas les options payantes : avertissement affiché",
+      "ok": true,
+      "detail": "Prévus au démarrage mais pas inclus dans toutes les offres : Planning, Ressources humaines. Ils ne seront activés que pour les sociétés dont l'offre les inclut "
+    },
+    {
+      "name": "Platform JobDomain : aucune erreur API",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "Plan : Préparation de la paie → Ressources humaines ET Absences et congés (transitif) affichés",
+      "ok": true,
+      "detail": "Préparation de la paie\t | En option | \t | Dépendance obligatoire : Ressources humaines · En option | Dépendance obligatoire : Absences et congés · En option"
+    },
+    {
+      "name": "offre incohérente refusée (dépendance non couverte), rien enregistré",
+      "ok": true,
+      "detail": {
+        "s": 422,
+        "m": "La valeur sélectionnée est invalide."
+      }
+    },
+    {
+      "name": "nouvelle société : Planning et RH (options payantes) NON activés, aucun abonnement créé",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "act": "0"
+      }
+    },
+    {
+      "name": "aperçu : Planning et RH sont des options — leur activation est annoncée comme un achat (jamais gratuite)",
+      "ok": true,
+      "detail": [
+        "workforce_planning",
+        "workforce"
+      ]
+    },
+    {
+      "name": "assistant : « Planning nécessite également Ressources humaines. Ce module sera ajouté automatiquement. »",
+      "ok": true,
+      "detail": "Activer Planning |  | Planning nécessite également Ressources humaines. Ce module sera ajouté automatiquement. |  | Planning | Sera activé | Ressources humaines | Sera activé | Annuler | Activer (2)"
+    },
+    {
+      "name": "les deux modules deviennent actifs de manière cohérente",
+      "ok": true,
+      "detail": "workforce,workforce_planning"
+    },
+    {
+      "name": "l’assistant de configuration du module enchaîne",
+      "ok": true,
+      "detail": "/company/modules/workforce_planning"
+    },
+    {
+      "name": "RH (prévu par le métier) : pas de bouton Désactiver, mention « fait partie de votre activité »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "API : désactiver RH alors que Planning en dépend est refusé (409, dépendants listés)",
+      "ok": true,
+      "detail": {
+        "s": 409,
+        "d": [
+          "workforce_planning"
+        ]
+      }
+    },
+    {
+      "name": "activer la Paie ajoute Absences et congés (transitif), RH déjà actif",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "désactiver Congés : la Paie détectée, confirmation bloquée tant que la cascade n’est pas choisie",
+      "ok": true,
+      "detail": "Préparation de la paie dépend(ent) de Absences et congés. Désactiver Absences et congés seul laisserait ces modules sans ce dont ils ont besoin.\nDésactiver aussi Préparation de la paie (les données so"
+    },
+    {
+      "name": "cascade explicite : Paie et Congés désactivés ensemble ; RH et Planning restent actifs",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "name": "réactivation : la Paie et sa dépendance reviennent",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "isolation : aperçu d’une autre société refusé",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "menu Platform limité : pas de Catalogue / Entreprises / Facturation",
+      "ok": true,
+      "detail": "leezr | . | SYSTÈME | Opérations"
+    },
+    {
+      "name": "API Platform : composition métier et modules d’offre refusés sans permission",
+      "ok": true,
+      "detail": {
+        "jd": 403,
+        "plan": 403
+      }
+    },
+    {
+      "name": "page JobDomain non accessible (redirection / refus)",
+      "ok": true,
+      "detail": "/platform/operations/health"
+    }
+  ]
+}
