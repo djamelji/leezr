@@ -1,0 +1,391 @@
+[
+    {
+        "key": "core.settings",
+        "name": "Company Settings",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "company-profile",
+            "my-space",
+            "account-settings"
+        ],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "core.documentation",
+        "name": "Documentation",
+        "type": "core",
+        "surface": "core",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 1,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "core.roles",
+        "name": "Roles",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "settings-roles"
+        ],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.jobdomain",
+        "name": "Industry Profile",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.dashboard",
+        "name": "Dashboard",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "dashboard"
+        ],
+        "permissions": 0,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.audit",
+        "name": "Audit Log",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "audit"
+        ],
+        "permissions": 1,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.support",
+        "name": "Support",
+        "type": "core",
+        "surface": "core",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.theme",
+        "name": "Theme",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "core.members",
+        "name": "Members",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "people"
+        ],
+        "permissions": 5,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "core.workflows",
+        "name": "Workflows",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "workflows"
+        ],
+        "permissions": 2,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.documents",
+        "name": "Documents",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "settings-documents",
+            "documents"
+        ],
+        "permissions": 8,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "core.modules",
+        "name": "Module Catalog",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "modules"
+        ],
+        "permissions": 1,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.notifications",
+        "name": "Notifications",
+        "type": "core",
+        "surface": "core",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 0,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "core.billing",
+        "name": "Plan & Billing",
+        "type": "core",
+        "surface": "structure",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "billing"
+        ],
+        "permissions": 1,
+        "requires": [],
+        "companies_active": 3,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_contract",
+        "name": "Contrats de travail",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "settings-templates"
+        ],
+        "permissions": 3,
+        "requires": [
+            "workforce",
+            "workforce_documents"
+        ],
+        "companies_active": 2,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_signature",
+        "name": "Signatures électroniques",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "settings-signature"
+        ],
+        "permissions": 5,
+        "requires": [
+            "workforce",
+            "workforce_documents"
+        ],
+        "companies_active": 2,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_leave",
+        "name": "Workforce Leave",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "workforce-leave",
+            "settings-leave-types"
+        ],
+        "permissions": 5,
+        "requires": [
+            "workforce"
+        ],
+        "companies_active": 10,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_documents",
+        "name": "Workforce Documents",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 4,
+        "requires": [
+            "workforce"
+        ],
+        "companies_active": 5,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_payroll",
+        "name": "Workforce Payroll",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "workforce-payroll"
+        ],
+        "permissions": 3,
+        "requires": [
+            "workforce",
+            "workforce_leave"
+        ],
+        "companies_active": 6,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce_planning",
+        "name": "Workforce Planning",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "workforce-planning"
+        ],
+        "permissions": 4,
+        "requires": [
+            "workforce"
+        ],
+        "companies_active": 10,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "workforce",
+        "name": "Workforce",
+        "type": "addon",
+        "surface": "hr",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "workforce-me",
+            "workforce-people",
+            "workforce-hiring",
+            "workforce-time",
+            "workforce-organization",
+            "workforce-requirements",
+            "workforce-settings"
+        ],
+        "permissions": 16,
+        "requires": [],
+        "companies_active": 12,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "logistics_shipments",
+        "name": "Shipments",
+        "type": "addon",
+        "surface": "operations",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [
+            "shipments",
+            "my-deliveries"
+        ],
+        "permissions": 7,
+        "requires": [],
+        "companies_active": 8,
+        "in_logistique_defaults": true
+    },
+    {
+        "key": "logistics_tracking",
+        "name": "Real-Time Tracking",
+        "type": "addon",
+        "surface": "operations",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 0,
+        "requires": [
+            "logistics_shipments"
+        ],
+        "companies_active": 2,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "logistics_fleet",
+        "name": "Fleet Management",
+        "type": "addon",
+        "surface": "operations",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 0,
+        "requires": [
+            "logistics_shipments"
+        ],
+        "companies_active": 2,
+        "in_logistique_defaults": false
+    },
+    {
+        "key": "logistics_analytics",
+        "name": "Logistics Analytics",
+        "type": "addon",
+        "surface": "operations",
+        "commercial_status": null,
+        "enabled_globally": true,
+        "nav": [],
+        "permissions": 0,
+        "requires": [
+            "logistics_shipments"
+        ],
+        "companies_active": 0,
+        "in_logistique_defaults": false
+    }
+]

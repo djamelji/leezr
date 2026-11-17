@@ -69,6 +69,14 @@ class ModuleCatalogReadModel
                     return null;
                 }
 
+                // Logistics Only (ADR-818) — un module non livré (« en préparation ») n'est plus exposé au
+                // catalogue d'une société qui ne l'a pas : aucun « bientôt disponible ». Une société qui l'a déjà
+                // (activation ou abonnement historique) le garde visible : rien n'est désactivé rétroactivement.
+                if (! in_array(ModuleCommercialPolicy::statusFor($pm->key), ModuleCommercialPolicy::SELLABLE_STATUSES, true)
+                    && ! ($cm?->is_enabled_for_company) && ! $addonSubs->has($pm->key)) {
+                    return null;
+                }
+
                 // ADR-163/204: Exclude modules incompatible with company's jobdomain
                 // ADR-167a: jobdomain is always present — no null check
                 // ADR-203: DB override takes priority over manifest
@@ -122,7 +130,9 @@ class ModuleCatalogReadModel
                     'entitlement_source' => $entitlement['source'],
                     'entitlement_reason' => $entitlement['reason'],
                     'requires' => $manifest->requires,
-                    'dependents' => $dependentsMap[$pm->key] ?? [],
+                    // Logistics Only : « requis par » ne nomme jamais un module non livré absent de la société.
+                    'dependents' => array_values(array_filter($dependentsMap[$pm->key] ?? [], fn ($d) => in_array(ModuleCommercialPolicy::statusFor($d), ModuleCommercialPolicy::SELLABLE_STATUSES, true)
+                        || ($companyModules->get($d)?->is_enabled_for_company))),
                     'min_plan' => $minPlan,
                     'commercial_status' => $commercialStatus,
                     'purchasable' => $purchasable,

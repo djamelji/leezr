@@ -78,10 +78,19 @@ class ModuleCommercialPolicyP0ATest extends TestCase
     // 4. Le catalogue ne propose AUCUN prix commandable pour un module en préparation.
     public function test_catalog_hides_price_for_preview_modules(): void
     {
+        // Logistics Only (ADR-818) : un module non livré n'est plus exposé au catalogue d'une société qui ne l'a pas.
+        $catalog = collect(ModuleCatalogReadModel::forCompany($this->company))->keyBy('key');
+        foreach (self::EMPTY_MODULES as $key) {
+            $this->assertNull($catalog->get($key), "$key absent du catalogue (non livré, jamais « bientôt disponible »)");
+        }
+        // Une société qui l'a déjà activé le garde visible, sans prix commandable (rien de rétroactif).
+        foreach (self::EMPTY_MODULES as $key) {
+            \App\Core\Modules\CompanyModule::updateOrCreate(['company_id' => $this->company->id, 'module_key' => $key], ['is_enabled_for_company' => true]);
+        }
         $catalog = collect(ModuleCatalogReadModel::forCompany($this->company))->keyBy('key');
         foreach (self::EMPTY_MODULES as $key) {
             $row = $catalog->get($key);
-            $this->assertNotNull($row, "$key présent au catalogue (En préparation, non masqué du référentiel)");
+            $this->assertNotNull($row, "$key reste visible pour la société qui l'a");
             $this->assertSame('preview', $row['commercial_status']);
             $this->assertFalse($row['purchasable']);
             $this->assertNull($row['addon_pricing'], "$key : aucun prix commandable exposé");

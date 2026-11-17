@@ -269,21 +269,21 @@ class ModuleEntitlementEnforcementTest extends TestCase
      */
     public function test_catalog_includes_dependents_for_shipments(): void
     {
+        // Logistics Only (ADR-818) : les modules non livrés (suivi, flotte, analytique) n'apparaissent ni au
+        // catalogue ni dans « requis par » tant que la société ne les a pas ; la dépendance reste déclarée.
         $catalog = ModuleCatalogReadModel::forCompany($this->company);
         $shipments = collect($catalog)->firstWhere('key', 'logistics_shipments');
         $this->assertNotNull($shipments);
-
-        // logistics_shipments is required by tracking, fleet, analytics
         $this->assertIsArray($shipments['dependents']);
-        $this->assertNotEmpty($shipments['dependents']);
-        $this->assertContains('logistics_tracking', $shipments['dependents']);
+        $this->assertNotContains('logistics_tracking', $shipments['dependents']);
+        $this->assertNull(collect($catalog)->firstWhere('key', 'logistics_tracking'));
 
-        // logistics_tracking has no dependents
+        \App\Core\Modules\CompanyModule::updateOrCreate(['company_id' => $this->company->id, 'module_key' => 'logistics_tracking'], ['is_enabled_for_company' => true]);
+        $catalog = ModuleCatalogReadModel::forCompany($this->company);
+        $this->assertContains('logistics_tracking', collect($catalog)->firstWhere('key', 'logistics_shipments')['dependents']);
         $tracking = collect($catalog)->firstWhere('key', 'logistics_tracking');
         $this->assertNotNull($tracking);
         $this->assertEmpty($tracking['dependents']);
-
-        // logistics_tracking requires logistics_shipments
         $this->assertContains('logistics_shipments', $tracking['requires']);
     }
 
