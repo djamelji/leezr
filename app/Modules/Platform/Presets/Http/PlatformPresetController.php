@@ -19,7 +19,7 @@ class PlatformPresetController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $request->validate(['kind' => 'sometimes|in:rbac,requirements,planning']);
+        $request->validate(['kind' => 'sometimes|in:catalog,rbac,requirements,planning']);
 
         return response()->json(['presets' => Preset::query()->when($request->query('kind'), fn ($q, $k) => $q->where('kind', $k))
             ->orderBy('family_key')->orderByDesc('version')->get()]);
@@ -28,7 +28,7 @@ class PlatformPresetController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'kind' => 'required|in:rbac,requirements,planning', 'family_key' => ['required', 'regex:/^[a-z0-9_]{2,80}$/'],
+            'kind' => 'required|in:catalog,rbac,requirements,planning', 'family_key' => ['required', 'regex:/^[a-z0-9_]{2,80}$/'],
             'label' => 'required|string|max:255', 'description' => 'nullable|string|max:2000', 'content' => 'required|array',
             'jobdomain_key' => 'nullable|exists:jobdomains,key', 'market_key' => 'nullable|exists:markets,key', 'requires_modules' => 'nullable|array',
         ]);
@@ -94,7 +94,7 @@ class PlatformPresetController extends Controller
 
     public function setRecommendations(Request $request, string $jobdomain): JsonResponse
     {
-        $data = $request->validate(['links' => 'present|array', 'links.*.kind' => 'required|in:rbac,organization,requirements,planning',
+        $data = $request->validate(['links' => 'present|array', 'links.*.kind' => 'required|in:catalog,rbac,organization,requirements,planning',
             'links.*.family_key' => 'required|string|max:80', 'links.*.market_key' => 'nullable|exists:markets,key',
             'links.*.pinned_version' => 'nullable|integer|min:1']);
         abort_unless(\App\Core\Jobdomains\Jobdomain::where('key', $jobdomain)->exists(), 404);

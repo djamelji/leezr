@@ -207,6 +207,7 @@ class Adr797JobdomainModernizationTest extends TestCase
     // une fois activée (test), additive, sans module ni rôle sensible implicite.
     public function test_versioned_initialisation_is_prepared_not_operational(): void
     {
+        config(['jobdomains.versioned_init.enabled' => false]); // ADR-820 : le repli (drapeau coupé) reste vérifié
         $rbac = $this->publishedPreset('rbac', ['roles' => [['key' => 'livreur', 'name' => 'Livreur', 'bundles' => ['shipments.delivery']],
             ['key' => 'admin_x', 'name' => 'Admin', 'bundles' => ['members.team_management'], 'is_administrative' => true]]], 'logi_rbac');
         $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'rbac', 'family_key' => 'logi_rbac']]])->assertOk();

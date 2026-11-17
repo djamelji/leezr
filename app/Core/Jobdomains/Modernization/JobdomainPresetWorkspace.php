@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class JobdomainPresetWorkspace
 {
-    public const KINDS = ['rbac', 'organization', 'requirements', 'planning'];
+    public const KINDS = ['catalog', 'rbac', 'organization', 'requirements', 'planning'];
 
     public static function state(Jobdomain $jd): array
     {
@@ -124,6 +124,7 @@ final class JobdomainPresetWorkspace
     private static function legacyItems(Jobdomain $jd, string $kind): int
     {
         return count(match ($kind) {
+            'catalog' => LegacyJobdomainConfig::catalog($jd)['items'],
             'rbac' => LegacyJobdomainConfig::rbac($jd)['items'],
             'requirements' => LegacyJobdomainConfig::requirements($jd)['items'],
             'planning' => LegacyJobdomainConfig::planning($jd)['items'],

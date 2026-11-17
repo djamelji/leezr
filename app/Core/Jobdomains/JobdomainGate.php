@@ -229,8 +229,9 @@ class JobdomainGate
                         ],
                         [
                             'enabled' => true,
-                            // ADR-389: required_override from jobdomain preset
-                            'required_override' => $config['required'] ?? false,
+                            // ADR-820 : un type de document du JobDomain est un élément de bibliothèque, jamais une
+                            // obligation (l'ancien `required` d'ADR-389 n'est plus projeté sur les nouvelles sociétés).
+                            'required_override' => false,
                             'order' => $config['order'] ?? $docType->default_order ?? 0,
                         ],
                     );

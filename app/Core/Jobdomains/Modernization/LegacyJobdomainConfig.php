@@ -81,6 +81,40 @@ final class LegacyJobdomainConfig
         return ['content' => ['items' => $items], 'items' => $keyed, 'skipped' => $skipped];
     }
 
+    /**
+     * ADR-820 — CATALOG family (« bibliothèque de départ ») from the historical default fields / documents.
+     * The historical `required` flag is DROPPED : a library item is never an obligation. `recommended` →
+     * suggested only (not included).
+     *
+     * @return array{content: array, items: array<string, array>, skipped: list<string>}
+     */
+    public static function catalog(Jobdomain $jd): array
+    {
+        $docScopes = DocumentType::where('is_system', true)->pluck('scope', 'code');
+        $fieldScopes = FieldDefinition::whereNull('company_id')->pluck('scope', 'code');
+        $subjectOf = fn (?string $scope) => match ($scope) {
+            DocumentType::SCOPE_COMPANY_USER => 'person',
+            DocumentType::SCOPE_COMPANY => 'company',
+            default => null,
+        };
+        $content = ['fields' => [], 'documents' => []];
+        $skipped = [];
+        foreach (['documents' => [(array) $jd->default_documents, $docScopes], 'fields' => [(array) $jd->default_fields, $fieldScopes]] as $list => [$rows, $scopes]) {
+            foreach ($rows as $r) {
+                $subject = $subjectOf($scopes[$r['code'] ?? ''] ?? null);
+                if (! $subject) {
+                    $skipped[] = $list.':'.($r['code'] ?? '?');
+
+                    continue;
+                }
+                $content[$list][] = array_filter(['code' => $r['code'], 'subject' => $subject, 'included' => empty($r['recommended']),
+                    'order' => isset($r['order']) ? (int) $r['order'] : null], fn ($v) => $v !== null);
+            }
+        }
+
+        return ['content' => $content, 'items' => (new \App\Core\Presets\Adapters\CatalogPresetAdapter())->items($content), 'skipped' => $skipped];
+    }
+
     /** @return array{content: array, items: array<string, array>} PLANNING family (same shape as workforce_presets) */
     public static function planning(Jobdomain $jd): array
     {

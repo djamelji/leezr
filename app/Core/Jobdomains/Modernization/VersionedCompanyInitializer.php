@@ -5,10 +5,6 @@ namespace App\Core\Jobdomains\Modernization;
 use App\Company\RBAC\CompanyPermission;
 use App\Company\RBAC\CompanyRole;
 use App\Core\Audit\AuditLogger;
-use App\Core\Documents\DocumentType;
-use App\Core\Documents\DocumentTypeActivation;
-use App\Core\Fields\FieldActivation;
-use App\Core\Fields\FieldDefinition;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Jobdomains\JobdomainGate;
 use App\Core\Models\Company;
@@ -19,8 +15,6 @@ use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Modules\ModuleGate;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Presets\PresetService;
-use App\Core\Requirements\Requirement;
-use App\Core\Requirements\RequirementLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -35,9 +29,15 @@ use Illuminate\Validation\ValidationException;
  *    domain, and their dependencies) ; paid / plan-gated ones stay optional ; incompatible ones refused ;
  *  - RBAC : non-sensitive roles automatically ; administrative / sensitive roles only when explicitly
  *    confirmed ; never on an existing company ;
- *  - requirements : registry copies + the OPERATIONAL projection the historical engine reads today
- *    (company-wide field / document activations) — the operational resolver is not switched ;
+ *  - catalog (ADR-820) : the starting LIBRARY — fields / document types made available, never required ;
+ *  - requirements : explicit decision only (an obligation is configured by the company, never implied by
+ *    the domain) ; the company is created with the POSITION authority : RBAC roles never define what is
+ *    required from a person (ADR-820) ;
  *  - planning / organisation : explicit decisions only.
+ *
+ * ADR-820 — this is THE creation path for every active domain with a published RBAC preset (owner role) and
+ * a published catalog ; `jobdomains.versioned_init.enabled=false` (or a domain missing from a non-`*`
+ * allow-list) is the rollback to JobdomainGate::assignToCompany.
  */
 final class VersionedCompanyInitializer
 {
@@ -65,7 +65,7 @@ final class VersionedCompanyInitializer
     {
         return match ($kind) {
             'rbac' => self::sensitiveRole($item) ? self::EXPLICIT : self::AUTO,
-            'requirements' => ($item['job_role_keys'] ?? []) === [] ? self::AUTO : self::EXPLICIT, // aucun poste n'existe à la création
+            'catalog' => self::AUTO, // ADR-820 : bibliothèque = disponible, jamais exigé
             default => self::EXPLICIT, // planning, organisation
         };
     }
@@ -113,10 +113,16 @@ final class VersionedCompanyInitializer
      */
     public static function shouldUse(string $jobdomainKey, ?string $marketKey): bool
     {
-        if (! config('jobdomains.versioned_init.enabled') || ! in_array($jobdomainKey, (array) config('jobdomains.versioned_init.jobdomains', []), true)) {
+        $allowed = (array) config('jobdomains.versioned_init.jobdomains', []);
+        if (! config('jobdomains.versioned_init.enabled') || ! (in_array('*', $allowed, true) || in_array($jobdomainKey, $allowed, true))) {
             return false;
         }
-        $rbac = collect(PresetService::recommendationsFor($jobdomainKey, $marketKey))->firstWhere('kind', 'rbac');
+        $recs = collect(PresetService::recommendationsFor($jobdomainKey, $marketKey));
+        $catalog = $recs->firstWhere('kind', 'catalog');
+        if (! $catalog || ! $catalog['usable'] || $catalog['effective_status'] !== 'published') {
+            return false; // ADR-820 : sans bibliothèque publiée, une société arriverait vide → chemin historique
+        }
+        $rbac = $recs->firstWhere('kind', 'rbac');
         // ADR-808.1 : a version pinned then archived is « usable » for recommendations but cannot be APPLIED
         // (PresetService::apply) — it would break the registration : historical path instead.
         if (! $rbac || ! $rbac['usable'] || $rbac['effective_status'] !== 'published') {
@@ -162,7 +168,7 @@ final class VersionedCompanyInitializer
                 $items = PresetService::adapter($rec['kind'])->items($content);
                 $selection = match ($rec['kind']) {
                     'rbac' => array_values(array_filter(array_keys($items), fn ($k) => ! self::sensitiveRole($items[$k]) || in_array(substr($k, 5), $confirm['rbac'] ?? [], true))),
-                    'requirements' => array_values(array_filter(array_keys($items), fn ($k) => self::decision('requirements', $items[$k]) === self::AUTO)),
+                    'catalog' => null, // tous les éléments « inclus » ; les suggestions ne sont jamais activées
                     default => ($confirm[$rec['kind']] ?? false) ? null : false,
                 };
                 if ($selection === false) {
@@ -175,10 +181,13 @@ final class VersionedCompanyInitializer
                 if ($rec['kind'] === 'rbac') {
                     self::finishRoles($company, $items);
                 }
-                if ($rec['kind'] === 'requirements') {
-                    $summary['operational_projection'] = self::projectActivations($company, $content['items'] ?? []);
-                }
             }
+            // ADR-820 : modèle cible — le poste (et les règles explicites de la société) décide des exigences,
+            // jamais le rôle d'accès. Nouvelle société : aucune personne, donc aucune perte possible.
+            \App\Core\Documents\CompanyDocumentSetting::forCompany($company->id);
+            DB::table('company_document_settings')->where('company_id', $company->id)
+                ->update(['requirements_authority' => \App\Core\Requirements\RequirementAuthority::POSITION, 'requirements_authority_at' => now(), 'requirements_authority_by' => $actorId, 'updated_at' => now()]);
+            \App\Core\Requirements\RequirementAuthority::flush($company->id);
             self::cloneCompanyDashboard($company, $jd);
             $summary['pending_access'] = self::holdOperationalAccess($company, $summary['modules']['activated']);
             app(AuditLogger::class)->logCompany($company->id, 'company.versioned_initialized', 'company', (string) $company->id, ['actorId' => $actorId,
@@ -250,38 +259,6 @@ final class VersionedCompanyInitializer
         return $held;
     }
 
-    /** Operational projection of company-wide items (the historical engine reads activations, not the registry). */
-    private static function projectActivations(Company $company, array $items): array
-    {
-        $n = ['fields' => 0, 'documents' => 0];
-        foreach ($items as $item) {
-            $subject = $item['subject'] ?? Requirement::SUBJECT_PERSON;
-            if (($item['job_role_keys'] ?? []) !== [] || $subject === Requirement::SUBJECT_LEGAL_REPRESENTATIVE) {
-                continue; // par poste ou représentant légal : registre seulement
-            }
-            if (($item['level'] ?? null) === RequirementLevel::RECOMMENDED) {
-                continue; // ADR-819 : recommandé = proposé au catalogue, jamais activé d'office
-            }
-            $companyScope = $subject === Requirement::SUBJECT_COMPANY;
-            if ($item['kind'] === 'field') {
-                $def = FieldDefinition::whereNull('company_id')->where('code', $item['code'])->where('scope', $companyScope ? FieldDefinition::SCOPE_COMPANY : FieldDefinition::SCOPE_COMPANY_USER)->first();
-                if ($def) {
-                    FieldActivation::updateOrCreate(['company_id' => $company->id, 'field_definition_id' => $def->id],
-                        ['enabled' => true, 'required_override' => false, 'order' => $item['order'] ?? $def->default_order ?? 0]);
-                    $n['fields']++;
-                }
-            } else {
-                $type = DocumentType::where('code', $item['code'])->where('scope', $companyScope ? DocumentType::SCOPE_COMPANY : DocumentType::SCOPE_COMPANY_USER)->first();
-                if ($type) {
-                    DocumentTypeActivation::updateOrCreate(['company_id' => $company->id, 'document_type_id' => $type->id],
-                        ['enabled' => true, 'required_override' => ($item['level'] ?? null) === RequirementLevel::CONFIGURABLE_REQUIRED, 'order' => $item['order'] ?? $type->default_order ?? 0]);
-                    $n['documents']++;
-                }
-            }
-        }
-
-        return $n;
-    }
 
     private static function cloneCompanyDashboard(Company $company, Jobdomain $jd): void
     {

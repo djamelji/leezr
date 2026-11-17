@@ -335,14 +335,22 @@ class NavBuilder
 
         // 10b. Sort groups by the canonical order from NavGroupRegistry (single source of truth,
         //      both scopes). Unregistered groups are appended last (and flagged by the contract test).
-        $grouped = static::sortGroupsByOrder($grouped, NavGroupRegistry::orderedKeys($scope));
+        // ADR-820 : le profil d'expérience du JobDomain (configuré dans Platform) met d'abord ses groupes
+        // métier et ses points d'entrée ; il n'ajoute ni ne retire aucune entrée (droits et modules inchangés).
+        $experience = $company ? (array) (\App\Core\Jobdomains\Jobdomain::where('key', $company->jobdomain_key)->first()?->experience ?? []) : [];
+        $groupOrder = NavGroupRegistry::orderedKeys($scope);
+        if (! empty($experience['group_order'])) {
+            $groupOrder = array_values(array_unique(array_merge(array_values($experience['group_order']), $groupOrder)));
+        }
+        $grouped = static::sortGroupsByOrder($grouped, $groupOrder);
+        $entryRank = array_flip(array_values($experience['entry_points'] ?? []));
 
         // 11. Sort within groups + clean output
         $result = [];
 
         foreach ($grouped as $group) {
             $sortedItems = collect($group['items'])
-                ->sortBy('_sort')
+                ->sortBy(fn (array $node) => isset($entryRank[$node['key']]) ? -1000 + $entryRank[$node['key']] : $node['_sort'])
                 ->map(fn (array $node) => static::cleanNode($node))
                 ->values()
                 ->all();

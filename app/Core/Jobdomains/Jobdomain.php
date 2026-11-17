@@ -25,6 +25,8 @@ class Jobdomain extends Model
         'is_active',
         'signup_available', // Logistics Only : proposé aux nouvelles inscriptions (≠ is_active)
         'default_modules',
+        'recommended_modules', // ADR-820
+        'experience',          // ADR-820 — { group_order, entry_points }
         'default_fields',
         'default_documents',
         'default_roles',
@@ -40,6 +42,8 @@ class Jobdomain extends Model
             'terminology' => 'array',
             'convention_refs' => 'array',
             'default_modules' => 'array',
+            'recommended_modules' => 'array',
+            'experience' => 'array',
             'default_fields' => 'array',
             'default_documents' => 'array',
             'default_roles' => 'array',

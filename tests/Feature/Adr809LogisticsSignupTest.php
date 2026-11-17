@@ -24,6 +24,8 @@ use Tests\TestCase;
  */
 class Adr809LogisticsSignupTest extends TestCase
 {
+    use \Tests\Support\PublishesStartingLibrary;
+
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -40,7 +42,7 @@ class Adr809LogisticsSignupTest extends TestCase
             ['key' => 'dispatcher', 'name' => 'Répartiteur', 'is_administrative' => true, 'bundles' => ['shipments.operations']],
         ]]], null);
         PresetService::publish($rbac, null);
-        PresetService::setRecommendations('logistique', [['kind' => 'rbac', 'family_key' => 'logistique_rbac']]);
+        PresetService::setRecommendations('logistique', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'logistique_rbac']]);
         config(['jobdomains.versioned_init.enabled' => true, 'jobdomains.versioned_init.jobdomains' => ['logistique']]);
     }
 
@@ -73,7 +75,7 @@ class Adr809LogisticsSignupTest extends TestCase
     {
         $c = $this->register('owner809@example.test');
         $owner = User::where('email', 'owner809@example.test')->sole();
-        $this->assertSame(1, PresetApplication::where('company_id', $c->id)->count(), 'versioned path, traced');
+        $this->assertSame(2, PresetApplication::where('company_id', $c->id)->count(), 'versioned path, traced (library + RBAC, ADR-820)');
         $this->assertEqualsCanonicalizing(['driver', 'owner'], CompanyRole::where('company_id', $c->id)->pluck('key')->all(), 'management role awaits a decision');
         $this->assertSame(0, \DB::table('company_addon_subscriptions')->where('company_id', $c->id)->count(), 'no paid module');
         $driver = $this->member($c, 'driver');

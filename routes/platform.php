@@ -632,7 +632,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         $pp = \App\Modules\Platform\Presets\Http\PlatformPresetController::class;
         $pe = \App\Modules\Platform\Presets\Http\PlatformPresetEditorController::class;
         $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
-        $kinds = ['rbac', 'requirements', 'planning', 'organization'];
+        $kinds = ['catalog', 'rbac', 'requirements', 'planning', 'organization'];
         Route::middleware('platform.permission:manage_jobdomains|presets.view')->group(function () use ($pp, $pe, $jm, $kinds) {
             Route::get('/presets', [$pp, 'index']);
             Route::get('/presets/meta', [$pe, 'meta']);

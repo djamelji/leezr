@@ -279,12 +279,12 @@ class Adr798PresetEditorsCompanyRequirementsTest extends TestCase
         $legacyId = $register('legacy@example.test');
         $this->assertSame(0, PresetApplication::where('company_id', $legacyId)->count());
         $this->app['auth']->forgetGuards();
-        foreach (['rbac', 'requirements'] as $kind) {
+        foreach (['rbac', 'catalog'] as $kind) { // ADR-820 : bibliothèque (jamais d'obligation) + rôles
             $id = $this->api()->postJson('/api/platform/jobdomains/'.Jobdomain::where('key', 'logistique')->value('id').'/legacy-drafts', ['kind' => $kind])->json('preset.id');
             $this->api()->postJson("/api/platform/presets/{$kind}/{$id}/publish")->assertOk();
         }
-        $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'rbac', 'family_key' => 'logistique_rbac'], ['kind' => 'requirements', 'family_key' => 'logistique_requirements']]])->assertOk();
-        config(['jobdomains.versioned_init.enabled' => true]);
+        $this->api()->putJson('/api/platform/jobdomains/logistique/preset-recommendations', ['links' => [['kind' => 'rbac', 'family_key' => 'logistique_rbac'], ['kind' => 'catalog', 'family_key' => 'logistique_catalog']]])->assertOk();
+        config(['jobdomains.versioned_init.enabled' => true, 'jobdomains.versioned_init.jobdomains' => []]);
         $this->app['auth']->forgetGuards();
         $this->assertSame(0, PresetApplication::where('company_id', $register('flag-only@example.test'))->count(), 'ADR-808 : drapeau seul = chemin historique');
         config(['jobdomains.versioned_init.jobdomains' => ['logistique']]); // ADR-808 : bascule contrôlée par métier

@@ -28,6 +28,8 @@ use Tests\TestCase;
  */
 class Adr8081DormantRightsClosureTest extends TestCase
 {
+    use \Tests\Support\PublishesStartingLibrary;
+
     use RefreshDatabase;
 
     private const MODULES = ['workforce', 'workforce_leave', 'workforce_planning', 'workforce_payroll', 'workforce_documents', 'workforce_signature', 'logistics_shipments', 'core.members'];
@@ -212,12 +214,12 @@ class Adr8081DormantRightsClosureTest extends TestCase
         // Pinned to v1 on logistique ; shared (latest) on a second jobdomain.
         config(['jobdomains.versioned_init.enabled' => true, 'jobdomains.versioned_init.jobdomains' => ['logistique', 'svc8081']]);
         // Pinned to v1, archived when v2 was published : recommendable but not applicable → historical path (no crash).
-        PresetService::setRecommendations('logistique', [['kind' => 'rbac', 'family_key' => 'logi_8081', 'pinned_version' => 1]]);
+        PresetService::setRecommendations('logistique', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'logi_8081', 'pinned_version' => 1]]);
         $this->assertFalse(VersionedCompanyInitializer::shouldUse('logistique', 'FR'));
         // Pinned to the published v2 on logistique ; the same family shared (latest) by a second jobdomain.
-        PresetService::setRecommendations('logistique', [['kind' => 'rbac', 'family_key' => 'logi_8081', 'pinned_version' => 2]]);
+        PresetService::setRecommendations('logistique', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'logi_8081', 'pinned_version' => 2]]);
         Jobdomain::create(['key' => 'svc8081', 'label' => 'Services', 'is_active' => true, 'default_modules' => []]);
-        PresetService::setRecommendations('svc8081', [['kind' => 'rbac', 'family_key' => 'logi_8081']]);
+        PresetService::setRecommendations('svc8081', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'logi_8081']]);
         $this->assertTrue(VersionedCompanyInitializer::shouldUse('logistique', 'FR'));
         $this->assertTrue(VersionedCompanyInitializer::shouldUse('svc8081', 'FR'));
 

@@ -48,7 +48,7 @@ class JobdomainModernizationController extends Controller
 
     public function legacyDraft(Request $request, int $id): JsonResponse
     {
-        $data = $request->validate(['kind' => 'required|in:rbac,requirements,planning']);
+        $data = $request->validate(['kind' => 'required|in:catalog,rbac,requirements,planning']);
         $result = LegacyPresetDraftFactory::draft(Jobdomain::findOrFail($id), $data['kind'], $request->user()?->id);
 
         return response()->json(['preset' => $result['preset'], 'skipped' => $result['skipped'], 'not_carried' => $result['not_carried']], 201);
@@ -96,7 +96,7 @@ class JobdomainModernizationController extends Controller
 
     public function presetDraft(Request $request, int $id, string $kind): JsonResponse
     {
-        abort_unless(in_array($kind, ['rbac', 'requirements', 'planning'], true), 404);
+        abort_unless(in_array($kind, ['catalog', 'rbac', 'requirements', 'planning'], true), 404);
 
         return response()->json(['draft' => \App\Core\Jobdomains\Modernization\JobdomainPresetWorkspace::draft(Jobdomain::findOrFail($id), $kind, $request->user()?->id)]);
     }

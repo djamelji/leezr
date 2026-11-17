@@ -66,8 +66,8 @@ final class CreationParity
     private static function presetsFromLegacy(Jobdomain $jd): void
     {
         $links = [];
-        foreach (['rbac', 'requirements'] as $kind) {
-            $legacy = $kind === 'rbac' ? LegacyJobdomainConfig::rbac($jd) : LegacyJobdomainConfig::requirements($jd);
+        foreach (['rbac', 'catalog'] as $kind) { // ADR-820 : la bibliothèque remplace la projection des exigences
+            $legacy = $kind === 'rbac' ? LegacyJobdomainConfig::rbac($jd) : LegacyJobdomainConfig::catalog($jd);
             if ($legacy['items'] === []) {
                 continue;
             }

@@ -28,6 +28,8 @@ use Tests\TestCase;
  */
 class Adr808InitializationDormantRightsTest extends TestCase
 {
+    use \Tests\Support\PublishesStartingLibrary;
+
     use RefreshDatabase;
 
     private const WF = ['workforce', 'workforce_leave', 'workforce_documents', 'workforce_signature', 'logistics_shipments'];
@@ -77,7 +79,7 @@ class Adr808InitializationDormantRightsTest extends TestCase
             PresetService::publish($p, null);
         }
         foreach ($jobdomains as $jd) {
-            PresetService::setRecommendations($jd, [['kind' => 'rbac', 'family_key' => $family]]);
+            PresetService::setRecommendations($jd, [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => $family]]);
         }
     }
 
@@ -102,6 +104,7 @@ class Adr808InitializationDormantRightsTest extends TestCase
     public function test_switch_is_controlled_and_falls_back_to_the_historical_path(): void
     {
         $use = fn () => VersionedCompanyInitializer::shouldUse('logistique', 'FR');
+        config(['jobdomains.versioned_init.enabled' => false, 'jobdomains.versioned_init.jobdomains' => []]); // ADR-820 : repli explicite
         $this->assertFalse($use(), 'flag off');
         config(['jobdomains.versioned_init.enabled' => true]);
         $this->assertFalse($use(), 'flag on, no jobdomain listed : never global');
@@ -120,7 +123,7 @@ class Adr808InitializationDormantRightsTest extends TestCase
 
         // Shared preset : the same family recommended to a second jobdomain works there too, only if listed.
         Jobdomain::create(['key' => 'svc808', 'label' => 'Services 808', 'is_active' => true, 'default_modules' => []]);
-        PresetService::setRecommendations('svc808', [['kind' => 'rbac', 'family_key' => 'shared']]);
+        PresetService::setRecommendations('svc808', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'shared']]);
         $this->assertFalse(VersionedCompanyInitializer::shouldUse('svc808', 'FR'));
         config(['jobdomains.versioned_init.jobdomains' => ['logistique', 'svc808']]);
         $this->assertTrue(VersionedCompanyInitializer::shouldUse('svc808', 'FR'));

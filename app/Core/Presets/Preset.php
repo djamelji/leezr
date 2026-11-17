@@ -4,12 +4,12 @@ namespace App\Core\Presets;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** ADR-793 (L3) — versioned preset of the RBAC, REQUIREMENTS or PLANNING family (global catalogue). */
+/** ADR-793 (L3) — versioned preset of the CATALOG (ADR-820), RBAC, REQUIREMENTS or PLANNING family (global catalogue). */
 class Preset extends Model
 {
     use VersionedPresetLifecycle;
 
-    public const KINDS = ['rbac', 'requirements', 'planning'];
+    public const KINDS = ['catalog', 'rbac', 'requirements', 'planning'];
 
     protected $fillable = ['key', 'family_key', 'kind', 'label', 'description', 'jobdomain_key', 'market_key', 'version', 'status', 'revision', 'content', 'requires_modules', 'created_by', 'updated_by', 'published_at'];
 

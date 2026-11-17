@@ -18,10 +18,11 @@ final class LegacyPresetDraftFactory
     public static function draft(Jobdomain $jd, string $kind, ?int $by): array
     {
         $legacy = match ($kind) {
+            'catalog' => LegacyJobdomainConfig::catalog($jd),
             'rbac' => LegacyJobdomainConfig::rbac($jd),
             'requirements' => LegacyJobdomainConfig::requirements($jd),
             'planning' => LegacyJobdomainConfig::planning($jd),
-            default => throw ValidationException::withMessages(['kind' => 'Only rbac, requirements and planning can be drafted from the legacy configuration.']),
+            default => throw ValidationException::withMessages(['kind' => 'Only catalog, rbac, requirements and planning can be drafted from the legacy configuration.']),
         };
         if ($legacy['items'] === []) {
             throw ValidationException::withMessages(['kind' => 'No historical configuration to draft from.']);

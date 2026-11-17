@@ -37,9 +37,17 @@ final class CompanyCatalogReadModel
         $locale = FieldResolverService::requestLocale();
 
         // ── Origins : JobDomain presets (activated / recommended) and module contributions ──
-        $presets = $company->jobdomain_key ? JobdomainPresetResolver::resolve($company->jobdomain_key, $market) : null;
-        $jdFields = collect($presets?->fields ?? [])->keyBy('code');
-        $jdDocs = collect($presets?->documents ?? [])->keyBy('code');
+        // ADR-820 : la bibliothèque publiée par Platform fait foi ; à défaut, les valeurs historiques du JobDomain.
+        $library = $company->jobdomain_key ? \App\Core\Presets\Adapters\CatalogPresetAdapter::effectiveContent($company->jobdomain_key, $market) : null;
+        if ($library !== null) {
+            $fromLibrary = fn (string $list) => collect($library[$list] ?? [])->map(fn ($i) => ['code' => $i['code'], 'recommended' => ! ($i['included'] ?? true)])->keyBy('code');
+            $jdFields = $fromLibrary('fields');
+            $jdDocs = $fromLibrary('documents');
+        } else {
+            $presets = $company->jobdomain_key ? JobdomainPresetResolver::resolve($company->jobdomain_key, $market) : null;
+            $jdFields = collect($presets?->fields ?? [])->keyBy('code');
+            $jdDocs = collect($presets?->documents ?? [])->keyBy('code');
+        }
         $moduleRefs = ['fields' => [], 'documents' => []];
         foreach (ModuleRegistry::definitions() as $key => $manifest) {
             if ($manifest->scope !== 'company' || empty($manifest->contributions)) {

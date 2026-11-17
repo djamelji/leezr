@@ -23,11 +23,12 @@ use Illuminate\Validation\ValidationException;
  */
 final class PresetService
 {
-    public const KINDS = ['rbac', 'organization', 'requirements', 'planning'];
+    public const KINDS = ['catalog', 'rbac', 'organization', 'requirements', 'planning'];
 
     public static function adapter(string $kind): PresetFamilyAdapter
     {
         return match ($kind) {
+            'catalog' => new \App\Core\Presets\Adapters\CatalogPresetAdapter(),
             'rbac' => new RbacPresetAdapter(),
             'organization' => new OrganizationPresetAdapter(),
             'requirements' => new RequirementsPresetAdapter(),

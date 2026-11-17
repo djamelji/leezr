@@ -130,6 +130,8 @@ class ModuleCatalogReadModel
                     'entitlement_source' => $entitlement['source'],
                     'entitlement_reason' => $entitlement['reason'],
                     'requires' => $manifest->requires,
+                    // ADR-820 : proposé par le profil métier (jamais activé ni acheté pour autant)
+                    'recommended_for_jobdomain' => in_array($pm->key, (array) ($jobdomain->recommended_modules ?? []), true),
                     // Logistics Only : « requis par » ne nomme jamais un module non livré absent de la société.
                     'dependents' => array_values(array_filter($dependentsMap[$pm->key] ?? [], fn ($d) => in_array(ModuleCommercialPolicy::statusFor($d), ModuleCommercialPolicy::SELLABLE_STATUSES, true)
                         || ($companyModules->get($d)?->is_enabled_for_company))),
