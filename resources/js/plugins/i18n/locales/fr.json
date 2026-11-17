@@ -10633,7 +10633,8 @@
       "roles_doc_config": "Les documents prescrits par rôle ne sont pas repris : un rôle n’est pas un poste.",
       "requirements_registry": "La création versionnée enregistre aussi les exigences dans le registre (parallèle, non opérationnel).",
       "modules_not_entitled": "Les modules recommandés non couverts par l’offre ne sont pas activés (aucun achat implicite, aucun drapeau ambigu)."
-    }
+    },
+    "signupAvailable": "Proposé aux nouvelles inscriptions"
   },
   "presetAdmin": {
     "all": "Toutes",

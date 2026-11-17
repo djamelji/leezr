@@ -78,6 +78,8 @@ const saveGeneral = () => run(() => $platformApi(`/jobdomains/${id.value}`, { me
   terminology: Object.fromEntries(Object.entries(identity.value.terminology).filter(([, v]) => v)),
   convention_refs: refs.value.filter(r => r.market_key && r.convention_collective_id),
 } }), t('jobdomainProfile.saved'))
+// Logistics Only — proposé aux NOUVELLES inscriptions (les sociétés existantes ne sont jamais affectées).
+const toggleSignup = v => run(() => $platformApi(`/jobdomains/${id.value}`, { method: 'PUT', body: { signup_available: !!v } }), t('jobdomainProfile.saved'))
 const saveModules = () => run(() => $platformApi(`/jobdomains/${id.value}`, { method: 'PUT', body: { default_modules: modules.value } }),
   res => (res.auto_added?.length ? t('jobdomainProfile.modulesSavedDeps', { list: res.auto_added.join(', ') }) : t('jobdomainProfile.saved')))
 // ADR-802 — une seule façon d'associer une famille au domaine (toutes familles) : remplace la recommandation
@@ -126,10 +128,22 @@ const orgStructure = computed(() => profile.value?.workspace.organization.publis
           {{ t('jobdomainProfile.companies', { n: profile.compatibility.companies }) }}
         </div>
       </div>
-      <AppStatusText
-        :tone="profile.identity.is_active ? 'success' : 'info'"
-        :text="profile.identity.is_active ? t('jobdomainProfile.active') : t('jobdomainProfile.inactive')"
-      />
+      <div class="d-flex align-center gap-4 flex-wrap">
+        <VSwitch
+          :model-value="!!profile.identity.signup_available"
+          :label="t('jobdomainProfile.signupAvailable')"
+          :disabled="saving || !profile.identity.is_active"
+          hide-details
+          density="compact"
+          color="success"
+          data-test="jd-signup-available"
+          @update:model-value="toggleSignup"
+        />
+        <AppStatusText
+          :tone="profile.identity.is_active ? 'success' : 'info'"
+          :text="profile.identity.is_active ? t('jobdomainProfile.active') : t('jobdomainProfile.inactive')"
+        />
+      </div>
     </div>
 
     <VTabs

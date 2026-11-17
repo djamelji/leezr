@@ -10633,7 +10633,8 @@
       "roles_doc_config": "Per-role document prescriptions are not carried: a role is not a position.",
       "requirements_registry": "The versioned creation also records the requirements in the registry (parallel, non operational).",
       "modules_not_entitled": "Recommended modules not covered by the offer are not activated (no implicit purchase, no ambiguous flag)."
-    }
+    },
+    "signupAvailable": "Offered to new sign-ups"
   },
   "presetAdmin": {
     "all": "All",

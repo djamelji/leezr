@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router'
 import PlatformCommercial from '@/views/platform-dashboard/_PlatformCommercialWidget.vue'
 import { resolvePresentationMode } from '@/core/surface-engine/presentationMode'
 
-definePage({ meta: { layout: 'platform', platform: true, module: 'platform.dashboard' } })
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.dashboard', devOnly: true } })
 
 const route = useRoute()
 const matrix = [

@@ -25,7 +25,7 @@ class PublicPlanController extends Controller
      */
     public function index(): JsonResponse
     {
-        $jobdomains = Jobdomain::where('is_active', true)
+        $jobdomains = Jobdomain::offeredForSignup() // Logistics Only : catalogue commercial
             ->orderBy('label')
             ->get(['key', 'label', 'description']);
 

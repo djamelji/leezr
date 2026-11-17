@@ -56,6 +56,7 @@ class JobdomainController extends Controller
             'label' => ['sometimes', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
+            'signup_available' => ['sometimes', 'boolean'], // Logistics Only
             'allow_custom_fields' => ['sometimes', 'boolean'],
             'default_modules' => ['sometimes', 'array'],
             'default_modules.*' => ['string'],

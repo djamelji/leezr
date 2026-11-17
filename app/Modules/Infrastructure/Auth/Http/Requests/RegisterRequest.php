@@ -35,7 +35,8 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', PasswordPolicy::rules()],
             'company_name' => ['required', 'string', 'max:255'],
-            'jobdomain_key' => ['required', 'string', 'exists:jobdomains,key'],
+            // Logistics Only : refusé côté serveur si le métier n'est pas proposé aux nouvelles inscriptions.
+            'jobdomain_key' => ['required', 'string', \Illuminate\Validation\Rule::exists('jobdomains', 'key')->where('is_active', true)->where('signup_available', true)],
             'plan_key' => ['sometimes', 'nullable', 'string', Rule::in(PlanRegistry::keys())],
             'market_key' => ['sometimes', 'string', 'exists:markets,key'],
             'billing_interval' => ['sometimes', 'string', Rule::in(['monthly', 'yearly'])],

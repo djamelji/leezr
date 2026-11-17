@@ -10,7 +10,7 @@ import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
 import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import StatusChip from '@/core/components/StatusChip.vue'
 
-definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
+definePage({ meta: { module: 'workforce', permission: 'workforce.view', devOnly: true } })
 
 const { toast } = useAppToast()
 

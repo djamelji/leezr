@@ -21,6 +21,11 @@ export const setupGuards = router => {
       return false
     }
 
+    // Logistics Only — laboratoires de conception (ui-lab, dev-lab, presentation-lab) : serveur de
+    // développement uniquement, jamais dans le produit construit (routes non livrées).
+    if (to.meta.devOnly && !import.meta.env.DEV)
+      return { path: '/' }
+
     const runtime = useRuntimeStore()
 
     // ─── Public routes ───────────────────────────────────

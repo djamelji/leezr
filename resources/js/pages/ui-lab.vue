@@ -55,6 +55,9 @@ const states = [
   { value: 'empty', label: 'Empty' },
   { value: 'error', label: 'Error' },
 ]
+
+// Logistics Only — laboratoire : serveur de développement uniquement (garde du routeur).
+definePage({ meta: { devOnly: true } })
 </script>
 
 <template>

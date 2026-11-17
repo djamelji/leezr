@@ -9,6 +9,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Jobdomain extends Model
 {
+    /** Jobdomains offered to new companies (commercial catalogue). Historical companies are unaffected. */
+    public function scopeOfferedForSignup($query)
+    {
+        return $query->where('is_active', true)->where('signup_available', true);
+    }
+
     protected $fillable = [
         'key',
         'label',
@@ -17,6 +23,7 @@ class Jobdomain extends Model
         'terminology',  // ADR-797 — vocabulaire métier (ex. « collaborateur » → « livreur »)
         'convention_refs', // ADR-799 — conventions pertinentes par marché (référence, jamais un lien juridique)
         'is_active',
+        'signup_available', // Logistics Only : proposé aux nouvelles inscriptions (≠ is_active)
         'default_modules',
         'default_fields',
         'default_documents',
@@ -29,6 +36,7 @@ class Jobdomain extends Model
     {
         return [
             'is_active' => 'boolean',
+            'signup_available' => 'boolean',
             'terminology' => 'array',
             'convention_refs' => 'array',
             'default_modules' => 'array',

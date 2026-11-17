@@ -29,7 +29,7 @@ class JobdomainModernizationController extends Controller
         $jd = Jobdomain::findOrFail($id);
 
         return response()->json([
-            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'convention_refs', 'is_active', 'allow_custom_fields']),
+            'identity' => $jd->only(['id', 'key', 'label', 'description', 'sector', 'terminology', 'convention_refs', 'is_active', 'signup_available', 'allow_custom_fields']),
             'markets' => Market::orderBy('key')->get(['key', 'name', 'is_active'])->map(fn ($m) => $m->only(['key', 'name', 'is_active'])
                 + ['has_override' => $jd->overlays()->where('market_key', $m->key)->exists()])->values(),
             'modules' => VersionedCompanyInitializer::classifyModules((array) $jd->default_modules, $jd->key),

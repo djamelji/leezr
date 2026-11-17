@@ -14,7 +14,7 @@ class JobdomainCatalogReadModel
      */
     public static function all(): array
     {
-        return Jobdomain::where('is_active', true)
+        return Jobdomain::offeredForSignup()
             ->orderBy('label')
             ->get()
             ->map(fn (Jobdomain $jd) => [

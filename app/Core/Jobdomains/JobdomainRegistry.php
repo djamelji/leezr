@@ -380,7 +380,7 @@ class JobdomainRegistry
 
             $mergedFields = array_merge($coreFields, array_values($jobdomainOnly));
 
-            Jobdomain::updateOrCreate(
+            $jd = Jobdomain::updateOrCreate(
                 ['key' => $key],
                 [
                     'label' => $definition['label'],
@@ -393,6 +393,11 @@ class JobdomainRegistry
                     'workforce_presets' => $definition['workforce_presets'] ?? static::workforcePresetsFor($key),
                 ],
             );
+            // Logistics Only : la disponibilité commerciale est fixée à la CRÉATION puis pilotée par Platform
+            // (jamais réécrite par un sync). Seul le métier livré (logistique) est proposé par défaut.
+            if ($jd->wasRecentlyCreated) {
+                $jd->forceFill(['signup_available' => $key === 'logistique'])->save();
+            }
         }
     }
 

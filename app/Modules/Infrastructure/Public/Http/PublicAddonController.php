@@ -27,7 +27,7 @@ class PublicAddonController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'jobdomain' => ['required', 'string', 'exists:jobdomains,key'],
+            'jobdomain' => ['required', 'string', \Illuminate\Validation\Rule::exists('jobdomains', 'key')->where('is_active', true)->where('signup_available', true)],
             'plan' => ['required', 'string'],
             'market' => ['sometimes', 'string', 'exists:markets,key'],
         ]);

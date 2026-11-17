@@ -134,6 +134,10 @@ class Adr809LogisticsSignupTest extends TestCase
         // Another jobdomain, not listed : historical path (no preset application, rights effective as before).
         Jobdomain::create(['key' => 'other809', 'label' => 'Autre', 'is_active' => true, 'default_modules' => ['core.members'],
             'default_roles' => ['owner' => ['name' => 'Owner', 'is_administrative' => true, 'bundles' => ['members.team_management']]]]);
+        // Logistics Only : a jobdomain not offered for sign-up is refused server-side ; Platform opens it explicitly.
+        $this->postJson('/api/register', ['first_name' => 'R', 'last_name' => 'U', 'email' => 'refused809@example.test', 'password' => 'P@ssw0rd!Strong',
+            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Refused', 'jobdomain_key' => 'other809', 'plan_key' => 'starter'])->assertStatus(422)->assertJsonValidationErrors('jobdomain_key');
+        Jobdomain::where('key', 'other809')->update(['signup_available' => true]);
         $o = $this->register('owner809c@example.test', 'other809');
         $this->assertSame(0, PresetApplication::where('company_id', $o->id)->count());
         $this->assertSame([], PendingModuleAccess::summary($o, null)['roles']);
