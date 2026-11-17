@@ -7,6 +7,9 @@ const props = defineProps({
   // W-HR-UX-7 (P3) — compteur-signal : chaque incrément (depuis « Modifier » de l'en-tête) ouvre
   // directement le formulaire d'édition, sans exiger un 2ᵉ clic « Modifier » dans l'onglet.
   editSignal: { type: Number, default: 0 },
+  // ADR-818 (chantier B) : dans la fiche personne, l'identité a son propre formulaire (section Identité) ;
+  // ne pas la redemander ici (un sujet = un formulaire). Hors fiche, comportement inchangé.
+  withIdentity: { type: Boolean, default: true },
 })
 
 // Load departments/roles/employees for edit dropdowns
@@ -102,6 +105,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
     <!-- Display mode -->
     <VRow v-if="!isEditing">
       <VCol
+        v-if="withIdentity"
         cols="12"
         md="6"
       >
@@ -181,7 +185,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
 
       <VCol
         cols="12"
-        md="6"
+        :md="withIdentity ? 6 : 12"
       >
         <VCard variant="outlined">
           <VCardTitle class="text-subtitle-1">
@@ -302,6 +306,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         <VForm @submit.prevent="saveProfile">
           <VRow>
             <VCol
+              v-if="withIdentity"
               cols="12"
               md="6"
             >
@@ -313,6 +318,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
               />
             </VCol>
             <VCol
+              v-if="withIdentity"
               cols="12"
               md="6"
             >
@@ -324,6 +330,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
               />
             </VCol>
             <VCol
+              v-if="withIdentity"
               cols="12"
               md="6"
             >
@@ -335,6 +342,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
               />
             </VCol>
             <VCol
+              v-if="withIdentity"
               cols="12"
               md="6"
             >

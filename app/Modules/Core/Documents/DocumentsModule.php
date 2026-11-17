@@ -60,6 +60,16 @@ class DocumentsModule implements ModuleDefinition
                     'is_admin' => true,
                 ],
                 [
+                    // ADR-818 (Logistics Only) — moindre privilège pour les rôles opérationnels : traiter les pièces
+                    // (demander, déposer pour la personne, vérifier) SANS configurer les types de documents ni accéder
+                    // aux pièces hautement confidentielles. `documents.management` reste inchangé (rôles existants).
+                    'key' => 'documents.processing',
+                    'label' => 'Document Processing',
+                    'hint' => 'Request, upload on behalf of and review documents — without configuring document types or opening highly confidential pieces.',
+                    'permissions' => ['documents.manage'],
+                    'is_admin' => true,
+                ],
+                [
                     'key' => 'payslips.distribution',
                     'label' => 'Payslip Distribution',
                     'hint' => 'Import, review, publish and download external payslips (independent of the payroll generation engine).',

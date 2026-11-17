@@ -51,7 +51,7 @@ class PeopleListReadModel
             $scope = \App\Modules\Workforce\Security\WorkforceAccess::employeeScopeFor($company, $actor);
             $employees = Employee::withoutGlobalScopes()->where('company_id', $company->id)
                 ->when($scope !== null, fn ($q) => $q->whereIn('id', $scope))
-                ->with(['department:id,name', 'jobRole:id,title'])->get();
+                ->with(['department:id,name', 'jobRole:id,title', 'manager:id,first_name,last_name', 'currentContract:id,employee_id,contract_type,status'])->get(); // ADR-818 : responsable + contrat
             foreach ($employees as $e) {
                 $key = $e->user_id ? 'u'.$e->user_id : 'e'.$e->id;
                 $persons[$key] = array_merge($persons[$key] ?? self::emptyRow(), self::rowFromEmployee($e, $canAccess && $details, $persons[$key] ?? null));
@@ -87,7 +87,7 @@ class PeopleListReadModel
     private static function emptyRow(): array
     {
         return ['person_ref' => null, 'name' => '', 'email' => null, 'avatar' => null,
-            'account_state' => null, 'role' => null, 'employment_status' => null, 'job_role' => null, 'department' => null];
+            'account_state' => null, 'role' => null, 'employment_status' => null, 'job_role' => null, 'department' => null, 'manager' => null, 'contract_type' => null];
     }
 
     private static function rowFromMembership(Membership $m, bool $details = true): array
@@ -126,6 +126,9 @@ class PeopleListReadModel
             'employment_status' => $e->isPreparatory() ? 'preparatory' : $e->status,
             'job_role' => $e->jobRole?->title,
             'department' => $e->department?->name,
+            // ADR-818 (chantier B) : responsable et contrat en cours, sans ouvrir la fiche.
+            'manager' => $e->manager ? trim($e->manager->first_name.' '.$e->manager->last_name) : null,
+            'contract_type' => $e->currentContract?->contract_type,
         ];
         // Identité : garder celle du compte si déjà présente (facette accès), sinon fiche RH.
         if (! $existing || empty($existing['name'])) {

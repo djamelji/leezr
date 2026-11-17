@@ -2993,6 +2993,10 @@
       "workforce.hr_consultation": {
         "label": "Dossiers des collaborateurs (consultation)",
         "hint": "Consulter tous les dossiers des collaborateurs, sans pouvoir les modifier."
+      },
+      "documents.processing": {
+        "label": "Traitement des documents",
+        "hint": "Demander, déposer pour la personne et vérifier les pièces — sans configurer les types de documents ni ouvrir les pièces hautement confidentielles."
       }
     },
     "permissions": {
@@ -4811,7 +4815,9 @@
     "tabHr": "Gestion RH",
     "hrToolsIntro": "Filtres avancés, sélection multiple, actions groupées, import et export des fiches salariés.",
     "showIncomplete": "Afficher",
-    "hideIncomplete": "Masquer"
+    "hideIncomplete": "Masquer",
+    "manager": "Responsable",
+    "contract": "Contrat"
   },
   "home": {
     "title": "Accueil",

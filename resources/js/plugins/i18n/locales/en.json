@@ -2993,6 +2993,10 @@
       "workforce.hr_consultation": {
         "label": "Employee files (read-only)",
         "hint": "Read every employee file, without modifying it."
+      },
+      "documents.processing": {
+        "label": "Document processing",
+        "hint": "Request, upload on behalf of and review documents — without configuring document types or opening highly confidential pieces."
       }
     },
     "permissions": {
@@ -4811,7 +4815,9 @@
     "tabHr": "HR management",
     "hrToolsIntro": "Advanced filters, multi-selection, bulk actions, import and export of employee records.",
     "showIncomplete": "Show",
-    "hideIncomplete": "Hide"
+    "hideIncomplete": "Hide",
+    "manager": "Manager",
+    "contract": "Contract"
   },
   "home": {
     "title": "Home",

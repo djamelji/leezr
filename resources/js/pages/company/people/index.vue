@@ -86,6 +86,8 @@ const headers = computed(() => {
     h.push({ title: t('peopleList.employment'), key: 'employment_status', sortable: false })
     h.push({ title: t('peopleList.job'), key: 'job_role', sortable: false })
     h.push({ title: t('peopleList.department'), key: 'department', sortable: false })
+    h.push({ title: t('peopleList.manager'), key: 'manager', sortable: false }) // ADR-818
+    h.push({ title: t('peopleList.contract'), key: 'contract_type', sortable: false })
   }
   h.push({ title: '', key: 'actions', sortable: false, align: 'end' })
 
@@ -233,6 +235,8 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
             </template>
             <template #item.job_role="{ item }"><span :class="item.job_role ? '' : 'text-disabled'">{{ item.job_role || '—' }}</span></template>
             <template #item.department="{ item }"><span :class="item.department ? '' : 'text-disabled'">{{ item.department || '—' }}</span></template>
+            <template #item.manager="{ item }"><span :class="item.manager ? '' : 'text-disabled'">{{ item.manager || '—' }}</span></template>
+            <template #item.contract_type="{ item }"><span :class="item.contract_type ? '' : 'text-disabled'">{{ item.contract_type ? ($te(`employees.contractTypes.${item.contract_type}`) ? $t(`employees.contractTypes.${item.contract_type}`) : item.contract_type.toUpperCase()) : '—' }}</span></template>
             <template #item.actions="{ item }"><VBtn icon variant="text" size="small" :aria-label="t('peopleList.openFile', { name: item.name })" @click.stop="openFiche(item)"><VIcon icon="tabler-chevron-right" /></VBtn></template>
             <template #no-data>
               <div class="text-center py-8 text-medium-emphasis">

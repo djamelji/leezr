@@ -1,0 +1,166 @@
+{
+    "generated_at": "2026-11-17T06:03:42+00:00",
+    "read_only": true,
+    "proposals": [
+        {
+            "company_id": 1,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 3,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 1,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 2,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 2,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 3,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 3,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 31,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 31,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 32,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 32,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 33,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 33,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 34,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 34,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 0,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 101,
+            "role": "Dispatcher",
+            "role_key": "dispatcher",
+            "members": 1,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        },
+        {
+            "company_id": 101,
+            "role": "Operations Manager",
+            "role_key": "ops_manager",
+            "members": 1,
+            "holds": [
+                "documents.configure"
+            ],
+            "proposal": "remove documents.configure (keep document processing: documents.manage) — explicit decision of the company"
+        }
+    ]
+}

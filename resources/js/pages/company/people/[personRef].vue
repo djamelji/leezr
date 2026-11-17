@@ -604,6 +604,7 @@ const requestMissing = async () => {
                   <EmployeeProfile
                     v-if="employee"
                     :employee="employee"
+                    :with-identity="!(store.membershipId && store.can.view_access)"
                     :edit-signal="editSignal"
                     @updated="reload().then(() => toast(t('employees.updated'), 'success'))"
                   />

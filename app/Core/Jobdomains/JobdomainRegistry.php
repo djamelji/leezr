@@ -204,7 +204,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access', 'members.team_management',
                             'settings.company_info',
-                            'documents.access', 'documents.management',
+                            'documents.access', 'documents.processing', // Logistics Only (ADR-818) : traiter les pièces, sans configurer les types ni voir les pièces confidentielles
                             'shipments.operations',
                             'shipments.delivery',
                             'support.access', // ADR-373: Dispatcher can view/create support tickets
@@ -299,7 +299,7 @@ class JobdomainRegistry
                             'theme.full',
                             'members.team_access', 'members.team_management', 'members.sensitive_data',
                             'settings.company_info',
-                            'documents.access', 'documents.management',
+                            'documents.access', 'documents.processing', // Logistics Only (ADR-818) : traiter les pièces, sans configurer les types ni voir les pièces confidentielles
                             'roles.governance',
                             'jobdomain.info',
                             'shipments.operations',
