@@ -87,11 +87,9 @@ const headers = computed(() => {
     h.push({ title: t('peopleList.access'), key: 'account_state', sortable: false })
   }
   if (store.facets.hr) {
-    h.push({ title: t('peopleList.employment'), key: 'employment_status', sortable: false })
+    // ADR-821 : colonnes regroupées — poste et service ensemble, responsable et contrat sous le statut
     h.push({ title: t('peopleList.job'), key: 'job_role', sortable: false })
-    h.push({ title: t('peopleList.department'), key: 'department', sortable: false })
-    h.push({ title: t('peopleList.manager'), key: 'manager', sortable: false }) // ADR-818
-    h.push({ title: t('peopleList.contract'), key: 'contract_type', sortable: false })
+    h.push({ title: t('peopleList.employment'), key: 'employment_status', sortable: false })
   }
   h.push({ title: '', key: 'actions', sortable: false, align: 'end' })
 
@@ -128,11 +126,13 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
   <div>
     <SettingsReturnLink /> <!-- ADR-781 -->
     <div class="d-flex align-center flex-wrap gap-2 mb-4">
-      <div>
+      <div
+        class="flex-grow-1"
+        style="flex-basis: 320px; min-inline-size: 0;"
+      >
         <h4 class="text-h4 mb-1">{{ t('peopleList.title') }}</h4>
         <p class="text-body-1 text-medium-emphasis mb-0">{{ t('peopleList.subtitle') }}</p>
       </div>
-      <VSpacer />
       <!-- ADR-802 : les outils ne renvoient plus vers d'autres pages — Gestion RH est un onglet d'Équipe,
            les champs du profil s'ouvrent ici. -->
       <VMenu v-if="tab === 'people' && can('members.view') && can('settings.manage')">
@@ -234,10 +234,30 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
               <span v-else class="text-disabled">{{ t('people.account.none') }}</span>
             </template>
             <template #item.employment_status="{ item }">
-              <span v-if="item.employment_status" class="text-body-2">{{ t('people.empStatus.' + item.employment_status, item.employment_status) }}</span>
+              <VChip
+                v-if="item.employment_status"
+                size="small"
+                label
+                variant="tonal"
+                :color="{ active: 'success', on_leave: 'info', suspended: 'warning', terminated: 'secondary', inactive: 'secondary' }[item.employment_status] || 'secondary'"
+              >
+                {{ t('people.empStatus.' + item.employment_status, item.employment_status) }}
+              </VChip>
               <span v-else class="text-disabled">—</span>
+              <div
+                v-if="item.contract_type || item.manager"
+                class="text-caption text-medium-emphasis mt-1"
+              >
+                {{ [item.contract_type ? ($te(`employees.contractTypes.${item.contract_type}`) ? $t(`employees.contractTypes.${item.contract_type}`) : item.contract_type) : null, item.manager ? t('peopleList.managerShort', { name: item.manager }) : null].filter(Boolean).join(' · ') }}
+              </div>
             </template>
-            <template #item.job_role="{ item }"><span :class="item.job_role ? '' : 'text-disabled'">{{ item.job_role || '—' }}</span></template>
+            <template #item.job_role="{ item }">
+              <div :class="item.job_role ? 'text-body-1' : 'text-disabled'">{{ item.job_role || '—' }}</div>
+              <div
+                v-if="item.department"
+                class="text-caption text-medium-emphasis"
+              >{{ item.department }}</div>
+            </template>
             <template #item.department="{ item }"><span :class="item.department ? '' : 'text-disabled'">{{ item.department || '—' }}</span></template>
             <template #item.manager="{ item }"><span :class="item.manager ? '' : 'text-disabled'">{{ item.manager || '—' }}</span></template>
             <template #item.contract_type="{ item }"><span :class="item.contract_type ? '' : 'text-disabled'">{{ item.contract_type ? ($te(`employees.contractTypes.${item.contract_type}`) ? $t(`employees.contractTypes.${item.contract_type}`) : item.contract_type.toUpperCase()) : '—' }}</span></template>

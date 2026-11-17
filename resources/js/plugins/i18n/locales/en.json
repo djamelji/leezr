@@ -4523,7 +4523,10 @@
       "draft": "Draft"
     },
     "plan": "Plan",
-    "planned": "Planning saved."
+    "planned": "Planning saved.",
+    "route": "Route",
+    "notScheduled": "Not scheduled",
+    "listSubtitle": "Follow your shipments from planning to delivery."
   },
   "deliveries": {
     "title": "My Deliveries",
@@ -4895,7 +4898,8 @@
     "showIncomplete": "Show",
     "hideIncomplete": "Hide",
     "manager": "Manager",
-    "contract": "Contract"
+    "contract": "Contract",
+    "managerShort": "mgr. {name}"
   },
   "home": {
     "title": "Home",

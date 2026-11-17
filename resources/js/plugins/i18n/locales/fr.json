@@ -4523,7 +4523,10 @@
       "draft": "Brouillon"
     },
     "plan": "Planifier",
-    "planned": "Planification enregistrée."
+    "planned": "Planification enregistrée.",
+    "route": "Trajet",
+    "notScheduled": "Non planifiée",
+    "listSubtitle": "Suivez vos expéditions, de la planification à la livraison."
   },
   "deliveries": {
     "title": "Mes livraisons",
@@ -4895,7 +4898,8 @@
     "showIncomplete": "Afficher",
     "hideIncomplete": "Masquer",
     "manager": "Responsable",
-    "contract": "Contrat"
+    "contract": "Contrat",
+    "managerShort": "resp. {name}"
   },
   "home": {
     "title": "Accueil",
