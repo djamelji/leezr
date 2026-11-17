@@ -93,7 +93,9 @@ test('éditeurs de presets, cycle de vie, exigences entreprise, parité', async 
 
     // ── Domaine « logistique » (lecture) : exigences de l'entreprise d'une société + parité depuis l'historique ──
     const logi = Number(tinker("echo App\\Core\\Jobdomains\\Jobdomain::where('key','logistique')->value('id');"))
-    await page.goto(`/platform/jobdomains/${logi}`)
+    await page.goto(`/platform/jobdomains/${logi}/publication`)
+    await expect(page.locator('[data-test="jd-publication"]')).toBeVisible({ timeout: 30000 })
+    await page.locator('[data-test="jd-advanced"] .v-expansion-panel-title').click() // ADR-820 : diagnostic dans Publication › avancé
     await expect(page.locator('[data-test="jd-company-report"]')).toBeVisible({ timeout: 30000 })
     await page.locator('[data-test="jd-report-company"]').click()
     await page.getByRole('option', { name: /\(#1\)/ }).click()

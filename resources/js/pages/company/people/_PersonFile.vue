@@ -270,6 +270,8 @@ onBeforeUnmount(() => employeesStore.clearCurrentEmployee())
 const tabRoute = tab => ({ name: 'company-people-person-ref', params: { personRef: personRef.value, tab: tab === 'overview' ? undefined : tab } })
 watch(currentTab, tab => {
   const { tab: _, ...query } = route.query
+  // Une SECTION de la rubrique affichée (`/contract`, `/payslips`…) reste dans l'adresse : lien partagé intact.
+  if (route.query.tab === undefined && groups.value.find(g => g.key === tab)?.sections.includes(route.params.tab)) return
   const sameTab = (route.params.tab || 'overview') === tab
   if (!sameTab || route.query.tab !== undefined) router.replace({ ...tabRoute(tab), query })
 })

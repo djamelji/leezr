@@ -191,7 +191,7 @@ test('salarié : créer sans compte → éditer RH → contrat → chevauchement
 
   // ─── Anciennes routes : redirection avec deep-link conservé ───
   await page.goto(`/company/workforce/employees/${employeeId}?tab=contract`, { waitUntil: 'networkidle' })
-  await page.waitForURL(new RegExp(`/company/people/${ref}\\?tab=contract`), { timeout: 15000 })
+  await page.waitForURL(new RegExp(`/company/people/${ref}/contract`), { timeout: 15000 }) // ADR-820 : rubrique dans le chemin
   await expect(page.locator('[data-test="contract-add"]'), 'onglet demandé conservé').toBeVisible({ timeout: 10000 })
   await page.goto(`/company/workforce/employees/${employeeId}?legacy=1`, { waitUntil: 'networkidle' })
   await settle(page)

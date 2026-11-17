@@ -11637,7 +11637,7 @@
       "rbac": "Les rôles définissent l'accès au logiciel. Ils ne décident jamais des informations demandées aux personnes.",
       "organization": "Services et postes proposés à la société. Ses postes porteront ensuite ses propres exigences.",
       "requirements": "Exigences que la société peut adopter, par poste. Elles ne sont jamais appliquées automatiquement à la création.",
-      "planning": "Horaires et semaines types proposés au module Planning, qui en reste propriétaire. Le temps de travail se règle dans la société."
+      "planning": "Horaires et semaines types proposés au module Planning, qui en reste propriétaire. Ce ne sont pas des règles de travail : le temps de travail se règle dans la société."
     },
     "orgSummary": "{departments} services · {positions} postes",
     "publicationTitle": "Disponibilité",

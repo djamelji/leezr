@@ -20,14 +20,15 @@ test('A — JobDomain en six onglets, preset publié depuis son onglet', async (
     const res = await apiRequest(page, { method: 'POST', path: '/api/platform/jobdomains', body: { key, label: `E2E 799 ${key.slice(-4)}`, description: 'Domaine fictif de recette' } })
     jdId = res.json.jobdomain.id
     await page.goto(`/platform/jobdomains/${jdId}`)
-    await expect(page.locator('[data-test="jd-tabs"] [role="tab"]')).toHaveCount(6, { timeout: 30000 })
+    await expect(page.locator('[data-test="jd-tabs"] [role="tab"]')).toHaveCount(5, { timeout: 30000 }) // ADR-820 : Général · Modules · Expérience · Presets · Publication
     await expect(page.locator('[data-test="jd-identity"]')).toContainText('Cadre conventionnel recommandé')
     await expect(page.locator('[data-test="jd-identity"]')).toContainText('ne fixe pas l’organisation du temps de travail')
     await settle(page)
     await page.screenshot({ path: `${OUT}/jobdomain-general.jpg`, type: 'jpeg', quality: 65 })
 
     // Rôles : création depuis l'onglet (aucun choix de version, aucune association manuelle), puis publication.
-    await page.locator('[data-test="jd-tabbtn-roles"]').click()
+    await page.locator('[data-test="jd-tabbtn-presets"]').click()
+    await page.locator('[data-test="jd-family-rbac"]').click()
     await page.locator('[data-test="jd-edit-rbac"]').click()
     await expect(page.locator('[data-test="preset-editor"]')).toBeVisible({ timeout: 60000 })
     await page.locator('[data-test="preset-editor-label"] input').fill('Rôles E2E')
@@ -44,7 +45,7 @@ test('A — JobDomain en six onglets, preset publié depuis son onglet', async (
     await settle(page)
     await page.screenshot({ path: `${OUT}/jobdomain-roles-tab.jpg`, type: 'jpeg', quality: 65 })
 
-    await page.locator('[data-test="jd-tabbtn-planning"]').click()
+    await page.locator('[data-test="jd-family-planning"]').click()
     await expect(page.getByText('Ce ne sont pas des règles de travail')).toBeVisible()
     await page.emulateMedia({ colorScheme: 'dark' })
     await settle(page)

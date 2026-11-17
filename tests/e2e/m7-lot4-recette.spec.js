@@ -53,10 +53,10 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   /** @type {Array<[string, RegExp, string]>} */
   const cases = [
     // Redirections à parité prouvée.
-    ['/company/roles', /\/company\/people\?tab=roles$/, 'Rôles → onglet de Collaborateurs'],
+    ['/company/roles', /\/company\/people\/roles$/, 'Rôles → onglet de Collaborateurs'],
     ['/company/workforce/documents', /\/company\/documents\/hr/, 'Documents RH → espace Documents'],
     [`/company/members/${someone.id}`, new RegExp(`/company/people/${resolved.json.person_ref}$`), 'fiche membre → fiche unifiée (id résolu serveur)'],
-    [`/company/workforce/employees/${linked.employee_id}?tab=contract`, new RegExp(`/company/people/employee-${linked.employee_id}\\?tab=contract$`), 'fiche salarié → fiche unifiée, onglet conservé'],
+    [`/company/workforce/employees/${linked.employee_id}?tab=contract`, new RegExp(`/company/people/employee-${linked.employee_id}/contract$`), 'fiche salarié → fiche unifiée, onglet conservé'],
     ['/account-settings/documents', /\/company\/my-space\/documents$/, 'mes documents → Mon espace'],
     // Chemins nus.
     ['/company/my-space', /\/company\/my-space\/overview$/, 'Mon espace sans onglet'],
@@ -98,7 +98,7 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   await expect(page).toHaveURL(/\/company\/people\/(user|employee)-\d+/, { timeout: 20000 })
   await settle(page)
   await page.getByRole('tab', { name: 'Informations & emploi' }).first().click() // ADR-777 : rubrique
-  await expect(page).toHaveURL(/tab=profile/)
+  await expect(page).toHaveURL(/\/profile$/) // ADR-820 : rubrique dans le chemin
   await page.locator('[data-test="person-back"]').click()
   await expect(page, 'retour à la liste').toHaveURL(/\/company\/people$/, { timeout: 20000 })
 
