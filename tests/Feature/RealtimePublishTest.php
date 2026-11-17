@@ -281,7 +281,7 @@ class RealtimePublishTest extends TestCase
     public function test_module_disable_publishes_modules_changed(): void
     {
         $this->actAs($this->owner)
-            ->putJson('/api/modules/logistics_shipments/disable')
+            ->putJson('/api/modules/logistics_shipments/disable', ['cascade' => true]) // ADR-821 : dépendants actifs dans ce jeu de données
             ->assertOk();
 
         $this->assertPublished('modules.changed', $this->company->id);

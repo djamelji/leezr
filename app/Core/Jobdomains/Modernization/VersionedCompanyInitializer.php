@@ -90,10 +90,13 @@ final class VersionedCompanyInitializer
         foreach (array_values($keys) as $key) {
             $m = ModuleRegistry::definitions()[$key] ?? null;
             $e = $m ? EntitlementResolver::check($probe, $key) : ['entitled' => false, 'source' => null, 'reason' => 'unknown_module'];
+            // ADR-821 : le Plan gouverne les droits commerciaux — un module de démarrage proposé en OPTION payante
+            // (ou hors offre) n'est jamais activé gratuitement parce que le métier le prévoit.
+            $commercial = $m ? \App\Core\Modules\ModuleDependencyResolver::commercialStatus($key, $planKey ?? 'starter') : 'not_included';
             $class = match (true) {
                 ! $m || ! ModuleGate::isEnabledGlobally($key) => 'unavailable',
                 $e['reason'] === 'incompatible_jobdomain' => 'incompatible',
-                ! $e['entitled'] => 'paid_optional',
+                ! $e['entitled'], $commercial !== 'included' => 'paid_optional',
                 $e['source'] === 'core' => 'core',
                 default => 'included',
             };
@@ -201,6 +204,16 @@ final class VersionedCompanyInitializer
     private static function activateModules(Company $company, array $recommended): array
     {
         $classes = collect(self::classifyModules($recommended, (string) $company->jobdomain_key, $company->plan_key))->keyBy('key');
+        // ADR-821 : un module dont une dépendance n'est pas commercialement incluse n'est pas activé (jamais
+        // d'activation partielle, jamais une dépendance premium offerte).
+        $classes = $classes->map(function ($m) use ($company) {
+            if ($m['activated_at_creation'] && collect(\App\Core\Modules\ModuleDependencyResolver::requiresOf($m['key']))
+                ->contains(fn ($d) => \App\Core\Modules\ModuleDependencyResolver::commercialStatus($d, $company->plan_key ?? 'starter') !== 'included')) {
+                return ['activated_at_creation' => false, 'class' => 'dependency_not_covered'] + $m;
+            }
+
+            return $m;
+        });
         $activated = [];
         foreach ($classes->where('activated_at_creation', true) as $key => $m) {
             CompanyModuleActivationReason::firstOrCreate(['company_id' => $company->id, 'module_key' => $key, 'reason' => CompanyModuleActivationReason::REASON_DIRECT, 'source_module_key' => null]);

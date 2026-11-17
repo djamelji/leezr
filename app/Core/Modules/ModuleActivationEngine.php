@@ -83,7 +83,12 @@ class ModuleActivationEngine
             ];
         }
 
-        // Collect all transitive requires
+        // Collect all transitive requires (ADR-821 : résolution unique, cycles refusés)
+        $resolution = ModuleDependencyResolver::resolve([$key]);
+        if ($resolution['cycles'] !== [] || $resolution['unknown'] !== []) {
+            return ['success' => false, 'status' => 422, 'data' => ['message' => 'Module dependencies are inconsistent.',
+                'reason' => $resolution['cycles'] !== [] ? 'dependency_cycle' : 'unknown_module', 'missing' => $resolution['unknown']]];
+        }
         $allRequires = static::collectTransitiveRequires($key);
 
         // Check all requires are globally enabled + entitled
@@ -199,7 +204,7 @@ class ModuleActivationEngine
      *
      * @return array{success: bool, status: int, data: array}
      */
-    public static function disable(Company $company, string $key): array
+    public static function disable(Company $company, string $key, bool $cascade = false): array
     {
         $manifest = ModuleRegistry::definitions()[$key] ?? null;
 
@@ -219,9 +224,27 @@ class ModuleActivationEngine
             ];
         }
 
+        // ADR-821 : jamais un module actif privé d'une dépendance. Sans confirmation explicite de la cascade, refus
+        // expliqué (liste des modules qui en dépendent) ; avec cascade, les dépendants sont désactivés d'abord.
+        $dependents = ModuleDependencyResolver::activeDependents($company, $key);
+        if ($dependents !== [] && ! $cascade) {
+            return ['success' => false, 'status' => 409, 'data' => ['message' => 'Other active modules depend on this module.',
+                'reason' => 'has_dependents', 'dependents' => $dependents]];
+        }
+        if ($dependents !== []) {
+            foreach ($dependents as $dep) {
+                if ((ModuleRegistry::definitions()[$dep]->type ?? null) === 'core') {
+                    return ['success' => false, 'status' => 422, 'data' => ['message' => 'A core module depends on this module.', 'reason' => 'core_dependent', 'dependents' => [$dep]]];
+                }
+            }
+        }
+
         $deactivated = [];
 
-        DB::transaction(function () use ($company, $key, &$deactivated) {
+        DB::transaction(function () use ($company, $key, $dependents, &$deactivated) {
+            foreach ($dependents as $dep) {
+                static::removeReason($company, $dep, CompanyModuleActivationReason::REASON_DIRECT);
+            }
             // 1. Remove 'direct' reason for this module
             static::removeReason($company, $key, CompanyModuleActivationReason::REASON_DIRECT);
 
@@ -268,14 +291,7 @@ class ModuleActivationEngine
      */
     public static function collectTransitiveRequires(string $moduleKey): array
     {
-        $visited = [];
-
-        static::dfsRequires($moduleKey, $visited);
-
-        // Remove the module itself from the result
-        unset($visited[$moduleKey]);
-
-        return array_keys($visited);
+        return ModuleDependencyResolver::requiresOf($moduleKey); // ADR-821 : une seule résolution
     }
 
     /**
@@ -421,24 +437,6 @@ class ModuleActivationEngine
     /**
      * DFS traversal of requires graph.
      */
-    private static function dfsRequires(string $moduleKey, array &$visited): void
-    {
-        if (isset($visited[$moduleKey])) {
-            return; // Already visited (handles cycles gracefully)
-        }
-
-        $visited[$moduleKey] = true;
-
-        $manifest = ModuleRegistry::definitions()[$moduleKey] ?? null;
-
-        if (!$manifest || empty($manifest->requires)) {
-            return;
-        }
-
-        foreach ($manifest->requires as $reqKey) {
-            static::dfsRequires($reqKey, $visited);
-        }
-    }
 
     /**
      * ADR-168b: Auto-activate field definitions that are required_by_modules

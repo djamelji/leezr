@@ -41,6 +41,23 @@ class UpdateModuleConfigUseCase
             ]);
         }
 
+        // ADR-821 — cohérence commerciale des dépendances : un module inclus dans une offre exige que ses
+        // dépendances le soient aussi ; une dépendance premium ne devient jamais gratuite par accident. Seuls les
+        // NOUVEAUX écarts créés par cette modification sont refusés (l'existant reste signalé, non bloquant).
+        if (array_key_exists('min_plan_override', $validated) || array_key_exists('addon_pricing', $validated)) {
+            $override = [$key => [
+                'min_plan' => array_key_exists('min_plan_override', $validated) ? ($validated['min_plan_override'] ?? (\App\Core\Modules\ModuleRegistry::definitions()[$key]->minPlan ?? null)) : ($module->min_plan_override ?? (\App\Core\Modules\ModuleRegistry::definitions()[$key]->minPlan ?? null)),
+                'addon_pricing' => $proposedAddonPricing,
+            ]];
+            $sig = fn ($v) => $v['plan'].'|'.$v['module'].'|'.$v['dependency'];
+            $before = array_map($sig, \App\Core\Modules\ModuleDependencyResolver::planCoverage());
+            $new = array_values(array_filter(\App\Core\Modules\ModuleDependencyResolver::planCoverage($override), fn ($v) => ! in_array($sig($v), $before, true)));
+            if ($new !== []) {
+                throw ValidationException::withMessages(['min_plan_override' => [__('modules.dependency_not_covered', [
+                    'module' => $new[0]['module'], 'dependency' => $new[0]['dependency'], 'plan' => $new[0]['plan']])]]);
+            }
+        }
+
         $module->update($validated);
 
         return $module;

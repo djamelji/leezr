@@ -245,20 +245,22 @@ class ModuleDependencyTest extends TestCase
 
     public function test_engine_disable_direct_keeps_required_reason(): void
     {
-        // Enable shipments directly, then enable tracking (which also adds 'required' for shipments)
+        // ADR-821 : désactiver un module dont un autre module actif dépend est REFUSÉ (409, dépendants listés),
+        // jamais un faux succès ; avec cascade explicite, le dépendant puis le module sont désactivés.
         ModuleActivationEngine::enable($this->company, 'logistics_shipments');
         ModuleActivationEngine::enable($this->company, 'logistics_tracking');
 
-        // Disable shipments directly → 'direct' reason removed, but 'required' from tracking remains
-        ModuleActivationEngine::disable($this->company, 'logistics_shipments');
+        $refused = ModuleActivationEngine::disable($this->company, 'logistics_shipments');
+        $this->assertFalse($refused['success']);
+        $this->assertSame(409, $refused['status']);
+        $this->assertSame(['logistics_tracking'], $refused['data']['dependents']);
+        $this->assertTrue(ModuleGate::isActive($this->company, 'logistics_shipments'));
+        $this->assertContains('direct', array_column(ModuleActivationEngine::reasonsFor($this->company, 'logistics_shipments'), 'reason'), 'nothing removed when refused');
 
-        $this->assertTrue(ModuleGate::isActive($this->company, 'logistics_shipments'),
-            'Shipments should stay active because tracking still requires it');
-
-        $reasons = ModuleActivationEngine::reasonsFor($this->company, 'logistics_shipments');
-        $reasonTypes = array_column($reasons, 'reason');
-        $this->assertNotContains('direct', $reasonTypes);
-        $this->assertContains('required', $reasonTypes);
+        $cascade = ModuleActivationEngine::disable($this->company, 'logistics_shipments', true);
+        $this->assertTrue($cascade['success']);
+        $this->assertFalse(ModuleGate::isActive($this->company, 'logistics_tracking'));
+        $this->assertFalse(ModuleGate::isActive($this->company, 'logistics_shipments'));
     }
 
     public function test_engine_core_module_cannot_be_disabled(): void

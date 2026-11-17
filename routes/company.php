@@ -512,6 +512,8 @@ Route::middleware('company.access:use-module,core.modules')->group(function () {
         Route::post('/modules/{key}/setup/confirm', [$ms, 'confirm']);
         Route::get('/modules/{key}/deactivation-impact', [$ms, 'deactivationImpact']); // ADR-805
         // ADR-820 — besoins de données du module ↔ champs de la société (aucune copie, confirmation explicite)
+        // ADR-821 — aperçu de ce qu'une activation / désactivation entraîne (dépendances, droits commerciaux)
+        Route::get('/modules/{key}/activation-preview', [\App\Modules\Core\Modules\Http\ModuleDependencyController::class, 'activation']);
         $md = \App\Modules\Core\Modules\Http\ModuleDataNeedsController::class;
         Route::get('/modules/{key}/data-needs', [$md, 'show']);
         Route::put('/modules/{key}/data-needs/{need}', [$md, 'bind'])->where('need', '[a-z0-9_]+');

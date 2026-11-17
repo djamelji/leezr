@@ -99,7 +99,7 @@ class CompanyModuleController
     public function disable(Request $request, string $key): JsonResponse
     {
         $company = $request->attributes->get('company');
-        $result = ModuleActivationEngine::disable($company, $key);
+        $result = ModuleActivationEngine::disable($company, $key, $request->boolean('cascade')); // ADR-821 : cascade explicite
 
         if ($result['success']) {
             Log::info('module.disabled', [

@@ -33,6 +33,8 @@ class ModuleDeactivationPreviewController
         if (! $addon) {
             return response()->json([
                 'has_addon' => false,
+                // ADR-821 : modules actifs qui dépendent de celui-ci (désactivation refusée sans cascade explicite)
+                'dependents' => \App\Core\Modules\ModuleDependencyResolver::activeDependents($company, $key),
             ]);
         }
 
@@ -76,6 +78,7 @@ class ModuleDeactivationPreviewController
 
         return response()->json([
             'has_addon' => true,
+            'dependents' => \App\Core\Modules\ModuleDependencyResolver::activeDependents($company, $key), // ADR-821
             'timing' => $timing,
             'module_key' => $key,
             'currency' => $addon->currency,
