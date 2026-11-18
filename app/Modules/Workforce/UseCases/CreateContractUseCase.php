@@ -28,6 +28,15 @@ class CreateContractUseCase
         ?int $hourlyRateCents = null,
         ?int $dailyRateCents = null,
     ): EmploymentContract {
+        // ADR-826 : the work model is the source of truth ; an unknown model or a days-based package paid by the
+        // hour is refused here (readable 422 via the controller), never converted silently.
+        if (! in_array($workModelKey, EmploymentContract::WORK_MODELS, true)) {
+            throw new \DomainException("Unknown work model « {$workModelKey} ».");
+        }
+        if ($workModelKey === 'forfait_jours' && $compensationType === 'hourly') {
+            throw new \DomainException('A days-based package cannot be paid by the hour : choose a monthly or daily compensation.');
+        }
+
         return DB::transaction(function () use (
             $employee, $contractType, $workModelKey, $startDate,
             $weeklyHours, $endDate, $probationEndDate,

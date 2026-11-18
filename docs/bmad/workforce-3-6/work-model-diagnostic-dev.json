@@ -1,0 +1,21 @@
+{
+    "database": "leezr",
+    "mode": "diagnostic",
+    "batch": null,
+    "summary": {
+        "diagnostic_only": 1
+    },
+    "contracts": [
+        {
+            "company_id": 21,
+            "contract_id": 22,
+            "employee_id": 1234,
+            "contract_type": "cdi",
+            "status": "active",
+            "is_current": true,
+            "work_model_key": "on_site",
+            "hint": "value of the « work mode » field (place of work), not a working-time model : the real model must be confirmed by the company",
+            "action": "diagnostic_only"
+        }
+    ]
+}
