@@ -13,7 +13,7 @@ defineProps({
 
 const emit = defineEmits(['go', 'generate-contract', 'manage-access'])
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const store = usePersonStore()
 const { can } = useCan()
 
@@ -36,6 +36,33 @@ const steps = computed(() => {
   return list
 })
 const doneCount = computed(() => steps.value.filter(s => s.done).length)
+
+// ADR-822 — « Au quotidien » : une ligne par fonction RÉELLEMENT disponible (le serveur n'envoie
+// planning / time / leave / documents que si le module est actif ET la section autorisée).
+const has = key => (store.sections || []).includes(key)
+const hm = iso => (iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : '')
+const daily = computed(() => {
+  const e = emp.value
+  const rows = []
+  if (e?.planning !== undefined && has('planning'))
+    rows.push({ key: 'planning', icon: 'tabler-calendar-event', color: 'primary', title: t('personOverview.planning'),
+      value: e.planning ? `${formatDate(e.planning.date)} · ${hm(e.planning.start_at)}–${hm(e.planning.end_at)}` : t('personOverview.noShift') })
+  if (e?.time !== undefined && has('time'))
+    rows.push({ key: 'time', icon: 'tabler-clock', color: 'info', title: t('personOverview.time'),
+      value: e.time ? `${formatDate(e.time.date)} · ${t(`workforce.statuses.timeEntry.${e.time.status}`, e.time.status)}` : t('personOverview.noClock') })
+  if (e?.leave && has('leave')) {
+    const b = e.leave.balances?.[0]
+    rows.push({ key: 'leave', icon: 'tabler-beach', color: 'success', title: t('personOverview.leave'),
+      value: [b ? t('personOverview.balance', { type: b.type, days: (b.available_hundredths / 100).toLocaleString() }) : null,
+        e.leave.pending_requests ? t('personOverview.pending', { count: e.leave.pending_requests }) : null].filter(Boolean).join(' · ') || t('personOverview.noLeave'),
+      badge: e.leave.pending_requests || 0 })
+  }
+  if (e?.documents && has('documents'))
+    rows.push({ key: 'documents', icon: 'tabler-file-certificate', color: 'warning', title: t('personOverview.documents'), value: t('personOverview.docCount', { count: e.documents.count }) })
+
+  return rows
+})
+const contractStatus = st => (te('workforce.statuses.contract.' + st) ? t('workforce.statuses.contract.' + st) : st)
 </script>
 
 <template>
@@ -109,135 +136,190 @@ const doneCount = computed(() => steps.value.filter(s => s.done).length)
       </VCardText>
     </VCard>
 
-    <VRow class="card-grid card-grid-sm">
+    <VRow>
+      <!-- Emploi : poste métier, rattachement, contrat (les droits logiciels sont dans « Accès ») -->
       <VCol
         cols="12"
-        :md="emp ? 4 : 6"
+        md="7"
       >
-        <VCard variant="outlined">
-          <VCardText>
-            <div class="text-overline mb-2">
-              {{ t('people.tabs.access') }}
-            </div>
-            <VChip
-              :color="accountMeta.color"
-              variant="tonal"
-              size="small"
-              label
-              class="mb-2"
-            >
-              {{ accountMeta.label }}
-            </VChip>
-            <div
-              v-if="store.account.role"
-              class="text-body-2"
-            >
-              {{ store.account.role.name }}
-            </div>
-            <div
-              v-if="store.identity.login_email"
-              class="text-body-2 text-medium-emphasis text-truncate"
-            >
-              {{ store.identity.login_email }}
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-
-      <VCol
-        v-if="emp"
-        cols="12"
-        md="4"
-      >
-        <VCard variant="outlined">
-          <VCardText>
-            <div class="text-overline mb-2">
-              {{ t('employeeFile.tabs.contract') }}
-            </div>
-            <template v-if="contract">
-              <div>{{ t('employeeFile.contractType') }}: <strong>{{ contract.contract_type?.toUpperCase() }}</strong> ({{ te('workforce.statuses.contract.' + contract.status) ? t('workforce.statuses.contract.' + contract.status).toLowerCase() : contract.status }})</div>
-              <div>{{ t('employeeFile.weeklyHours') }}: {{ contract.weekly_hours }} h</div>
-              <div v-if="contract.convention">
-                {{ contract.convention }}
-              </div>
-              <div
-                v-if="contract.compensation && store.can.view_compensation"
-                class="d-flex align-center gap-1"
-                data-test="person-overview-salary"
+        <VCard
+          v-if="emp"
+          variant="outlined"
+          data-test="person-overview-employment"
+        >
+          <VCardItem>
+            <VCardTitle>{{ t('personOverview.employment') }}</VCardTitle>
+            <template #append>
+              <VBtn
+                v-if="has('employment')"
+                variant="text"
+                size="small"
+                @click="emit('go', 'employment')"
               >
-                {{ t('employeeFile.salary') }}:
+                {{ t('personOverview.seeAll') }}
+              </VBtn>
+            </template>
+          </VCardItem>
+          <VList
+            density="compact"
+            class="pt-0"
+          >
+            <VListItem prepend-icon="tabler-briefcase">
+              <VListItemSubtitle>{{ t('personOverview.position') }}</VListItemSubtitle>
+              <VListItemTitle>{{ emp.position?.job_role || t('personOverview.notSet') }}</VListItemTitle>
+            </VListItem>
+            <VListItem prepend-icon="tabler-sitemap">
+              <VListItemSubtitle>{{ t('personOverview.department') }}</VListItemSubtitle>
+              <VListItemTitle>
+                {{ emp.position?.department || t('personOverview.notSet') }}<span
+                  v-if="emp.position?.manager"
+                  class="text-medium-emphasis"
+                > · {{ t('personOverview.manager', { name: emp.position.manager }) }}</span>
+              </VListItemTitle>
+            </VListItem>
+            <VListItem prepend-icon="tabler-file-text">
+              <VListItemSubtitle>{{ t('employeeFile.tabs.contract') }}</VListItemSubtitle>
+              <VListItemTitle v-if="contract">
+                {{ contract.contract_type?.toUpperCase() }} · {{ contract.weekly_hours }} h / {{ t('personOverview.week') }}
+                <span v-if="contract.start_date"> · {{ t('personOverview.since', { date: formatDate(contract.start_date) }) }}</span>
+              </VListItemTitle>
+              <VListItemTitle
+                v-else
+                class="text-warning"
+              >
+                {{ t('employeeFile.noContract') }}
+              </VListItemTitle>
+              <template
+                v-if="contract"
+                #append
+              >
+                <VChip
+                  size="small"
+                  label
+                  :color="contract.status === 'active' ? 'success' : 'secondary'"
+                >
+                  {{ contractStatus(contract.status) }}
+                </VChip>
+              </template>
+            </VListItem>
+            <VListItem
+              v-if="contract?.compensation && store.can.view_compensation"
+              prepend-icon="tabler-coins"
+              data-test="person-overview-salary"
+            >
+              <VListItemSubtitle>{{ t('employeeFile.salary') }}</VListItemSubtitle>
+              <VListItemTitle class="d-flex align-center gap-1">
                 <MoneyDisplay
                   :amount="contract.compensation.base_salary_cents"
                   :currency="contract.compensation.currency || 'EUR'"
                   color="high-emphasis"
                 />
                 <span class="text-medium-emphasis">/ {{ te('employees.payFrequency.' + contract.compensation.pay_frequency) ? t('employees.payFrequency.' + contract.compensation.pay_frequency) : contract.compensation.pay_frequency }}</span>
-              </div>
-            </template>
-            <div
-              v-else
-              class="text-disabled"
-            >
-              {{ t('employeeFile.noContract') }}
-            </div>
-          </VCardText>
+              </VListItemTitle>
+            </VListItem>
+          </VList>
         </VCard>
-      </VCol>
 
-      <VCol
-        v-if="emp"
-        cols="12"
-        md="4"
-      >
-        <VCard variant="outlined">
-          <VCardText>
-            <div class="text-overline mb-2">
-              {{ t('employeeFile.situation') }}
-            </div>
-            <div v-if="emp.planning">
-              {{ t('employeeFile.nextShift') }}: {{ emp.planning.date ? formatDate(emp.planning.date) : '—' }}
-            </div>
-            <div v-if="emp.time">
-              {{ t('employeeFile.lastClock') }}: {{ emp.time.date ? formatDate(emp.time.date) : '—' }} ({{ t(`workforce.statuses.timeEntry.${emp.time.status}`, emp.time.status) }})
-            </div>
-            <div v-if="emp.leave">
-              {{ t('employeeFile.pendingLeave') }}: {{ emp.leave.pending_requests }}
-            </div>
-            <div v-if="emp.documents">
-              {{ t('employeeFile.tabs.documents') }}: {{ emp.documents.count }}
-            </div>
-            <div
-              v-if="!emp.planning && !emp.time && !emp.leave && !emp.documents"
-              class="text-disabled"
-            >
-              —
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-
-      <VCol
-        v-if="!emp && store.can.create_hr_record"
-        cols="12"
-        md="6"
-      >
-        <VCard variant="outlined">
-          <VCardText>
-            <div class="text-overline mb-2">
-              {{ t('people.hrLink.noRecordTitle') }}
-            </div>
-            <p class="text-body-2 text-medium-emphasis mb-3">
-              {{ t('people.hrLink.noRecordHint') }}
-            </p>
+        <VCard
+          v-else-if="store.can.create_hr_record"
+          variant="outlined"
+          data-test="person-overview-no-hr"
+        >
+          <VCardItem
+            :title="t('people.hrLink.noRecordTitle')"
+            :subtitle="t('people.hrLink.noRecordHint')"
+          />
+          <VCardActions class="px-6 pb-4">
             <VBtn
-              size="small"
               variant="tonal"
               prepend-icon="tabler-id-badge-2"
               @click="emit('go', 'create-hr')"
             >
               {{ t('people.hrLink.createTitle') }}
             </VBtn>
-          </VCardText>
+          </VCardActions>
+        </VCard>
+      </VCol>
+
+      <!-- Au quotidien + accès logiciel -->
+      <VCol
+        cols="12"
+        md="5"
+      >
+        <VCard
+          variant="outlined"
+          data-test="person-overview-daily"
+        >
+          <VCardItem :title="t('personOverview.daily')" />
+          <VList class="pt-0">
+            <VListItem
+              v-for="row in daily"
+              :key="row.key"
+              :data-test="`person-overview-${row.key}`"
+              @click="emit('go', row.key)"
+            >
+              <template #prepend>
+                <VAvatar
+                  :color="row.color"
+                  variant="tonal"
+                  rounded
+                  size="36"
+                  class="me-1"
+                >
+                  <VIcon
+                    :icon="row.icon"
+                    size="20"
+                  />
+                </VAvatar>
+              </template>
+              <VListItemTitle>{{ row.title }}</VListItemTitle>
+              <VListItemSubtitle>{{ row.value }}</VListItemSubtitle>
+              <template #append>
+                <VBadge
+                  v-if="row.badge"
+                  :content="row.badge"
+                  color="warning"
+                  inline
+                />
+                <VIcon
+                  icon="tabler-chevron-right"
+                  size="18"
+                  class="text-disabled"
+                />
+              </template>
+            </VListItem>
+            <VListItem
+              :data-test="'person-overview-access'"
+              @click="has('access') ? emit('go', 'access') : null"
+            >
+              <template #prepend>
+                <VAvatar
+                  :color="accountMeta.color"
+                  variant="tonal"
+                  rounded
+                  size="36"
+                  class="me-1"
+                >
+                  <VIcon
+                    icon="tabler-key"
+                    size="20"
+                  />
+                </VAvatar>
+              </template>
+              <VListItemTitle>{{ t('people.tabs.access') }}</VListItemTitle>
+              <VListItemSubtitle>{{ [accountMeta.label, store.account.role?.name].filter(Boolean).join(' · ') }}</VListItemSubtitle>
+              <template
+                v-if="has('access')"
+                #append
+              >
+                <VIcon
+                  icon="tabler-chevron-right"
+                  size="18"
+                  class="text-disabled"
+                />
+              </template>
+            </VListItem>
+          </VList>
         </VCard>
       </VCol>
     </VRow>

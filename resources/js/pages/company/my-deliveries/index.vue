@@ -1,184 +1,226 @@
 <script setup>
 import { formatDate } from '@/utils/datetime'
+import { useAuthStore } from '@/core/stores/auth'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations', permission: 'shipments.view_own' } })
 
 const { t } = useI18n()
 const deliveryStore = useDeliveryStore()
-const router = useRouter()
-
+const auth = useAuthStore()
 const isLoading = ref(true)
-const statusFilter = ref('')
+const loadError = ref(false)
+const statusFilter = ref('todo')
+const busy = ref(null)
+const message = ref(null)
 
-const headers = computed(() => [
-  { title: t('deliveries.reference'), key: 'reference' },
-  { title: t('common.status'), key: 'status', width: '140px' },
-  { title: t('deliveries.destination'), key: 'destination_address', sortable: false },
-  { title: t('deliveries.scheduled'), key: 'scheduled_at' },
-  { title: t('common.actions'), key: 'actions', align: 'center', width: '80px', sortable: false },
-])
-
-const statusOptions = computed(() => [
-  { title: t('deliveries.all'), value: '' },
-  { title: t('deliveries.statusPlanned'), value: 'planned' },
-  { title: t('deliveries.statusInTransit'), value: 'in_transit' },
-  { title: t('deliveries.statusDelivered'), value: 'delivered' },
-  { title: t('deliveries.statusCanceled'), value: 'canceled' },
-])
-
-const statusColor = status => {
-  const colors = {
-    draft: 'secondary',
-    planned: 'info',
-    in_transit: 'warning',
-    delivered: 'success',
-    canceled: 'error',
-  }
-
-  return colors[status] || 'secondary'
-}
-
-const statusLabel = status => {
-  const labels = {
-    draft: t('deliveries.statusDraft'),
-    planned: t('deliveries.statusPlanned'),
-    in_transit: t('deliveries.statusInTransit'),
-    delivered: t('deliveries.statusDelivered'),
-    canceled: t('deliveries.statusCanceled'),
-  }
-
-  return labels[status] || status
-}
-
-const truncate = (str, len = 40) => {
-  if (!str)
-    return '—'
-
-  return str.length > len ? `${str.substring(0, len)}...` : str
-}
+// ADR-822 — un livreur travaille depuis son téléphone : filtres en puces, une carte par livraison,
+// l'étape suivante directement sur la carte (même contrôle serveur : affectée à moi + manage_status).
+const FILTERS = ['todo', 'in_transit', 'delivered', 'all']
+const FILTER_STATUS = { todo: 'planned', in_transit: 'in_transit', delivered: 'delivered', all: undefined }
+const NEXT = { planned: { status: 'in_transit', icon: 'tabler-truck', color: 'warning', key: 'deliveries.startTransit' }, in_transit: { status: 'delivered', icon: 'tabler-check', color: 'success', key: 'deliveries.markDelivered' } }
+const canAct = computed(() => auth.hasPermission('shipments.manage_status'))
+const STATUS_COLOR = { draft: 'secondary', planned: 'info', in_transit: 'warning', delivered: 'success', canceled: 'error' }
+const STATUS_KEY = { draft: 'statusDraft', planned: 'statusPlanned', in_transit: 'statusInTransit', delivered: 'statusDelivered', canceled: 'statusCanceled' }
+const statusLabel = st => STATUS_KEY[st] ? t(`deliveries.${STATUS_KEY[st]}`) : st
 
 const loadDeliveries = async (page = 1) => {
   isLoading.value = true
+  loadError.value = false
   try {
-    await deliveryStore.fetchDeliveries({
-      page,
-      status: statusFilter.value || undefined,
-    })
+    await deliveryStore.fetchDeliveries({ page, status: FILTER_STATUS[statusFilter.value] })
   }
-  finally {
-    isLoading.value = false
+  catch { loadError.value = true }
+  finally { isLoading.value = false }
+}
+
+const advance = async d => {
+  const next = NEXT[d.status]
+  if (!next)
+    return
+  busy.value = d.id
+  message.value = null
+  try {
+    await deliveryStore.updateStatus(d.id, next.status)
+    message.value = { type: 'success', text: t('deliveries.statusChangedTo', { status: statusLabel(next.status) }) }
+    await loadDeliveries(deliveryStore.pagination.current_page)
   }
+  catch (e) { message.value = { type: 'error', text: e?.data?.message || t('deliveries.failedToChangeStatus') } }
+  finally { busy.value = null }
 }
 
 onMounted(() => loadDeliveries())
-
 watch(statusFilter, () => loadDeliveries(1))
-
-const onPageChange = page => {
-  loadDeliveries(page)
-}
 </script>
 
 <template>
   <div>
-    <VCard>
-      <VCardTitle class="d-flex align-center justify-space-between flex-wrap gap-4">
-        <div class="d-flex align-center gap-x-2">
-          <VIcon icon="tabler-truck-delivery" />
-          <span>{{ t('deliveries.title') }}</span>
-        </div>
-      </VCardTitle>
+    <div class="mb-6">
+      <h4 class="text-h4 mb-1">
+        {{ t('deliveries.title') }}
+      </h4>
+      <div class="text-body-1 text-medium-emphasis">
+        {{ t('deliveries.subtitle') }}
+      </div>
+    </div>
 
-      <VCardText>
-        <VRow class="mb-4">
-          <VCol
-            cols="12"
-            md="3"
-          >
-            <AppSelect
-              v-model="statusFilter"
-              :items="statusOptions"
-              :placeholder="t('deliveries.filterByStatus')"
-              clearable
-            />
-          </VCol>
-        </VRow>
-      </VCardText>
-
-      <VDataTable
-        :headers="headers"
-        :items="deliveryStore.deliveries"
-        :loading="isLoading"
-        :items-per-page="deliveryStore.pagination.per_page"
-        hide-default-footer
+    <VChipGroup
+      v-model="statusFilter"
+      mandatory
+      selected-class="text-primary"
+      class="mb-4"
+      data-test="deliveries-filter"
+    >
+      <VChip
+        v-for="f in FILTERS"
+        :key="f"
+        :value="f"
+        label
+        variant="tonal"
+        :data-test="`deliveries-filter-${f}`"
       >
-        <!-- Reference -->
-        <template #item.reference="{ item }">
-          <RouterLink
-            :to="{ name: 'company-my-deliveries-id', params: { id: item.id } }"
-            class="text-primary font-weight-medium"
-          >
-            {{ item.reference }}
-          </RouterLink>
-        </template>
+        {{ t(`deliveries.filter.${f}`) }}
+      </VChip>
+    </VChipGroup>
 
-        <!-- Status badge -->
-        <template #item.status="{ item }">
-          <VChip
-            :color="statusColor(item.status)"
-            size="small"
-          >
-            {{ statusLabel(item.status) }}
-          </VChip>
-        </template>
+    <VAlert
+      v-if="message"
+      :type="message.type"
+      variant="tonal"
+      closable
+      class="mb-4"
+      @click:close="message = null"
+    >
+      {{ message.text }}
+    </VAlert>
 
-        <!-- Destination -->
-        <template #item.destination_address="{ item }">
-          {{ truncate(item.destination_address) }}
-        </template>
+    <VProgressLinear
+      v-if="isLoading"
+      indeterminate
+      class="mb-4"
+    />
 
-        <!-- Scheduled at -->
-        <template #item.scheduled_at="{ item }">
-          {{ formatDate(item.scheduled_at) }}
-        </template>
+    <VAlert
+      v-else-if="loadError"
+      type="error"
+      variant="tonal"
+    >
+      {{ t('deliveries.loadError') }}
+      <template #append>
+        <VBtn
+          variant="text"
+          @click="loadDeliveries()"
+        >
+          {{ t('common.retry') }}
+        </VBtn>
+      </template>
+    </VAlert>
 
-        <!-- Actions -->
-        <template #item.actions="{ item }">
-          <VBtn
-            icon
-            size="small"
-            variant="text"
-            :to="{ name: 'company-my-deliveries-id', params: { id: item.id } }"
-          >
-            <VIcon icon="tabler-eye" />
-          </VBtn>
-        </template>
-
-        <!-- Empty state -->
-        <template #no-data>
-          <div class="text-center pa-4 text-disabled">
-            {{ t('deliveries.noDeliveries') }}
-          </div>
-        </template>
-
-        <!-- Pagination -->
-        <template #bottom>
-          <VDivider />
-          <div class="d-flex align-center justify-space-between flex-wrap gap-3 pa-4">
-            <span class="text-body-2 text-disabled">
-              {{ t('deliveries.deliveryCount', { count: deliveryStore.pagination.total }) }}
-            </span>
-            <VPagination
-              v-if="deliveryStore.pagination.last_page > 1"
-              :model-value="deliveryStore.pagination.current_page"
-              :length="deliveryStore.pagination.last_page"
-              :total-visible="5"
-              @update:model-value="onPageChange"
-            />
-          </div>
-        </template>
-      </VDataTable>
+    <VCard
+      v-else-if="!deliveryStore.deliveries.length"
+      class="text-center pa-8"
+      data-test="deliveries-empty"
+    >
+      <VAvatar
+        size="56"
+        color="primary"
+        variant="tonal"
+        class="mb-3"
+      >
+        <VIcon
+          icon="tabler-truck-delivery"
+          size="28"
+        />
+      </VAvatar>
+      <div class="text-h6 mb-1">
+        {{ t(`deliveries.empty.${statusFilter}`) }}
+      </div>
+      <div class="text-body-2 text-medium-emphasis">
+        {{ t('deliveries.emptyHint') }}
+      </div>
     </VCard>
+
+    <VRow v-else>
+      <VCol
+        v-for="d in deliveryStore.deliveries"
+        :key="d.id"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <VCard
+          class="h-100 d-flex flex-column"
+          :data-test="`delivery-card-${d.id}`"
+        >
+          <VCardItem>
+            <VCardTitle class="d-flex align-center gap-2">
+              <RouterLink
+                :to="{ name: 'company-my-deliveries-id', params: { id: d.id } }"
+                class="text-truncate text-high-emphasis"
+              >
+                {{ d.reference }}
+              </RouterLink>
+              <VSpacer />
+              <VChip
+                :color="STATUS_COLOR[d.status]"
+                size="small"
+                label
+              >
+                {{ statusLabel(d.status) }}
+              </VChip>
+            </VCardTitle>
+            <VCardSubtitle>
+              <VIcon
+                icon="tabler-calendar"
+                size="14"
+                class="me-1"
+              />{{ d.scheduled_at ? formatDate(d.scheduled_at) : t('shipments.notScheduled') }}
+            </VCardSubtitle>
+          </VCardItem>
+          <VCardText class="flex-grow-1">
+            <div class="d-flex gap-2 align-start">
+              <VIcon
+                icon="tabler-map-pin"
+                size="18"
+                color="success"
+              />
+              <span class="text-body-1">{{ d.destination_address || t('shipments.detail.notProvided') }}</span>
+            </div>
+          </VCardText>
+          <VCardActions class="px-4 pb-4">
+            <VBtn
+              variant="text"
+              :to="{ name: 'company-my-deliveries-id', params: { id: d.id } }"
+            >
+              {{ t('deliveries.open') }}
+            </VBtn>
+            <VSpacer />
+            <VBtn
+              v-if="canAct && NEXT[d.status]"
+              :color="NEXT[d.status].color"
+              variant="elevated"
+              :prepend-icon="NEXT[d.status].icon"
+              :loading="busy === d.id"
+              :data-test="`delivery-advance-${d.id}`"
+              @click="advance(d)"
+            >
+              {{ t(NEXT[d.status].key) }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VCol>
+    </VRow>
+
+    <div
+      v-if="deliveryStore.pagination.last_page > 1"
+      class="d-flex justify-center mt-6"
+    >
+      <VPagination
+        :model-value="deliveryStore.pagination.current_page"
+        :length="deliveryStore.pagination.last_page"
+        :total-visible="5"
+        @update:model-value="loadDeliveries"
+      />
+    </div>
   </div>
 </template>

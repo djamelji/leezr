@@ -104,6 +104,17 @@ onMounted(() => {
 
 // ── Stats ────────────────────────────────────────────────────
 const stats = computed(() => store.statistics)
+const payrollKpis = computed(() => {
+  const by = stats.value?.by_status || {}
+  const n = k => by[k]?.count ?? 0
+
+  return [
+    { key: 'total', icon: 'tabler-receipt', color: 'primary', value: stats.value?.total_runs ?? 0 },
+    { key: 'inProgress', icon: 'tabler-pencil', color: 'warning', value: n('draft') + n('computed') },
+    { key: 'validated', icon: 'tabler-circle-check', color: 'success', value: n('validated') },
+    { key: 'closed', icon: 'tabler-lock', color: 'info', value: n('exported') + n('closed') },
+  ]
+})
 
 // ── Format helpers ───────────────────────────────────────────
 const formatCents = cents => {
@@ -225,124 +236,43 @@ const goToRun = id => {
     <VWindow v-model="activeTab" :touch="false">
       <VWindowItem value="periods">
 
-    <!-- Stats Cards -->
-    <VRow
+    <!-- Stats — ADR-822 : bande compacte ; chaque période apparaît dans UN état (une période exportée
+         n'était comptée nulle part). -->
+    <VCard
       v-if="stats"
-      class="card-grid card-grid-xs mb-6"
+      class="mb-6"
+      data-test="payroll-stats"
     >
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-receipt"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('payroll.stats.totalRuns') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.total_runs ?? 0 }}
-              </div>
+      <div class="d-flex flex-wrap">
+        <div
+          v-for="(k, i) in payrollKpis"
+          :key="k.key"
+          class="d-flex align-center gap-3 pa-4 flex-grow-1"
+          :class="{ 'border-e': i < payrollKpis.length - 1 }"
+          style="min-inline-size: 150px;"
+        >
+          <VAvatar
+            :color="k.color"
+            variant="tonal"
+            rounded
+            size="34"
+          >
+            <VIcon
+              :icon="k.icon"
+              size="20"
+            />
+          </VAvatar>
+          <div>
+            <div class="text-h6 font-weight-medium">
+              {{ k.value }}
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="secondary"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-file-pencil"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('payroll.stats.draft') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.draft?.count ?? 0 }}
-              </div>
+            <div class="text-caption text-medium-emphasis text-no-wrap">
+              {{ $t(`payroll.kpi.${k.key}`) }}
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="info"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-calculator"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('payroll.stats.computed') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.computed?.count ?? 0 }}
-              </div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="success"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-circle-check"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('payroll.stats.validated') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.validated?.count ?? 0 }}
-              </div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
+          </div>
+        </div>
+      </div>
+    </VCard>
 
     <!-- Filters + Table -->
     <VCard>

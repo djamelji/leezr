@@ -117,6 +117,19 @@ class LeaveRequestReadModel
             ];
         }
 
+        // ADR-822 — « en attente » est une file de travail : toute demande à traiter compte, quelle que soit
+        // l'année de son début (une demande déposée pour l'an prochain était invisible dans le compteur).
+        $pending = LeaveRequest::withoutCompanyScope()
+            ->where('company_id', $companyId)
+            ->when($employeeIds !== null, fn ($q) => $q->whereIn('employee_id', $employeeIds))
+            ->where('status', LeaveRequest::STATUS_PENDING)
+            ->selectRaw('COUNT(*) as count, SUM(days_count_hundredths) as total_days')->first();
+        if ((int) ($pending->count ?? 0) > 0) {
+            $stats['pending'] = ['count' => (int) $pending->count, 'total_days_hundredths' => (int) $pending->total_days];
+        } else {
+            unset($stats['pending']);
+        }
+
         return $stats;
     }
 }

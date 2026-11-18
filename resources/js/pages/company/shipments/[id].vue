@@ -2,14 +2,12 @@
 import { formatDate } from '@/utils/datetime'
 import { $api } from '@/utils/api'
 import { useAuthStore } from '@/core/stores/auth'
-import { useMembersStore } from '@/modules/company/members/members.store'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
 
 definePage({ meta: { module: 'logistics_shipments', surface: 'operations', permission: 'shipments.view' } })
 
 const { t } = useI18n()
 const auth = useAuthStore()
-const membersStore = useMembersStore()
 const shipmentStore = useShipmentStore()
 const route = useRoute()
 const router = useRouter()
@@ -24,14 +22,22 @@ const successMessage = ref('')
 const canManage = computed(() => auth.hasPermission('shipments.manage_status'))
 const canAssign = computed(() => auth.hasPermission('shipments.assign'))
 
-const memberOptions = computed(() => {
-  return membersStore.members
-    .filter(m => !m._isProtected && m.company_role)
-    .map(m => ({
-      title: `${m.user.display_name} — ${m.company_role.name}`,
-      value: m.user.id,
-    }))
-})
+// ADR-822 — personnes affectables avec l'identifiant chauffeur lu dans le champ choisi par la société.
+// Une valeur manquante bloque SEULEMENT l'affectation de cette personne (contrôle serveur identique).
+const assignees = ref({ identifier_required: false, identifier_label: null, people: [] })
+const memberOptions = computed(() => assignees.value.people.map(p => ({
+  title: p.name,
+  value: p.user_id,
+  role: p.role,
+  identifier: p.driver_identifier,
+  props: { disabled: assignees.value.identifier_required && !p.driver_identifier },
+})))
+const STEPS = ['draft', 'planned', 'in_transit', 'delivered']
+const stepIndex = computed(() => STEPS.indexOf(shipment.value?.status))
+const STEP_ICON = { draft: 'tabler-pencil', planned: 'tabler-calendar-check', in_transit: 'tabler-truck', delivered: 'tabler-circle-check' }
+const forward = computed(() => availableTransitions.value.filter(tr => tr.status !== 'canceled'))
+const canCancel = computed(() => availableTransitions.value.some(tr => tr.status === 'canceled'))
+const confirmCancel = ref(false)
 
 const shipment = computed(() => shipmentStore.currentShipment)
 
@@ -121,9 +127,8 @@ onMounted(async () => {
   try {
     await shipmentStore.fetchShipment(route.params.id)
 
-    if (canAssign.value) {
-      await membersStore.fetchMembers()
-    }
+    if (canAssign.value)
+      assignees.value = await $api('/shipments/assignees').catch(() => assignees.value)
 
     // Init selected user from current assignment
     selectedUserId.value = shipmentStore.currentShipment?.assigned_to_user_id || null
@@ -248,207 +253,270 @@ const savePlan = async () => {
       <VAlert
         v-if="successMessage"
         type="success"
+        variant="tonal"
         class="mb-4"
         closable
         @click:close="successMessage = ''"
       >
         {{ successMessage }}
       </VAlert>
-
       <VAlert
         v-if="errorMessage"
         type="error"
+        variant="tonal"
         class="mb-4"
         closable
+        data-test="shipment-error"
         @click:close="errorMessage = ''"
       >
         {{ errorMessage }}
       </VAlert>
 
+      <!-- Avancement : où en est l'expédition, et l'étape suivante en un clic -->
+      <VCard
+        class="mb-6"
+        data-test="shipment-progress"
+      >
+        <VCardText>
+          <VAlert
+            v-if="shipment.status === 'canceled'"
+            type="error"
+            variant="tonal"
+            icon="tabler-ban"
+          >
+            {{ t('shipments.detail.canceled') }}
+          </VAlert>
+          <div
+            v-else
+            class="d-flex flex-wrap align-center gap-4"
+          >
+            <template
+              v-for="(st, i) in STEPS"
+              :key="st"
+            >
+              <div class="d-flex align-center gap-2">
+                <VAvatar
+                  size="34"
+                  :color="i <= stepIndex ? statusColor(st) : 'secondary'"
+                  :variant="i === stepIndex ? 'elevated' : 'tonal'"
+                >
+                  <VIcon
+                    :icon="STEP_ICON[st]"
+                    size="18"
+                  />
+                </VAvatar>
+                <span :class="i === stepIndex ? 'font-weight-medium text-high-emphasis' : 'text-medium-emphasis'">{{ statusLabel(st) }}</span>
+              </div>
+              <VIcon
+                v-if="i < STEPS.length - 1"
+                icon="tabler-chevron-right"
+                size="18"
+                class="text-disabled"
+              />
+            </template>
+          </div>
+        </VCardText>
+        <template v-if="canManage && (forward.length || canCancel)">
+          <VDivider />
+          <VCardActions class="flex-wrap gap-2 px-6 py-4">
+            <VBtn
+              v-for="tr in forward"
+              :key="tr.status"
+              :color="tr.color"
+              variant="elevated"
+              :prepend-icon="tr.icon"
+              :loading="isChangingStatus"
+              :data-test="`shipment-to-${tr.status}`"
+              @click="changeStatus(tr.status)"
+            >
+              {{ tr.label }}
+            </VBtn>
+            <VSpacer />
+            <VBtn
+              v-if="canCancel"
+              color="error"
+              variant="text"
+              prepend-icon="tabler-x"
+              data-test="shipment-cancel"
+              @click="confirmCancel = true"
+            >
+              {{ t('shipments.cancelShipment') }}
+            </VBtn>
+          </VCardActions>
+        </template>
+      </VCard>
+
       <VRow>
-        <!-- Shipment details -->
         <VCol
           cols="12"
-          md="8"
+          md="7"
         >
-          <VCard>
-            <VCardTitle>{{ t('shipments.shipmentDetails') }}</VCardTitle>
+          <VCard :title="t('shipments.detail.route')">
             <VCardText>
-              <VRow>
-                <VCol
-                  cols="12"
-                  md="6"
+              <VTimeline
+                side="end"
+                align="start"
+                density="compact"
+                truncate-line="both"
+                class="v-timeline-density-compact"
+              >
+                <VTimelineItem
+                  dot-color="primary"
+                  size="x-small"
                 >
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.reference') }}
-                  </div>
-                  <div class="text-body-1 font-weight-medium">
-                    {{ shipment.reference }}
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.scheduledDate') }}
-                  </div>
-                  <div class="text-body-1">
-                    {{ formatDate(shipment.scheduled_at) }}
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
+                  <div class="text-caption text-disabled">
                     {{ t('shipments.origin') }}
                   </div>
                   <div class="text-body-1">
-                    {{ shipment.origin_address || '—' }}
+                    {{ shipment.origin_address || t('shipments.detail.notProvided') }}
                   </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
+                </VTimelineItem>
+                <VTimelineItem
+                  dot-color="success"
+                  size="x-small"
                 >
-                  <div class="text-body-2 text-disabled mb-1">
+                  <div class="text-caption text-disabled">
                     {{ t('shipments.destination') }}
                   </div>
                   <div class="text-body-1">
-                    {{ shipment.destination_address || '—' }}
+                    {{ shipment.destination_address || t('shipments.detail.notProvided') }}
                   </div>
-                </VCol>
-
-                <VCol cols="12">
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.notes') }}
-                  </div>
-                  <div class="text-body-1">
-                    {{ shipment.notes || '—' }}
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.assignedTo') }}
-                  </div>
-                  <div class="text-body-1">
-                    <template v-if="shipment.assigned_to">
-                      {{ shipment.assigned_to.display_name }}
-                      <span
-                        v-if="shipment.driver_identifier"
-                        class="text-body-2 text-medium-emphasis"
-                      > · {{ shipment.driver_identifier }}</span>
-                    </template>
-                    <span
-                      v-else
-                      class="text-disabled"
-                    >{{ t('shipments.unassigned') }}</span>
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.createdBy') }}
-                  </div>
-                  <div class="text-body-1">
-                    <template v-if="shipment.created_by">
-                      {{ shipment.created_by.display_name }}
-                    </template>
-                    <span
-                      v-else
-                      class="text-disabled"
-                    >—</span>
-                  </div>
-                </VCol>
-
-                <VCol
-                  cols="12"
-                  md="6"
-                >
-                  <div class="text-body-2 text-disabled mb-1">
-                    {{ t('shipments.createdAt') }}
-                  </div>
-                  <div class="text-body-1">
-                    {{ formatDate(shipment.created_at) }}
-                  </div>
-                </VCol>
-              </VRow>
+                </VTimelineItem>
+              </VTimeline>
             </VCardText>
+            <VDivider />
+            <VList
+              density="compact"
+              class="py-2"
+            >
+              <VListItem prepend-icon="tabler-calendar">
+                <VListItemSubtitle>{{ t('shipments.scheduledDate') }}</VListItemSubtitle>
+                <VListItemTitle>{{ shipment.scheduled_at ? formatDate(shipment.scheduled_at) : t('shipments.notScheduled') }}</VListItemTitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-notes">
+                <VListItemSubtitle>{{ t('shipments.notes') }}</VListItemSubtitle>
+                <VListItemTitle class="text-wrap">
+                  {{ shipment.notes || '—' }}
+                </VListItemTitle>
+              </VListItem>
+              <VListItem prepend-icon="tabler-user-plus">
+                <VListItemSubtitle>{{ t('shipments.createdBy') }}</VListItemSubtitle>
+                <VListItemTitle>{{ shipment.created_by?.display_name || '—' }} · {{ formatDate(shipment.created_at) }}</VListItemTitle>
+              </VListItem>
+            </VList>
           </VCard>
         </VCol>
 
-        <!-- Status actions -->
         <VCol
           cols="12"
-          md="4"
+          md="5"
         >
-          <VCard>
-            <VCardTitle>{{ t('common.actions') }}</VCardTitle>
-            <VCardText>
-              <template v-if="canManage && availableTransitions.length">
-                <div class="d-flex flex-column gap-3">
-                  <VBtn
-                    v-for="transition in availableTransitions"
-                    :key="transition.status"
-                    v-can="'shipments.manage_status'"
-                    :color="transition.color"
-                    :prepend-icon="transition.icon"
-                    :loading="isChangingStatus"
-                    block
-                    @click="changeStatus(transition.status)"
-                  >
-                    {{ transition.label }}
-                  </VBtn>
-                </div>
-              </template>
-              <template v-else>
-                <div class="text-body-2 text-disabled text-center py-4">
-                  {{ t('shipments.noActionsAvailable') }}
-                </div>
-              </template>
-            </VCardText>
-          </VCard>
-
-          <!-- Assignment card -->
           <VCard
-            v-if="canAssign"
-            v-can="'shipments.assign'"
-            class="mt-4"
+            :title="t('shipments.detail.driver')"
+            data-test="shipment-driver"
           >
-            <VCardTitle>{{ t('shipments.assignment') }}</VCardTitle>
             <VCardText>
-              <AppSelect
-                v-model="selectedUserId"
-                :items="memberOptions"
-                :placeholder="t('shipments.selectMember')"
-                clearable
-                class="mb-3"
-              />
-              <VBtn
-                v-can="'shipments.assign'"
-                color="primary"
-                prepend-icon="tabler-user-check"
-                :loading="isAssigning"
-                block
-                @click="assignShipment"
+              <div
+                v-if="shipment.assigned_to"
+                class="d-flex align-center gap-3"
               >
-                {{ selectedUserId ? t('shipments.assign') : t('shipments.unassign') }}
-              </VBtn>
+                <VAvatar
+                  color="primary"
+                  variant="tonal"
+                >
+                  {{ (shipment.assigned_to.display_name || '?').slice(0, 2).toUpperCase() }}
+                </VAvatar>
+                <div>
+                  <div class="text-body-1 font-weight-medium">
+                    {{ shipment.assigned_to.display_name }}
+                  </div>
+                  <VChip
+                    v-if="shipment.driver_identifier"
+                    size="x-small"
+                    label
+                    color="info"
+                    variant="tonal"
+                    data-test="shipment-driver-identifier"
+                  >
+                    {{ shipment.driver_identifier }}
+                  </VChip>
+                </div>
+              </div>
+              <div
+                v-else
+                class="text-body-2 text-disabled"
+              >
+                {{ t('shipments.unassigned') }}
+              </div>
             </VCardText>
+
+            <template v-if="canAssign && !['delivered', 'canceled'].includes(shipment.status)">
+              <VDivider />
+              <VCardText>
+                <AppSelect
+                  v-model="selectedUserId"
+                  :items="memberOptions"
+                  :label="t('shipments.detail.assignTo')"
+                  :placeholder="t('shipments.selectMember')"
+                  clearable
+                  data-test="shipment-assignee"
+                >
+                  <template #item="{ props: itemProps, item }">
+                    <VListItem
+                      v-bind="itemProps"
+                      :subtitle="[item.raw.role, item.raw.identifier || (assignees.identifier_required ? t('shipments.detail.identifierMissing') : null)].filter(Boolean).join(' · ')"
+                    />
+                  </template>
+                </AppSelect>
+                <div
+                  v-if="assignees.identifier_required"
+                  class="text-caption text-medium-emphasis mt-2"
+                >
+                  {{ t('shipments.detail.identifierRule', { field: assignees.identifier_label }) }}
+                </div>
+                <VBtn
+                  class="mt-4"
+                  color="primary"
+                  prepend-icon="tabler-user-check"
+                  :loading="isAssigning"
+                  :disabled="selectedUserId === (shipment.assigned_to_user_id || null)"
+                  block
+                  data-test="shipment-assign"
+                  @click="assignShipment"
+                >
+                  {{ selectedUserId ? t('shipments.assign') : t('shipments.unassign') }}
+                </VBtn>
+              </VCardText>
+            </template>
           </VCard>
         </VCol>
       </VRow>
+
+      <VDialog
+        v-model="confirmCancel"
+        max-width="440"
+      >
+        <VCard :title="t('shipments.cancelShipment')">
+          <VCardText>{{ t('shipments.detail.cancelConfirm') }}</VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn
+              variant="text"
+              @click="confirmCancel = false"
+            >
+              {{ t('common.cancel') }}
+            </VBtn>
+            <VBtn
+              color="error"
+              variant="elevated"
+              data-test="shipment-cancel-confirm"
+              @click="confirmCancel = false; changeStatus('canceled')"
+            >
+              {{ t('shipments.cancelShipment') }}
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
     </template>
   </div>
 </template>

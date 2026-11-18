@@ -232,6 +232,39 @@ class Ux41LeaveBalanceScopeTest extends TestCase
         $this->stats($this->userWith(['workforce.view']))->assertForbidden();
     }
 
+    /** ADR-822 — « en attente » = file de travail : une demande déposée pour une année future est comptée. */
+    public function test_pending_counter_includes_requests_of_a_future_year(): void
+    {
+        $this->seedRequests();
+        LeaveRequest::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->stranger->id, 'leave_type_id' => $this->cp->id,
+            'date_from' => '2028-06-25', 'date_to' => '2028-06-27', 'days_count_hundredths' => 300, 'status' => 'pending',
+        ]);
+        $hr = $this->userWith(['workforce.leave_request', 'workforce.leave_view_all']);
+        $this->stats($hr)->assertOk()->assertJsonPath('pending.count', 3)->assertJsonPath('approved.count', 2);
+    }
+
+    /** ADR-822 — registre des contrats : même périmètre que la liste des salariés, jamais une autre société. */
+    public function test_contract_register_follows_the_employee_perimeter(): void
+    {
+        $get = fn (User $u, string $q = '') => $this->actingAs($u)->getJson('/api/workforce/contracts'.$q, ['X-Company-Id' => $this->company->id]);
+        $owner = $this->userWith([], null, 'owner');
+        $all = $get($owner)->assertOk();
+        $this->assertSame(3, $all->json('total'));
+        $this->assertNotContains($this->foreign->id, array_column($all->json('data'), 'employee_id'), 'never another company');
+        $this->assertSame(['active' => 3], $all->json('counts'));
+        $this->assertArrayNotHasKey('compensation_plans', $all->json('data.0'), 'no compensation in the register');
+
+        $mgr = $this->userWith(['workforce.view'], $this->manager);
+        $ids = array_column($get($mgr)->assertOk()->json('data'), 'employee_id');
+        sort($ids);
+        $this->assertSame([$this->manager->id, $this->report->id], $ids, 'self + direct reports only');
+
+        $this->assertSame(1, $get($owner, '?search=Remy')->json('total'));
+        $this->assertSame(0, $get($owner, '?status=draft')->json('total'));
+        $get($this->userWith(['workforce.leave_request']))->assertForbidden();
+    }
+
     public function test_statistics_never_count_another_company(): void
     {
         $this->seedRequests();

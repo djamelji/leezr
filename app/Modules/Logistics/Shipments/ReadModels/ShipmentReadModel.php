@@ -58,6 +58,42 @@ class ShipmentReadModel
     }
 
     /**
+     * ADR-822 — people who can receive a shipment, with the driver identifier the company bound to the module
+     * need (read, never copied). `identifier_required` is true only once the company bound the need : a missing
+     * value then blocks ONLY the assignment of that person (ModuleDataNeeds::assertAvailable), nothing else.
+     *
+     * @return array{identifier_required: bool, identifier_label: ?string, people: list<array{user_id: int, name: string, role: ?string, driver_identifier: ?string}>}
+     */
+    public static function assignees(Company $company): array
+    {
+        $needs = new \App\Core\Modules\Data\ModuleDataNeeds($company);
+        $mapping = $needs->mapping('logistics_shipments', 'driver_identifier');
+        $memberships = \App\Core\Models\Membership::where('company_id', $company->id)
+            ->with(['user:id,first_name,last_name,email', 'companyRole:id,name,is_administrative'])->get()
+            ->filter(fn ($m) => $m->user && $m->role !== 'owner');
+        $values = [];
+        if ($mapping) {
+            $field = \App\Core\Fields\FieldDefinition::find($mapping->field_definition_id);
+            $employees = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)
+                ->whereIn('user_id', $memberships->pluck('user_id'))->get();
+            $raw = $field && $employees->isNotEmpty() ? (new \App\Core\Fields\EmployeeFieldStore($company))->rawValues($employees, [$field->code]) : [];
+            foreach ($employees as $e) {
+                $v = $raw[$e->id][$field->code] ?? null;
+                $values[$e->user_id] = $v === null || $v === '' ? null : (string) $v;
+            }
+        }
+
+        return [
+            'identifier_required' => (bool) $mapping,
+            'identifier_label' => $mapping ? \App\Core\Fields\FieldDefinition::find($mapping->field_definition_id)?->resolvedLabel(app()->getLocale()) : null,
+            'people' => $memberships->map(fn ($m) => [
+                'user_id' => $m->user_id, 'name' => $m->user->display_name, 'role' => $m->companyRole?->name,
+                'driver_identifier' => $values[$m->user_id] ?? null,
+            ])->sortBy('name')->values()->all(),
+        ];
+    }
+
+    /**
      * Single shipment by ID, scoped to company.
      */
     public static function find(Company $company, int $id): Shipment

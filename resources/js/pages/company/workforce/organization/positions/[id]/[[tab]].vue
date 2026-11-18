@@ -130,6 +130,17 @@ const adopt = async () => {
   finally { adopting.value = false }
 }
 
+// ADR-822 — aperçu des exigences EFFECTIVES du poste (lecture du registre, aucune déduction côté client).
+const requirements = ref(null)
+const loadRequirements = async () => {
+  if (!canConfigure.value)
+    return
+  requirements.value = await $api('/workforce/requirements', { query: { scope: `job_role:${id.value}` } }).catch(() => null)
+}
+const reqList = kind => (requirements.value?.state?.[kind] || []).filter(r => r.state === 'required')
+  .map(r => (kind === 'documents' ? docLabel(r.code, r.label) : r.label))
+onMounted(() => { loadRequirements(); if (canDocs.value && !peopleLoaded.value) loadPeople() })
+
 watch(tab, v => {
   if (['people', 'fields', 'documents'].includes(v) && !peopleLoaded.value)
     loadPeople()
@@ -163,10 +174,61 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
     />
 
     <template v-else-if="position">
-      <AppPageHeader
-        :title="position.title"
-        :description="t('positions.subtitle')"
-      />
+      <div class="d-flex flex-wrap align-center gap-3 mb-1">
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          rounded
+          size="44"
+        >
+          <VIcon icon="tabler-briefcase" />
+        </VAvatar>
+        <div class="flex-grow-1">
+          <h4 class="text-h4">
+            {{ position.title }}
+          </h4>
+          <div class="d-flex flex-wrap gap-2 mt-1">
+            <VChip
+              v-if="position.department?.name"
+              size="small"
+              label
+              color="info"
+              variant="tonal"
+              prepend-icon="tabler-sitemap"
+            >
+              {{ position.department.name }}
+            </VChip>
+            <VChip
+              v-if="position.level"
+              size="small"
+              label
+              variant="tonal"
+            >
+              {{ position.level }}
+            </VChip>
+            <VChip
+              size="small"
+              label
+              variant="tonal"
+              prepend-icon="tabler-users"
+            >
+              {{ t('positions.peopleCount', { n: position.employees_count ?? 0 }) }}
+            </VChip>
+          </div>
+        </div>
+        <VBtn
+          v-if="canEditInfo && tab === 'overview' && !editing"
+          variant="tonal"
+          prepend-icon="tabler-edit"
+          data-test="position-edit"
+          @click="startEdit"
+        >
+          {{ t('common.edit') }}
+        </VBtn>
+      </div>
+      <p class="text-body-2 text-medium-emphasis mb-4">
+        {{ t('positions.subtitle') }}
+      </p>
 
       <VTabs
         v-model="tab"
@@ -210,25 +272,87 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
       <VWindow v-model="tab">
         <!-- Informations -->
         <VWindowItem value="overview">
-          <VCard>
-            <VCardText v-if="!editing">
-              <div class="d-flex flex-column gap-3">
-                <div><span class="text-medium-emphasis">{{ t('positions.fields.title') }} :</span> {{ position.title }}</div>
-                <div><span class="text-medium-emphasis">{{ t('positions.fields.department') }} :</span> {{ position.department?.name || '—' }}</div>
-                <div><span class="text-medium-emphasis">{{ t('positions.fields.level') }} :</span> {{ position.level || '—' }}</div>
-                <div><span class="text-medium-emphasis">{{ t('positions.fields.description') }} :</span> {{ position.description || '—' }}</div>
-              </div>
-              <VBtn
-                v-if="canEditInfo"
-                class="mt-4"
-                variant="tonal"
-                data-test="position-edit"
-                @click="startEdit"
+          <VRow v-if="!editing">
+            <VCol
+              cols="12"
+              md="6"
+            >
+              <VCard
+                :title="t('positions.fields.description')"
+                class="h-100"
               >
-                {{ t('common.edit') }}
-              </VBtn>
-            </VCardText>
-            <VCardText v-else>
+                <VCardText class="text-body-1">
+                  <span
+                    v-if="position.description"
+                    style="white-space: pre-line;"
+                  >{{ position.description }}</span>
+                  <span
+                    v-else
+                    class="text-disabled"
+                  >{{ t('positions.noDescription') }}</span>
+                </VCardText>
+              </VCard>
+            </VCol>
+            <VCol
+              v-if="canConfigure"
+              cols="12"
+              md="6"
+            >
+              <VCard
+                :title="t('positions.effective.title')"
+                :subtitle="t('positions.effective.subtitle')"
+                class="h-100"
+                data-test="position-effective"
+              >
+                <VCardText>
+                  <VAlert
+                    v-if="application && !authorityIsPosition"
+                    type="info"
+                    variant="tonal"
+                    density="compact"
+                    class="mb-4"
+                    data-test="position-authority-role"
+                  >
+                    {{ t('positions.effective.roleAuthority') }}
+                  </VAlert>
+                  <template
+                    v-for="kind in ['fields', 'documents']"
+                    :key="kind"
+                  >
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-body-2 font-weight-medium">{{ t(`positions.effective.${kind}`, { n: reqList(kind).length }) }}</span>
+                      <VBtn
+                        variant="text"
+                        size="small"
+                        :data-test="`position-effective-edit-${kind}`"
+                        @click="tab = kind"
+                      >
+                        {{ t('positions.effective.configure') }}
+                      </VBtn>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                      <VChip
+                        v-for="label in reqList(kind)"
+                        :key="label"
+                        size="small"
+                        label
+                        color="warning"
+                        variant="tonal"
+                      >
+                        {{ label }}
+                      </VChip>
+                      <span
+                        v-if="!reqList(kind).length"
+                        class="text-body-2 text-disabled"
+                      >{{ t('positions.effective.none') }}</span>
+                    </div>
+                  </template>
+                </VCardText>
+              </VCard>
+            </VCol>
+          </VRow>
+          <VCard v-else>
+            <VCardText>
               <VRow>
                 <VCol
                   cols="12"

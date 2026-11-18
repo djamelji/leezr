@@ -63,6 +63,19 @@ const preparation = computed(() => {
   return { step: '—', hint: '', color: 'secondary', icon: 'tabler-help' }
 })
 
+const anomalyGroups = computed(() => {
+  const groups = {}
+  for (const a of run.value?.anomalies || []) {
+    groups[a.type] ??= { type: a.type, severity: a.severity, names: [] }
+    if (a.severity === 'error')
+      groups[a.type].severity = 'error'
+    if (a.employee_name)
+      groups[a.type].names.push(a.employee_name)
+  }
+
+  return Object.values(groups)
+})
+
 // Per-employee preparation state (derived from line anomalies + run status).
 function lineReadiness(line) {
   const anomalies = line.anomalies ?? []
@@ -248,7 +261,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
             <h4 class="text-h4 font-weight-bold mb-1">{{ formatPeriod(run) }}</h4>
             <div class="d-flex align-center gap-3">
               <StatusChip domain="payrollRun" :status="run.status" />
-              <span class="text-body-2 text-medium-emphasis">{{ run.employee_count }} {{ $t('payroll.employees') }}</span>
+              <span class="text-body-2 text-medium-emphasis">{{ $t('payroll.employeeCount', { n: run.employee_count }, run.employee_count) }}</span>
             </div>
           </div>
           <!-- Workflow actions -->
@@ -350,13 +363,30 @@ onBeforeUnmount(() => store.clearCurrentRun())
       </VCol>
     </VRow>
 
-    <!-- E. Anomaly banner -->
-    <VAlert v-if="run.anomaly_count > 0 && run.anomalies?.length" type="warning" variant="tonal" class="mb-6" closable>
-      <VAlertTitle>{{ $t('payroll.anomalies.title') }}</VAlertTitle>
-      <div v-for="anomaly in run.anomalies" :key="`${anomaly.employee_id}-${anomaly.type}`" class="mt-1">
-        <VIcon :icon="anomaly.severity === 'error' ? 'tabler-alert-circle' : 'tabler-alert-triangle'" :color="anomaly.severity === 'error' ? 'error' : 'warning'" size="16" class="me-1" />
-        {{ $t(`payroll.anomalies.types.${anomaly.type}`, anomaly.type) }}
-        <span v-if="anomaly.employee_name" class="text-medium-emphasis">&mdash; {{ anomaly.employee_name }}</span>
+    <!-- E. Anomaly banner — ADR-822 : regroupées par type (une ligne par personne noyait la page) -->
+    <VAlert
+      v-if="run.anomaly_count > 0 && run.anomalies?.length"
+      type="warning"
+      variant="tonal"
+      class="mb-6"
+      data-test="payroll-anomalies"
+    >
+      <VAlertTitle class="mb-2">
+        {{ $t('payroll.anomalies.title') }}
+      </VAlertTitle>
+      <div
+        v-for="g in anomalyGroups"
+        :key="g.type"
+        class="mb-1"
+      >
+        <VIcon
+          :icon="g.severity === 'error' ? 'tabler-alert-circle' : 'tabler-alert-triangle'"
+          :color="g.severity === 'error' ? 'error' : 'warning'"
+          size="16"
+          class="me-1"
+        />
+        <strong>{{ $t(`payroll.anomalies.types.${g.type}`, g.type) }} ({{ g.names.length }})</strong>
+        <span class="text-medium-emphasis"> — {{ g.names.slice(0, 5).join(', ') }}<span v-if="g.names.length > 5">{{ $t('payroll.anomalies.andMore', { n: g.names.length - 5 }) }}</span></span>
       </div>
     </VAlert>
 

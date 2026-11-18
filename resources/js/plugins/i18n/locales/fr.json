@@ -216,7 +216,8 @@
       "company-catalogs": "Catalogues",
       "workforce-referrals": "Parrainages",
       "my-referrals": "Parrainage",
-      "settings-referrals": "Parrainage"
+      "settings-referrals": "Parrainage",
+      "workforce-contracts": "Contrats"
     }
   },
   "roles": {
@@ -4526,7 +4527,18 @@
     "planned": "Planification enregistrée.",
     "route": "Trajet",
     "notScheduled": "Non planifiée",
-    "listSubtitle": "Suivez vos expéditions, de la planification à la livraison."
+    "listSubtitle": "Suivez vos expéditions, de la planification à la livraison.",
+    "detail": {
+      "canceled": "Cette expédition a été annulée.",
+      "route": "Trajet",
+      "notProvided": "Non renseigné",
+      "driver": "Chauffeur",
+      "assignTo": "Affecter à",
+      "identifierMissing": "identifiant manquant",
+      "identifierRule": "Une personne sans « {field} » ne peut pas recevoir d'expédition : complétez sa fiche. Le reste du module reste utilisable.",
+      "cancelConfirm": "L'expédition sera annulée et ne pourra plus avancer. Confirmer ?",
+      "myIdentifier": "Mon identifiant chauffeur"
+    }
   },
   "deliveries": {
     "title": "Mes livraisons",
@@ -4552,7 +4564,23 @@
     "markDelivered": "Marquer comme livrée",
     "statusChangedTo": "Statut changé en « {status} ».",
     "failedToChangeStatus": "Échec du changement de statut.",
-    "all": "Toutes"
+    "all": "Toutes",
+    "subtitle": "Les livraisons qui vous sont confiées, avec l'étape suivante en un geste.",
+    "filter": {
+      "todo": "À faire",
+      "in_transit": "En cours",
+      "delivered": "Livrées",
+      "all": "Toutes"
+    },
+    "empty": {
+      "todo": "Aucune livraison à faire",
+      "in_transit": "Aucune livraison en cours",
+      "delivered": "Aucune livraison terminée",
+      "all": "Aucune livraison ne vous est confiée"
+    },
+    "emptyHint": "Les livraisons apparaissent ici dès qu'elles vous sont affectées.",
+    "loadError": "Impossible de charger vos livraisons.",
+    "open": "Détail"
   },
   "forbidden": {
     "title": "Accès refusé",
@@ -8431,7 +8459,8 @@
         "timesheet_has_errors": "Feuille de temps avec erreurs",
         "zero_worked_minutes": "Aucune heure travaillée",
         "compensation_gap": "Écart de rémunération"
-      }
+      },
+      "andMore": " et {n} autre(s)"
     },
     "lines": {
       "title": "Lignes de paie par employé",
@@ -8577,7 +8606,14 @@
     "tabs": {
       "periods": "Périodes",
       "declarations": "Déclarations (DSN)"
-    }
+    },
+    "kpi": {
+      "total": "Périodes",
+      "inProgress": "En préparation",
+      "validated": "Validées",
+      "closed": "Exportées"
+    },
+    "employeeCount": "{n} salarié | {n} salarié | {n} salariés"
   },
   "timeTracking": {
     "tabs": {
@@ -11254,7 +11290,14 @@
     },
     "effective": {
       "position": "Calcul effectif : par poste. Ces exigences s'appliquent aux nouvelles embauches et aux demandes que vous lancez. Les pièces déjà fournies et les demandes en cours ne changent pas.",
-      "role": "Calcul effectif : encore par rôle d'accès. Cette configuration est préparée : elle s'appliquera quand votre société calculera les pièces par poste (Réglages › Informations et documents demandés)."
+      "role": "Calcul effectif : encore par rôle d'accès. Cette configuration est préparée : elle s'appliquera quand votre société calculera les pièces par poste (Réglages › Informations et documents demandés).",
+      "title": "Exigences du poste",
+      "subtitle": "Ce qui est réellement demandé aux personnes de ce poste.",
+      "fields": "Champs exigés ({n})",
+      "documents": "Documents demandés ({n})",
+      "configure": "Configurer",
+      "none": "Aucune exigence",
+      "roleAuthority": "Votre société applique encore les exigences des rôles d’accès. Celles du poste s’appliqueront après la bascule (Réglages › Exigences) ; l’onglet « Historique et reprise » montre ce que les rôles demandent aujourd’hui."
     },
     "status": {
       "active": "Actif",
@@ -11276,7 +11319,9 @@
       "intro": "Les demandes suivantes vont être créées. Les pièces déjà fournies, prouvées ou demandées ne sont jamais redemandées ; les embauches en cours et les personnes sorties sont ignorées.",
       "confirm": "Créer les demandes",
       "done": "{n} demande(s) créée(s)."
-    }
+    },
+    "peopleCount": "{n} personne(s)",
+    "noDescription": "Aucune mission décrite. Modifiez le poste pour expliquer ce que fait la personne."
   },
   "hiring": {
     "title": "Embauches",
@@ -11849,5 +11894,48 @@
       "suspended": "Suspendue",
       "pending_payment": "Paiement en attente"
     }
+  },
+  "personOverview": {
+    "employment": "Emploi",
+    "seeAll": "Détails",
+    "position": "Poste métier",
+    "department": "Service",
+    "manager": "responsable : {name}",
+    "notSet": "Non renseigné",
+    "week": "semaine",
+    "since": "depuis le {date}",
+    "daily": "Au quotidien",
+    "planning": "Planning",
+    "noShift": "Aucun créneau à venir",
+    "time": "Dernier pointage",
+    "noClock": "Aucun pointage",
+    "leave": "Congés",
+    "balance": "{type} : {days} j disponibles",
+    "pending": "{count} demande(s) en attente",
+    "noLeave": "Aucun solde ni demande",
+    "documents": "Documents RH",
+    "docCount": "{count} document(s)"
+  },
+  "contractsRegister": {
+    "title": "Contrats de travail",
+    "subtitle": "Tous les contrats de votre périmètre, leur état et leurs échéances. Les actions se font sur la fiche du collaborateur.",
+    "templates": "Modèles de contrat",
+    "all": "Tous",
+    "endingSoon": "Fin dans 60 jours",
+    "search": "Rechercher une personne",
+    "loadError": "Impossible de charger les contrats.",
+    "col": {
+      "person": "Collaborateur",
+      "contract": "Contrat",
+      "period": "Période",
+      "status": "État"
+    },
+    "leftCompany": "A quitté l'entreprise",
+    "hours": "{h} h / semaine",
+    "noEnd": "sans terme",
+    "endsIn": "Se termine dans {n} jour(s)",
+    "probation": "Période d'essai jusqu'au {date}",
+    "empty": "Aucun contrat",
+    "emptyHint": "Créez un contrat depuis la fiche d'un collaborateur."
   }
 }

@@ -34,9 +34,12 @@ class MyDeliveryReadModel
      */
     public static function find(Company $company, int $userId, int $id): Shipment
     {
-        return Shipment::where('company_id', $company->id)
+        $shipment = Shipment::where('company_id', $company->id)
             ->where('assigned_to_user_id', $userId)
             ->with('createdBy:id,first_name,last_name')
             ->findOrFail($id);
+        ShipmentReadModel::withDriverIdentifier($company, [$shipment]); // ADR-822 : le livreur voit SON identifiant
+
+        return $shipment;
     }
 }

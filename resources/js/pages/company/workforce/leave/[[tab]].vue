@@ -607,75 +607,54 @@ watch(activeTab, tab => {
       <!-- TAB: DEMANDES                                          -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <VWindowItem value="requests">
-        <!-- Stats Row -->
-        <VRow class="card-grid card-grid-xs mb-6">
-          <VCol
-            cols="12"
-            md="4"
+        <!-- ADR-822 — indicateurs compacts et CLIQUABLES : un clic filtre la liste (la file « à traiter »
+             compte toutes les demandes en attente ; approuvées / refusées = année en cours). -->
+        <VCard
+          class="mb-6"
+          data-test="leave-stats"
+        >
+          <VRow
+            no-gutters
+            class="text-center"
           >
-            <VCard
-              variant="outlined"
-              class="text-center pa-4"
+            <VCol
+              v-for="st in [{ key: 'pending', n: pendingCount, color: 'warning', icon: 'tabler-hourglass' }, { key: 'approved', n: approvedCount, color: 'success', icon: 'tabler-check' }, { key: 'rejected', n: rejectedCount, color: 'error', icon: 'tabler-x' }]"
+              :key="st.key"
+              cols="4"
+              class="border-e"
             >
-              <VIcon
-                icon="tabler-clock"
-                size="32"
-                color="warning"
-                class="mb-2"
-              />
-              <div class="text-h5 font-weight-bold">
-                {{ pendingCount }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('leaves.stats.pending') }}
-              </div>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="12"
-            md="4"
-          >
-            <VCard
-              variant="outlined"
-              class="text-center pa-4"
-            >
-              <VIcon
-                icon="tabler-check"
-                size="32"
-                color="success"
-                class="mb-2"
-              />
-              <div class="text-h5 font-weight-bold">
-                {{ approvedCount }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('leaves.stats.approved') }}
-              </div>
-            </VCard>
-          </VCol>
-          <VCol
-            cols="12"
-            md="4"
-          >
-            <VCard
-              variant="outlined"
-              class="text-center pa-4"
-            >
-              <VIcon
-                icon="tabler-x"
-                size="32"
-                color="error"
-                class="mb-2"
-              />
-              <div class="text-h5 font-weight-bold">
-                {{ rejectedCount }}
-              </div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('leaves.stats.rejected') }}
-              </div>
-            </VCard>
-          </VCol>
-        </VRow>
+              <VBtn
+                variant="text"
+                block
+                height="auto"
+                class="py-4 rounded-0"
+                :color="statusFilter === st.key ? st.color : undefined"
+                :active="statusFilter === st.key"
+                :data-test="`leave-stat-${st.key}`"
+                @click="statusFilter = statusFilter === st.key ? null : st.key"
+              >
+                <div class="d-flex flex-column flex-sm-row align-center gap-2">
+                  <VAvatar
+                    :color="st.color"
+                    variant="tonal"
+                    rounded
+                    size="36"
+                  >
+                    <VIcon :icon="st.icon" />
+                  </VAvatar>
+                  <div class="text-sm-start">
+                    <div class="text-h5 font-weight-medium">
+                      {{ st.n }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis text-none">
+                      {{ $t(`leaves.stats.${st.key}`) }}<span v-if="st.key !== 'pending'"> · {{ new Date().getFullYear() }}</span>
+                    </div>
+                  </div>
+                </div>
+              </VBtn>
+            </VCol>
+          </VRow>
+        </VCard>
 
         <!-- Filters + Table -->
         <VCard>

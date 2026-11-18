@@ -14,6 +14,18 @@ use Illuminate\Http\Request;
 
 class ContractController extends Controller
 {
+    /** ADR-822 — company-wide contract register (read only, employee perimeter of the reader). */
+    public function register(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('company_id');
+        $visible = WorkforceAccess::hasViewAll($request, 'employee') ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
+        $filters = $request->only(['status', 'contract_type', 'search']) + ['ending_soon' => $request->boolean('ending_soon')];
+        $page = \App\Modules\Workforce\ReadModels\ContractRegisterReadModel::list($companyId, $visible, $filters, (int) $request->query('per_page', 20));
+
+        return response()->json(['data' => $page->items(), 'total' => $page->total(), 'current_page' => $page->currentPage(), 'last_page' => $page->lastPage(),
+            'counts' => \App\Modules\Workforce\ReadModels\ContractRegisterReadModel::counts($companyId, $visible)]);
+    }
+
     public function index(Request $request, int $employeeId): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');

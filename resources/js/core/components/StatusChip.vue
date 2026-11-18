@@ -92,6 +92,14 @@ const colorMaps = {
   },
 }
 
+// ADR-822 — libellé traduit quand il existe (`workforce.statuses.<domaine>.<statut>`), sinon le code.
+const { t, te } = useI18n()
+const label = computed(() => {
+  const key = `workforce.statuses.${props.domain}.${props.status}`
+
+  return te(key) ? t(key) : props.status
+})
+
 const chipColor = computed(() => {
   const map = colorMaps[props.domain] || colorMaps.subscription
 
@@ -105,6 +113,6 @@ const chipColor = computed(() => {
     :size
     variant="tonal"
   >
-    <slot>{{ status }}</slot>
+    <slot>{{ label }}</slot>
   </VChip>
 </template>

@@ -131,6 +131,22 @@ class Adr820ModuleDataMappingTest extends TestCase
         $this->as($this->owner)->postJson("/api/shipments/{$s->id}/assign", ['user_id' => $this->driverUser->id])->assertOk();
     }
 
+    /** ADR-822 — the assignment picker shows each person's identifier, read from the bound field (never copied). */
+    public function test_assignees_expose_the_bound_identifier_only_once_bound(): void
+    {
+        $free = $this->as($this->owner)->getJson('/api/shipments/assignees')->assertOk()->json();
+        $this->assertFalse($free['identifier_required'], 'unbound need : nobody is blocked');
+        $this->assertContains($this->driverUser->id, array_column($free['people'], 'user_id'));
+
+        $amzl = $this->customField('amzl_id', 'ID transporteur');
+        $this->as($this->owner)->putJson('/api/modules/logistics_shipments/data-needs/driver_identifier', ['field_definition_id' => $amzl->id])->assertOk();
+        $row = fn () => collect($this->as($this->owner)->getJson('/api/shipments/assignees')->assertOk()->json('people'))->firstWhere('user_id', $this->driverUser->id);
+        $this->assertNull($row()['driver_identifier'], 'missing value reported, not invented');
+        (new EmployeeFieldStore($this->c))->write($this->driver, ['amzl_id' => 'AMZ-7'], $this->owner, true);
+        $this->assertSame('AMZ-7', $row()['driver_identifier']);
+        $this->assertTrue($this->as($this->owner)->getJson('/api/shipments/assignees')->json('identifier_required'));
+    }
+
     public function test_incompatible_foreign_and_unauthorised_bindings_are_refused(): void
     {
         $date = $this->customField('start_day', 'Début', 'date');

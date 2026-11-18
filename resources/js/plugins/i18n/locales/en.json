@@ -216,7 +216,8 @@
       "company-catalogs": "Catalogues",
       "workforce-referrals": "Referrals",
       "my-referrals": "Referral",
-      "settings-referrals": "Referral"
+      "settings-referrals": "Referral",
+      "workforce-contracts": "Contracts"
     }
   },
   "roles": {
@@ -4526,7 +4527,18 @@
     "planned": "Planning saved.",
     "route": "Route",
     "notScheduled": "Not scheduled",
-    "listSubtitle": "Follow your shipments from planning to delivery."
+    "listSubtitle": "Follow your shipments from planning to delivery.",
+    "detail": {
+      "canceled": "This shipment was canceled.",
+      "route": "Route",
+      "notProvided": "Not provided",
+      "driver": "Driver",
+      "assignTo": "Assign to",
+      "identifierMissing": "identifier missing",
+      "identifierRule": "A person without “{field}” cannot receive a shipment: complete their file. The rest of the module stays available.",
+      "cancelConfirm": "The shipment will be canceled and cannot move forward again. Confirm?",
+      "myIdentifier": "My driver identifier"
+    }
   },
   "deliveries": {
     "title": "My Deliveries",
@@ -4552,7 +4564,23 @@
     "markDelivered": "Mark Delivered",
     "statusChangedTo": "Status changed to \"{status}\".",
     "failedToChangeStatus": "Failed to change status.",
-    "all": "All"
+    "all": "All",
+    "subtitle": "The deliveries entrusted to you, with the next step in one tap.",
+    "filter": {
+      "todo": "To do",
+      "in_transit": "In progress",
+      "delivered": "Delivered",
+      "all": "All"
+    },
+    "empty": {
+      "todo": "No delivery to do",
+      "in_transit": "No delivery in progress",
+      "delivered": "No completed delivery",
+      "all": "No delivery is assigned to you"
+    },
+    "emptyHint": "Deliveries show up here as soon as they are assigned to you.",
+    "loadError": "Your deliveries could not be loaded.",
+    "open": "Details"
   },
   "forbidden": {
     "title": "Access denied",
@@ -8431,7 +8459,8 @@
         "timesheet_has_errors": "Timesheet has errors",
         "zero_worked_minutes": "Zero worked hours",
         "compensation_gap": "Compensation gap"
-      }
+      },
+      "andMore": " and {n} more"
     },
     "lines": {
       "title": "Payroll Lines by Employee",
@@ -8577,7 +8606,14 @@
     "tabs": {
       "periods": "Periods",
       "declarations": "Declarations (DSN)"
-    }
+    },
+    "kpi": {
+      "total": "Periods",
+      "inProgress": "In preparation",
+      "validated": "Validated",
+      "closed": "Exported"
+    },
+    "employeeCount": "{n} employee | {n} employee | {n} employees"
   },
   "timeTracking": {
     "tabs": {
@@ -11254,7 +11290,14 @@
     },
     "effective": {
       "position": "Effective calculation: per position. These requirements apply to new hires and to the requests you launch. Documents already provided and pending requests do not change.",
-      "role": "Effective calculation: still per access role. This configuration is prepared: it will apply once your company computes documents per position (Settings › Requested information and documents)."
+      "role": "Effective calculation: still per access role. This configuration is prepared: it will apply once your company computes documents per position (Settings › Requested information and documents).",
+      "title": "Position requirements",
+      "subtitle": "What is actually asked of people in this position.",
+      "fields": "Required fields ({n})",
+      "documents": "Requested documents ({n})",
+      "configure": "Configure",
+      "none": "No requirement",
+      "roleAuthority": "Your company still applies the requirements of access roles. Position requirements apply after the switch (Settings › Requirements); the “History and takeover” tab shows what roles ask today."
     },
     "status": {
       "active": "Active",
@@ -11276,7 +11319,9 @@
       "intro": "The following requests will be created. Documents already provided, proven or requested are never asked again; ongoing hires and people who left are skipped.",
       "confirm": "Create the requests",
       "done": "{n} request(s) created."
-    }
+    },
+    "peopleCount": "{n} person(s)",
+    "noDescription": "No mission described. Edit the position to explain what the person does."
   },
   "hiring": {
     "title": "Hiring",
@@ -11849,5 +11894,48 @@
       "suspended": "Suspended",
       "pending_payment": "Payment pending"
     }
+  },
+  "personOverview": {
+    "employment": "Employment",
+    "seeAll": "Details",
+    "position": "Job position",
+    "department": "Department",
+    "manager": "manager: {name}",
+    "notSet": "Not set",
+    "week": "week",
+    "since": "since {date}",
+    "daily": "Day to day",
+    "planning": "Schedule",
+    "noShift": "No upcoming shift",
+    "time": "Last clock-in",
+    "noClock": "No clock-in yet",
+    "leave": "Leave",
+    "balance": "{type}: {days} days available",
+    "pending": "{count} pending request(s)",
+    "noLeave": "No balance or request",
+    "documents": "HR documents",
+    "docCount": "{count} document(s)"
+  },
+  "contractsRegister": {
+    "title": "Employment contracts",
+    "subtitle": "Every contract in your scope, its state and deadlines. Actions are done on the person's file.",
+    "templates": "Contract templates",
+    "all": "All",
+    "endingSoon": "Ending within 60 days",
+    "search": "Search a person",
+    "loadError": "Contracts could not be loaded.",
+    "col": {
+      "person": "Person",
+      "contract": "Contract",
+      "period": "Period",
+      "status": "State"
+    },
+    "leftCompany": "Has left the company",
+    "hours": "{h} h / week",
+    "noEnd": "open-ended",
+    "endsIn": "Ends in {n} day(s)",
+    "probation": "Probation until {date}",
+    "empty": "No contract",
+    "emptyHint": "Create a contract from a person's file."
   }
 }

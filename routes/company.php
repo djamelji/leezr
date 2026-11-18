@@ -540,6 +540,8 @@ Route::middleware('company.access:use-module,logistics_shipments')->group(functi
         ->middleware('company.access:use-permission,shipments.view');
     Route::post('/shipments', [ShipmentController::class, 'store'])
         ->middleware('company.access:use-permission,shipments.create');
+    Route::get('/shipments/assignees', [ShipmentController::class, 'assignees']) // ADR-822
+        ->middleware(['company.access:use-permission,shipments.view', 'company.access:use-permission,shipments.assign']);
     Route::get('/shipments/{id}', [ShipmentController::class, 'show'])
         ->middleware('company.access:use-permission,shipments.view');
     // ADR-806/807 — explicit server scopes. COLLECTIVE (any shipment of the company) = shipments.view + the
@@ -773,6 +775,7 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees/{id}/access/revoke', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'revokeAccess'])->whereNumber('id')->middleware($perm('members.manage'));
 
     // Contracts — view to read, contracts to create/activate
+    Route::get('contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'register'])->middleware($perm('workforce.view')); // ADR-822 : registre
     Route::get('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'index'])->middleware([$perm('workforce.view'), $employeeScope]);
     Route::post('employees/{employeeId}/contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'store'])->middleware($perm('workforce.contracts'));
     Route::post('employees/{employeeId}/contracts/{contractId}/activate', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'activate'])->middleware($perm('workforce.contracts'));

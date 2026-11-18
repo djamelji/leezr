@@ -41,6 +41,8 @@ class WorkforceModule implements ModuleDefinition
                     ['key' => 'workforce-people', 'title' => 'Collaborators', 'to' => ['name' => 'company-people'], 'icon' => 'tabler-users', 'permission' => 'workforce.view', 'surface' => 'hr', 'operationalOnly' => true, 'group' => 'team', 'sort' => 10],
                     // ADR-818 — « Embauches » : dossiers d'embauche (sur place ou à distance), progression, finalisation.
                     ['key' => 'workforce-hiring', 'title' => 'Hiring', 'to' => ['name' => 'company-workforce-hiring'], 'icon' => 'tabler-user-check', 'permission' => 'workforce.manage', 'surface' => 'hr', 'group' => 'team', 'sort' => 15],
+                    // ADR-822 — registre des contrats (lecture ; actions sur la fiche collaborateur).
+                    ['key' => 'workforce-contracts', 'title' => 'Employment contracts', 'to' => ['name' => 'company-workforce-contracts'], 'icon' => 'tabler-file-text', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'team', 'sort' => 16],
                     ['key' => 'workforce-time', 'title' => 'Time Tracking', 'to' => ['name' => 'company-workforce-time'], 'icon' => 'tabler-clock', 'permission' => 'workforce.timesheet_view', 'surface' => 'hr', 'group' => 'time', 'sort' => 20],
                     ['key' => 'workforce-organization', 'title' => 'Organization', 'to' => ['name' => 'company-workforce-organization-tab', 'params' => ['tab' => 'departments']], 'icon' => 'tabler-hierarchy-2', 'permission' => 'workforce.view', 'surface' => 'hr', 'group' => 'settings', 'sort' => 20, 'settings' => ['section' => 'organization', 'level' => 'essential']],
                     // ADR-639 (W-B) : « Paramètres RH » (hub agrégateur) remplace l'ancien lien « Configuration »

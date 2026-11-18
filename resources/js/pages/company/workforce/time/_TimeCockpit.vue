@@ -171,35 +171,44 @@ const submitCorrect = async () => {
       </VCardText>
     </VCard>
 
-    <!-- KPIs -->
-    <VRow class="card-grid card-grid-xs mb-4">
-      <VCol
-        v-for="k in visibleKpis"
-        :key="k.key"
-        cols="6"
-        sm="4"
-        md="3"
-      >
-        <VCard
-          :class="{ 'cursor-pointer': k.status !== null }"
+    <!-- KPIs — ADR-822 : une seule bande compacte (7 cartes empilées repoussaient le tableau sous la ligne
+         de flottaison) ; un indicateur lié à un statut reste cliquable et filtre le tableau. -->
+    <VCard
+      class="mb-4"
+      data-test="time-kpis"
+    >
+      <div class="d-flex flex-wrap">
+        <div
+          v-for="(k, i) in visibleKpis"
+          :key="k.key"
+          class="d-flex align-center gap-3 pa-4 flex-grow-1"
+          :class="[{ 'cursor-pointer': k.status !== null, 'border-e': i < visibleKpis.length - 1 }, statusFilter === k.status && k.status ? 'kpi-active' : '']"
+          style="min-inline-size: 150px;"
+          :data-test="`time-kpi-${k.key}`"
           @click="k.status !== null && applyKpi(k)"
         >
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar :color="k.color" variant="tonal" rounded size="40">
-              <VIcon :icon="k.icon" size="22" />
-            </VAvatar>
-            <div>
-              <div class="text-h5 font-weight-bold">
-                {{ k.value ?? 0 }}
-              </div>
-              <div class="text-caption text-medium-emphasis">
-                {{ t('timeCockpit.kpi.' + k.key) }}
-              </div>
+          <VAvatar
+            :color="k.color"
+            variant="tonal"
+            rounded
+            size="34"
+          >
+            <VIcon
+              :icon="k.icon"
+              size="20"
+            />
+          </VAvatar>
+          <div>
+            <div class="text-h6 font-weight-medium">
+              {{ k.value ?? 0 }}
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
+            <div class="text-caption text-medium-emphasis text-no-wrap">
+              {{ t('timeCockpit.kpi.' + k.key) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </VCard>
 
     <!-- Tableau opérationnel -->
     <VCard>
@@ -403,4 +412,8 @@ const submitCorrect = async () => {
   cursor: pointer;
   min-block-size: 56px; // cible tactile confortable (liste mobile)
 }
+</style>
+
+<style scoped>
+.kpi-active { background: rgba(var(--v-theme-primary), 0.08); }
 </style>

@@ -41,6 +41,12 @@ class ShipmentController
         ], 201);
     }
 
+    /** ADR-822 — assignable people with their driver identifier (read model only). */
+    public function assignees(Request $request): JsonResponse
+    {
+        return response()->json(ShipmentReadModel::assignees($request->attributes->get('company')));
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         $shipment = ShipmentReadModel::find(
