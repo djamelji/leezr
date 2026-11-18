@@ -90,8 +90,11 @@ const anomalyGroups = computed(() => {
     groups[a.type] ??= { type: a.type, severity: a.severity, names: [] }
     if (a.severity === 'error')
       groups[a.type].severity = 'error'
-    if (a.employee_name)
-      groups[a.type].names.push(a.employee_name)
+    if (a.employee_name) {
+      // ADR-825 : régime de travail du contrat affiché pour les salariés exclus (diagnostic, lecture seule)
+      const wm = store.currentRunSummary?.anomaly_work_models?.[a.employee_id]
+      groups[a.type].names.push(wm && wm !== 'horaire' ? `${a.employee_name} (${t(`payroll.workModel.${wm}`, wm)})` : a.employee_name)
+    }
   }
 
   return Object.values(groups)

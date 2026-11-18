@@ -55,6 +55,7 @@ class PayrollRunController extends Controller
             'run' => $run,
             'lines_summary' => PayrollLineReadModel::summary($run->id),
             'calculation_totals' => PayrollCalculationReadModel::runTotals($run->id),
+            'anomaly_work_models' => \App\Modules\Workforce\ReadModels\PayrollRunReadModel::anomalyWorkModels($run), // ADR-825 : diagnostic
         ], PayrollConfidentiality::canRead($request)));
     }
 

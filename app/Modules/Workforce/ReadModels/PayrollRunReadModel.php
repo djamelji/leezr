@@ -38,6 +38,22 @@ class PayrollRunReadModel
             ->first();
     }
 
+    /**
+     * ADR-825 — diagnostic only (read side, nothing computed) : the work model of the current contract of each
+     * employee named in the run anomalies, so HR sees WHY a person is excluded (e.g. a « forfait jours »
+     * contract without a locked timesheet). @return array<int, ?string> employee_id => work_model_key
+     */
+    public static function anomalyWorkModels(PayrollRun $run): array
+    {
+        $ids = collect($run->anomalies ?? [])->pluck('employee_id')->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        return \App\Core\Workforce\EmploymentContract::withoutGlobalScopes()->where('company_id', $run->company_id)
+            ->whereIn('employee_id', $ids)->where('is_current', true)->pluck('work_model_key', 'employee_id')->all();
+    }
+
     public static function statistics(int $companyId): array
     {
         $runs = PayrollRun::withoutGlobalScopes()

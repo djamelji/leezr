@@ -8630,7 +8630,12 @@
       "validated": "Validated",
       "closed": "Exported"
     },
-    "employeeCount": "{n} employee | {n} employee | {n} employees"
+    "employeeCount": "{n} employee | {n} employee | {n} employees",
+    "workModel": {
+      "horaire": "hourly",
+      "forfait_jours": "days-based package",
+      "forfait_heures": "hours-based package"
+    }
   },
   "timeTracking": {
     "tabs": {

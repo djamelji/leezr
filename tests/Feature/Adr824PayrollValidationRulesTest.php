@@ -135,4 +135,15 @@ class Adr824PayrollValidationRulesTest extends TestCase
         $this->expectException(\DomainException::class);
         app(ExportPayrollUseCase::class)->execute($this->makeRun(), $this->user->id);
     }
+
+    /** ADR-825 — diagnostic : the work model of each excluded employee is exposed (nothing computed). */
+    public function test_excluded_employees_expose_their_work_model(): void
+    {
+        \App\Core\Workforce\EmploymentContract::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id, 'employee_id' => $this->employee->id, 'contract_type' => 'cdi',
+            'work_model_key' => 'forfait_jours', 'status' => 'active', 'is_current' => true, 'start_date' => '2024-01-01', 'weekly_hours' => 35,
+        ]);
+        $run = $this->makeRun([['type' => PayrollRun::ANOMALY_MISSING_TIMESHEET, 'severity' => 'error', 'employee_id' => $this->employee->id]]);
+        $this->assertSame([$this->employee->id => 'forfait_jours'], \App\Modules\Workforce\ReadModels\PayrollRunReadModel::anomalyWorkModels($run));
+    }
 }

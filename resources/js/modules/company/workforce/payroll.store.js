@@ -69,6 +69,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
         this._currentRunSummary = {
           lines_summary: data.lines_summary ?? null,
           calculation_totals: data.calculation_totals ?? null,
+          anomaly_work_models: data.anomaly_work_models ?? {},
         }
 
         return data
