@@ -1,0 +1,62 @@
+{
+ "api": {
+  "/my-deliveries": {
+   "s": 200,
+   "n": 8
+  },
+  "/company/members": {
+   "s": 403,
+   "n": null
+  },
+  "/company/people": {
+   "s": 403,
+   "n": null
+  },
+  "/company/documents": {
+   "s": 403,
+   "n": null
+  },
+  "/company/documents/compliance": {
+   "s": 403,
+   "n": null
+  },
+  "/company": {
+   "s": 200,
+   "n": null
+  },
+  "/company/settings": {
+   "s": 404,
+   "n": null
+  },
+  "inter-tenant /my-deliveries (company 1)": {
+   "s": 403,
+   "n": null
+  },
+  "inter-tenant /company/members (company 1)": {
+   "s": 403,
+   "n": null
+  }
+ },
+ "pages": {
+  "/company/deliveries": {
+   "url": "/company/deliveries",
+   "refused": false
+  },
+  "/company/people": {
+   "url": "/company/403",
+   "refused": true
+  },
+  "/company/profile/overview": {
+   "url": "/company/403",
+   "refused": true
+  },
+  "/company/settings": {
+   "url": "/company/settings",
+   "refused": false
+  },
+  "/company/documents/vault": {
+   "url": "/company/403",
+   "refused": true
+  }
+ }
+}

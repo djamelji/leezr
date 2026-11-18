@@ -29308,3 +29308,32 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Recette 37/37 ; 6 tests de règles de paie.
 - E2E comparés au code de fin de 3.3 : aucune régression.
 - Remédiation chauffeur préparée, non appliquée.
+
+## ADR-825 — Leezr 3.5 : remédiation contrôlée des rôles chauffeur, panneaux pilotés par l'adresse, matrice des modèles de temps
+
+**Date** : 2026-11-18 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-COMPANY-3-5-FINAL.md`
+
+**Contexte**
+- L'audit ADR-824 a relevé des rôles chauffeur historiques porteurs de `members.view`, `settings.view` et `documents.view`.
+- Plusieurs panneaux ouverts par l'adresse se perdaient.
+- Les modèles de temps de travail n'étaient pas cartographiés.
+- Des E2E historiques échouaient.
+
+**Décisions**
+- Commande `rbac:driver-role-remediate` :
+  - simulation par défaut ;
+  - `--apply` exige `--confirm-database` ;
+  - une transaction par rôle, audit avec numéro de lot, reprise sûre ;
+  - restauration par lot ;
+  - rôles personnalisés sautés sauf `--role` ;
+  - les droits de livraison ne sont jamais retirés.
+- Simulée sur DEV (rien écrit). Appliquée et restaurée uniquement sur le clone `leezr_audit821`, sociétés fictives 109 et 110. **Aucune exécution réelle** sans décision.
+- `useAsyncAction` avec `immediate` démarre en chargement. Les panneaux ouverts par l'adresse portent `disable-route-watcher`, et un identifiant inconnu est retiré de l'adresse. Concerne Campagnes, ligne de paie et Parrainage.
+- Le modèle de temps reste sans effet sur le calcul. Seul un diagnostic est ajouté : le régime des salariés exclus d'une période (`anomaly_work_models`). La matrice et les décisions D-1 à D-6 sont dans `company-3-5/WORKFORCE-WORK-MODEL-MATRIX.md`.
+- E2E historiques réalignés sur le produit (fiche unifiée, laboratoire dev-only, format des durées, palette repliée), sans assertion relâchée.
+
+**Conséquences**
+- Chauffeur 109 du clone, après remédiation : livraisons 200, annuaire et documents 403, isolation entre sociétés intacte.
+- E2E historiques : 18 réussis, 2 sautés, 0 échec.
+- PHPUnit : 4714 réussis, 12 sautés, 3 échecs antérieurs (`ControllerSizeInvariant`, contrôleurs non touchés). Build propre.
+- En attente de décision : D-1 à D-9, dont la remédiation réelle (D-8) et le bouton Précédent sur les panneaux (D-7).

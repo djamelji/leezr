@@ -1,0 +1,55 @@
+{
+    "database": "leezr_audit821",
+    "mode": "apply",
+    "batch": "drv-20261118062828-txjo2k",
+    "summary": {
+        "applied": 1,
+        "skipped_customised": 1
+    },
+    "roles": [
+        {
+            "company_id": 109,
+            "role_id": 199,
+            "members": 1,
+            "remove": [
+                "members.view",
+                "settings.view",
+                "documents.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "applied"
+        },
+        {
+            "company_id": 110,
+            "role_id": 201,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view",
+                "documents.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 1,
+            "status": "skipped_customised"
+        }
+    ]
+}
