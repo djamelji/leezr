@@ -1,0 +1,144 @@
+// ADR-829 — SSE recette on the ISOLATED bench mirroring Valet (nginx 8827 + php-fpm pm.max_children=5,
+// clone leezr_audit821, REALTIME_MAX_CONCURRENT_STREAMS=1 (D-19), stream 20 s, heartbeat 2 s, Redis prefix
+// leezr829-). Temporary : not part of the regular suite (copy kept in docs/bmad/leezr-3-9/sse/).
+import { expect, test } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
+import { loginCompany } from './helpers.js'
+
+const PWD = 'Audit821!x'
+const REF = { Referer: 'http://127.0.0.1:8827/' }
+const redis = k => (execFileSync('redis-cli', ['get', `leezr829-leezr:realtime:stream:count:${k}`], { encoding: 'utf8' }).trim() || '0')
+const counters = () => ({ streams: redis('streams'), users: redis('global') })
+const fpm = () => {
+  const s = execFileSync('curl', ['-s', 'http://127.0.0.1:8827/fpm-status'], { encoding: 'utf8' })
+  const g = k => Number((s.match(new RegExp(`^${k}:\\s+(\\d+)`, 'm')) || [])[1])
+
+  return { active: g('active processes'), idle: g('idle processes'), max_active: g('max active processes'), max_children_reached: g('max children reached') }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+test('D-19 / D-20 : 5 tabs, cap 1, fallback, recovery to SSE, 401/403, network loss, company switch, session end', async ({ browser, playwright }) => {
+  test.setTimeout(900_000)
+  const log = []
+  const t0 = Date.now()
+  const report = {}
+  const now = () => Math.round((Date.now() - t0) / 100) / 10
+  const dump = () => writeFileSync(process.env.SSE_REPORT || '/tmp/adr829-sse.json', JSON.stringify({ ...report, timeline: log }, null, 1))
+  const track = (page, label) => page.on('response', r => {
+    if (r.url().includes('/realtime/stream')) log.push({ t: now(), page: label, status: r.status(), company: new URL(r.url()).searchParams.get('company_id') })
+  })
+  const st = (label, after = -1) => log.filter(e => e.page === label && e.t > after).map(e => e.status)
+  const until = async (cond, max) => { const s = Date.now(); while (Date.now() - s < max) { if (cond()) return Date.now() - s; await sleep(250) } return null }
+
+  // S0 — no session : 401 JSON, never the HTML login
+  const anon = await playwright.request.newContext({ baseURL: 'http://127.0.0.1:8827' })
+  const r0 = await anon.get('/api/realtime/stream?company_id=109', { headers: { Accept: 'text/event-stream' }, maxRedirects: 0 })
+  report.s0_unauthenticated = { status: r0.status(), type: r0.headers()['content-type'] }; dump()
+  expect(r0.status()).toBe(401)
+  await anon.dispose()
+
+  // S1 — first tab streams
+  const ctxA = await browser.newContext()
+  const tabs = []
+  const open = async label => { const p = await ctxA.newPage(); track(p, label); tabs.push([label, p]); return p }
+  const a1 = await open('A1')
+  await loginCompany(a1, 'fondatrice.51718@example.test', PWD)
+  await until(() => st('A1').includes(200), 10000)
+  report.s1_first_tab = { a1: st('A1'), counters: counters(), fpm: fpm() }; dump()
+  expect(counters().streams).toBe('1')
+
+  // S2 — 4 more tabs : 429 x3 each then polling ; the application stays usable (5 workers, 1 held)
+  for (const l of ['A2', 'A3', 'A4', 'A5']) {
+    const p = await open(l)
+    await p.goto('/dashboard')
+    await p.evaluate(() => { window.__noReload = true })
+  }
+  await sleep(9000)
+  const tFallback = now()
+  const lat = []
+  for (let i = 0; i < 12; i++) {
+    const s = Date.now()
+    const r = await a1.request.get('/api/nav', { headers: { Accept: 'application/json', 'X-Company-Id': '109', ...REF } })
+    lat.push([r.status(), Date.now() - s])
+  }
+  const nav = (await a1.request.get('/dashboard', { headers: { Accept: 'text/html' } })).status() // full SPA document, no extra tab
+  report.s2_five_tabs = { per_tab: Object.fromEntries(tabs.map(([l]) => [l, st(l)])), counters: counters(), fpm: fpm(),
+    api_nav_while_saturated: { statuses: [...new Set(lat.map(x => x[0]))], max_ms: Math.max(...lat.map(x => x[1])), avg_ms: Math.round(lat.reduce((a, x) => a + x[1], 0) / lat.length) },
+    full_page_navigation_status: nav }
+  dump()
+  expect(counters().streams).toBe('1')
+  expect(lat.every(x => x[0] === 200)).toBe(true)
+
+  // S3 — no reconnection loop : nothing for ~24 s after the fallback, then at most one attempt per tab per period
+  await sleep(20000)
+  const quiet = ['A2', 'A3', 'A4', 'A5'].map(l => st(l, tFallback + 1).length)
+  report.s3_no_loop = { attempts_in_20s_after_fallback: quiet }; dump()
+  expect(quiet.every(n => n === 0)).toBe(true)
+
+  // S4 — close the streaming tab : one capped tab recovers SSE WITHOUT reload, the others keep polling
+  const tClose = now()
+  await a1.close()
+  const recovered = await until(() => ['A2', 'A3', 'A4', 'A5'].some(l => st(l, tClose).includes(200)), 90000)
+  await sleep(3000)
+  const who = ['A2', 'A3', 'A4', 'A5'].filter(l => st(l, tClose).includes(200))
+  const noReload = await Promise.all(tabs.filter(([l]) => who.includes(l)).map(([, p]) => p.evaluate(() => window.__noReload === true)))
+  report.s4_recovery = { recovered_after_ms: recovered, recovered_tabs: who, without_reload: noReload,
+    attempts_since_close: Object.fromEntries(['A2', 'A3', 'A4', 'A5'].map(l => [l, st(l, tClose)])), counters: counters() }
+  dump()
+  expect(recovered).not.toBeNull()
+  expect(noReload.every(Boolean)).toBe(true)
+  expect(counters().streams).toBe('1')
+
+  // S5 — authenticated, other tenant : 403
+  const pA2 = tabs.find(([l]) => l === 'A2')[1]
+  report.s5_other_tenant = (await pA2.request.get('/api/realtime/stream?company_id=1', { headers: { Accept: 'text/event-stream', ...REF }, maxRedirects: 0 })).status(); dump()
+  expect(report.s5_other_tenant).toBe(403)
+
+  // S6 — network loss (whole context offline 8 s) : the stream comes back by itself
+  const tOff = now()
+  await ctxA.setOffline(true)
+  await sleep(8000)
+  await ctxA.setOffline(false)
+  const back = await until(() => ['A2', 'A3', 'A4', 'A5'].some(l => st(l, tOff + 8).includes(200)), 120000)
+  report.s6_network_loss = { back_after_ms_from_online: back, attempts: Object.fromEntries(['A2', 'A3', 'A4', 'A5'].map(l => [l, st(l, tOff)])), counters: counters() }; dump()
+  expect(back).not.toBeNull()
+
+  // S9a — all of context A closed : counters back to zero
+  await ctxA.close()
+  report.s9a_closed = { released_after_ms: await until(() => counters().streams === '0', 20000), counters: counters() }; dump()
+  expect(counters().streams).toBe('0')
+
+  // S7 — company switch (owner of 6 companies on the clone) : the stream follows the company
+  const ctxB = await browser.newContext()
+  const b = await ctxB.newPage(); track(b, 'B')
+  await loginCompany(b, 'owner@leezr.test', PWD)
+  await until(() => st('B').includes(200), 10000)
+  const firstCompany = log.filter(e => e.page === 'B' && e.status === 200).at(-1)?.company
+  const target = firstCompany === '2' ? '1' : '2'
+  const tSwitch = now()
+  // No company switcher is mounted in the UI (CompanySwitcher.vue is orphan) : reproduce exactly what
+  // auth.switchCompany does — persist the currentCompanyId cookie — then the reload it triggers.
+  await ctxB.addCookies([{ name: 'currentCompanyId', value: target, url: 'http://127.0.0.1:8827' }])
+  await b.reload()
+  await until(() => log.some(e => e.page === 'B' && e.t > tSwitch && e.status === 200), 20000)
+  const after = log.filter(e => e.page === 'B' && e.t > tSwitch)
+  report.s7_company_switch = { from: firstCompany, to: target, after, counters: counters() }; dump()
+  expect(after.filter(e => e.status === 200).map(e => e.company)).toContain(target)
+  expect(counters().streams).toBe('1')
+
+  // S8 — session ends while streaming : reconnection refused (401), the tab leaves for the login page, no loop
+  const xsrf = decodeURIComponent((await ctxB.cookies()).find(c => c.name === 'XSRF-TOKEN')?.value || '')
+  const logout = await b.request.post('/api/logout', { headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', ...REF } })
+  const tOut = now()
+  await sleep(75000)
+  report.s8_session_end = { logout: logout.status(), after: log.filter(e => e.page === 'B' && e.t > tOut), url: b.url(), counters: counters() }; dump()
+  expect(log.filter(e => e.page === 'B' && e.t > tOut && e.status === 200)).toHaveLength(0)
+
+  // S9 — everything closed : zero streams, zero users
+  await ctxB.close()
+  report.s9_all_closed = { released_after_ms: await until(() => counters().streams === '0' && counters().users === '0', 25000), counters: counters(), fpm: fpm(),
+    keys: execFileSync('redis-cli', ['--scan', '--pattern', 'leezr829-leezr:realtime:stream:*'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean) }
+  dump()
+  expect(counters().streams).toBe('0')
+})

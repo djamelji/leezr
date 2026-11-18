@@ -29422,3 +29422,21 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Aucune spec ne peut plus écrire hors d'un clone marqué par les commandes artisan. Un accès direct par PDO à une autre base reste hors de portée du garde (risque résiduel documenté).
 - Le nettoyage de fixtures sur le DEV reste possible, mais seulement de façon explicite, en nommant la base réellement connectée.
 - Les vérifications de production ne sont pas réalisées, faute d'accès en lecture seule autorisé. Les commandes sont fournies dans `docs/bmad/leezr-3-8/PRODUCTION-READONLY-CHECKS.md`.
+
+## ADR-829 — Leezr 3.9 : SSE sans saturation du DEV, reprise SSE après repli, 401 JSON, mode dégradé, E2E réalignées, relances différées démontrées
+
+**Date** : 2026-11-18
+**Contexte** : la 3.8 a montré que le DEV local (Valet, `pm.max_children = 5`) devient indisponible quand plusieurs onglets ouvrent chacun un flux SSE, qu'un client passé au polling ne revenait jamais au SSE sans rechargement, qu'un flux sans session recevait un 302 vers la page de connexion HTML, et que 14 specs E2E de recette échouaient sans lien avec le garde. Elle a aussi verrouillé `--async` billing faute de consommateur et de garantie sur les relances.
+**Décision** :
+- **D-19 — plafond DEV local** : `REALTIME_MAX_CONCURRENT_STREAMS=1` dans le `.env` local seulement (non versionné, jamais une valeur de production). `phpunit.xml` force 0 : une politique de poste n'est jamais une condition de test.
+- **D-20 — client** : après 3 échecs (2 s, 4 s), repli sur le polling ; puis **une** tentative SSE à la fois, backoff borné avec jitter (30 s, 60 s, 120 s, 240 s, puis 300 s, ±20 %), jamais pendant qu'un onglet est caché, jamais si la session ou la société ont changé (`canRecover`) ; retour au SSE sans rechargement dès qu'un flux est accepté. Un flux perdu réactive le polling (`onDisconnected`). Tous les timers et l'écouteur de visibilité sont libérés à la déconnexion. Garantie testée par `tests/js/realtime-client.test.mjs` (`pnpm test:js`).
+- **D-20 — statuts** : toute route `/api/*` répond en JSON quel que soit l'en-tête `Accept` (`shouldRenderJsonWhen`) : 401 sans session, 403 sans droit sur la société, 429 au plafond. Aucune page HTML n'est renvoyée à un client API.
+- **Mode dégradé** : avec `REALTIME_DRIVER` différent de `sse`, l'endpoint répond 204 immédiatement (aucun worker occupé, aucun compteur) ; le client se replie sur le polling et ne sonde qu'avec le backoff borné. C'est le repli explicite de production tant que le pool PHP-FPM et le proxy ne sont pas vérifiés (D-10), sans nouveau mécanisme de configuration.
+- **D-21 — E2E** : chaque échec a été rattaché à sa cause ; aucune assertion métier affaiblie. Les specs suivent les parcours actuels (JobDomain en 3 sections, familles avancées, modules en filtres, onglets de temps dans le chemin, tiroir actif), ciblent des modules réellement vendables (`logistics_tracking` est `preview` depuis ADR-732), préparent leur propre état (`e2e:setup-two-companies`, solde de congés, journée de pointage restée ouverte) et le restaurent. Deux options ajoutées à des commandes protégées existantes : `e2e:reset-clock-day --clear-open-days`, `e2e:prepare-leave-fixture --key`. `clickAndExpectApi` accepte `urlPath` (chemin exact).
+- **D-17 — relances différées** : défaut démontré, non corrigé dans le code de production. Un `ProcessDunningBatchJob` consommé en retard ou livré deux fois refait une tentative alors que `next_retry_at` a déjà été repoussé (3 tentatives en 1 jour au lieu de 1, 3, 7 jours → irrécouvrable et suspension anticipées). Correctif **préparé** (`docs/bmad/leezr-3-9/billing/`), validé puis retiré ; `--async` reste verrouillé.
+
+**Conséquences** :
+- Avec 5 onglets sur un pool de 5 workers, l'application reste utilisable (1 worker tenu, API à 50 ms en moyenne) ; les onglets excédentaires passent au polling sans boucle.
+- Après un rechargement, l'ancien flux occupe la place jusqu'au battement suivant (30 s par défaut sur le DEV) : avec un plafond de 1, l'onglet rechargé peut rester en polling jusqu'à la tentative de reprise suivante.
+- Une session expirée n'est pas redirigée vers la connexion par le polling (comportement antérieur) ; les sondes SSE restent bornées.
+- La production n'est toujours pas vérifiée (D-11) : aucune valeur de plafond n'est proposée sans le relevé du pool.

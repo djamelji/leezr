@@ -1,0 +1,33 @@
+{
+    "tool": "restore-company1-april2026",
+    "mode": "restore",
+    "apply": false,
+    "checks": [
+        "schema identical to the verified rows"
+    ],
+    "conflicts": [],
+    "target": {
+        "d": "leezr",
+        "u": "3e824880-f953-11f0-82c3-5c060a208435",
+        "h": "192.168.11.107"
+    },
+    "state": {
+        "restored_rows_present": {
+            "workforce_timesheet_periods": false,
+            "workforce_payroll_runs": false,
+            "workforce_payroll_lines": false,
+            "workforce_payroll_calculations": false,
+            "workforce_payroll_ytd_snapshots": false
+        },
+        "sheet_143": {
+            "state": "as_created_by_incident",
+            "dependents": 0
+        }
+    },
+    "result": "would_restore",
+    "plan": [
+        "backup then delete sheet 143 (the incident copy, unchanged)",
+        "insert timesheet 17, run 11, line 9, calculation 9, ytd snapshot 9 (verified rows)",
+        "verify every row hash, commit"
+    ]
+}

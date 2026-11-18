@@ -1,0 +1,350 @@
+{
+ "s0_unauthenticated": {
+  "status": 401,
+  "type": "application/json"
+ },
+ "s1_first_tab": {
+  "a1": [
+   200
+  ],
+  "counters": {
+   "streams": "1",
+   "users": "1"
+  },
+  "fpm": {
+   "active": 2,
+   "idle": 3,
+   "max_active": 5,
+   "max_children_reached": 0
+  }
+ },
+ "s2_five_tabs": {
+  "per_tab": {
+   "A1": [
+    200
+   ],
+   "A2": [
+    429,
+    429,
+    429
+   ],
+   "A3": [
+    429,
+    429,
+    429
+   ],
+   "A4": [
+    429,
+    429,
+    429
+   ],
+   "A5": [
+    429,
+    429,
+    429
+   ]
+  },
+  "counters": {
+   "streams": "1",
+   "users": "1"
+  },
+  "fpm": {
+   "active": 2,
+   "idle": 3,
+   "max_active": 5,
+   "max_children_reached": 0
+  },
+  "api_nav_while_saturated": {
+   "statuses": [
+    200
+   ],
+   "max_ms": 98,
+   "avg_ms": 50
+  },
+  "full_page_navigation_status": 200
+ },
+ "s3_no_loop": {
+  "attempts_in_20s_after_fallback": [
+   0,
+   0,
+   0,
+   0
+  ]
+ },
+ "s4_recovery": {
+  "recovered_after_ms": 4029,
+  "recovered_tabs": [
+   "A5"
+  ],
+  "without_reload": [
+   true
+  ],
+  "attempts_since_close": {
+   "A2": [
+    429
+   ],
+   "A3": [],
+   "A4": [
+    429
+   ],
+   "A5": [
+    200
+   ]
+  },
+  "counters": {
+   "streams": "1",
+   "users": "1"
+  }
+ },
+ "s5_other_tenant": 403,
+ "s6_network_loss": {
+  "back_after_ms_from_online": 11086,
+  "attempts": {
+   "A2": [],
+   "A3": [],
+   "A4": [],
+   "A5": [
+    200
+   ]
+  },
+  "counters": {
+   "streams": "1",
+   "users": "1"
+  }
+ },
+ "s9a_closed": {
+  "released_after_ms": 4826,
+  "counters": {
+   "streams": "0",
+   "users": "0"
+  }
+ },
+ "s7_company_switch": {
+  "from": "1",
+  "to": "2",
+  "after": [
+   {
+    "t": 67.4,
+    "page": "B",
+    "status": 429,
+    "company": "2"
+   },
+   {
+    "t": 69.5,
+    "page": "B",
+    "status": 429,
+    "company": "2"
+   },
+   {
+    "t": 73.5,
+    "page": "B",
+    "status": 200,
+    "company": "2"
+   }
+  ],
+  "counters": {
+   "streams": "1",
+   "users": "1"
+  }
+ },
+ "s8_session_end": {
+  "logout": 200,
+  "after": [
+   {
+    "t": 95.6,
+    "page": "B",
+    "status": 401,
+    "company": "2"
+   },
+   {
+    "t": 99.6,
+    "page": "B",
+    "status": 401,
+    "company": "2"
+   },
+   {
+    "t": 126,
+    "page": "B",
+    "status": 401,
+    "company": "2"
+   }
+  ],
+  "url": "http://127.0.0.1:8827/home",
+  "counters": {
+   "streams": "0",
+   "users": "0"
+  }
+ },
+ "s9_all_closed": {
+  "released_after_ms": 30,
+  "counters": {
+   "streams": "0",
+   "users": "0"
+  },
+  "fpm": {
+   "active": 1,
+   "idle": 4,
+   "max_active": 5,
+   "max_children_reached": 0
+  },
+  "keys": [
+   "leezr829-leezr:realtime:stream:count:1",
+   "leezr829-leezr:realtime:stream:count:2",
+   "leezr829-leezr:realtime:stream:count:109",
+   "leezr829-leezr:realtime:stream:count:streams",
+   "leezr829-leezr:realtime:stream:count:global"
+  ]
+ },
+ "timeline": [
+  {
+   "t": 1.8,
+   "page": "A1",
+   "status": 200,
+   "company": "109"
+  },
+  {
+   "t": 3.5,
+   "page": "A2",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 3.7,
+   "page": "A3",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 4,
+   "page": "A4",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 4.1,
+   "page": "A5",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 5.5,
+   "page": "A2",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 5.7,
+   "page": "A3",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 6,
+   "page": "A4",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 6.2,
+   "page": "A5",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 9.6,
+   "page": "A2",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 9.8,
+   "page": "A3",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 10.1,
+   "page": "A4",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 10.2,
+   "page": "A5",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 23.8,
+   "page": "A1",
+   "status": 200,
+   "company": "109"
+  },
+  {
+   "t": 35.5,
+   "page": "A2",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 37.1,
+   "page": "A5",
+   "status": 200,
+   "company": "109"
+  },
+  {
+   "t": 38.5,
+   "page": "A4",
+   "status": 429,
+   "company": "109"
+  },
+  {
+   "t": 59.2,
+   "page": "A5",
+   "status": 200,
+   "company": "109"
+  },
+  {
+   "t": 65.9,
+   "page": "B",
+   "status": 200,
+   "company": "1"
+  },
+  {
+   "t": 67.4,
+   "page": "B",
+   "status": 429,
+   "company": "2"
+  },
+  {
+   "t": 69.5,
+   "page": "B",
+   "status": 429,
+   "company": "2"
+  },
+  {
+   "t": 73.5,
+   "page": "B",
+   "status": 200,
+   "company": "2"
+  },
+  {
+   "t": 95.6,
+   "page": "B",
+   "status": 401,
+   "company": "2"
+  },
+  {
+   "t": 99.6,
+   "page": "B",
+   "status": 401,
+   "company": "2"
+  },
+  {
+   "t": 126,
+   "page": "B",
+   "status": 401,
+   "company": "2"
+  }
+ ]
+}
