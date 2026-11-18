@@ -1,0 +1,14 @@
+<?php
+// ADR-830 recette : one queue worker delivering the dunning job ; the provider is SIMULATED (slow decline, no network)
+$id = (int) getenv('RC_INVOICE'); $log = getenv('RC_LOG');
+app()->instance(App\Core\Billing\Adapters\StripePaymentAdapter::class, new class($log) extends App\Core\Billing\Adapters\StripePaymentAdapter {
+    public function __construct(private string $log) {}
+    public function chargeInvoiceWithPaymentMethod(App\Core\Billing\Invoice $invoice, string $pm, ?int $amount = null): array {
+        file_put_contents($this->log, getmypid().' charge '.$invoice->id.' '.microtime(true)."\n", FILE_APPEND); usleep(2500000);
+        return ['status' => 'failed', 'error' => 'card_declined (simulated)'];
+    }
+});
+$until = (float) getenv('RC_START'); while (microtime(true) < $until) usleep(2000);
+(new App\Jobs\Billing\ProcessDunningBatchJob(collect([$id])))->handle();
+$i = App\Core\Billing\Invoice::withoutGlobalScopes()->find($id);
+echo getmypid()." done retry_count={$i->retry_count} next={$i->next_retry_at}\n";

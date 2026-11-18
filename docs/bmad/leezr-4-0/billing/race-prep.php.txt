@@ -1,0 +1,9 @@
+<?php
+// ADR-830 recette : FICTIVE company + overdue invoice due now, with a fake saved card (clone only)
+use App\Core\Billing\{InvoiceIssuer, Subscription, CompanyPaymentProfile};
+$c = App\Core\Models\Company::create(['name' => 'RC830 Fictive '.uniqid(), 'slug' => 'rc830-'.uniqid(), 'plan_key' => 'pro', 'status' => 'active', 'jobdomain_key' => 'logistique', 'market_key' => 'FR']);
+$s = Subscription::create(['company_id' => $c->id, 'plan_key' => 'pro', 'interval' => 'monthly', 'status' => 'past_due', 'current_period_start' => now()->subMonth(), 'current_period_end' => now()]);
+$i = InvoiceIssuer::createDraft($c, $s->id); InvoiceIssuer::addLine($i, 'plan', 'Pro plan', 2900); $i = InvoiceIssuer::finalize($i);
+$i->update(['status' => 'overdue', 'due_at' => now()->subDays(10), 'retry_count' => 0, 'next_retry_at' => now()->subHour()]);
+CompanyPaymentProfile::create(['company_id' => $c->id, 'provider_key' => 'stripe', 'method_key' => 'card', 'provider_payment_method_id' => 'pm_fake_rc830', 'label' => 'Fake', 'is_default' => true]);
+echo "INVOICE={$i->id}\n";

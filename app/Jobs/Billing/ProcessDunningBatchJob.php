@@ -52,7 +52,9 @@ class ProcessDunningBatchJob implements ShouldQueue
             }
 
             try {
-                CompanyContext::runFor($invoice->company_id, fn () => DunningEngine::retrySingleInvoice($invoice));
+                // ADR-830 : same guarded path as the scheduled scan — claim + due date re-checked ; a late,
+                // redelivered or concurrent job makes no attempt (it used to call the admin retry, schedule-blind).
+                CompanyContext::runFor($invoice->company_id, fn () => DunningEngine::retryIfDue($invoice, 'job'));
             } catch (\Throwable $e) {
                 Log::channel('billing')->error('[dunning-job] Failed to retry invoice', [
                     'invoice_id' => $invoiceId,
