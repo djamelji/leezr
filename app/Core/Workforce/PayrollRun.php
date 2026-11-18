@@ -44,6 +44,14 @@ class PayrollRun extends Model
     const ANOMALY_ZERO_BASE_SALARY = 'zero_base_salary';
     const ANOMALY_INVALID_WEEKLY_HOURS = 'invalid_weekly_hours';
 
+    // ADR-826 — exclusions decided by the work model (WorkModelPayrollGuard) : never a silent wrong result
+    const ANOMALY_WORK_MODEL_UNKNOWN = 'work_model_unknown';
+    const ANOMALY_WORK_MODEL_TRACKING_UNSUPPORTED = 'work_model_tracking_unsupported';
+    const ANOMALY_WORK_MODEL_COMPENSATION_MISMATCH = 'work_model_compensation_mismatch';
+    const ANOMALY_WORK_MODEL_OVERTIME_NOT_APPLICABLE = 'work_model_overtime_not_applicable';
+    const ANOMALY_WORK_MODEL_OVERTIME_NOT_QUALIFIED = 'work_model_overtime_not_qualified';
+    const ANOMALY_PART_TIME_HOURS_BEYOND_CONTRACT = 'part_time_hours_beyond_contract';
+
     const ANOMALY_SEVERITIES = [
         self::ANOMALY_MISSING_TIMESHEET => 'error',
         self::ANOMALY_MISSING_COMPENSATION => 'error',
@@ -52,6 +60,12 @@ class PayrollRun extends Model
         self::ANOMALY_COMPENSATION_GAP => 'warning',
         self::ANOMALY_ZERO_BASE_SALARY => 'error',
         self::ANOMALY_INVALID_WEEKLY_HOURS => 'error',
+        self::ANOMALY_WORK_MODEL_UNKNOWN => 'error',
+        self::ANOMALY_WORK_MODEL_TRACKING_UNSUPPORTED => 'error',
+        self::ANOMALY_WORK_MODEL_COMPENSATION_MISMATCH => 'error',
+        self::ANOMALY_WORK_MODEL_OVERTIME_NOT_APPLICABLE => 'error',
+        self::ANOMALY_WORK_MODEL_OVERTIME_NOT_QUALIFIED => 'error',
+        self::ANOMALY_PART_TIME_HOURS_BEYOND_CONTRACT => 'error',
     ];
 
     protected $fillable = [

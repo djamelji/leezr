@@ -42,6 +42,9 @@ class ComputePayrollUseCase
 
             $runAnomalies = [];
             $payFrequencies = [];
+            $guard = app(\App\Modules\Workforce\Services\WorkModelPayrollGuard::class);
+            $ruleResolver = app(\App\Core\Workforce\Services\WorkforceRuleResolver::class);
+            $coreCompany = \App\Core\Models\Company::withoutGlobalScopes()->find($run->company_id);
 
             foreach ($employees as $employee) {
                 // Find locked TimesheetPeriod covering this payroll period
@@ -54,13 +57,14 @@ class ComputePayrollUseCase
                     ->first();
 
                 if (! $timesheet) {
-                    $runAnomalies[] = [
-                        'type' => PayrollRun::ANOMALY_MISSING_TIMESHEET,
+                    // ADR-826 : the reason depends on the work model (a days-based package is not « no work »)
+                    $missing = $guard->missingTimesheetAnomaly($employee->currentContract);
+                    $runAnomalies[] = array_merge([
                         'severity' => 'error',
                         'employee_id' => $employee->id,
                         'employee_name' => $employee->full_name,
                         'message' => "No locked timesheet found for {$employee->full_name}",
-                    ];
+                    ], $missing);
                     continue;
                 }
 
@@ -87,11 +91,20 @@ class ComputePayrollUseCase
                     continue;
                 }
 
-                // Track pay frequencies
-                $payFrequencies[] = $compensation->pay_frequency;
-
                 // Separate paid/unpaid leave from timesheet lines
                 $timesheetLines = $timesheet->lines()->get();
+
+                // ADR-826 : never prepare a line the engine would compute wrongly for this work model
+                $reference = $coreCompany ? ($ruleResolver->resolveWorkTimeRules($coreCompany, \Illuminate\Support\Carbon::parse($run->period_end), $contract)['weekly_hours_reference']['value'] ?? null) : null;
+                $exclusion = $guard->assess($contract, $compensation->compensation_type ?? 'monthly', (int) $timesheet->total_overtime_minutes,
+                    $timesheetLines, is_numeric($reference) ? (float) $reference : null);
+                if ($exclusion) {
+                    $runAnomalies[] = array_merge(['severity' => 'error', 'employee_id' => $employee->id, 'employee_name' => $employee->full_name], $exclusion);
+                    continue;
+                }
+
+                // Track pay frequencies
+                $payFrequencies[] = $compensation->pay_frequency;
                 $paidLeaveHundredths = 0;
                 $unpaidLeaveHundredths = 0;
                 $totalLeaveMinutes = 0;

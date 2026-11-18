@@ -8468,7 +8468,13 @@
         "missing_compensation": "Missing compensation",
         "timesheet_has_errors": "Timesheet has errors",
         "zero_worked_minutes": "Zero worked hours",
-        "compensation_gap": "Compensation gap"
+        "compensation_gap": "Compensation gap",
+        "work_model_unknown": "Unknown work model on the contract (to be corrected)",
+        "work_model_tracking_unsupported": "Days-based package: period statement missing (day tracking not supported)",
+        "work_model_compensation_mismatch": "Days-based package paid by the hour: contract and pay are incoherent",
+        "work_model_overtime_not_applicable": "Days-based package: hourly overtime does not apply",
+        "work_model_overtime_not_qualified": "Hours-based package: hours beyond the package not supported",
+        "part_time_hours_beyond_contract": "Part time: hours beyond the contract (complementary) not supported"
       },
       "andMore": " and {n} more",
       "excluded": "excluded from the period",

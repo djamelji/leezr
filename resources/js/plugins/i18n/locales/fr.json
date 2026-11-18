@@ -8468,7 +8468,13 @@
         "missing_compensation": "Rémunération manquante",
         "timesheet_has_errors": "Feuille de temps avec erreurs",
         "zero_worked_minutes": "Aucune heure travaillée",
-        "compensation_gap": "Écart de rémunération"
+        "compensation_gap": "Écart de rémunération",
+        "work_model_unknown": "Modèle de temps inconnu sur le contrat (à corriger)",
+        "work_model_tracking_unsupported": "Forfait jours : relevé de la période manquant (suivi en jours non pris en charge)",
+        "work_model_compensation_mismatch": "Forfait jours rémunéré à l'heure : contrat et rémunération incohérents",
+        "work_model_overtime_not_applicable": "Forfait jours : heures supplémentaires horaires non applicables",
+        "work_model_overtime_not_qualified": "Forfait heures : dépassement du forfait non pris en charge",
+        "part_time_hours_beyond_contract": "Temps partiel : heures au-delà du contrat (complémentaires) non prises en charge"
       },
       "andMore": " et {n} autre(s)",
       "excluded": "exclu de la période",
