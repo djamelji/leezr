@@ -9537,7 +9537,9 @@
         "annual": "Annuelle",
         "none": "Sans acquisition",
         "custom": "Personnalisée"
-      }
+      },
+      "system": "Système",
+      "systemHint": "Type prévu par la réglementation : non modifiable ni supprimable. Créez un type personnalisé si besoin."
     },
     "created": "Demande de congé créée",
     "approved": "Congé approuvé",

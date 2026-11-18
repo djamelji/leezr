@@ -1144,6 +1144,20 @@ watch(activeTab, tab => {
               <div class="py-2">
                 <span class="font-weight-medium text-high-emphasis">{{ item.name }}</span>
                 <span class="text-caption text-disabled ms-2">{{ item.code }}</span>
+                <VChip
+                  v-if="item.is_system"
+                  size="x-small"
+                  label
+                  variant="tonal"
+                  class="ms-2"
+                >
+                  {{ $t('leaves.config.system') }}
+                  <VTooltip
+                    activator="parent"
+                    location="top"
+                    :text="$t('leaves.config.systemHint')"
+                  />
+                </VChip>
                 <div
                   v-if="item.description"
                   class="text-body-2 text-medium-emphasis"

@@ -9537,7 +9537,9 @@
         "annual": "Annual",
         "none": "No accrual",
         "custom": "Custom"
-      }
+      },
+      "system": "System",
+      "systemHint": "Statutory type: cannot be edited or deleted. Create a custom type if needed."
     },
     "created": "Leave request created",
     "approved": "Leave approved",
