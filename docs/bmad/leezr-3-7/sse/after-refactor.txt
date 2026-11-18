@@ -1,0 +1,7 @@
+== after refactor (StreamLifetime) : timeout 40, locked limit 30, cap 3, 4 tabs
+tab4 429 0.049628s
+during: streams=3 global=1 ; GET /api/me 200 in 0.047616s
+tab1 200 25.188158s
+tab2 200 25.055975s
+tab3 200 25.078856s
+after: streams=0 global=0 company=0 ; heartbeats tab1=12 ; new fatal=0

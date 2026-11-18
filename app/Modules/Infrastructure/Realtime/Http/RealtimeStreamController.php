@@ -7,6 +7,7 @@ use App\Core\Realtime\ConnectionTracker;
 use App\Core\Realtime\Contracts\StreamTransport;
 use App\Core\Realtime\EventCategory;
 use App\Core\Realtime\MetricsCollector;
+use App\Core\Realtime\StreamLifetime;
 use App\Core\Realtime\TopicRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,39 +58,9 @@ class RealtimeStreamController
         Log::debug('[realtime] connect', ['user_id' => $userId, 'company_id' => $companyId, 'categories' => $categoryFilter, 'topics' => $topicFilter]);
 
         $response = new StreamedResponse(function () use ($transport, $redisKey, $heartbeatInterval, $streamTimeout, $companyId, $userId, $categoryFilter, $topicFilter) {
-            // Disable output buffering for real-time streaming
-            if (function_exists('apache_setenv')) {
-                apache_setenv('no-gzip', '1');
-            }
-            @ini_set('zlib.output_compression', '0');
-            while (ob_get_level()) {
-                ob_end_clean();
-            }
-
-            // ADR-826 — measured on DEV (PHP-FPM, max_execution_time 30) : every stream was KILLED after 30 s
-            // (« Maximum execution time exceeded » in the polling transport, 22 989 occurrences ; 29 536 connects
-            // for 259 logged disconnects), the browser reconnected 3 s later, and the unregister below never ran.
-            // The stream is designed to live `stream_timeout` seconds : its execution limit follows that setting
-            // (bounded, plus a margin), and the unregister is guaranteed by a shutdown function — it also runs
-            // after a fatal error or when the client has gone (ignore_user_abort keeps control so the loop sees
-            // connection_aborted() and ends normally).
-            @set_time_limit($streamTimeout + 15);
-            // ADR-827 — measured under a real PHP-FPM pool : when the limit is locked by the pool
-            // (php_admin_value[max_execution_time]), set_time_limit() has no effect and the stream was still
-            // killed at the limit (fatal error). The stream then ends CLEANLY before the effective limit ; the
-            // browser reconnects as for any normal end of stream.
-            $effectiveLimit = (int) ini_get('max_execution_time');
-            if ($effectiveLimit > 0 && $effectiveLimit < $streamTimeout + 5) {
-                $streamTimeout = max(5, $effectiveLimit - 5);
-            }
-            ignore_user_abort(true);
-            $unregistered = false;
-            register_shutdown_function(function () use (&$unregistered, $companyId, $userId) {
-                if (! $unregistered && $companyId !== null) {
-                    $unregistered = true;
-                    ConnectionTracker::disconnect($userId, $companyId);
-                }
-            });
+            // ADR-826 / ADR-827 : bounded lifetime, guaranteed unregister (see StreamLifetime)
+            $lifetime = StreamLifetime::begin($streamTimeout, $userId, $companyId);
+            $streamTimeout = $lifetime->timeout;
 
             $startedAt = time();
             $lastHeartbeat = time();
@@ -172,10 +143,7 @@ class RealtimeStreamController
             }
 
             // ADR-127: Unregister connection (ADR-431: skip for platform scope)
-            if ($companyId !== null && ! $unregistered) {
-                $unregistered = true;
-                ConnectionTracker::disconnect($userId, $companyId);
-            }
+            $lifetime->release();
 
             Log::debug('[realtime] disconnect', [
                 'user_id' => $userId,

@@ -8,6 +8,7 @@ use App\Core\Models\Company;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Realtime\ConnectionTracker;
+use App\Core\Realtime\StreamLifetime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
@@ -104,5 +105,14 @@ class Adr827RealtimeCapacityTest extends TestCase
         $this->actingAs($user)->get('/api/realtime/stream?company_id='.$company->id)
             ->assertStatus(429)->assertJson(['message' => 'Too many connections.']);
         $this->assertSame(1, ConnectionTracker::streamsTotal(), 'the refused stream took nothing');
+    }
+
+    public function test_the_stream_ends_before_an_execution_limit_it_cannot_raise(): void
+    {
+        $this->assertSame(300, StreamLifetime::effectiveTimeout(300, 0), 'no limit');
+        $this->assertSame(300, StreamLifetime::effectiveTimeout(300, 315), 'limit raised by set_time_limit');
+        $this->assertSame(25, StreamLifetime::effectiveTimeout(300, 30), 'pool-locked 30 s : clean end at 25 s');
+        $this->assertSame(25, StreamLifetime::effectiveTimeout(40, 30));
+        $this->assertSame(5, StreamLifetime::effectiveTimeout(300, 6), 'never below 5 s');
     }
 }
