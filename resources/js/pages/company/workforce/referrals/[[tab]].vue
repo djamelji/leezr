@@ -60,6 +60,24 @@ const openDetail = async id => {
   drawer.value = !!detail.value
   load()
 }
+// ADR-826 (D-7) : ouverte depuis la liste, la candidature ajoute une entrée d'historique marquée — Précédent revient
+// à la liste et ferme le panneau. Ouverte par l'adresse : aucune entrée ajoutée (pas de boucle).
+const openFromList = id => {
+  const to = { query: { ...route.query, open: id } }
+  if (route.query.open) router.replace({ ...to, state: { panelFromList: !!window.history.state?.panelFromList } })
+  else router.push({ ...to, state: { panelFromList: true } })
+}
+watch(() => route.query.open, id => {
+  if (!id) { drawer.value = false; return }
+  if (String(detail.value?.id ?? detail.value?.referral?.id) !== String(id) || !drawer.value) openDetail(Number(id))
+})
+watch(drawer, open => {
+  if (open || !route.query.open) return
+  if (window.history.state?.panelFromList) return router.back()
+  const { open: _, ...query } = route.query
+
+  router.replace({ query })
+})
 const decide = async decision => {
   acting.value = decision
   try {
@@ -168,7 +186,7 @@ const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateSty
             :loading="loading"
             :items-per-page="25"
             data-test="referrals-table"
-            @click:row="(_, { item }) => openDetail(item.id)"
+            @click:row="(_, { item }) => openFromList(item.id)"
           >
             <template #item.name="{ item }">
               <span class="font-weight-medium">{{ [item.first_name, item.last_name].filter(Boolean).join(' ') }}</span>

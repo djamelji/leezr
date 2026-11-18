@@ -208,25 +208,43 @@ const openLineId = ref(null)
 const canRecompute = computed(() => run.value?.status === 'computed' && can('workforce.payroll_prepare'))
 const panelEmployeeId = computed(() => lineDetail.value?.employee?.id ?? null)
 
-async function openLineDetail(item) {
+// ADR-826 (D-7) : ouvert DEPUIS LA LISTE, le panneau ajoute une entrée d'historique marquée (state natif de Vue
+// Router) : « Précédent » revient à la liste et ferme le panneau, « Suivant » le rouvre. Changer de ligne
+// panneau ouvert remplace l'entrée (pas d'empilement). Ouvert par l'adresse (lien direct, rechargement) : aucune
+// entrée ajoutée — Précédent quitte la page comme avant, sans boucle.
+async function openLineDetail(item, { fromAddress = false } = {}) {
   openLineId.value = item.id
   lineDetailLoading.value = true
   showLineDetailDialog.value = true
-  // Deep-link the opened collaborator so the panel survives back-navigation.
-  if (route.query.line !== String(item.id)) router.replace({ query: { ...route.query, line: item.id } })
+  if (!fromAddress && route.query.line !== String(item.id)) {
+    const to = { query: { ...route.query, line: item.id } }
+    if (route.query.line) router.replace({ ...to, state: { panelFromList: !!window.history.state?.panelFromList } })
+    else router.push({ ...to, state: { panelFromList: true } })
+  }
   try { await store.fetchLineDetail(route.params.id, item.id) }
   catch (e) { toast((e?.data?.message || e?.response?._data?.message) || e.message, 'error'); showLineDetailDialog.value = false }
   finally { lineDetailLoading.value = false }
 }
-function closeLineDetail() {
+function resetLinePanel() {
   showLineDetailDialog.value = false
   openLineId.value = null
   store.clearLineDetail()
-  if (route.query.line) {
-    const q = { ...route.query }; delete q.line
-    router.replace({ query: q })
-  }
 }
+function closeLineDetail() {
+  resetLinePanel()
+  if (!route.query.line) return
+  // Entrée ajoutée par une ouverture depuis la liste : on y revient (même effet que « Précédent »).
+  if (window.history.state?.panelFromList) return router.back()
+  const q = { ...route.query }; delete q.line
+  router.replace({ query: q })
+}
+// Précédent / Suivant du navigateur : l'adresse fait foi pour le panneau.
+watch(() => route.query.line, line => {
+  if (!line) { if (showLineDetailDialog.value) resetLinePanel(); return }
+  if (String(openLineId.value) === String(line)) return
+  const item = store.currentRunLines.find(l => String(l.id) === String(line))
+  if (item) openLineDetail(item, { fromAddress: true })
+})
 
 // Current period URL (with the selected collaborator) — used to return here.
 const returnUrl = computed(() => `/company/workforce/payroll/${route.params.id}${openLineId.value ? `?line=${openLineId.value}` : ''}`)
@@ -261,7 +279,7 @@ onMounted(async () => {
   const lineParam = route.query.line
   if (lineParam) {
     const item = store.currentRunLines.find(l => String(l.id) === String(lineParam))
-    if (item) openLineDetail(item)
+    if (item) openLineDetail(item, { fromAddress: true })
     else { const { line: _, ...q } = route.query; router.replace({ query: q }) } // ADR-825 : ligne inconnue → adresse nettoyée
   }
 })
