@@ -29440,3 +29440,19 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Après un rechargement, l'ancien flux occupe la place jusqu'au battement suivant (30 s par défaut sur le DEV) : avec un plafond de 1, l'onglet rechargé peut rester en polling jusqu'à la tentative de reprise suivante.
 - Une session expirée n'est pas redirigée vers la connexion par le polling (comportement antérieur) ; les sondes SSE restent bornées.
 - La production n'est toujours pas vérifiée (D-11) : aucune valeur de plafond n'est proposée sans le relevé du pool.
+
+## ADR-830 — Leezr 4.0 RC : relances à une tentative par échéance, profil polling par défaut, continuité de session, limiteurs par route, campagnes E2E hors DEV
+
+**Date** : 2026-11-18
+**Contexte** : release candidate 4.0. La 3.9 a démontré qu'un job de relance tardif ou relivré multipliait les tentatives (D-17) ; la capacité PHP-FPM de production est inconnue (D-10) ; la session expirée ne ramenait pas l'utilisateur à son écran ; la campagne E2E complète a révélé que tous les limiteurs `throttle:N,M` sans nom partageaient un seul compteur par utilisateur ou IP, et que la configuration Playwright par défaut visait le DEV.
+**Décision** :
+- **Relances (D-17)** : `DunningEngine::retryIfDue` est le seul chemin automatique (balayage planifié et job différé). Réservation atomique par facture (verrou du cache de l'environnement), relecture de la facture (en retard et `next_retry_at` atteint), sinon aucune tentative ni appel prestataire. Le `retry_count` lu à la réservation est revérifié sous verrou de ligne au moment de comptabiliser : une tentative déjà comptée par un autre worker ne l'est jamais deux fois. Une charge acceptée par le prestataire attend la date suivante de la politique (intervalles inchangés) au lieu de rester exigible jusqu'au webhook. L'idempotence de l'appel externe reste celle du prestataire (clé Stripe par facture et moyen de paiement) : le verrou SQL ne la remplace pas. `--async` reste refusé ; aucune règle financière modifiée.
+- **Temps réel** : profil A (polling, `REALTIME_DRIVER=null`, 204 sans worker tenu) recommandé par défaut ; le badge de notifications société est désormais relu toutes les 30 s quand aucun flux n'est actif (il ne l'était qu'au démarrage). Profil B (SSE) seulement après relevé du pool et du proxy (D-10).
+- **Session** : le mécanisme existant (ADR-357/358b : boîte « session expirée », diffusion entre onglets, `auth_redirect`) est conservé ; le chemin 401 et la diffusion `session-expired` mémorisent désormais l'écran courant, si bien que la reconnexion ramène chaque onglet à son écran. Les requêtes de fond restent silencieuses (pas de boucle).
+- **Limiteurs** : un `throttle:N,M` sans nom limite désormais **sa** route (méthode + URI) ; les valeurs sont inchangées ; les limiteurs nommés gardent leur budget partagé. Auparavant, la vérification de version de quelques onglets épuisait le budget de `/public/plans`, du thème, des téléversements…
+- **E2E** : `playwright.config.js` refuse le DEV (`leezr.test`) sauf `E2E_ALLOW_DEV=1` ; `E2E_DB_DATABASE` transmet la base du clone aux commandes de recette ; trois specs qui visaient le DEV en dur utilisent l'hôte de la campagne ; l'outil d'audit `adr774` ne casse plus la collecte.
+- **Accessibilité** : la liste de priorités de l'accueil (liens) est exposée comme navigation (axe `aria-required-children`).
+
+**Conséquences** :
+- Le code est candidat ; le déploiement reste suspendu aux preuves de production (D-11) et aux décisions D-10, D-13, D-8, D-17 (activation de l'asynchrone).
+- Les specs E2E historiques en échec pour dérive d'interface sont listées et qualifiées dans le rapport 4.0, pas masquées.

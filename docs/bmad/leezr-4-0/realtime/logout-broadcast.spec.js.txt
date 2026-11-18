@@ -1,0 +1,21 @@
+// ADR-830 — session continuity S4 : logout in one tab, the other tabs follow (broadcast) and remember their screen.
+import { test } from '@playwright/test'
+import { writeFileSync } from 'node:fs'
+import { loginCompany } from './helpers.js'
+test('logout broadcast across tabs', async ({ browser }) => {
+  test.setTimeout(180_000)
+  const ctx = await browser.newContext()
+  const a = await ctx.newPage(); await loginCompany(a, 'owner@leezr.test', 'password')
+  const b = await ctx.newPage(); await b.goto('/company/workforce/leave', { waitUntil: 'networkidle' })
+  await a.getByRole('button', { name: 'Menu du compte' }).click({ timeout: 10000 })
+  await a.locator('.v-overlay--active').getByText(/déconnex|logout/i).first().click({ timeout: 10000 })
+  await a.waitForURL(/\/login/, { timeout: 15000 }).catch(() => {})
+  await b.waitForURL(/\/login/, { timeout: 15000 }).catch(() => {})
+  const r = { tabA: new URL(a.url()).pathname, tabB: new URL(b.url()).pathname, tabB_return: await b.evaluate(() => sessionStorage.getItem('auth_redirect')) }
+  // tab B logs back in : back to its own screen
+  await b.fill('input[type="email"]', 'owner@leezr.test'); await b.fill('input[type="password"]', 'password'); await b.keyboard.press('Enter')
+  await b.waitForURL(u => !u.pathname.endsWith('/login'), { timeout: 20000 }).catch(() => {})
+  r.tabB_after_login = new URL(b.url()).pathname
+  writeFileSync(process.env.RC_REPORT, JSON.stringify(r)); console.log(JSON.stringify(r))
+  await ctx.close()
+})

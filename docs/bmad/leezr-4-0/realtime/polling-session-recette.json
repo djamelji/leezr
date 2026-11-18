@@ -1,0 +1,83 @@
+{
+ "p1_five_tabs": {
+  "stream_statuses": [
+   204
+  ],
+  "per_tab_stream_calls": [
+   3,
+   3,
+   3,
+   3,
+   3
+  ],
+  "fpm": {
+   "active": 1,
+   "max_active": 5,
+   "max_children_reached": 0
+  },
+  "api": {
+   "statuses": [
+    200
+   ],
+   "max_ms": 113
+  }
+ },
+ "p2_polling": {
+  "nav_calls_65s": 2,
+  "notif_calls_65s": 2,
+  "stream_probes_65s": 1,
+  "fpm": {
+   "active": 1,
+   "max_active": 5,
+   "max_children_reached": 0
+  }
+ },
+ "p3_notification": {
+  "unread_before": 7,
+  "unread_after": 8,
+  "polled_after_ms": 9542
+ },
+ "p4_state_change": {
+  "disable": 200,
+  "nav_refreshed_after": 2,
+  "enable_back": 200,
+  "nav_status": 200
+ },
+ "p5_company_switch": {
+  "stream": [
+   204,
+   204
+  ],
+  "nav": [
+   200
+  ]
+ },
+ "s1_expired_idle": {
+  "requests_401_in_70s": 7,
+  "per_tab": [
+   1,
+   3,
+   1,
+   1,
+   1
+  ],
+  "dialog_visible": false
+ },
+ "s2_action": {
+  "landed": "/login",
+  "expired_dialog": false
+ },
+ "s2_relogin": {
+  "back_to": "/company/workforce/planning"
+ },
+ "s3_after_relogin": {
+  "nav_200": 1,
+  "any_401": 0
+ },
+ "s4_logout_broadcast": {
+  "tabA": "/login",
+  "tabB": "/login",
+  "tabB_return": "/company/workforce/leave",
+  "tabB_after_login": "/company/workforce/leave"
+ }
+}

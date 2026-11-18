@@ -1,0 +1,147 @@
+// ADR-830 — Profile A (polling, REALTIME_DRIVER off) + session continuity, on the ISOLATED bench
+// (nginx 8827 + php-fpm pm.max_children=5, marked clone leezr_recipe830s, Redis prefix leezr830s-).
+// Temporary : not part of the regular suite (copy kept in docs/bmad/leezr-4-0/).
+import { expect, test } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { loginCompany, apiRequest } from './helpers.js'
+
+const ENV = { ...process.env, DB_DATABASE: 'leezr_recipe830s', REDIS_PREFIX: 'leezr830s-' }
+const onClone = php => {
+  const f = join(mkdtempSync(join(tmpdir(), 'rc830-')), 'x.php')
+  writeFileSync(f, `<?php\n${php}`)
+
+  return execFileSync('php', ['artisan', 'e2e:php', f], { env: ENV, encoding: 'utf8' }).trim().split('\n').pop()
+}
+const fpm = () => {
+  const s = execFileSync('curl', ['-s', 'http://127.0.0.1:8827/fpm-status'], { encoding: 'utf8' })
+  const g = k => Number((s.match(new RegExp(`^${k}:\\s+(\\d+)`, 'm')) || [])[1])
+
+  return { active: g('active processes'), max_active: g('max active processes'), max_children_reached: g('max children reached') }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+test('Profile A (polling) and session continuity', async ({ browser }) => {
+  test.setTimeout(900_000)
+  const t0 = Date.now()
+  const now = () => Math.round((Date.now() - t0) / 100) / 10
+  const log = []
+  const report = {}
+  const dump = () => writeFileSync(process.env.RC_REPORT || '/tmp/rc830.json', JSON.stringify({ ...report, timeline: log.slice(-400) }, null, 1))
+  const track = (page, label) => page.on('response', r => {
+    const u = new URL(r.url())
+    if (u.pathname.startsWith('/api/')) log.push({ t: now(), page: label, path: u.pathname, status: r.status() })
+  })
+  const hits = (label, re, after = -1) => log.filter(e => e.page === label && re.test(e.path) && e.t > after)
+
+  // ── P1 — 5 tabs, SSE off : 204 (no worker held), nothing streaming ──
+  const ctx = await browser.newContext()
+  const tabs = []
+  for (let i = 1; i <= 5; i++) {
+    const p = await ctx.newPage(); track(p, `T${i}`); tabs.push(p)
+    if (i === 1) await loginCompany(p, 'owner@leezr.test', 'password')
+    else await p.goto('/dashboard', { waitUntil: 'networkidle' })
+  }
+  await sleep(9000)
+  const lat = []
+  for (let i = 0; i < 10; i++) { const s = Date.now(); const r = await apiRequest(tabs[0], { path: '/api/nav' }); lat.push([r.status, Date.now() - s]) }
+  report.p1_five_tabs = { stream_statuses: [...new Set(log.filter(e => /realtime\/stream/.test(e.path)).map(e => e.status))],
+    per_tab_stream_calls: tabs.map((_, i) => hits(`T${i + 1}`, /realtime\/stream/).length), fpm: fpm(),
+    api: { statuses: [...new Set(lat.map(x => x[0]))], max_ms: Math.max(...lat.map(x => x[1])) } }
+  dump()
+  expect(report.p1_five_tabs.stream_statuses).toEqual([204])
+  expect(report.p1_five_tabs.fpm.max_children_reached).toBe(0)
+
+  // ── P2 — periodic refresh : nav + notifications polled about every 30 s, SSE probes bounded ──
+  const tP2 = now()
+  await sleep(65000)
+  report.p2_polling = { nav_calls_65s: hits('T1', /^\/api\/nav$/, tP2).length, notif_calls_65s: hits('T1', /notifications\/unread-count/, tP2).length,
+    stream_probes_65s: hits('T1', /realtime\/stream/, tP2).length, fpm: fpm() }
+  dump()
+  expect(report.p2_polling.nav_calls_65s).toBeGreaterThanOrEqual(2)
+  expect(report.p2_polling.notif_calls_65s).toBeGreaterThanOrEqual(2)
+  expect(report.p2_polling.stream_probes_65s).toBeLessThanOrEqual(2)
+
+  // ── P3 — a notification appears without reload (polling) ──
+  const ownerId = Number(onClone("echo App\\Core\\Models\\User::where('email','owner@leezr.test')->value('id');"))
+  const before = (await apiRequest(tabs[0], { path: '/api/notifications/unread-count' })).json?.unread_count ?? 0
+  onClone(`App\\Core\\Notifications\\NotificationDispatcher::send('billing.invoice_created', [App\\Core\\Models\\User::find(${ownerId})], ['invoice_number' => 'RC830-PROBE', 'amount' => '0,00 €'], App\\Core\\Models\\Company::find(1));`)
+  const tP3 = now()
+  const seen = await (async () => { const s = Date.now(); while (Date.now() - s < 45000) { const l = hits('T1', /notifications\/unread-count/, tP3); if (l.length) break; await sleep(500) } return Date.now() - s })()
+  const after = (await apiRequest(tabs[0], { path: '/api/notifications/unread-count' })).json?.unread_count ?? 0
+  report.p3_notification = { unread_before: before, unread_after: after, polled_after_ms: seen }
+  dump()
+
+  // ── P4 — a state change reaches the navigation without reload ──
+  const navHas = async () => (await apiRequest(tabs[0], { path: '/api/nav' })).status
+  const off = await apiRequest(tabs[1], { method: 'PUT', path: '/api/modules/workforce_contract/disable' })
+  const tP4 = now()
+  await sleep(36000)
+  const on = await apiRequest(tabs[1], { method: 'PUT', path: '/api/modules/workforce_contract/enable' }) // baseline restored
+  report.p4_state_change = { disable: off.status, nav_refreshed_after: hits('T1', /^\/api\/nav$/, tP4).length, enable_back: on.status, nav_status: await navHas() }
+  dump()
+  expect(report.p4_state_change.nav_refreshed_after).toBeGreaterThanOrEqual(1)
+
+  // ── P5 — company switch in polling mode ──
+  await ctx.addCookies([{ name: 'currentCompanyId', value: '2', url: 'http://127.0.0.1:8827' }])
+  const tP5 = now()
+  await tabs[4].reload({ waitUntil: 'networkidle' })
+  await sleep(4000)
+  report.p5_company_switch = { stream: hits('T5', /realtime\/stream/, tP5).map(e => e.status), nav: hits('T5', /^\/api\/nav$/, tP5).map(e => e.status) }
+  await ctx.addCookies([{ name: 'currentCompanyId', value: '1', url: 'http://127.0.0.1:8827' }])
+  dump()
+
+  // ── S1 — session expires server-side ; background polling stays silent and bounded (no 401 loop) ──
+  await tabs[0].goto('/company/workforce/planning', { waitUntil: 'networkidle' })
+  await sleep(1500)
+  onClone(`DB::table('sessions')->where('user_id', ${ownerId})->delete(); echo 'ok';`)
+  const tS1 = now()
+  await sleep(70000)
+  const bg401 = log.filter(e => e.t > tS1 && e.status === 401)
+  report.s1_expired_idle = { requests_401_in_70s: bg401.length, per_tab: tabs.map((_, i) => bg401.filter(e => e.page === `T${i + 1}`).length),
+    dialog_visible: await tabs[0].getByText(/session.*expir/i).first().isVisible().catch(() => false) }
+  dump()
+  expect(bg401.length, 'bounded : ≤ ~3 background calls per tab per 70 s').toBeLessThanOrEqual(5 * 6)
+
+  // ── S2 — a user action shows the expired dialog ; re-login comes back to the same screen ──
+  await tabs[0].goto('/company/workforce/planning', { waitUntil: 'domcontentloaded' })
+  await sleep(4000)
+  const url1 = new URL(tabs[0].url()).pathname
+  const dialog = await tabs[0].getByText(/session.*expir/i).first().isVisible().catch(() => false)
+  report.s2_action = { landed: url1, expired_dialog: dialog }
+  dump()
+  if (url1 !== '/login') {
+    await tabs[0].getByRole('button', { name: /connect|login/i }).last().click().catch(() => {})
+    await tabs[0].waitForURL(/\/login/, { timeout: 15000 }).catch(() => {})
+  }
+  await tabs[0].fill('input[type="email"]', 'owner@leezr.test')
+  await tabs[0].fill('input[type="password"]', 'password')
+  await tabs[0].keyboard.press('Enter')
+  await tabs[0].waitForURL(u => !u.pathname.endsWith('/login'), { timeout: 20000 }).catch(() => {})
+  await sleep(3000)
+  report.s2_relogin = { back_to: new URL(tabs[0].url()).pathname }
+  dump()
+  expect(report.s2_relogin.back_to).toBe('/company/workforce/planning')
+
+  // ── S3 — after re-login : polling resumes, no 401 ──
+  const tS3 = now()
+  await sleep(35000)
+  report.s3_after_relogin = { nav_200: hits('T1', /^\/api\/nav$/, tS3).filter(e => e.status === 200).length, any_401: log.filter(e => e.page === 'T1' && e.t > tS3 && e.status === 401).length }
+  dump()
+  expect(report.s3_after_relogin.any_401).toBe(0)
+
+  // ── S4 — logout in one tab : the other tabs leave for the login page (broadcast), each remembering its screen ──
+  await tabs[2].goto('/company/workforce/leave', { waitUntil: 'networkidle' })
+  await tabs[0].locator('.v-avatar').last().click().catch(() => {})
+  await tabs[0].getByText(/déconnexion|logout/i).first().click().catch(() => {})
+  await sleep(5000)
+  report.s4_logout_broadcast = { tab1: new URL(tabs[0].url()).pathname, tab3: new URL(tabs[2].url()).pathname,
+    tab3_return_path: await tabs[2].evaluate(() => sessionStorage.getItem('auth_redirect')) }
+  dump()
+
+  await ctx.close()
+  report.end = { fpm: fpm() }
+  dump()
+})
