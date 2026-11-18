@@ -1,4 +1,5 @@
 <script setup>
+import { useCatalogText } from '@/composables/useCatalogText'
 import { displayLocale } from '@/utils/datetime'
 // ADR-768 (M7 LOT 2) — onglet « Accès & autorisations » de la fiche unifiée. Toutes les actions
 // appellent les endpoints sécurisés existants (MembershipSecurityPolicy, GlobalIdentityPolicy) :
@@ -64,6 +65,18 @@ const restore = () => run('restore', () => store.restoreAccess(), 'people.access
 
 // M7 LOT 3 — état RÉEL de l'invitation (envoi de l'e-mail, échéance), fourni par le serveur.
 const invitation = computed(() => account.value.invitation || null)
+const { catalogText, moduleName } = useCatalogText()
+const humanize = k => { const v = k.split('.').slice(1).join(' ').replace(/_/g, ' '); return v.charAt(0).toUpperCase() + v.slice(1) }
+const permissionGroups = computed(() => {
+  const groups = {}
+  for (const key of account.value?.effective_permissions || []) {
+    const prefix = key.split('.')[0]
+    groups[prefix] ??= { key: prefix, label: moduleName(prefix, moduleName(`core.${prefix}`, prefix.charAt(0).toUpperCase() + prefix.slice(1))), items: [] }
+    groups[prefix].items.push({ key, label: catalogText('permissions', key, 'label', humanize(key)) })
+  }
+
+  return Object.values(groups).sort((a, b) => a.label.localeCompare(b.label))
+})
 const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString(displayLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) : '')
 const fmtDateTime = iso => (iso ? new Date(iso).toLocaleString(displayLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
 
@@ -409,19 +422,32 @@ const savePassword = async () => {
       <div class="text-overline mb-2">
         {{ t('people.access.effectivePermissions') }}
       </div>
+      <!-- ADR-823 : permissions lisibles, regroupées par domaine (libellés du catalogue ; la clé reste en infobulle) -->
       <div
         v-if="(account.effective_permissions || []).length"
-        class="d-flex flex-wrap gap-1"
+        data-test="person-permissions"
       >
-        <VChip
-          v-for="p in account.effective_permissions"
-          :key="p"
-          size="x-small"
-          label
-          variant="outlined"
+        <div
+          v-for="g in permissionGroups"
+          :key="g.key"
+          class="mb-3"
         >
-          {{ p }}
-        </VChip>
+          <div class="text-body-2 font-weight-medium mb-1">
+            {{ g.label }}
+          </div>
+          <div class="d-flex flex-wrap gap-1">
+            <VChip
+              v-for="p in g.items"
+              :key="p.key"
+              size="small"
+              label
+              variant="tonal"
+              :title="p.key"
+            >
+              {{ p.label }}
+            </VChip>
+          </div>
+        </div>
       </div>
       <div
         v-else

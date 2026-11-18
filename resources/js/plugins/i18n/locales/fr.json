@@ -1929,7 +1929,9 @@
     "signatureInProgress": "Signature en cours",
     "noUpcomingShift": "Aucun créneau à venir.",
     "noTime30": "Aucun pointage sur les 30 derniers jours.",
-    "inProgress": "en cours"
+    "inProgress": "en cours",
+    "showAll": "Tout afficher ({n})",
+    "showLess": "Afficher moins"
   },
   "companyBilling": {
     "title": "Facturation",

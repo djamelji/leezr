@@ -1930,7 +1930,9 @@
     "signatureInProgress": "Signature in progress",
     "noUpcomingShift": "No upcoming shift.",
     "noTime30": "No clock-in over the last 30 days.",
-    "inProgress": "in progress"
+    "inProgress": "in progress",
+    "showAll": "Show all ({n})",
+    "showLess": "Show less"
   },
   "companyBilling": {
     "title": "Billing",

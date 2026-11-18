@@ -8,6 +8,7 @@ import { fetchPdfBlob, downloadBlob } from '@/utils/pdf'
 const props = defineProps({ employeeId: { type: [String, Number], required: true } })
 
 const { t } = useI18n()
+const showAll = ref(false) // ADR-823 : 8 éléments, puis « Tout afficher »
 const store = useSignatureStore()
 const { toast } = useAppToast()
 
@@ -58,7 +59,7 @@ const download = async r => {
         {{ t('employeeFile.signatures.empty') }}
       </div>
       <VList v-else lines="two" class="py-0">
-        <VListItem v-for="r in items" :key="r.id">
+        <VListItem v-for="r in (showAll ? items : items.slice(0, 8))" :key="r.id">
           <VListItemTitle>{{ r.document_label || t('signature.unknownDocument') }}</VListItemTitle>
           <VListItemSubtitle>
             {{ r.signers?.length || 0 }} {{ t('employeeFile.signatures.signers') }}
@@ -82,6 +83,15 @@ const download = async r => {
           </template>
         </VListItem>
       </VList>
+      <VBtn
+        v-if="items.length > 8"
+        variant="text"
+        size="small"
+        class="mt-1"
+        @click="showAll = !showAll"
+      >
+        {{ showAll ? t('employeeFile.showLess') : t('employeeFile.showAll', { n: items.length }) }}
+      </VBtn>
     </VCardText>
   </VCard>
 </template>

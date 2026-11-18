@@ -9,6 +9,7 @@ import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({ employeeId: { type: [String, Number], required: true } })
 const { t } = useI18n()
+const showAll = ref(false) // ADR-823 : 8 éléments, puis « Tout afficher »
 const router = useRouter()
 const { toast } = useAppToast()
 const loading = ref(true)
@@ -69,7 +70,7 @@ const download = async (doc, signed = false) => {
         </thead>
         <tbody>
           <tr
-            v-for="d in docs"
+            v-for="d in (showAll ? docs : docs.slice(0, 8))"
             :key="d.id"
             :data-test="`generated-document-${d.id}`"
           >
@@ -131,6 +132,15 @@ const download = async (doc, signed = false) => {
       >
         {{ t('employeeFile.noDocuments') }}
       </div>
+      <VBtn
+        v-if="docs.length > 8"
+        variant="text"
+        size="small"
+        class="mt-1"
+        @click="showAll = !showAll"
+      >
+        {{ showAll ? t('employeeFile.showLess') : t('employeeFile.showAll', { n: docs.length }) }}
+      </VBtn>
       <VBtn
         class="mt-3"
         variant="text"
