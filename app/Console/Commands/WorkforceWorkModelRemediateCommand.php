@@ -72,7 +72,7 @@ class WorkforceWorkModelRemediateCommand extends Command
             if ($apply && $targeted) {
                 DB::transaction(function () use ($c, $set, $batch) {
                     $before = $c->work_model_key;
-                    EmploymentContract::withoutGlobalScopes()->whereKey($c->id)->update(['work_model_key' => $set]);
+                    EmploymentContract::withoutGlobalScopes()->where('company_id', $c->company_id)->where('id', $c->id)->update(['work_model_key' => $set]);
                     app(AuditLogger::class)->logCompany($c->company_id, 'contract.work_model_remediated', 'employment_contract', (string) $c->id, [
                         'actorType' => 'system', 'actorId' => null, 'severity' => 'warning',
                         'diffBefore' => ['work_model_key' => $before], 'diffAfter' => ['work_model_key' => $set],
@@ -95,7 +95,8 @@ class WorkforceWorkModelRemediateCommand extends Command
         $out = [];
         foreach ($logs as $log) {
             $previous = json_decode((string) $log->diff_before, true)['work_model_key'] ?? null;
-            $c = EmploymentContract::withoutGlobalScopes()->find((int) $log->target_id);
+            // tenant-bounded : the contract of the audited company only
+            $c = EmploymentContract::withoutGlobalScopes()->where('company_id', $log->company_id)->where('id', (int) $log->target_id)->first();
             if (! $c || $previous === null) {
                 $out[] = ['contract_id' => (int) $log->target_id, 'action' => 'not_restorable'];
 
@@ -106,7 +107,7 @@ class WorkforceWorkModelRemediateCommand extends Command
             if ($apply && $row['action'] === 'restored') {
                 DB::transaction(function () use ($c, $previous, $batch) {
                     $current = $c->work_model_key;
-                    EmploymentContract::withoutGlobalScopes()->whereKey($c->id)->update(['work_model_key' => $previous]);
+                    EmploymentContract::withoutGlobalScopes()->where('company_id', $c->company_id)->where('id', $c->id)->update(['work_model_key' => $previous]);
                     app(AuditLogger::class)->logCompany($c->company_id, 'contract.work_model_restored', 'employment_contract', (string) $c->id, [
                         'actorType' => 'system', 'actorId' => null, 'severity' => 'warning',
                         'diffBefore' => ['work_model_key' => $current], 'diffAfter' => ['work_model_key' => $previous],
