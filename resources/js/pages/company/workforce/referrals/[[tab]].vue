@@ -26,8 +26,15 @@ const load = async () => {
 }
 onMounted(async () => {
   await load()
-  if (route.query.open)
-    openDetail(Number(route.query.open))
+  if (route.query.open) {
+    await openDetail(Number(route.query.open))
+    // ADR-825 : candidature inconnue ou hors périmètre → l'adresse est nettoyée (pas de ?open= sans effet)
+    if (!detail.value) {
+      const { open: _, ...query } = route.query
+
+      router.replace({ query })
+    }
+  }
 })
 
 const OPEN = ['submitted', 'in_review', 'info_requested', 'accepted']
@@ -266,9 +273,11 @@ const fmtDateTime = v => (v ? new Date(v).toLocaleString(locale.value, { dateSty
     </VWindow>
 
     <!-- Détail d'une candidature -->
+    <!-- ADR-825 : disable-route-watcher — ouvert par ?open=, le tiroir ne se referme pas quand l'adresse est réécrite (?tab=) -->
     <VNavigationDrawer
       v-model="drawer"
       temporary
+      disable-route-watcher
       location="end"
       width="440"
     >
