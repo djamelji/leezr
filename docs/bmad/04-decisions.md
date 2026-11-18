@@ -29370,3 +29370,35 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - E2E pertinents verts sur le clone.
 - Pré-déploiement : **non prêt**. Bloquants : planificateur, workers, migration modifiée à vérifier, décision RBAC.
 - **Incident** : une spec a réinitialisé la paie d'avril 2026 de la société 1 sur le DEV. Une restauration est préparée mais non exécutée (D-13).
+
+## ADR-827 — Leezr 3.7 : incident de paie DEV, commandes de recette bornées aux clones marqués, capacité SSE
+
+**Date** : 2026-11-18
+**Contexte** : en 3.6, la spec `workforce-payroll-workflow` a exécuté `e2e:reset-payroll` puis `e2e:prepare-payroll` contre la base DEV (société 1). Les commandes de recette n'étaient protégées que par `APP_ENV=local|testing`, vrai sur le DEV. Le pré-déploiement 3.6 comparait à un SHA de production périmé. Les correctifs SSE 3.6 avaient été validés sous `php -S`, et non sous un vrai pool PHP-FPM.
+**Décision** :
+- **Incident** : la source de restauration est le journal binaire MySQL du DEV : images avant suppression, en format ligne complet, à 08:04:01 UTC (5 suppressions, 1 insertion, aucune cascade cachée). Ces lignes sont identiques, octet par octet, à celles du script 3.6. Outil autonome `docs/bmad/leezr-3-7/incident/restore-company1-april2026.php` :
+  - simulation par défaut, `--confirm-database` ;
+  - contrôle de dérive du schéma ;
+  - préconditions sur les identifiants et clés uniques ;
+  - la feuille 143 est vérifiée par empreinte et sauvegardée avant suppression ;
+  - transaction unique, vérification d'empreinte de chaque ligne, idempotence, retour arrière.
+
+  Il a été recetté sur des clones (restauration, rejeu, retour arrière, 9 conflits). **Il n'a pas été exécuté sur le DEV (D-13).**
+- **Commandes de recette** : `App\Console\Recipe\RecipeCommand` vérifie l'identité de la base au point d'exécution réel (`execute()`), pour tous les `e2e:*`, processus enfants compris. La base connectée doit :
+  - être celle configurée ;
+  - suivre la convention `leezr_(audit|clone|recipe)…` ;
+  - ne pas être une base DEV ou PROD connue ;
+  - porter le marqueur `_recipe_clone_identity` qui la nomme.
+
+  Il n'existe ni contournement par option ni preuve par `APP_ENV`. Les refus sont journalisés (`storage/logs/recipe-guard.log`), et le corps de la commande s'exécute dans une transaction. Outils associés : `recipe:status` (lecture seule) et `scripts/recipe/make-clone.sh` (clone marqué depuis un dump en lecture seule).
+- **SSE** (mesuré sur un nginx et un PHP-FPM isolés) :
+  - la course de comptage (n−1 par rafale) est corrigée par un `INCR` atomique ;
+  - le refus renvoie un vrai 429 (au lieu d'une 500) ;
+  - un `max_execution_time` verrouillé par le pool est respecté : le flux finit proprement 5 s avant ;
+  - un plafond optionnel du nombre de flux (`REALTIME_MAX_CONCURRENT_STREAMS`, désactivé par défaut) protège le pool.
+- **Pré-déploiement** : la base de comparaison est corrigée (`main` = `7d49e784`). Le planificateur et les workers sont déjà traités par ADR-738/739, et la migration modifiée est rejouable et réparée par `2026_11_23_000002`. Le document `docs/bmad/leezr-3-7/PRE-DEPLOYMENT-RUNBOOK.md` détaille ces points.
+
+**Conséquences** :
+- Une spec E2E à fixtures lancée contre le DEV échoue désormais en refus franc, sans aucune écriture : les recettes à écriture passent par un clone marqué.
+- Les écritures par `artisan tinker --execute` dans 9 specs (dont 3 suppressions de presets créés par la spec) ne sont pas couvertes par ce garde (risque résiduel, D-15).
+- La restauration DEV, les vérifications en lecture seule de la PROD, le dimensionnement du pool et le RBAC chauffeur restent des décisions (D-8, D-10, D-13 à D-17).
