@@ -528,7 +528,8 @@ function signatureChipProps(status) {
       <div class="me-grid">
         <div class="me-col">
           <!-- Mon planning (créneaux publiés, lecture seule) — W-HR-UX-4 §6 -->
-          <AppSurface
+          <VCard
+            variant="outlined"
             class="me-block"
             data-test="me-planning"
           >
@@ -576,10 +577,10 @@ function signatureChipProps(status) {
                 :text="t('workforceMe.shiftPublished')"
               />
             </div>
-          </AppSurface>
+          </VCard>
 
           <!-- Mes documents : bulletins + documents générés, une seule surface -->
-          <AppSurface class="me-block">
+          <VCard variant="outlined" class="me-block">
             <div class="me-block__head">
               <h6 class="me-block__title">
                 {{ t('workforceMe.hours.documentsTitle') }}
@@ -671,13 +672,14 @@ function signatureChipProps(status) {
                 <VIcon icon="tabler-download" />
               </IconBtn>
             </div>
-          </AppSurface>
+          </VCard>
         </div>
 
         <div class="me-col">
           <!-- Mes congés : une ligne par type, l'action dans l'en-tête (ADR-804 : seulement si le module Congés est actif) -->
-          <AppSurface
+          <VCard
             v-if="hasLeaveModule"
+            variant="outlined"
             class="me-block"
           >
             <div class="me-block__head">
@@ -721,10 +723,10 @@ function signatureChipProps(status) {
                 {{ t('workforceMe.daysUnit', { count: toDays(balance.available) }) }}
               </div>
             </div>
-          </AppSurface>
+          </VCard>
 
           <!-- Mon contrat : faits en une colonne (libellé / valeur) -->
-          <AppSurface class="me-block">
+          <VCard variant="outlined" class="me-block">
             <div class="me-block__head">
               <h6 class="me-block__title">
                 {{ t('workforceMe.myContract') }}
@@ -749,7 +751,7 @@ function signatureChipProps(status) {
                 <dd>{{ f.value || '—' }}</dd>
               </div>
             </dl>
-          </AppSurface>
+          </VCard>
         </div>
       </div>
     </template>

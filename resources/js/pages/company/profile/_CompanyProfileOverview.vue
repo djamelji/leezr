@@ -202,7 +202,7 @@ const confirmReset = () => {
     </VAlert>
 
     <!-- ADR-782 (UX6) : une surface, des sections (intitulé à gauche, champs à droite). -->
-    <AppSurface>
+    <VCard variant="outlined">
     <!-- ─── General Info ────────────────────────────── -->
     <AppFormSection
       :title="t('companySettings.title')"
@@ -438,7 +438,7 @@ const confirmReset = () => {
           />
         </VRow>
     </AppFormSection>
-    </AppSurface>
+    </VCard>
 
     <!-- ─── Save / Cancel ───────────────────────────── -->
     <div

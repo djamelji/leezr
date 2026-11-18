@@ -4452,10 +4452,8 @@
     "scheduled": "Planifiée",
     "scheduledDate": "Date planifiée",
     "createdBy": "Créée par",
-    "createdAt": "Créée le",
     "notes": "Notes",
     "additionalInfo": "Informations complémentaires...",
-    "shipmentDetails": "Détails de l'expédition",
     "assignment": "Assignation",
     "selectMember": "Sélectionner un membre...",
     "assign": "Assigner",
@@ -4542,19 +4540,13 @@
   },
   "deliveries": {
     "title": "Mes livraisons",
-    "filterByStatus": "Filtrer par statut",
-    "reference": "Référence",
     "destination": "Destination",
     "scheduled": "Planifiée",
     "scheduledDate": "Date planifiée",
     "origin": "Origine",
     "notes": "Notes",
-    "deliveryDetails": "Détails de la livraison",
     "delivery": "Livraison",
-    "updateStatus": "Mettre à jour le statut",
     "noActionsAvailable": "Aucune action disponible.",
-    "noDeliveries": "Aucune livraison ne vous est assignée.",
-    "deliveryCount": "{count} livraison(s)",
     "statusDraft": "Brouillon",
     "statusPlanned": "Planifiée",
     "statusInTransit": "En transit",
@@ -4564,7 +4556,6 @@
     "markDelivered": "Marquer comme livrée",
     "statusChangedTo": "Statut changé en « {status} ».",
     "failedToChangeStatus": "Échec du changement de statut.",
-    "all": "Toutes",
     "subtitle": "Les livraisons qui vous sont confiées, avec l'étape suivante en un geste.",
     "filter": {
       "todo": "À faire",
@@ -7694,8 +7685,6 @@
       "dateTo": "Au"
     },
     "columns": {
-      "templateCode": "Modèle",
-      "subject": "Sujet",
       "signatureStatus": "Signature",
       "generatedAt": "Généré le",
       "generatedBy": "Généré par",
@@ -8411,12 +8400,6 @@
       "computed": "Calculé",
       "validated": "Validé",
       "exported": "Exporté"
-    },
-    "stats": {
-      "totalRuns": "Total runs",
-      "draft": "Brouillons",
-      "computed": "Calculés",
-      "validated": "Validés"
     },
     "filters": {
       "periodStart": "Début de période",
