@@ -4,7 +4,7 @@
 // effet rétroactif, puis refait le parcours sur mobile (scroll/boutons). Validation d'incohérence vérifiée.
 // Les ACTIONS passent par l'UI ; les lectures de vérification peuvent interroger l'API.
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts } from './helpers.js'
+import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -20,10 +20,7 @@ test.afterEach(async ({ page }) => {
 })
 
 async function openTemplatesTab(page) {
-  await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'domcontentloaded' })
-  const tab = page.locator('[data-test="plan-view-templates"]')
-  await tab.waitFor({ state: 'visible', timeout: 30000 })
-  await tab.click()
+  await openPlanningTemplates(page) // ADR-830 : « Plus » menu since ADR-824
   await page.waitForTimeout(600)
 }
 async function fillCore(page, name) {
@@ -126,7 +123,7 @@ test('M1.b — éditeur visuel : création composée, reload, application, modif
   const labelsBefore = list1.map(a => a.label).sort()
 
   // 9) Modifier le modèle source via l'UI (changer un libellé d'activité) + enregistrer.
-  await page.locator('[data-test="plan-view-templates"]').click()
+  await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(500)
   await page.locator(`[data-test="template-edit-${tpl.id}"]`).click()
   await page.waitForTimeout(400)

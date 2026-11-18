@@ -263,3 +263,17 @@ export async function createEmployeeViaTeam(page, { firstName, lastName, email =
 
   return resp
 }
+
+// ADR-830 (D-21) — the planning « Modèles » view lives in the « Plus » menu since ADR-824 (the legacy
+// /company/workforce/time?tab=planning entry no longer lands on the planning page).
+export async function openPlanningTemplates(page, { navigate = true } = {}) {
+  if (navigate) await page.goto('/company/workforce/planning', { waitUntil: 'domcontentloaded' })
+  // desktop : « Plus » of the header ; mobile : the dedicated header menu (ADR-824)
+  const more = page.locator('[data-test="planning-actions-more"]:visible, [data-test="planning-more"]:visible').first()
+  await more.waitFor({ state: 'visible', timeout: 30000 })
+  await more.click()
+  const item = page.locator('[data-test="plan-view-templates"]')
+  await item.waitFor({ state: 'visible', timeout: 10000 })
+  await item.click()
+  await page.waitForTimeout(500)
+}

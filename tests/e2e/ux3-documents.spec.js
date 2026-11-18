@@ -198,7 +198,7 @@ test('UX3 parcours exécutés (propriétaire, registre d\'exécution)', async ({
     await page.screenshot({ path: `${OUT}/search.jpg`, type: 'jpeg', quality: 55 })
     // Le résultat ouvre l'endroit où vit le document.
     await page.locator('[data-test="documents-search-row-generated"]').click()
-    await page.waitForURL(u => u.pathname === `/company/people/${ref}`)
+    await page.waitForURL(u => u.pathname === `/company/people/${ref}` || u.pathname === `/company/people/${ref}/documents`) // ADR-830 : opens ON the Documents tab
     await expect(page.locator('[data-test="employee-generated-documents"] tbody tr').first(), 'contrat retrouvé dans le dossier').toBeVisible()
 
     // ── 8. Suivre une expiration ────────────────────────────────────────────────────────

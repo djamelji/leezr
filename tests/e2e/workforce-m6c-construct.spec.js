@@ -3,7 +3,7 @@
 // F navigation clarifiée (Agenda/Semaine/Modèles, plus de « Planning → Planning », bibliothèques accessibles).
 // La construction elle-même (semaine type / répétition / bulk / copie) est prouvée par m3/m4/lot4b (verts).
 import { test, expect } from '@playwright/test'
-import { loginCompany, trackCreatedShifts, cleanupShifts } from './helpers.js'
+import { loginCompany, trackCreatedShifts, cleanupShifts, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -72,12 +72,14 @@ test('M6.C F — navigation clarifiée : Agenda/Semaine/Modèles + bibliothèque
   // M6.D — sous-nav unifiée (Semaine/Jour/Postes/Mois) : le hook legacy plan-view-calendar = mode « Jour ».
   await expect(page.locator('[data-test="plan-view-calendar"]')).toContainText(/Jour/i)
   await expect(page.locator('[data-test="plan-view-planning"]')).toContainText(/Semaine/i)
+  await page.locator('[data-test="planning-actions-more"]').click() // ADR-824 : « Modèles » in the « Plus » menu
   await expect(page.locator('[data-test="plan-view-templates"]')).toContainText(/Modèles|Templates/i)
+  await page.keyboard.press('Escape')
   // L'action principale de construction est visible.
   await expect(page.locator('[data-test="prepare-week-open"]')).toBeVisible()
 
   // Les 3 bibliothèques (tâches, semaines types, import) restent accessibles depuis l'espace Modèles.
-  await page.locator('[data-test="plan-view-templates"]').click()
+  await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(600)
   await expect(page.locator('[data-test="preset-library-open"]')).toBeVisible()
   await expect(page.locator('[data-test="week-library-open"]')).toBeVisible()

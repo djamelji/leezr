@@ -20,7 +20,7 @@ test.describe('Platform CRUD (admin)', () => {
     // SUSPEND the first active company.
     await clickAndExpectApi(page, { urlIncludes: "/suspend", method: "PUT" }, async () => {
       await suspendBtns().first().click()
-      await page.getByRole("button", { name: "Confirm", exact: true }).click()
+      await page.getByRole("button", { name: /^(Confirm|Confirmer)$/ }).click() // ADR-830 : French UI
     })
 
     // Persistence: reload → one more suspended company (reactivate button).

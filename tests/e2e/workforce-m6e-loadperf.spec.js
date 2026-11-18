@@ -24,7 +24,7 @@ async function resolveCompanies(page) {
 }
 
 async function useCompany(page, id) {
-  await page.context().addCookies([{ name: 'currentCompanyId', value: String(id), url: 'https://leezr.test' }])
+  await page.context().addCookies([{ name: 'currentCompanyId', value: String(id), url: test.info().project.use.baseURL } /* ADR-830 : the campaign host, never the DEV */])
 }
 
 test('M6.E PERF — 4 vues × 5/25/50/100 collaborateurs (mesuré)', async ({ page }) => {

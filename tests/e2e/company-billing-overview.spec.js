@@ -3,7 +3,7 @@
 // Verifies the restructured owner overview renders, section headings are present, no JS error,
 // and it works in dark mode. (Financial correctness is covered by PHPUnit.)
 import { expect, test } from '@playwright/test'
-import { loginCompany } from './helpers'
+import { loginCompany, apiRequest } from './helpers'
 
 test('owner billing overview renders the new hierarchy without JS errors', async ({ page }) => {
   const errors = []
@@ -61,6 +61,8 @@ test('owner addon catalog renders with state distinctions and no JS errors', asy
 test('owner billing overview renders in dark mode', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await loginCompany(page, 'owner@leezr.test')
+  // ADR-830 (D-21) : other specs persist an explicit theme for this account — follow the system again.
+  await apiRequest(page, { method: 'PUT', path: '/api/theme-preference', body: { theme: 'system' } })
   await page.goto('/company/billing/overview', { waitUntil: 'networkidle' })
 
   const isDark = await page.evaluate(() => !!document.querySelector('.v-theme--dark'))

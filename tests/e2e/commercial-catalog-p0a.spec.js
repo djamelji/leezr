@@ -19,8 +19,14 @@ test('P0-A A — catalogue Company : modules fictifs « En préparation », non 
   const catalog = await apiRequest(page, { method: 'GET', path: '/api/modules' })
   const rows = (catalog.json?.modules ?? catalog.json?.data ?? catalog.json ?? [])
   const byKey = Object.fromEntries(rows.map(m => [m.key, m]))
-  for (const k of PREVIEW) {
-    expect(byKey[k], `${k} présent au catalogue`).toBeTruthy()
+  // ADR-818 (Logistics Only) supersedes the « shown as En préparation » rule : an undelivered module is
+  // ABSENT from the catalogue of a company that does not have it ; a company that already has it keeps
+  // seeing it, still non purchasable (ADR-829/830 D-21 realignment — the protection asserted is unchanged).
+  const shown = PREVIEW.filter(k => byKey[k])
+  for (const k of PREVIEW.filter(k => !byKey[k])) expect(byKey[k], `${k} absent (non livré, non détenu)`).toBeUndefined()
+  for (const k of shown) {
+    // visible only because the company already holds it (activation or historical add-on subscription — ADR-818) ;
+    // whichever the reason, it must never be purchasable :
     expect(byKey[k].commercial_status, `${k} en préparation`).toBe('preview')
     expect(byKey[k].purchasable, `${k} non achetable`).toBe(false)
     expect(byKey[k].addon_pricing, `${k} aucun prix commandable`).toBeNull()
@@ -28,9 +34,9 @@ test('P0-A A — catalogue Company : modules fictifs « En préparation », non 
   }
 
   // UI : au moins un CTA « En préparation » désactivé, et aucune action d'achat pour ces modules.
+  await expect(page.locator(PREVIEW.map(k => `[data-test="module-activate-${k}"]`).join(', ')), 'aucune action d\'achat').toHaveCount(0)
   const previewCtas = page.locator('[data-test="module-preview-cta"]')
-  expect(await previewCtas.count(), 'CTA « En préparation » présents').toBeGreaterThanOrEqual(1)
-  await expect(previewCtas.first()).toBeDisabled()
+  if (await previewCtas.count()) await expect(previewCtas.first()).toBeDisabled()
 })
 
 test('P0-A B — contournement frontend : l’endpoint refuse l’achat (422 not_commercialisable)', async ({ page }) => {

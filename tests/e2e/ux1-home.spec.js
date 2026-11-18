@@ -188,7 +188,8 @@ test('UX1 parcours exécutés depuis l\'accueil (propriétaire, registre d\'exé
     read = await meter(page)
     net.mark('planning')
     await page.locator('[data-test="home-action-time.plan"]').click()
-    await page.waitForURL(u => u.pathname !== '/dashboard', { timeout: 15000 }).catch(() => {})
+    // ADR-830 (D-21) : the canonical home is /home since ADR-818 — wait for the actual destination.
+    await page.waitForURL(u => u.pathname === '/company/workforce/planning', { timeout: 15000 }).catch(() => {})
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
     measures.planning = await read()
     expect(new URL(page.url()).pathname).toBe('/company/workforce/planning')

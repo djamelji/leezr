@@ -4,6 +4,13 @@
 // and the safe text survives.
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
+import { seedInboundThread, removeInboundThread } from './email-fixtures.js'
+
+let fixture = null
+test.beforeAll(() => {
+  fixture = seedInboundThread({ subject: 'XSS Probe Subject', html: '<p>Safe content here.</p><script>window.__xss = 1</script><img src=x onerror="window.__xss = 2">' })
+})
+test.afterAll(() => removeInboundThread(fixture))
 
 test('malicious inbound HTML is sanitized before rendering', async ({ page }) => {
   await loginPlatform(page, 'admin@leezr.com')

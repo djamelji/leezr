@@ -2,7 +2,7 @@
 // Écritures RÉELLEMENT persistées (POST 201 observés), pas de maquette. Le planning vit dans l'espace
 // unifié « Temps de travail » (onglet Planning) ; la grille hebdo est desktop-only.
 import { test, expect } from '@playwright/test'
-import { loginCompany } from './helpers.js'
+import { loginCompany, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -42,7 +42,7 @@ test('template enrichi : code + type d\'activité persistés', async ({ page }) 
 
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.locator('[data-test="plan-view-templates"]').click()
+  await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(500)
 
   await page.getByRole('button', { name: /Nouveau modèle|New template/i }).first().click()

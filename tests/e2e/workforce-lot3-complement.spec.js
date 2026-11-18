@@ -76,7 +76,7 @@ test('D — sécurité : projection sans motif + endpoint protégé (accès dire
 
   // Accès direct NON authentifié (contexte vierge, en JSON, sans suivre la redirection login) → pas 200.
   const fresh = await browser.newContext({ ignoreHTTPSErrors: true })
-  const res = await fresh.request.get(`https://leezr.test/api/workforce/planning/shifts/board?from=${today}&to=${today}`, {
+  const res = await fresh.request.get(`${test.info().project.use.baseURL}/api/workforce/planning/shifts/board?from=${today}&to=${today}`, {
     headers: { Accept: 'application/json' }, maxRedirects: 0, failOnStatusCode: false,
   })
   expect(res.status(), 'accès direct non authentifié doit être refusé').not.toBe(200)

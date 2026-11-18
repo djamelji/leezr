@@ -10,7 +10,9 @@ const TAG = process.env.AUDIT_TAG || 'j'
 const USER = process.env.AUDIT_USER || 'owner@leezr.test'
 const VIEW = (process.env.AUDIT_VIEW || '1440x900').split('x').map(Number)
 const DARK = process.env.AUDIT_DARK === '1'
-const STEPS = JSON.parse(fs.readFileSync(process.env.AUDIT_STEPS, 'utf8'))
+// ADR-830 : parametrised audit TOOL (AUDIT_STEPS=<file>) — skipped in a regular campaign instead of breaking collection
+const STEPS = process.env.AUDIT_STEPS ? JSON.parse(fs.readFileSync(process.env.AUDIT_STEPS, 'utf8')) : null
+test.skip(!STEPS, 'audit tool : set AUDIT_STEPS to run it')
 
 test.use({ viewport: { width: VIEW[0], height: VIEW[1] }, colorScheme: DARK ? 'dark' : 'light' })
 

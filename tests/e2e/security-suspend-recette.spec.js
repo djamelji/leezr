@@ -22,7 +22,7 @@ test('SECURITY-1 — suspend UI + live enforcement loop (local fixture)', async 
   const memberCtx = await browser.newContext()
   const member = await memberCtx.newPage(); member.setDefaultTimeout(20000)
   await loginCompany(member, 'sec-member@test.test', 'password')
-  await memberCtx.addCookies([{ name: 'currentCompanyId', value: '22', url: 'https://leezr.test' }])
+  await memberCtx.addCookies([{ name: 'currentCompanyId', value: '22', url: test.info().project.use.baseURL } /* ADR-830 : the campaign host, never the DEV */])
   await member.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await member.waitForTimeout(2000)
   const before = await apiRequest(member, { method: 'GET', path: '/api/nav' })

@@ -1,7 +1,7 @@
 // Refonte Smart Planning — M3 (ADR-726) : semaines types, depuis la VRAIE interface.
 // A (TPE nominative) · B (logistique par besoins, poste non pourvu) · C (mixte) · D (concurrence) · E (mobile).
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts } from './helpers.js'
+import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 const API = '/api/workforce/planning'
@@ -19,10 +19,7 @@ test.afterEach(async ({ page }) => {
 })
 
 async function templatesTab(page) {
-  await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'domcontentloaded' })
-  const tab = page.locator('[data-test="plan-view-templates"]')
-  await tab.waitFor({ state: 'visible', timeout: 30000 })
-  await tab.click(); await page.waitForTimeout(500)
+  await openPlanningTemplates(page) // ADR-830 : « Plus » menu since ADR-824; await page.waitForTimeout(500)
 }
 // Crée un modèle de shift court (faibles heures) via l'éditeur M1.b. Retourne {id,name}.
 async function makeTemplate(page, start, end) {

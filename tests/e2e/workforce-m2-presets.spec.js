@@ -3,7 +3,7 @@
 // appliquer → vérifier l'activité réelle → modifier la tâche source → constater l'absence d'effet
 // rétroactif (composition + instance) → désactiver → historique intact. + expérience mobile.
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts } from './helpers.js'
+import { loginCompany, apiRequest, trackCreatedShifts, cleanupShifts, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -21,10 +21,7 @@ test.afterEach(async ({ page }) => {
 })
 
 async function openTemplatesTab(page) {
-  await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'domcontentloaded' })
-  const tab = page.locator('[data-test="plan-view-templates"]')
-  await tab.waitFor({ state: 'visible', timeout: 30000 })
-  await tab.click()
+  await openPlanningTemplates(page) // ADR-830 : « Plus » menu since ADR-824
   await page.waitForTimeout(500)
 }
 
@@ -105,7 +102,7 @@ test('M2 — tâche type : créer, insérer dans un modèle, appliquer, modifier
   expect(list1[0].source).toBe('template')
 
   // 9) Modifier la tâche SOURCE via l'UI.
-  await page.locator('[data-test="plan-view-templates"]').click()
+  await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(400)
   await page.locator('[data-test="preset-library-open"]').click()
   await expect(page.locator(`[data-test="preset-edit-${preset.id}"]`)).toBeVisible()

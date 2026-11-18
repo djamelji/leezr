@@ -1,7 +1,7 @@
 // Lot 2 — réserve ADR-714 §9 : drawer scrollable même avec erreur de validation (hauteur accrue) et sur
 // mobile ; sauvegarde réelle depuis le bas du drawer. Parcours UI réels.
 import { test, expect } from '@playwright/test'
-import { loginCompany } from './helpers.js'
+import { loginCompany, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 
@@ -44,7 +44,7 @@ test('drawer mobile 390 : scroll et action accessibles', async ({ page }) => {
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
   await page.locator('[data-test="planning-more"]').click() // mobile : « Modèles » dans le menu « Plus » de l'en-tête
-  await page.locator('[data-test="plan-view-templates"]').click()
+  await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(600)
   await page.getByRole('button', { name: /Nouveau modèle|New template/i }).first().click()
   await page.waitForTimeout(400)

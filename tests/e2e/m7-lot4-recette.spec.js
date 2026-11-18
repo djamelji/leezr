@@ -10,6 +10,7 @@
 //   (M7Lot4RbacMatrixTest) — leurs comptes de recette locaux n'ont pas de mot de passe.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { recipeEval } from './recipe.js'
 import { apiRequest, loginCompany, watchNetwork } from './helpers.js'
 
 const DIR = 'tests/e2e/__screens__/m7-lot4'
@@ -121,6 +122,7 @@ test('profil salarié opérationnel : son espace, et des refus de sécurité EXP
       { status: 403, method: 'PUT', path: /^\/api\/company\/members\/\d+$/, reason: 'pas members.manage' },
       { status: 403, method: 'POST', path: /^\/api\/company\/members\/\d+\/suspend$/, reason: 'pas members.manage' },
       { status: 422, method: 'POST', path: /^\/api\/company\/members$/, reason: 'anti-escalade : rôle administratif refusé à un non-administrateur' },
+      { status: 403, method: 'POST', path: /^\/api\/company\/members$/, reason: 'pas de droit d\'inviter (ADR-830 : refus plus strict que l\'anti-escalade)' },
     ],
   })
 
@@ -143,10 +145,17 @@ test('profil salarié opérationnel : son espace, et des refus de sécurité EXP
   const other = list.json.data.find(r => r.user_id && r.email !== 'bob@leezr.test' && !r.is_owner)
   const file = await apiRequest(page, { path: `/api/company/people/${other.person_ref}` })
   expect([file.status, file.json.employment, file.json.can.view_hr, file.json.can.edit_identity]).toEqual([200, null, false, false])
+  // ADR-830 (D-21) : the probe needs an administrative role id ; bob cannot list roles (403, asserted below)
+  // and the people list only exposes the roles of the rows visible to him — read it through the guarded recipe.
   const adminRole = list.json.data.map(r => r.role).find(r => r?.is_administrative)
+    || { id: Number(recipeEval("echo App\\Company\\RBAC\\CompanyRole::where('company_id',1)->where('is_administrative',true)->value('id');")) }
+  expect(adminRole.id, 'an administrative role exists').toBeGreaterThan(0)
 
   // Appels HTTP directs (ce que l'interface masque) : refusés par le serveur.
-  const membershipId = file.json.membership_id
+  // ADR-816 hides account details (membership id) from non-admins — read a real one on the marked clone so the
+  // write probes below still target an existing membership (ADR-830 D-21).
+  const membershipId = file.json.membership_id || Number(recipeEval("$b = App\\Core\\Models\\User::where('email','bob@leezr.test')->value('id'); echo App\\Core\\Models\\Membership::where('company_id',1)->where('role','!=','owner')->where('user_id','!=',$b)->value('id');"))
+  expect(membershipId, 'a target membership exists').toBeGreaterThan(0)
   const probes = [
     ['GET', '/api/workforce/employees', null, 403],
     ['GET', '/api/company/payslip-imports', null, 403],
@@ -155,12 +164,13 @@ test('profil salarié opérationnel : son espace, et des refus de sécurité EXP
     ['GET', '/api/company/roles', null, 403],
     ['PUT', `/api/company/members/${membershipId}`, { last_name: 'Hijack' }, 403],
     ['POST', `/api/company/members/${membershipId}/suspend`, {}, 403],
-    ['POST', '/api/company/members', { email: `escalade.${Date.now()}@leezr.test`, first_name: 'E', last_name: 'S', company_role_id: adminRole.id }, 422],
+    ['POST', '/api/company/members', { email: `escalade.${Date.now()}@leezr.test`, first_name: 'E', last_name: 'S', company_role_id: adminRole.id }, [403, 422]], // ADR-830 : no invite right (403) or escalation refused (422) — never created
   ]
   for (const [method, path, body, expected] of probes) {
     const res = await apiRequest(page, { method, path, body })
 
-    expect(res.status, `${method} ${path}`).toBe(expected)
+    if (Array.isArray(expected)) expect(expected, `${method} ${path} → ${res.status}`).toContain(res.status)
+    else expect(res.status, `${method} ${path}`).toBe(expected)
   }
   expect(net.refusals.length, 'chaque refus est un refus de sécurité déclaré').toBe(probes.length)
   net.assertClean('sondes du salarié')

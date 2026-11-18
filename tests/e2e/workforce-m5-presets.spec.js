@@ -3,15 +3,13 @@
 // B (RBAC/provenance/idempotence côté service) + E (séparation tenant, homonyme) : couverts par PHPUnit
 //   (WorkforcePresetImportM5Test) — l'import réutilise exactement le même service transactionnel.
 import { test, expect } from '@playwright/test'
-import { loginCompany, apiRequest } from './helpers.js'
+import { loginCompany, apiRequest, openPlanningTemplates } from './helpers.js'
 
 test.use({ ignoreHTTPSErrors: true })
 const API = '/api/workforce/planning'
 
 async function templatesTab(page) {
-  await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'domcontentloaded' })
-  const tab = page.locator('[data-test="plan-view-templates"]')
-  await tab.waitFor({ state: 'visible', timeout: 30000 }); await tab.click(); await page.waitForTimeout(500)
+  await openPlanningTemplates(page) // ADR-830 : « Plus » menu since ADR-824; await page.waitForTimeout(500)
 }
 
 async function openImport(page) {

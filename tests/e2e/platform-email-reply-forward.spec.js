@@ -2,6 +2,14 @@
 // ADR-609 (recette) — reply-all and forward open the composer with the correct prefill.
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
+import { seedInboundThread, removeInboundThread } from './email-fixtures.js'
+
+const fixtures = []
+test.beforeAll(() => {
+  fixtures.push(seedInboundThread({ subject: '[E2E] Reply-all source', html: '<p>Reply-all body</p>', from: 'client-a@example.org', name: 'Client A' }))
+  fixtures.push(seedInboundThread({ subject: '[E2E] Forward source', html: '<p>Forward body</p>' }))
+})
+test.afterAll(() => fixtures.forEach(removeInboundThread))
 
 async function openThread(page, subject) {
   await page.goto('/platform/messaging/inbox', { waitUntil: 'networkidle' })
