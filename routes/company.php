@@ -941,21 +941,21 @@ Route::prefix('workforce/payroll')->middleware('company.access:use-module,workfo
     Route::get('statistics', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'statistics'])->middleware($perm('workforce.payroll_prepare'));
     Route::get('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'index'])->middleware($perm('workforce.payroll_prepare'));
     Route::post('/', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'store'])->middleware($perm('workforce.payroll_prepare'));
-    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'show'])->middleware($perm('workforce.payroll_prepare'));
-    Route::delete('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'destroy'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'show'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::delete('{id}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'destroy'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
 
     // Payroll Run Actions
-    Route::post('{id}/compute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'compute'])->middleware($perm('workforce.payroll_prepare'));
-    Route::post('{id}/compute-calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'computeCalculations'])->middleware($perm('workforce.payroll_prepare'));
-    Route::post('{id}/validate', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'validate'])->middleware($perm('workforce.payroll_validate'));
-    Route::post('{id}/export', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'export'])->middleware($perm('workforce.payroll_export'));
-    Route::post('{id}/recompute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'recompute'])->middleware($perm('workforce.payroll_prepare'));
+    Route::post('{id}/compute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'compute'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::post('{id}/compute-calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'computeCalculations'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::post('{id}/validate', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'validate'])->whereNumber('id')->middleware($perm('workforce.payroll_validate'));
+    Route::post('{id}/export', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'export'])->whereNumber('id')->middleware($perm('workforce.payroll_export'));
+    Route::post('{id}/recompute', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'recompute'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
 
     // Payroll Run Data
-    Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines'])->middleware($perm('workforce.payroll_prepare'));
-    Route::get('{id}/lines/{lineId}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'showLine'])->middleware($perm('workforce.payroll_prepare'));
-    Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations'])->middleware($perm('workforce.payroll_prepare'));
-    Route::get('{id}/documents', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'documents'])->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/lines', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'lines'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/lines/{lineId}', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'showLine'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/calculations', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'calculations'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
+    Route::get('{id}/documents', [\App\Modules\Workforce\Payroll\Http\PayrollRunController::class, 'documents'])->whereNumber('id')->middleware($perm('workforce.payroll_prepare'));
 });
 
 // ── Workforce DSN Declarations ────────────────────────────────
