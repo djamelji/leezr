@@ -110,6 +110,7 @@ const fmtDateTime = iso => iso ? new Date(iso).toLocaleString(locale.value, { da
 const weekStartDay = ref(null)
 const effectiveFirstDay = computed(() => weekStartDay.value ?? 1)
 const canEditShifts = computed(() => can('workforce.planning_manage'))
+const canManageCoverage = computed(() => can('workforce.coverage_manage')) // ADR-823 : entrée du menu « Plus »
 onMounted(async () => {
   try { weekStartDay.value = (await store.fetchWeekStart()).week_start_day } catch { /* repli locale */ }
 })
@@ -2686,15 +2687,7 @@ watch(activeTab, tab => {
       :bare="embedded"
     >
       <template #actions>
-        <VBtn
-          v-if="activeTab === 'planning' && selectedDraftIds.length > 0"
-          v-can="'workforce.planning_manage'"
-          color="success"
-          prepend-icon="tabler-send"
-          @click="publishSelected"
-        >
-          {{ $t('planning.publishSelected', { count: selectedDraftIds.length }) }}
-        </VBtn>
+        <!-- ADR-823 : la publication de la sélection vit dans le bandeau de la grille (plus de doublon ici) -->
         <VBtn
           v-if="activeTab === 'planning' && !smAndDown"
           v-can="'workforce.planning_manage'"
@@ -3299,49 +3292,28 @@ watch(activeTab, tab => {
           </VCard>
         </div>
 
-        <!-- Stats Row -->
-        <!-- Synthèse compacte de la semaine (remplace les 4 grandes cartes) -->
-        <div
-          v-if="!smAndDown"
-          class="d-flex flex-wrap align-center gap-x-6 gap-y-2 mb-4 px-1"
-        >
-          <div class="d-flex align-center gap-2">
-            <VIcon icon="tabler-calendar-stats" size="18" class="text-medium-emphasis" />
-            <span class="text-h6 mb-0">{{ weekSummary.total }}</span>
-            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.totalShifts') }}</span>
-          </div>
-          <VDivider vertical class="my-1" />
-          <div class="d-flex align-center gap-2">
-            <span class="legend-dot" style="background: rgb(var(--v-theme-success));" />
-            <span class="text-body-1 font-weight-medium">{{ weekSummary.published }}</span>
-            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.published') }}</span>
-          </div>
-          <div class="d-flex align-center gap-2">
-            <span class="legend-dot" style="background: rgb(var(--v-theme-warning));" />
-            <span class="text-body-1 font-weight-medium">{{ weekSummary.draft }}</span>
-            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.draft') }}</span>
-          </div>
-          <VDivider vertical class="my-1" />
-          <div class="d-flex align-center gap-2">
-            <VIcon icon="tabler-clock" size="18" class="text-medium-emphasis" />
-            <span class="text-body-1 font-weight-medium">{{ weekSummary.hours }}</span>
-            <span class="text-body-2 text-medium-emphasis">{{ $t('planning.stats.hoursPlanned') }}</span>
-          </div>
-        </div>
-
         <!-- Week Navigation + Grid (desktop) -->
         <VCard v-if="!smAndDown">
           <VCardText>
+            <!-- ADR-823 — barre de la grille sur UNE ligne : période + synthèse, recherche, filtres, vue,
+                 annuler/rétablir, puis « Plus » (libellés explicites) pour les actions secondaires. -->
             <div class="plan-toolbar d-flex align-center flex-wrap gap-2">
-              <!-- Navigation de semaine + Aujourd'hui -->
               <div class="d-flex align-center">
-                <VBtn icon variant="text" size="small" @click="prevWeek">
+                <VBtn icon variant="text" size="small" :aria-label="$t('common.previous', 'Précédent')" @click="prevWeek">
                   <VIcon icon="tabler-chevron-left" />
                 </VBtn>
-                <h5 class="plan-week-label text-subtitle-1 font-weight-bold text-capitalize mx-1">
-                  {{ weekLabel }}
-                </h5>
-                <VBtn icon variant="text" size="small" @click="nextWeek">
+                <div class="mx-1">
+                  <h5 class="plan-week-label text-subtitle-1 font-weight-bold text-capitalize mb-0">
+                    {{ weekLabel }}
+                  </h5>
+                  <div class="text-caption text-medium-emphasis d-flex flex-wrap gap-x-3" data-test="plan-week-summary">
+                    <span>{{ $t('planning.summary.shifts', { n: weekSummary.total }) }}</span>
+                    <span><span class="legend-dot me-1" style="background: rgb(var(--v-theme-success));" />{{ weekSummary.published }} {{ $t('planning.stats.published') }}</span>
+                    <span><span class="legend-dot me-1" style="background: rgb(var(--v-theme-warning));" />{{ weekSummary.draft }} {{ $t('planning.stats.draft') }}</span>
+                    <span>{{ weekSummary.hours }} {{ $t('planning.stats.hoursPlanned') }}</span>
+                  </div>
+                </div>
+                <VBtn icon variant="text" size="small" :aria-label="$t('common.next', 'Suivant')" @click="nextWeek">
                   <VIcon icon="tabler-chevron-right" />
                 </VBtn>
                 <VBtn variant="tonal" size="small" class="ms-2" @click="goToToday">
@@ -3351,57 +3323,23 @@ watch(activeTab, tab => {
 
               <VSpacer />
 
-              <!-- Recherche collaborateur (§4) -->
-              <AppTextField
-                v-model="rowSearch"
-                :placeholder="$t('planning.grid.searchEmployee')"
-                density="compact"
-                hide-details
-                prepend-inner-icon="tabler-search"
-                clearable
-                class="plan-toolbar__search"
-                data-test="grid-search"
-              />
-
-              <!-- Regroupement par équipe (§4) -->
-              <VBtnToggle v-model="groupBy" mandatory density="compact" variant="outlined" divided>
-                <VBtn value="team" size="small" data-test="group-team">
-                  <VIcon icon="tabler-users-group" size="18" />
-                  <VTooltip activator="parent" :text="$t('planning.grid.groupTeam')" location="top" />
-                </VBtn>
-                <VBtn value="none" size="small" data-test="group-none">
-                  <VIcon icon="tabler-list" size="18" />
-                  <VTooltip activator="parent" :text="$t('planning.grid.groupNone')" location="top" />
-                </VBtn>
-              </VBtnToggle>
-
-              <!-- Densité (§4) -->
-              <VBtn
-                icon
-                variant="outlined"
-                size="small"
-                data-test="density-toggle"
-                @click="density = density === 'compact' ? 'comfortable' : 'compact'"
-              >
-                <VIcon :icon="density === 'compact' ? 'tabler-baseline-density-small' : 'tabler-baseline-density-medium'" size="18" />
-                <VTooltip activator="parent" :text="$t('planning.grid.density')" location="top" />
-              </VBtn>
-
               <!-- Vue collaborateurs / postes -->
-              <VBtnToggle v-model="gridView" mandatory density="compact" variant="outlined" divided>
-                <VBtn value="employees" size="small" data-test="view-employees">
-                  <VIcon icon="tabler-users" size="18" />
-                  <VTooltip activator="parent" :text="$t('planning.views.byEmployee')" location="top" />
+              <div class="d-inline-flex rounded-lg border pa-1 flex-shrink-0">
+                <VBtn
+                  v-for="v in [{ value: 'employees', icon: 'tabler-users', label: $t('planning.views.byEmployee') }, { value: 'posts', icon: 'tabler-briefcase', label: $t('planning.views.byPost') }]"
+                  :key="v.value"
+                  :variant="gridView === v.value ? 'flat' : 'text'"
+                  :color="gridView === v.value ? 'primary' : 'medium-emphasis'"
+                  size="small"
+                  class="text-none"
+                  :prepend-icon="v.icon"
+                  :data-test="`view-${v.value}`"
+                  @click="gridView = v.value"
+                >
+                  {{ v.label }}
                 </VBtn>
-                <VBtn value="posts" size="small" data-test="view-posts">
-                  <VIcon icon="tabler-briefcase" size="18" />
-                  <VTooltip activator="parent" :text="$t('planning.views.byPost')" location="top" />
-                </VBtn>
-              </VBtnToggle>
+              </div>
 
-              <VDivider vertical class="mx-1" inset />
-
-              <!-- Actions : annuler / rétablir / copier / couverture -->
               <VBtn
                 v-can="'workforce.planning_manage'"
                 icon
@@ -3426,38 +3364,109 @@ watch(activeTab, tab => {
               >
                 <VIcon icon="tabler-arrow-forward-up" />
               </VBtn>
+
               <VBtn
-                v-can="'workforce.planning_manage'"
                 icon
-                variant="text"
+                variant="tonal"
                 size="small"
-                data-test="copy-prev-week"
-                @click="copyPreviousWeek"
+                color="secondary"
+                :aria-label="$t('timeSpace.more')"
+                data-test="grid-more"
               >
-                <VIcon icon="tabler-copy" />
-                <VTooltip activator="parent" :text="$t('planning.copyWeek.button')" location="top" />
+                <VIcon icon="tabler-dots-vertical" />
+                <VMenu activator="parent" location="bottom end">
+                  <VList min-width="280" density="compact">
+                    <VListSubheader>{{ $t('planning.grid.display') }}</VListSubheader>
+                    <VListItem
+                      prepend-icon="tabler-users-group"
+                      :active="groupBy === 'team'"
+                      :title="$t('planning.grid.groupTeam')"
+                      data-test="group-team"
+                      @click="groupBy = 'team'"
+                    />
+                    <VListItem
+                      prepend-icon="tabler-list"
+                      :active="groupBy === 'none'"
+                      :title="$t('planning.grid.groupNone')"
+                      data-test="group-none"
+                      @click="groupBy = 'none'"
+                    />
+                    <VListItem
+                      :prepend-icon="density === 'compact' ? 'tabler-baseline-density-medium' : 'tabler-baseline-density-small'"
+                      :title="density === 'compact' ? $t('planning.grid.comfortable') : $t('planning.grid.compact')"
+                      data-test="density-toggle"
+                      @click="density = density === 'compact' ? 'comfortable' : 'compact'"
+                    />
+                    <template v-if="canEditShifts || canManageCoverage">
+                      <VDivider class="my-1" />
+                      <VListSubheader>{{ $t('planning.grid.actions') }}</VListSubheader>
+                      <VListItem
+                        v-if="canEditShifts"
+                        prepend-icon="tabler-copy"
+                        :title="$t('planning.copyWeek.button')"
+                        data-test="copy-prev-week"
+                        @click="copyPreviousWeek"
+                      />
+                      <VListItem
+                        v-if="canEditShifts"
+                        prepend-icon="tabler-calendar-share"
+                        :title="$t('planning.copy.copyWeek')"
+                        data-test="copy-week"
+                        @click="openCopyWeek"
+                      />
+                      <VListItem
+                        v-if="canManageCoverage"
+                        prepend-icon="tabler-target-arrow"
+                        :title="$t('planning.coverage.manage')"
+                        data-test="coverage-manage"
+                        @click="openCoverageManager"
+                      />
+                    </template>
+                  </VList>
+                </VMenu>
               </VBtn>
-              <VBtn
-                v-can="'workforce.planning_manage'"
-                icon
-                variant="text"
-                size="small"
-                data-test="copy-week"
-                @click="openCopyWeek"
-              >
-                <VIcon icon="tabler-calendar-share" />
-                <VTooltip activator="parent" :text="$t('planning.copy.copyWeek')" location="top" />
-              </VBtn>
-              <VBtn
-                v-can="'workforce.coverage_manage'"
-                icon
-                variant="text"
-                size="small"
-                @click="openCoverageManager"
-              >
-                <VIcon icon="tabler-users-group" />
-                <VTooltip activator="parent" :text="$t('planning.coverage.manage')" location="top" />
-              </VBtn>
+            </div>
+
+            <!-- Recherche et filtres : deuxième ligne, pleine largeur -->
+            <div class="d-flex flex-wrap align-center gap-2 mt-3">
+                <AppTextField
+                  v-model="rowSearch"
+                  :placeholder="$t('planning.grid.searchEmployee')"
+                  density="compact"
+                  hide-details
+                  prepend-inner-icon="tabler-search"
+                  clearable
+                  class="plan-toolbar__search"
+                  data-test="grid-search"
+                />
+
+                <VBtn
+                  variant="tonal"
+                  :color="gridFilterCount ? 'primary' : 'secondary'"
+                  prepend-icon="tabler-filter"
+                  data-test="plan-filters-toggle"
+                  :aria-expanded="gridFiltersVisible"
+                  @click="gridFiltersOpen = !gridFiltersVisible"
+                >
+                  {{ $t('timeSpace.filters') }}
+                  <VChip
+                    v-if="gridFilterCount"
+                    size="x-small"
+                    color="primary"
+                    class="ms-2"
+                  >
+                    {{ gridFilterCount }}
+                  </VChip>
+                </VBtn>
+
+            </div>
+
+            <!-- Presse-papiers + publication : un bandeau seulement quand il y a quelque chose à faire -->
+            <div
+              v-if="clipboard || allDraftShiftIds.length > 0"
+              class="d-flex flex-wrap align-center gap-2 mt-3 pa-2 rounded border"
+              data-test="plan-publish-bar"
+            >
               <VChip
                 v-if="clipboard"
                 color="primary"
@@ -3469,67 +3478,44 @@ watch(activeTab, tab => {
                 <VIcon icon="tabler-clipboard" size="14" start />
                 {{ $t('planning.copy.clipboard', { n: clipboard.shiftIds.length }) }}
               </VChip>
-
-              <!-- Sélection & publication -->
-              <VBtn
-                v-if="allDraftShiftIds.length > 0"
-                v-can="'workforce.planning_manage'"
-                variant="text"
-                size="small"
-                :prepend-icon="selectedDraftIds.length === allDraftShiftIds.length ? 'tabler-square-check' : 'tabler-square'"
-                @click="toggleSelectAll"
-              >
-                {{ $t('planning.selectAll') }}
-              </VBtn>
-              <VBtn
-                v-if="selectedDraftIds.length > 0"
-                v-can="'workforce.planning_publish'"
-                color="success"
-                variant="flat"
-                size="small"
-                prepend-icon="tabler-send"
-                data-test="publish-selection"
-                @click="publishSelected"
-              >
-                {{ $t('planning.publishSelection', { n: selectedDraftIds.length }) }}
-              </VBtn>
-              <VBtn
-                v-if="allDraftShiftIds.length"
-                v-can="'workforce.planning_publish'"
-                variant="flat"
-                color="success"
-                size="small"
-                prepend-icon="tabler-send"
-                data-test="publish-week"
-                @click="publishWeek"
-              >
-                {{ $t('planning.publishWeek') }}
-              </VBtn>
-            </div>
-
-            <!-- Grid filters (Smart Planning SP1a) — ADR-779 (UX4) : repliés derrière « Filtres » ;
-                 ouverts d'office dès qu'un filtre ou un modèle armé est actif (rien de caché en silence). -->
-            <div class="d-flex flex-wrap align-center gap-3 mt-4">
-              <VBtn
-                variant="tonal"
-                color="secondary"
-                size="small"
-                prepend-icon="tabler-filter"
-                data-test="plan-filters-toggle"
-                :aria-expanded="gridFiltersVisible"
-                @click="gridFiltersOpen = !gridFiltersVisible"
-              >
-                {{ $t('timeSpace.filters') }}
-                <VChip
-                  v-if="gridFilterCount"
-                  size="x-small"
-                  color="primary"
-                  class="ms-2"
+              <template v-if="allDraftShiftIds.length > 0">
+                <span class="text-body-2 text-medium-emphasis ms-1">{{ $t('planning.drafts.pending', { n: allDraftShiftIds.length }) }}</span>
+                <VSpacer />
+                <VBtn
+                  v-can="'workforce.planning_manage'"
+                  variant="text"
+                  size="small"
+                  :prepend-icon="selectedDraftIds.length === allDraftShiftIds.length ? 'tabler-square-check' : 'tabler-square'"
+                  @click="toggleSelectAll"
                 >
-                  {{ gridFilterCount }}
-                </VChip>
-              </VBtn>
+                  {{ $t('planning.selectAll') }}
+                </VBtn>
+                <VBtn
+                  v-if="selectedDraftIds.length > 0"
+                  v-can="'workforce.planning_publish'"
+                  color="success"
+                  variant="tonal"
+                  size="small"
+                  prepend-icon="tabler-send"
+                  data-test="publish-selection"
+                  @click="publishSelected"
+                >
+                  {{ $t('planning.publishSelection', { n: selectedDraftIds.length }) }}
+                </VBtn>
+                <VBtn
+                  v-can="'workforce.planning_publish'"
+                  variant="flat"
+                  color="success"
+                  size="small"
+                  prepend-icon="tabler-send"
+                  data-test="publish-week"
+                  @click="publishWeek"
+                >
+                  {{ $t('planning.publishWeek') }}
+                </VBtn>
+              </template>
             </div>
+
             <div
               v-if="gridFiltersVisible"
               class="d-flex flex-wrap align-center gap-3 mt-3"

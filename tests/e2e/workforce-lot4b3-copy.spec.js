@@ -116,6 +116,7 @@ test('copier la semaine : prévisualisation → confirmation → persistance', a
   await cleanEmployeeRange(page, emp, curMonday, curSunday)
 
   await gotoGrid(page)
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
   await page.locator('[data-test="copy-week"]').click()
   const [prev] = await Promise.all([
     page.waitForResponse(r => /\/planning\/shifts\/copy-week\/preview$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20000 }),

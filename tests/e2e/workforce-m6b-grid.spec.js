@@ -20,6 +20,7 @@ test('M6.B A — regroupement par équipe : en-têtes repliables', async ({ page
   test.setTimeout(90000)
   await loginCompany(page)
   await gotoGrid(page)
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
   await page.locator('[data-test="group-team"]').click()
   await page.waitForTimeout(500)
   const headers = page.locator('[data-test="group-header"]')
@@ -43,6 +44,7 @@ test('M6.B B — recherche collaborateur : filtre les lignes de la grille', asyn
   test.setTimeout(90000)
   await loginCompany(page)
   await gotoGrid(page)
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
   await page.locator('[data-test="group-none"]').click() // liste plate → comptage direct
   await page.waitForTimeout(400)
   const all = await page.locator('.plan-emp-row').count()
@@ -71,6 +73,7 @@ test('M6.B C — densité : bascule compacte / confortable', async ({ page }) =>
   await gotoGrid(page)
   const grid = page.locator('.planning-grid').first()
   const was = await grid.evaluate(el => el.classList.contains('planning-grid--compact'))
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
   await page.locator('[data-test="density-toggle"]').click()
   await page.waitForTimeout(300)
   expect(await grid.evaluate(el => el.classList.contains('planning-grid--compact'))).toBe(!was)
@@ -120,7 +123,8 @@ test('M6.B PERF — latences de rendu sur données réelles (log)', async ({ pag
   await page.locator('[data-test="grid-search"] input').fill('')
   // Bascule densité (re-render CSS pur).
   const densityMs = await timeIt(async () => {
-    await page.locator('[data-test="density-toggle"]').click()
+    await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
+  await page.locator('[data-test="density-toggle"]').click()
     await page.waitForTimeout(50)
   })
 

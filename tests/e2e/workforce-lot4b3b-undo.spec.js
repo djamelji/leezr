@@ -99,6 +99,7 @@ test('C — copie de semaine → Annuler global (tous les brouillons retirés, s
   test.skip(srcMk.status !== 201, 'Source semaine précédente impossible (capacité).')
 
   await gotoGrid(page)
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : action déplacée dans le menu « Plus »
   await page.locator('[data-test="copy-week"]').click()
   await Promise.all([
     page.waitForResponse(r => /copy-week\/preview$/.test(r.url()), { timeout: 20000 }),

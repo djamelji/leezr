@@ -8341,7 +8341,14 @@
       "created": "Job role created successfully",
       "updated": "Job role updated",
       "deleted": "Job role deleted",
-      "deleteConsequence": "This action is permanent. Assigned employees will need reassignment."
+      "deleteConsequence": "This action is permanent. Assigned employees will need reassignment.",
+      "search": "Search a position",
+      "occupancy": {
+        "all": "All",
+        "staffed": "Staffed",
+        "empty": "Unstaffed"
+      },
+      "summary": "{n} position(s) · {p} person(s)"
     },
     "deleteConfirm": {
       "title": "Confirm deletion",
@@ -8371,7 +8378,8 @@
         "remote": "Remote",
         "mobile": "Mobile"
       }
-    }
+    },
+    "presetToggle": "Suggested organisation"
   },
   "payroll": {
     "title": "Payroll preparation",
@@ -9231,7 +9239,11 @@
       "groupTeam": "Group by team",
       "groupNone": "Flat list",
       "density": "Display density",
-      "noTeam": "No team"
+      "noTeam": "No team",
+      "display": "Display",
+      "actions": "Week actions",
+      "compact": "Compact view",
+      "comfortable": "Comfortable view"
     },
     "prepare": {
       "open": "Prepare my week",
@@ -9365,7 +9377,13 @@
     "publishConflict": "Cannot publish: conflict detected (nothing published).",
     "publishConfirmTitle": "Publish schedule?",
     "publishConfirmText": "{shifts} draft shift(s) for {employees} employee(s) will be published.",
-    "publishAtomicHint": "Atomic publish: if any conflict, nothing is published. Affected employees will be notified (next lot)."
+    "publishAtomicHint": "Atomic publish: if any conflict, nothing is published. Affected employees will be notified (next lot).",
+    "summary": {
+      "shifts": "{n} shift(s)"
+    },
+    "drafts": {
+      "pending": "{n} draft shift(s), not visible to employees"
+    }
   },
   "leaves": {
     "dateFrom": "From",

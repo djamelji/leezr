@@ -223,11 +223,21 @@ const subDepartmentsCount = computed(() =>
 )
 
 const totalRoles = computed(() => store.jobRoles.length)
+// ADR-823 — liste des postes : recherche, filtres service / occupation, ligne cliquable vers la fiche.
+const roleSearch = ref('')
+const roleDept = ref(null)
+const roleOccupancy = ref('all')
+const roleDeptOptions = computed(() => [...new Map(store.jobRoles.filter(r => r.department?.name).map(r => [r.department_id ?? r.department.name, { title: r.department.name, value: r.department_id ?? r.department.name }])).values()])
+const filteredRoles = computed(() => store.jobRoles.filter(r =>
+  (!roleSearch.value || `${r.title} ${r.description || ''}`.toLowerCase().includes(roleSearch.value.toLowerCase()))
+  && (!roleDept.value || (r.department_id ?? r.department?.name) === roleDept.value)
+  && (roleOccupancy.value === 'all' || (roleOccupancy.value === 'staffed' ? (r.employees_count ?? 0) > 0 : (r.employees_count ?? 0) === 0))))
+const openPosition = item => router.push(`/company/workforce/organization/positions/${item.id}`)
+// Bandeau « Organisation proposée » : ouvert tant que l'organisation est vide, sinon replié (à la demande).
+const presetOpen = ref(false)
+const hasOrganization = computed(() => store.departments.length > 0 || store.jobRoles.length > 0)
 const totalRoleEmployees = computed(() =>
   store.jobRoles.reduce((sum, r) => sum + (r.employees_count ?? 0), 0),
-)
-const rolesWithRateCount = computed(() =>
-  store.jobRoles.filter(r => r.default_hourly_rate_cents).length,
 )
 
 onMounted(() => {
@@ -257,8 +267,26 @@ onMounted(() => {
       </template>
     </AppPageHeader>
 
-    <!-- Organisation proposée (preset) — ADR-636 / W-E -->
-    <OrganizationPresetCard @applied="fetchDepartments(); fetchRoles()" />
+    <!-- Organisation proposée (preset) — ADR-636 / W-E ; ADR-823 : repliée une fois l'organisation en place -->
+    <OrganizationPresetCard
+      v-if="!hasOrganization || presetOpen"
+      @applied="fetchDepartments(); fetchRoles(); presetOpen = false"
+    />
+    <div
+      v-else
+      class="d-flex justify-end mb-2"
+    >
+      <VBtn
+        v-can="'workforce.manage'"
+        variant="text"
+        size="small"
+        prepend-icon="tabler-sitemap"
+        data-test="org-preset-open"
+        @click="presetOpen = true"
+      >
+        {{ $t('organization.presetToggle') }}
+      </VBtn>
+    </div>
 
     <!-- Tabs -->
     <VCard>
@@ -533,81 +561,48 @@ onMounted(() => {
 
           <!-- Job Roles Tab -->
           <VWindowItem value="roles">
-            <!-- Stats Row -->
-            <VRow class="card-grid card-grid-xs mb-6">
-              <VCol
-                cols="12"
-                md="4"
+            <div class="d-flex flex-wrap align-center gap-3 mb-4">
+              <AppTextField
+                v-model="roleSearch"
+                :placeholder="$t('organization.roles.search')"
+                prepend-inner-icon="tabler-search"
+                clearable
+                style="flex: 0 1 260px; min-inline-size: 220px;"
+                data-test="positions-search"
+              />
+              <AppSelect
+                v-if="roleDeptOptions.length"
+                v-model="roleDept"
+                :items="roleDeptOptions"
+                :placeholder="$t('organization.roles.department')"
+                clearable
+                style="flex: 0 1 220px; min-inline-size: 180px;"
+                data-test="positions-department"
+              />
+              <VChipGroup
+                v-model="roleOccupancy"
+                mandatory
+                selected-class="text-primary"
+                data-test="positions-occupancy"
               >
-                <VCard
-                  variant="outlined"
-                  class="text-center pa-4"
+                <VChip
+                  v-for="o in ['all', 'staffed', 'empty']"
+                  :key="o"
+                  :value="o"
+                  label
+                  variant="tonal"
+                  :data-test="`positions-occupancy-${o}`"
                 >
-                  <VIcon
-                    icon="tabler-briefcase"
-                    size="32"
-                    color="primary"
-                    class="mb-2"
-                  />
-                  <div class="text-h5 font-weight-bold">
-                    {{ totalRoles }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('organization.roles.statsTotal') }}
-                  </div>
-                </VCard>
-              </VCol>
-              <VCol
-                cols="12"
-                md="4"
-              >
-                <VCard
-                  variant="outlined"
-                  class="text-center pa-4"
-                >
-                  <VIcon
-                    icon="tabler-users"
-                    size="32"
-                    color="success"
-                    class="mb-2"
-                  />
-                  <div class="text-h5 font-weight-bold">
-                    {{ totalRoleEmployees }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('organization.roles.statsEmployees') }}
-                  </div>
-                </VCard>
-              </VCol>
-              <VCol
-                cols="12"
-                md="4"
-              >
-                <VCard
-                  variant="outlined"
-                  class="text-center pa-4"
-                >
-                  <VIcon
-                    icon="tabler-coin-euro"
-                    size="32"
-                    color="info"
-                    class="mb-2"
-                  />
-                  <div class="text-h5 font-weight-bold">
-                    {{ rolesWithRateCount }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t('organization.roles.statsWithRate') }}
-                  </div>
-                </VCard>
-              </VCol>
-            </VRow>
-
-            <div class="d-flex justify-end mb-4">
+                  {{ $t(`organization.roles.occupancy.${o}`) }}
+                </VChip>
+              </VChipGroup>
+              <VSpacer />
+              <span class="text-body-2 text-medium-emphasis">{{ $t('organization.roles.summary', { n: totalRoles, p: totalRoleEmployees }) }}</span>
               <VBtn
                 v-can="'workforce.manage'"
                 color="primary"
                 prepend-icon="tabler-plus"
+                data-test="positions-add"
                 @click="openRoleCreate"
               >
                 {{ $t('organization.roles.add') }}
@@ -616,10 +611,13 @@ onMounted(() => {
 
             <VDataTable
               :headers="roleHeaders"
-              :items="store.jobRoles"
+              :items="filteredRoles"
+              hover
+              data-test="positions-table"
+              @click:row="(_, { item }) => openPosition(item)"
               :loading="roleLoading"
               :items-per-page="15"
-              class="text-no-wrap"
+              class="text-no-wrap cursor-pointer"
             >
               <!-- Title -->
               <template #item.title="{ item }">

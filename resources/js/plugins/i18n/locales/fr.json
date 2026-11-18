@@ -8341,7 +8341,14 @@
       "created": "Poste créé avec succès",
       "updated": "Poste mis à jour",
       "deleted": "Poste supprimé",
-      "deleteConsequence": "Cette action est définitive. Les collaborateurs rattachés devront être réaffectés."
+      "deleteConsequence": "Cette action est définitive. Les collaborateurs rattachés devront être réaffectés.",
+      "search": "Rechercher un poste",
+      "occupancy": {
+        "all": "Tous",
+        "staffed": "Occupés",
+        "empty": "Sans personne"
+      },
+      "summary": "{n} poste(s) · {p} personne(s)"
     },
     "deleteConfirm": {
       "title": "Confirmer la suppression",
@@ -8371,7 +8378,8 @@
         "remote": "Télétravail",
         "mobile": "Mobile"
       }
-    }
+    },
+    "presetToggle": "Organisation proposée"
   },
   "payroll": {
     "title": "Préparation de la paie",
@@ -9231,7 +9239,11 @@
       "groupTeam": "Regrouper par équipe",
       "groupNone": "Liste simple",
       "density": "Densité d'affichage",
-      "noTeam": "Sans équipe"
+      "noTeam": "Sans équipe",
+      "display": "Affichage",
+      "actions": "Actions de la semaine",
+      "compact": "Affichage compact",
+      "comfortable": "Affichage aéré"
     },
     "prepare": {
       "open": "Préparer ma semaine",
@@ -9365,7 +9377,13 @@
     "publishConflict": "Publication impossible : conflit détecté (aucun créneau publié).",
     "publishConfirmTitle": "Publier le planning ?",
     "publishConfirmText": "{shifts} créneau(x) brouillon pour {employees} collaborateur(s) vont être publiés.",
-    "publishAtomicHint": "Publication atomique : en cas de conflit, rien n'est publié. Les collaborateurs concernés seront notifiés (lot suivant)."
+    "publishAtomicHint": "Publication atomique : en cas de conflit, rien n'est publié. Les collaborateurs concernés seront notifiés (lot suivant).",
+    "summary": {
+      "shifts": "{n} créneau(x)"
+    },
+    "drafts": {
+      "pending": "{n} créneau(x) en brouillon, non visibles des salariés"
+    }
   },
   "leaves": {
     "dateFrom": "Du",
