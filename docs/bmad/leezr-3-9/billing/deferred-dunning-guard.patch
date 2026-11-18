@@ -1,0 +1,23 @@
+diff --git a/app/Jobs/Billing/ProcessDunningBatchJob.php b/app/Jobs/Billing/ProcessDunningBatchJob.php
+index 279c75aa..4c289f5c 100644
+--- a/app/Jobs/Billing/ProcessDunningBatchJob.php
++++ b/app/Jobs/Billing/ProcessDunningBatchJob.php
+@@ -45,9 +45,16 @@ public function handle(): void
+         // ADR-733.1 (P0-D.1) : batch MULTI-TENANT. On récupère chaque facture hors-scope (lot inter-company
+         // légitime), puis on traite SOUS le contexte de SA company → isolation par ligne en worker async.
+         foreach ($this->invoiceIds as $invoiceId) {
+-            $invoice = Invoice::withoutGlobalScopes()->find($invoiceId);
++            // ADR-829 (D-17) : claim the invoice under a row lock and re-check the SCHEDULE, not only the status.
++            // A job consumed late, or delivered twice, finds next_retry_at already pushed forward by the attempt
++            // that ran meanwhile and makes no extra attempt (an extra attempt shortens the retry policy).
++            $invoice = \Illuminate\Support\Facades\DB::transaction(function () use ($invoiceId) {
++                $row = Invoice::withoutGlobalScopes()->whereKey($invoiceId)->lockForUpdate()->first();
+ 
+-            if (! $invoice || $invoice->status !== 'overdue') {
++                return $row && $row->status === 'overdue' && $row->next_retry_at !== null && $row->next_retry_at->lte(now()) ? $row : null;
++            });
++
++            if (! $invoice) {
+                 continue;
+             }
+ 
