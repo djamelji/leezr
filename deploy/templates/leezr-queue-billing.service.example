@@ -1,0 +1,27 @@
+# ADR-828 — PREPARED, NOT WIRED. Consumer of the `billing` and `billing-slow` queues, one unit per environment
+# (ENV_TAG = web2 PROD / web3 DEV, same convention as ADR-738). Not referenced by deploy_release.sh.
+#
+# Activation, only after a validated deployment (decision D-17) :
+#   1. install this unit for the environment (placeholders as in deploy_release.sh [6.5/9]) ;
+#   2. start it and check `queue:monitor billing,billing-slow` is empty and the worker log is clean ;
+#   3. only then set BILLING_ASYNC_QUEUES_ENABLED=true in that environment's .env (config:cache) ;
+#   4. the scheduler keeps running billing synchronously : --async remains a manual, explicit choice.
+#
+# One worker, sequential (no --max-procs) : billing jobs lock subscriptions / invoices row by row ;
+# timeout above the longest batch (renewal batch of 50 subscriptions), tries 3 with the jobs' own backoff.
+[Unit]
+Description=Leezr Billing Queue Worker (${ENV_TAG})
+After=network.target
+
+[Service]
+User=${VHOST_USER}
+Group=${VHOST_GROUP}
+WorkingDirectory=${CURRENT_LINK}
+ExecStart=${PHP_BIN} ${CURRENT_LINK}/artisan queue:work --queue=billing,billing-slow --sleep=3 --tries=3 --timeout=300 --max-jobs=50 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=append:${SHARED_DIR}/storage/logs/queue-billing.log
+StandardError=append:${SHARED_DIR}/storage/logs/queue-billing.log
+
+[Install]
+WantedBy=multi-user.target

@@ -45,6 +45,10 @@ class BillingReconcileCommand extends Command implements Isolatable
             $autoRepair = false;
         }
 
+        // ADR-828 — checked before anything is recorded : a refused --async run touches nothing
+        if ($this->option('async') && \App\Core\Billing\BillingAsyncGate::refuse($this, 'billing:reconcile', 'billing-slow')) {
+            return self::FAILURE;
+        }
         BillingJobHeartbeat::start('billing:reconcile');
 
         if ($this->option('async')) {
@@ -71,10 +75,10 @@ class BillingReconcileCommand extends Command implements Isolatable
         if (isset($result['repairs'])) {
             $repairs = $result['repairs'];
             $this->newLine();
-            $this->info("Auto-repair results:");
-            $this->line("  Repaired: " . count($repairs['repaired']));
-            $this->line("  Skipped:  " . count($repairs['skipped']));
-            $this->line("  Errors:   " . count($repairs['errors']));
+            $this->info('Auto-repair results:');
+            $this->line('  Repaired: '.count($repairs['repaired']));
+            $this->line('  Skipped:  '.count($repairs['skipped']));
+            $this->line('  Errors:   '.count($repairs['errors']));
 
             if (count($repairs['repaired']) > 0) {
                 $this->info("  Correlation ID: {$repairs['correlation_id']}");

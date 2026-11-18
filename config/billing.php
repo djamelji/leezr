@@ -36,8 +36,8 @@ return [
     'reporting_currency' => env('BILLING_REPORTING_CURRENCY', 'EUR'),
 
     'stripe' => [
-        'key'            => env('STRIPE_KEY'),
-        'secret'         => env('STRIPE_SECRET'),
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
@@ -52,14 +52,14 @@ return [
     */
 
     'platform' => [
-        'market_key'  => env('PLATFORM_MARKET', 'FR'),
-        'vat_number'  => env('PLATFORM_VAT_NUMBER'),
-        'legal_name'  => env('PLATFORM_LEGAL_NAME', 'Leezr SAS'),
-        'siret'       => env('PLATFORM_SIRET'),
-        'rcs'         => env('PLATFORM_RCS'),
-        'capital'     => env('PLATFORM_CAPITAL'),
-        'address'     => env('PLATFORM_ADDRESS'),
-        'email'       => env('PLATFORM_EMAIL'),
+        'market_key' => env('PLATFORM_MARKET', 'FR'),
+        'vat_number' => env('PLATFORM_VAT_NUMBER'),
+        'legal_name' => env('PLATFORM_LEGAL_NAME', 'Leezr SAS'),
+        'siret' => env('PLATFORM_SIRET'),
+        'rcs' => env('PLATFORM_RCS'),
+        'capital' => env('PLATFORM_CAPITAL'),
+        'address' => env('PLATFORM_ADDRESS'),
+        'email' => env('PLATFORM_EMAIL'),
     ],
 
     /*
@@ -73,9 +73,9 @@ return [
     */
 
     'alerting' => [
-        'enabled'           => env('BILLING_ALERT_ENABLED', false),
-        'email'             => env('BILLING_ALERT_EMAIL'),
-        'webhook_url'       => env('BILLING_ALERT_WEBHOOK'),
+        'enabled' => env('BILLING_ALERT_ENABLED', false),
+        'email' => env('BILLING_ALERT_EMAIL'),
+        'webhook_url' => env('BILLING_ALERT_WEBHOOK'),
         'slack_webhook_url' => env('BILLING_SLACK_WEBHOOK'),
     ],
 
@@ -90,9 +90,9 @@ return [
     */
 
     'auto_repair' => [
-        'enabled'          => env('BILLING_AUTO_REPAIR_ENABLED', false),
-        'dry_run_default'  => env('BILLING_AUTO_REPAIR_DRY_RUN', true),
-        'safe_types'       => [
+        'enabled' => env('BILLING_AUTO_REPAIR_ENABLED', false),
+        'dry_run_default' => env('BILLING_AUTO_REPAIR_DRY_RUN', true),
+        'safe_types' => [
             'missing_local_payment',
             'status_mismatch',
             'invoice_not_paid',
@@ -146,4 +146,12 @@ return [
         'emit' => (bool) env('BILLING_CONSOLIDATED_EMIT', false),
     ],
 
+    /*
+    | ADR-828 — the `--async` mode of billing:renew / billing:process-dunning / billing:reconcile dispatches
+    | jobs to the `billing` and `billing-slow` queues. No worker consumes them (the deployed workers only
+    | listen to `ai` and `default`) : those jobs would wait indefinitely, then run late. `--async` is refused
+    | until consumers are deployed and this flag is set explicitly. The scheduled (synchronous) runs are
+    | unaffected.
+    */
+    'async_queues_enabled' => (bool) env('BILLING_ASYNC_QUEUES_ENABLED', false),
 ];

@@ -10,8 +10,8 @@ use App\Core\Billing\Invoice;
 use App\Core\Billing\InvoiceIssuer;
 use App\Core\Billing\InvoiceLineDescriptor;
 use App\Core\Billing\Subscription;
-use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Modules\PlatformModule;
+use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Plans\Plan;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Console\Isolatable;
@@ -42,6 +42,10 @@ class BillingRenewCommand extends Command implements Isolatable
     public function handle(): int
     {
         $this->initCorrelationId();
+        // ADR-828 — checked before anything is recorded : a refused --async run touches nothing
+        if ($this->option('async') && \App\Core\Billing\BillingAsyncGate::refuse($this, 'billing:renew', 'billing')) {
+            return self::FAILURE;
+        }
         BillingJobHeartbeat::start('billing:renew');
 
         $dryRun = $this->option('dry-run');
@@ -351,8 +355,7 @@ class BillingRenewCommand extends Command implements Isolatable
                             'coupon_id' => $remaining <= 0 ? null : $subscription->coupon_id,
                         ]);
                     }
-                }
-                else {
+                } else {
                     // Coupon expired or exhausted — detach
                     $subscription->update(['coupon_id' => null, 'coupon_months_remaining' => null]);
                 }

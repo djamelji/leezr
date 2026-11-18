@@ -28,6 +28,10 @@ class ProcessDunningCommand extends Command implements Isolatable
 
     public function handle(): int
     {
+        // ADR-828 — checked before anything is recorded : a refused --async run touches nothing
+        if ($this->option('async') && \App\Core\Billing\BillingAsyncGate::refuse($this, 'billing:process-dunning', 'billing')) {
+            return self::FAILURE;
+        }
         BillingJobHeartbeat::start('billing:process-dunning');
 
         if ($this->option('async')) {

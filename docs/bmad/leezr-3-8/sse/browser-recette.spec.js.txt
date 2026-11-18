@@ -1,0 +1,79 @@
+// ADR-828 — SSE recette on the ISOLATED bench (nginx 8827 + php-fpm 4 workers, clone leezr_audit821,
+// REALTIME_MAX_CONCURRENT_STREAMS=2, stream 20 s, heartbeat 2 s). Temporary : not part of the regular suite.
+import { expect, test } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
+import { loginCompany } from './helpers.js'
+
+const PWD = 'Audit821!x'
+const REF = { Referer: 'http://127.0.0.1:8827/' }
+const redis = k => (execFileSync('redis-cli', ['get', `leezr827-leezr:realtime:stream:count:${k}`], { encoding: 'utf8' }).trim() || '0')
+const counters = () => ({ streams: redis('streams'), users: redis('global'), company109: redis('109') })
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+test('SSE capacity, fallback, tab close, reconnect, session end, tenant isolation', async ({ browser }) => {
+  test.setTimeout(300_000)
+  const log = []
+  const t0 = Date.now()
+  const report = {}
+  const dump = () => writeFileSync(process.env.SSE_REPORT || '/tmp/adr828-sse.json', JSON.stringify({ ...report, timeline: log }))
+  const track = (page, label) => page.on('response', r => {
+    if (r.url().includes('/realtime/stream')) log.push({ t: Math.round((Date.now() - t0) / 100) / 10, page: label, status: r.status() })
+  })
+  const st = label => log.filter(e => e.page === label).map(e => e.status)
+  const until = async (cond, max) => { const s = Date.now(); while (Date.now() - s < max) { if (cond()) return Date.now() - s; await sleep(200) } return null }
+
+  // S1 — one user, two tabs : both stream (cap 2), the user counts once
+  const ctxA = await browser.newContext()
+  const a1 = await ctxA.newPage(); track(a1, 'A1')
+  await loginCompany(a1, 'fondatrice.51718@example.test', PWD)
+  const a2 = await ctxA.newPage(); track(a2, 'A2')
+  await a2.goto('/dashboard')
+  await sleep(4000)
+  report.s1_two_tabs_same_user = { a1: st('A1'), a2: st('A2'), counters: counters() }; dump()
+  expect(counters().streams).toBe('2')
+
+  // S2 — another user while the cap is reached : 429 x3 (2 s, 4 s backoff), then polling, no SSE retry
+  const ctxB = await browser.newContext()
+  const b = await ctxB.newPage(); track(b, 'B')
+  await loginCompany(b, 'yanis.51718@example.test', PWD)
+  await sleep(12000)
+  const bAtFallback = st('B').length
+  await sleep(6000)
+  report.s2_other_user_capped = { b: st('B'), retries_after_fallback: st('B').length - bAtFallback, counters: counters() }; dump()
+
+  // S3 — tenant isolation : member of 109 asking for company 1
+  report.s3_other_company = (await b.request.get('/api/realtime/stream?company_id=1', { headers: { Accept: 'application/json', ...REF }, maxRedirects: 0 })).status(); dump()
+  expect(report.s3_other_company).toBe(403)
+
+  // S4 — closing a tab releases its worker and its slot within about one heartbeat
+  const before = counters()
+  await a2.close()
+  const releasedMs = await until(() => Number(counters().streams) < Number(before.streams), 15000)
+  report.s4_tab_closed = { before, released_after_ms: releasedMs, after: counters() }; dump()
+  expect(releasedMs).not.toBeNull()
+
+  // S5 — the capped user reloads : the freed slot is taken, SSE works again
+  const nB = st('B').length
+  await b.reload()
+  await sleep(4000)
+  report.s5_reload_reconnects = { b: st('B').slice(nB), counters: counters() }; dump()
+  expect(st('B').slice(nB)).toContain(200)
+
+  // S6 — natural end of stream (20 s) : the tab reconnects by itself (2 s later)
+  const nA1 = st('A1').length
+  await sleep(26000)
+  report.s6_natural_end_reconnect = { a1_new: st('A1').slice(nA1), counters: counters() }; dump()
+
+  // S7 — session ends (logout) while streaming : the open stream lives to its end, reconnection refused
+  const xsrf = decodeURIComponent((await ctxA.cookies()).find(c => c.name === 'XSRF-TOKEN')?.value || '')
+  const logout = await a1.request.post('/api/logout', { headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', ...REF } })
+  const t7 = (Date.now() - t0) / 1000
+  await sleep(40000)
+  report.s7_session_end = { logout: logout.status(), logout_at_s: Math.round(t7), a1_after: log.filter(e => e.page === 'A1' && e.t > t7), url: a1.url(), counters: counters() }; dump()
+
+  // S8 — everything closed : counters back to zero
+  await ctxA.close(); await ctxB.close()
+  report.s8_all_closed = { released_after_ms: await until(() => counters().streams === '0', 15000), counters: counters() }; dump()
+  expect(counters().streams).toBe('0')
+})

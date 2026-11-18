@@ -65,6 +65,7 @@ class BillingAsyncJobsTest extends TestCase
     public function test_dunning_async_dispatches_batch_jobs(): void
     {
         Bus::fake([ProcessDunningBatchJob::class]);
+        config(['billing.async_queues_enabled' => true]); // ADR-828 : consumers declared
 
         $company = $this->createCompany('Dunning Co', 'dunning-co');
 
@@ -94,6 +95,7 @@ class BillingAsyncJobsTest extends TestCase
     public function test_renewal_async_dispatches_batch_jobs(): void
     {
         Bus::fake([RenewSubscriptionBatchJob::class]);
+        config(['billing.async_queues_enabled' => true]); // ADR-828 : consumers declared
 
         // Create 2 companies, each with one active subscription (is_current unique per company)
         foreach (range(1, 2) as $i) {
@@ -121,6 +123,7 @@ class BillingAsyncJobsTest extends TestCase
     public function test_reconcile_async_dispatches_per_company(): void
     {
         Bus::fake([ReconcileCompanyJob::class]);
+        config(['billing.async_queues_enabled' => true]); // ADR-828 : consumers declared
 
         // Create 3 companies with CompanyPaymentCustomer records
         foreach (range(1, 3) as $i) {
@@ -190,5 +193,26 @@ class BillingAsyncJobsTest extends TestCase
 
         $customer->refresh();
         $this->assertNotNull($customer->last_reconciled_at);
+    }
+
+    // ── ADR-828 : without declared consumers, --async dispatches nothing ──
+
+    public function test_async_mode_is_refused_while_no_worker_consumes_the_billing_queues(): void
+    {
+        Bus::fake([ProcessDunningBatchJob::class, RenewSubscriptionBatchJob::class, ReconcileCompanyJob::class]);
+        config(['billing.async_queues_enabled' => false]);
+        $company = $this->createCompany('Gate Co', 'gate-co');
+        Invoice::create(['company_id' => $company->id, 'subscription_id' => null, 'number' => 'INV-GATE-1', 'status' => 'overdue',
+            'amount' => 5000, 'amount_due' => 5000, 'due_at' => now()->subDays(10), 'finalized_at' => now()->subDays(10), 'next_retry_at' => now()->subHour()]);
+
+        $this->artisan('billing:process-dunning', ['--async' => true])->assertFailed();
+        $this->artisan('billing:renew', ['--async' => true])->assertFailed();
+        $this->artisan('billing:reconcile', ['--async' => true])->assertFailed();
+
+        Bus::assertNotDispatched(ProcessDunningBatchJob::class);
+        Bus::assertNotDispatched(RenewSubscriptionBatchJob::class);
+        Bus::assertNotDispatched(ReconcileCompanyJob::class);
+        $this->assertFalse(\App\Core\Billing\BillingJobHeartbeat::where('job_key', 'billing:process-dunning')->exists(), 'a refused run records nothing (the last real run stays visible)');
+        $this->assertSame('overdue', Invoice::where('number', 'INV-GATE-1')->value('status'), 'no billing state touched');
     }
 }
