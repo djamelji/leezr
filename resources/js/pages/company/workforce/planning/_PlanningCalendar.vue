@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
+import frLocale from '@fullcalendar/core/locales/fr' // ADR-824 : « Toute la journée », boutons et liens en français
 import { useDisplay } from 'vuetify'
 import { usePlanningStore } from '@/modules/company/workforce/planning.store'
 import { useWorldStore } from '@/core/stores/world'
@@ -109,12 +110,16 @@ const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: props.view || (smAndDown.value ? 'listWeek' : 'timeGridWeek'),
   ...(props.anchorDate ? { initialDate: props.anchorDate } : {}),
+  locales: [frLocale],
+  allDayText: locale.value?.startsWith('fr') ? 'Journée' : 'All day', // la colonne horaire est étroite
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
   timeZone: world.timezone || 'local',
   // Premier jour de semaine : préférence Company (W-G4B) si fournie, sinon déduit de la locale par
   // FullCalendar (fr→lundi, en-US→dimanche). Jamais présumé lundi en dur.
   ...(props.firstDay !== null ? { firstDay: props.firstDay } : {}),
-  height: 'auto',
+  // ADR-824 : en vue horaire, hauteur bornée → la journée s'ouvre à 6 h (scrollTime) au lieu d'afficher 24 h d'un bloc ;
+  // les heures de nuit restent accessibles par défilement (shifts traversant minuit).
+  height: (props.view || '').startsWith('timeGrid') ? 680 : 'auto',
   nowIndicator: true,
   editable: props.editable,
   eventDurationEditable: props.editable,
@@ -124,7 +129,7 @@ const calendarOptions = computed(() => ({
     : (smAndDown.value
       ? { start: 'prev,next', center: 'title', end: 'listWeek,timeGridDay' }
       : { start: 'prev,next today', center: 'title', end: 'timeGridWeek,timeGridDay,listWeek' }),
-  buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Agenda' },
+  ...(locale.value?.startsWith('fr') ? { buttonText: { today: "Aujourd'hui", week: 'Semaine', day: 'Jour', list: 'Agenda' } } : {}),
   events: fetchEvents,
   eventClick({ event }) { emit('select', event.extendedProps) },
   // ADR-779 (UX4) — choisir une plage horaire ouvre la création préremplie (date + heures).
@@ -165,10 +170,15 @@ defineExpose({ refetch })
 </template>
 
 <style lang="scss">
+// ADR-824 : styles Vuexy du calendrier (preset apps/calendar) — jour courant, boutons, grille au thème
+@use "@core-scss/template/libs/full-calendar";
+
 .planning-calendar {
   .fc {
     .fc-toolbar-title { font-size: 1.05rem; }
-    .fc-event { cursor: pointer; font-size: 0.72rem; }
+    .fc-event { cursor: pointer; font-size: 0.8rem; }
+    .fc-timegrid-event .fc-event-main { padding: 2px 4px; }
+    .fc-timegrid-axis-cushion { white-space: nowrap; font-size: 0.7rem; }
     // Brouillon : rayé pour le distinguer du publié.
     .shift-draft { background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.25) 4px, rgba(255,255,255,.25) 8px); opacity: .85; }
   }

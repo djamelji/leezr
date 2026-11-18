@@ -69,10 +69,25 @@ const days = computed(() => {
   return out
 })
 
+// ADR-824 — lisibilité : filtre « à pourvoir » et jours repliables (un seul jour ouvert par défaut).
+const onlyGaps = ref(false)
+const openDays = ref([])
+const todayIso = isoOf(new Date())
+const toggleDay = iso => { openDays.value = openDays.value.includes(iso) ? openDays.value.filter(d => d !== iso) : [...openDays.value, iso] }
+const daySummary = iso => {
+  const all = visibleReqs.value.filter(r => r.date === iso)
+
+  return { total: all.length, gaps: all.filter(r => (r.gap || 0) > 0).length }
+}
+watch(requirements, () => {
+  const withGap = days.value.find(d => daySummary(d).gaps > 0)
+  openDays.value = days.value.includes(todayIso) ? [todayIso] : (withGap ? [withGap] : days.value.slice(0, 1))
+})
+
 const reqsByDay = computed(() => {
   const map = {}
   days.value.forEach(iso => { map[iso] = [] })
-  visibleReqs.value.forEach(r => {
+  visibleReqs.value.filter(r => !onlyGaps.value || (r.gap || 0) > 0).forEach(r => {
     if (map[r.date]) map[r.date].push(r)
   })
   Object.values(map).forEach(list => list.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')))
@@ -218,6 +233,28 @@ const toggleRow = async r => {
             </div>
           </div>
           <VSpacer />
+          <VChipGroup
+            v-model="onlyGaps"
+            mandatory
+            selected-class="text-primary"
+            data-test="posts-filter"
+          >
+            <VChip
+              :value="false"
+              label
+              variant="tonal"
+            >
+              {{ t('planning.posts.filterAll') }}
+            </VChip>
+            <VChip
+              :value="true"
+              label
+              variant="tonal"
+              data-test="posts-only-gaps"
+            >
+              {{ t('planning.posts.filterGaps') }}
+            </VChip>
+          </VChipGroup>
           <VBtn
             v-if="canManage"
             variant="tonal"
@@ -238,9 +275,28 @@ const toggleRow = async r => {
         class="mb-3"
         :data-test="`posts-day-${iso}`"
       >
-        <VCardItem class="py-2">
-          <VCardTitle class="text-body-1 text-capitalize">
+        <VCardItem
+          class="py-2 cursor-pointer"
+          :data-test="`posts-day-toggle-${iso}`"
+          @click="toggleDay(iso)"
+        >
+          <template #prepend>
+            <VIcon
+              :icon="openDays.includes(iso) ? 'tabler-chevron-down' : 'tabler-chevron-right'"
+              size="18"
+            />
+          </template>
+          <VCardTitle class="text-body-1 text-capitalize d-flex align-center gap-2">
             {{ dayLabel(iso) }}
+            <VChip
+              v-if="daySummary(iso).total"
+              size="x-small"
+              label
+              :color="daySummary(iso).gaps ? 'error' : 'success'"
+              variant="tonal"
+            >
+              {{ daySummary(iso).gaps ? t('planning.posts.dayGaps', { n: daySummary(iso).gaps, total: daySummary(iso).total }) : t('planning.posts.dayCovered', { total: daySummary(iso).total }) }}
+            </VChip>
           </VCardTitle>
           <template #append>
             <VBtn
@@ -248,12 +304,13 @@ const toggleRow = async r => {
               size="small"
               append-icon="tabler-arrow-right"
               data-test="posts-goto-day"
-              @click="emit('go-to-day', iso)"
+              @click.stop="emit('go-to-day', iso)"
             >
               {{ t('planning.posts.viewDay', 'Voir la journée') }}
             </VBtn>
           </template>
         </VCardItem>
+        <template v-if="openDays.includes(iso)">
         <VDivider />
         <VCardText v-if="!reqsByDay[iso].length" class="text-caption text-medium-emphasis py-3">
           {{ t('planning.posts.noRequirement', 'Aucun besoin ce jour.') }}
@@ -380,6 +437,7 @@ const toggleRow = async r => {
             </VListItem>
           </template>
         </VList>
+        </template>
       </VCard>
     </template>
   </div>

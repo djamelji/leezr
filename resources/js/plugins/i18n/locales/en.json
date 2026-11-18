@@ -8857,7 +8857,11 @@
     },
     "posts": {
       "uncategorized": "Uncategorized",
-      "empty": "No assignment this week."
+      "empty": "No assignment this week.",
+      "filterAll": "All needs",
+      "filterGaps": "Unfilled only",
+      "dayGaps": "{n} unfilled of {total}",
+      "dayCovered": "{total} need(s) covered"
     },
     "month": {
       "published": "Published",

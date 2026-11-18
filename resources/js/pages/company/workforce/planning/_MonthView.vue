@@ -221,8 +221,10 @@ const isEmptyDay = iso => { const a = agg(iso); return a.total === 0 && a.absenc
 <style scoped lang="scss">
 .month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr)); // ADR-824 : 1fr laissait le contenu élargir la grille (débordement mobile)
   gap: 6px;
+
+  @media (max-width: 599px) { gap: 3px; }
 
   &--head {
     margin-block-end: 6px;
@@ -244,7 +246,11 @@ const isEmptyDay = iso => { const a = agg(iso); return a.total === 0 && a.absenc
   flex-direction: column;
   gap: 4px;
   min-block-size: 92px;
+  min-inline-size: 0;
   padding: 6px 8px;
+  overflow: hidden;
+
+  @media (max-width: 599px) { min-block-size: 64px; padding: 4px 3px; }
   text-align: start;
   cursor: pointer;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));

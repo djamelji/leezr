@@ -2688,25 +2688,60 @@ watch(activeTab, tab => {
     >
       <template #actions>
         <!-- ADR-823 : la publication de la sélection vit dans le bandeau de la grille (plus de doublon ici) -->
-        <VBtn
-          v-if="activeTab === 'planning' && !smAndDown"
-          v-can="'workforce.planning_manage'"
-          variant="outlined"
-          prepend-icon="tabler-copy"
-          @click="isBulkDrawerOpen = true"
-        >
-          {{ $t('planning.bulkCreate') }}
-        </VBtn>
-        <VBtn
-          v-if="activeTab === 'planning' && !smAndDown"
-          v-can="'workforce.planning_manage'"
-          color="primary"
-          data-test="shift-add"
-          prepend-icon="tabler-calendar-plus"
-          @click="openCreateShift()"
-        >
-          {{ $t('planning.newShift') }}
-        </VBtn>
+      <!-- ADR-824 — actions de l'en-tête, identiques dans les quatre vues : créer (principal), préparer la semaine,
+             puis « Plus » (création en lot, modèles). Le mobile garde son menu dédié dans l'en-tête. -->
+          <template v-if="!smAndDown && activeTab !== 'templates'">
+          <VBtn
+            v-if="viewMode !== 'templates'"
+            v-can="'workforce.planning_manage'"
+            color="primary"
+            prepend-icon="tabler-calendar-plus"
+            data-test="shift-add"
+            @click="openCreateShift()"
+          >
+            {{ $t('planning.newShift') }}
+          </VBtn>
+          <VBtn
+            v-can="'workforce.planning_manage'"
+            variant="tonal"
+            color="primary"
+            prepend-icon="tabler-wand"
+            data-test="prepare-week-open"
+            @click="openPrepareWeek"
+          >
+            {{ $t('planning.prepare.open') }}
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            icon="tabler-dots-vertical"
+            :aria-label="$t('timeSpace.more')"
+            data-test="planning-actions-more"
+          >
+            <VIcon icon="tabler-dots-vertical" />
+            <VMenu
+              activator="parent"
+              location="bottom end"
+            >
+              <VList min-width="240">
+                <VListItem
+                  v-if="canEditShifts"
+                  prepend-icon="tabler-copy"
+                  :title="$t('planning.bulkCreate')"
+                  data-test="bulk-create-open"
+                  @click="isBulkDrawerOpen = true"
+                />
+                <VListItem
+                  prepend-icon="tabler-template"
+                  :active="viewMode === 'templates'"
+                  data-test="plan-view-templates"
+                  :title="$t('planning.modes.templates', 'Modèles')"
+                  @click="viewMode = 'templates'"
+                />
+              </VList>
+            </VMenu>
+          </VBtn>
+        </template>
         <!-- Mobile : les actions secondaires passent dans « Plus » (rien n'est retiré). -->
         <VBtn
           v-if="activeTab !== 'templates' && smAndDown && canEditShifts"
@@ -2832,9 +2867,8 @@ watch(activeTab, tab => {
 
       <VSpacer />
 
-      <!-- Modèles — entrée secondaire (gestion contextuelle), pas un mode opérationnel de 1er niveau. -->
       <VBtn
-        v-if="!smAndDown || !canEditShifts"
+        v-if="smAndDown && !canEditShifts"
         :variant="viewMode === 'templates' ? 'flat' : 'tonal'"
         :color="viewMode === 'templates' ? 'primary' : 'secondary'"
         size="small"
@@ -2844,18 +2878,6 @@ watch(activeTab, tab => {
         @click="viewMode = 'templates'"
       >
         {{ $t('planning.modes.templates', 'Modèles') }}
-      </VBtn>
-
-      <!-- M6.C — action PRINCIPALE de construction : un seul point d'entrée vers tous les parcours. -->
-      <VBtn
-        v-if="!smAndDown"
-        v-can="'workforce.planning_manage'"
-        color="primary"
-        prepend-icon="tabler-wand"
-        data-test="prepare-week-open"
-        @click="openPrepareWeek"
-      >
-        {{ $t('planning.prepare.open') }}
       </VBtn>
     </div>
 

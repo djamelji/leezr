@@ -8857,7 +8857,11 @@
     },
     "posts": {
       "uncategorized": "Non catégorisé",
-      "empty": "Aucune affectation cette semaine."
+      "empty": "Aucune affectation cette semaine.",
+      "filterAll": "Tous les besoins",
+      "filterGaps": "À pourvoir uniquement",
+      "dayGaps": "{n} à pourvoir sur {total}",
+      "dayCovered": "{total} besoin(s) couvert(s)"
     },
     "month": {
       "published": "Publiés",
