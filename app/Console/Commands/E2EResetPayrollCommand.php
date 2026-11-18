@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\PayrollRun;
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  *
  * NOT for production — guarded by environment.
  */
-class E2EResetPayrollCommand extends Command
+class E2EResetPayrollCommand extends RecipeCommand
 {
     protected $signature = 'e2e:reset-payroll {--company=1} {--from=} {--to=}';
 

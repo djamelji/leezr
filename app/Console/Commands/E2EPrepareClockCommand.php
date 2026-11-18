@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\TimeEntry;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): put an employee into a WORKING clock state with a
@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  * and KEEP it across refresh (server timestamp = source of truth). Proves the counter does not
  * reset to zero on reload. Idempotent: clears today's entries first. NOT for production.
  */
-class E2EPrepareClockCommand extends Command
+class E2EPrepareClockCommand extends RecipeCommand
 {
     protected $signature = 'e2e:prepare-clock {--employee=3} {--company=1} {--minutes-ago=25}';
 

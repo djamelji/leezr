@@ -22,6 +22,8 @@ class M7Lot4E2eTeardownOwnershipTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ADR-827 : the in-memory test database is not a marked clone — the test exercises the command logic only
+        $this->app->instance(\App\Console\Recipe\RecipeDatabaseGuard::class, new \Tests\Support\AllowingRecipeGuard);
         $this->seed(\Database\Seeders\PlatformSeeder::class);
         $this->company = Company::create(['name' => 'T', 'slug' => 't-'.uniqid(), 'jobdomain_key' => 'logistique', 'plan_key' => 'pro']);
     }

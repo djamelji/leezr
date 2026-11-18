@@ -2,12 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Core\Workforce\LeaveBalanceCache;
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\LeaveLedgerEntry;
 use App\Core\Workforce\LeaveRequest;
 use App\Core\Workforce\Services\LeaveBalanceCacheHealer;
 use App\Core\Workforce\Services\LeaveLedger;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): remove an employee's E2E leave requests and their
@@ -18,7 +17,7 @@ use Illuminate\Console\Command;
  *
  * NOT for production — guarded by environment.
  */
-class E2EResetLeaveCommand extends Command
+class E2EResetLeaveCommand extends RecipeCommand
 {
     protected $signature = 'e2e:reset-leave {--employee=3} {--marker=E2E}';
 

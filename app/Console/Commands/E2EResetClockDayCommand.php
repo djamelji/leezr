@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\TimeEntry;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): reset an employee's time entries for a given day so the
@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
  *
  * NOT for production — guarded by environment.
  */
-class E2EResetClockDayCommand extends Command
+class E2EResetClockDayCommand extends RecipeCommand
 {
     protected $signature = 'e2e:reset-clock-day {--employee=3} {--date=}';
 

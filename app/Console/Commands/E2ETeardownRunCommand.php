@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Models\Membership;
 use App\Core\Models\User;
 use App\Core\Tenancy\CompanyContext;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
-use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
  * There is deliberately NO way to delete by a shared prefix, by a pattern, or without a ledger :
  * data left by another session, another run or a human can never be reached from here.
  */
-class E2ETeardownRunCommand extends Command
+class E2ETeardownRunCommand extends RecipeCommand
 {
     protected $signature = 'e2e:teardown-run {ledger : Path of the run ledger (JSON)} {--dry-run : Report only}';
 

@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Models\Company;
 use App\Core\Workforce\Employee;
 use App\Modules\Workforce\Employees\Services\EmployeeAccessService;
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Password;
 
 /**
@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Password;
  *
  * NOT for production — guarded by environment.
  */
-class E2EHrux4GrantAccessCommand extends Command
+class E2EHrux4GrantAccessCommand extends RecipeCommand
 {
     protected $signature = 'e2e:hrux4-grant-access {--employee=} {--company=1}';
 

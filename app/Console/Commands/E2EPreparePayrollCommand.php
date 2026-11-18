@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\TimesheetPeriod;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): ensure a LOCKED timesheet exists for an employee over a
@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
  *
  * NOT for production — guarded by environment.
  */
-class E2EPreparePayrollCommand extends Command
+class E2EPreparePayrollCommand extends RecipeCommand
 {
     protected $signature = 'e2e:prepare-payroll {--employee=3} {--company=1} {--from=} {--to=} {--minutes=9240}';
 

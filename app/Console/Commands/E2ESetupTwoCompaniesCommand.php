@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Jobdomains\Jobdomain;
 use App\Core\Models\Company;
 use App\Core\Models\Membership;
@@ -12,7 +13,6 @@ use App\Core\Workforce\ConventionCollectiveRule;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
 use App\Core\Workforce\Services\WorkforceRuleResolver;
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Hash;
  * Each company's break rule is resolved server-side per-company; neither can read the other's
  * config or HR data (tenant isolation). NOT for production.
  */
-class E2ESetupTwoCompaniesCommand extends Command
+class E2ESetupTwoCompaniesCommand extends RecipeCommand
 {
     protected $signature = 'e2e:setup-two-companies {--a-minutes=30} {--b-minutes=45}';
 

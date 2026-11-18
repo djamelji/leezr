@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\TimesheetPeriod;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): delete an employee's timesheet period(s) overlapping a
@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
  *
  * NOT for production — guarded by environment.
  */
-class E2EResetTimesheetsCommand extends Command
+class E2EResetTimesheetsCommand extends RecipeCommand
 {
     protected $signature = 'e2e:reset-timesheets {--employee=3} {--from=} {--to=}';
 

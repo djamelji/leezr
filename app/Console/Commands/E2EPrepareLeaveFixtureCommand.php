@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Workforce\Services\LeaveLedger;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): give the demo employee Bob (employee #3,
@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  *
  * NOT for production — guarded by environment. Reproducible for the E2E campaign.
  */
-class E2EPrepareLeaveFixtureCommand extends Command
+class E2EPrepareLeaveFixtureCommand extends RecipeCommand
 {
     protected $signature = 'e2e:prepare-leave-fixture {--employee=3} {--leave-type=1} {--days=25}';
 

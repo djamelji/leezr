@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Modules\CompanyModule;
 use App\Core\Modules\CompanyModuleActivationReason;
-use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  * Does NOT bypass module rules — the specs still drive the real enable/disable afterwards.
  * NOT for production — guarded by environment.
  */
-class E2EResetModuleAddonCommand extends Command
+class E2EResetModuleAddonCommand extends RecipeCommand
 {
     protected $signature = 'e2e:reset-module-addon {--company=1} {--module=}';
 

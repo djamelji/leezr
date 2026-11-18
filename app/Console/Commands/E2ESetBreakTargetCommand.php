@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Recipe\RecipeCommand;
 use App\Core\Models\Company;
 use App\Core\Workforce\Services\WorkforceRuleResolver;
-use Illuminate\Console\Command;
 
 /**
  * E2E test fixture (LOCAL/TESTING only): configure a Company's break TARGET duration (minutes)
@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  * Used to prove that the break countdown is driven by the per-Company resolved config, isolated
  * between companies. NOT for production.
  */
-class E2ESetBreakTargetCommand extends Command
+class E2ESetBreakTargetCommand extends RecipeCommand
 {
     protected $signature = 'e2e:set-break-target {--company=1} {--minutes=30}';
 
