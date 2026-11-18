@@ -36,6 +36,9 @@ watch(() => props.employeeId, load, { immediate: true })
 
 const editable = computed(() => fields.value.filter(f => f.editable && props.canEdit))
 const readOnly = computed(() => fields.value.filter(f => !(f.editable && props.canEdit)))
+const emit = defineEmits(['editable-codes'])
+watch(editable, v => emit('editable-codes', v.map(f => f.code)), { immediate: true })
+const readOnlyShown = computed(() => readOnly.value.filter(f => !(hasAccount.value && f.managed_by_account && f.status !== 'needs_review')))
 const changes = computed(() => Object.fromEntries(Object.entries(form.value).filter(([code, v]) => {
   const f = fields.value.find(x => x.code === code)
 
@@ -120,19 +123,29 @@ const statusText = f => (f.status === 'needs_review'
           {{ t('common.save') }}
         </VBtn>
       </div>
-      <VList
-        v-if="readOnly.length"
-        lines="two"
-        class="py-0 mt-2"
+      <!-- ADR-823 : lecture seule en grille libellé / valeur ; les valeurs gérées par le compte sont déjà
+           affichées dans « Informations personnelles » quand la personne a un compte. -->
+      <VRow
+        v-if="readOnlyShown.length"
+        class="mt-2"
+        data-test="employee-fields-readonly"
       >
-        <VListItem
-          v-for="f in readOnly"
+        <VCol
+          v-for="f in readOnlyShown"
           :key="f.code"
-          :title="display(f)"
-          :subtitle="[f.label, statusText(f)].filter(Boolean).join(' · ')"
+          cols="12"
+          sm="6"
+          md="4"
           :data-test="`employee-field-${f.code}`"
-        />
-      </VList>
+        >
+          <div class="text-caption text-medium-emphasis">
+            {{ f.label }}<span v-if="statusText(f)"> · {{ statusText(f) }}</span>
+          </div>
+          <div :class="f.value === null || f.value === '' ? 'text-disabled' : 'text-body-1'">
+            {{ display(f) }}
+          </div>
+        </VCol>
+      </VRow>
     </template>
 
     <AppDialog

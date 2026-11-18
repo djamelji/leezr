@@ -1927,7 +1927,10 @@
     "signedVersion": "Signed version",
     "downloadOriginal": "Download the original",
     "restricted": "Restricted access (compensation)",
-    "signatureInProgress": "Signature in progress"
+    "signatureInProgress": "Signature in progress",
+    "noUpcomingShift": "No upcoming shift.",
+    "noTime30": "No clock-in over the last 30 days.",
+    "inProgress": "in progress"
   },
   "companyBilling": {
     "title": "Billing",
@@ -5360,7 +5363,16 @@
     "required": "Required",
     "profileComplete": "Profile complete",
     "profileIncomplete": "{filled} of {total} required fields filled",
-    "profileIncompleteShort": "Incomplete profile"
+    "profileIncompleteShort": "Incomplete profile",
+    "group": {
+      "identity": "Identity",
+      "contact": "Contact details",
+      "hr": "Administrative",
+      "driving": "Driving",
+      "dispatch": "Operations",
+      "personal": "Personal",
+      "emergency": "Emergency"
+    }
   },
   "runtime": {
     "timeout": "Loading timed out.",

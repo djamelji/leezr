@@ -9,6 +9,10 @@ import { useCompanySettingsStore } from '@/modules/company/settings/settings.sto
 import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
+  // ADR-823 : champs déjà modifiables dans « Informations complémentaires » (fiche RH) — même écrivain canonique
+  // PersonFieldWriter, contrôle contractuel — retirés ICI seulement pour éviter deux formulaires concurrents.
+  // Seuls les codes réellement affichés par l'éditeur RH sont retirés (jamais un champ qui n'aurait plus d'éditeur).
+  hiddenCodes: { type: Array, default: () => [] },
   membershipId: { type: Number, default: null },
   identity: { type: Object, default: () => ({}) },
   employeeNumber: { type: String, default: null },
@@ -129,7 +133,7 @@ const onRoleChange = async roleId => {
         v-else
         :member="member"
         :base-fields="baseFields"
-        :dynamic-fields="dynamicFields"
+        :dynamic-fields="hiddenCodes.length ? dynamicFields.filter(f => !hiddenCodes.includes(f.code)) : dynamicFields"
         :profile-completeness="completeness"
         :editable="canEdit"
         :lock-name="lockName"

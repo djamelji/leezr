@@ -104,6 +104,10 @@ const fieldLabel = field => {
   return field.required ? `${field.label} *` : field.label
 }
 
+// ADR-823 : libellé traduit du groupe (`fields.group.<clé>`), sinon la clé — plus de « Identity » / « Hr » bruts.
+const { t: tGroup, te: teGroup } = useI18n()
+const groupLabel = key => (teGroup(`fields.group.${key}`) ? tGroup(`fields.group.${key}`) : key.charAt(0).toUpperCase() + key.slice(1))
+
 // ADR-164: Group fields by `group` property (optional)
 const hasGroups = computed(() => props.fields.some(f => f.group))
 
@@ -132,8 +136,8 @@ const groupedFields = computed(() => {
         v-if="groupName !== '_ungrouped'"
         cols="12"
       >
-        <div class="text-subtitle-2 text-medium-emphasis text-capitalize mt-2">
-          {{ groupName }}
+        <div class="text-subtitle-2 text-medium-emphasis mt-2">
+          {{ groupLabel(groupName) }}
         </div>
       </VCol>
       <template

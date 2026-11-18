@@ -2,6 +2,7 @@
 // ADR-640 (W-C) — congés du collaborateur (lazy). Réutilise les endpoints existants (scopés W-D).
 import { $api } from '@/utils/api'
 import { formatDate } from '@/utils/datetime'
+import StatusChip from '@/core/components/StatusChip.vue'
 const props = defineProps({ employeeId: { type: [String, Number], required: true } })
 const { t } = useI18n()
 const router = useRouter()
@@ -23,18 +24,22 @@ onMounted(async () => {
   <div>
     <VSkeletonLoader v-if="loading" type="table-row@3" />
     <template v-else>
-      <div v-if="balances.length" class="d-flex gap-2 flex-wrap mb-4">
-        <VChip v-for="(b, i) in balances" :key="i" color="primary" variant="tonal" size="small">
-          {{ b.leave_type_name || b.type || b.code }} : {{ ((b.available_hundredths ?? b.available ?? 0) / 100).toFixed(1) }} {{ t('employeeFile.days') }}
-        </VChip>
-      </div>
+      <!-- ADR-823 : soldes réels (cache du registre), lisibles d'un coup d'œil -->
+      <VRow v-if="balances.length" class="mb-2" data-test="person-leave-balances">
+        <VCol v-for="(b, i) in balances" :key="i" cols="12" sm="6" md="4">
+          <div class="pa-3 rounded border">
+            <div class="text-caption text-medium-emphasis">{{ b.leave_type_name || b.type || b.code }}</div>
+            <div class="text-h6">{{ ((b.available_hundredths ?? b.available ?? 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 }) }} {{ t('employeeFile.days') }}</div>
+          </div>
+        </VCol>
+      </VRow>
       <VTable v-if="requests.length" density="compact">
         <thead><tr><th>{{ t('employeeFile.period') }}</th><th>{{ t('employeeFile.type') }}</th><th>{{ t('employeeFile.status') }}</th></tr></thead>
         <tbody>
           <tr v-for="r in requests" :key="r.id">
             <td>{{ formatDate(r.date_from) }} – {{ formatDate(r.date_to) }}</td>
             <td>{{ r.leave_type?.name || r.leave_type_name || '—' }}</td>
-            <td><VChip size="x-small">{{ r.status }}</VChip></td>
+            <td><StatusChip domain="leave" :status="r.status" size="x-small" /></td>
           </tr>
         </tbody>
       </VTable>

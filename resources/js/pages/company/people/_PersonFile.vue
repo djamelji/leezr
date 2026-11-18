@@ -291,6 +291,7 @@ const historyLabel = action => {
 const historyOpened = ref([])
 watch(historyOpened, v => { if (v.length && !store.history.length) store.loadHistory(personRef.value) })
 
+const hrEditableCodes = ref([]) // ADR-823 : champs modifiables dans l'éditeur RH (fiche salarié)
 const go = target => {
   if (target === 'create-hr') openHrLink('create')
   else openSection(target)
@@ -590,6 +591,7 @@ const requestMissing = async () => {
                     :can-edit="!!store.can.edit_identity"
                     :lock-name="!store.can.edit_global_name"
                     :shared="!!store.data.identity_shared"
+                    :hidden-codes="has('employment') ? hrEditableCodes : []"
                     @updated="reload"
                   />
                 </section>
@@ -625,6 +627,7 @@ const requestMissing = async () => {
                     v-if="store.employeeId"
                     :employee-id="store.employeeId"
                     :can-edit="!!store.can.edit_hr"
+                    @editable-codes="codes => (hrEditableCodes = codes)"
                   />
                 </section>
               </template>

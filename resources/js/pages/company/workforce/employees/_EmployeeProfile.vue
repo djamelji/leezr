@@ -89,7 +89,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
   <div>
     <div class="d-flex align-center justify-space-between mb-4">
       <h6 class="text-h6">
-        {{ $t('employees.profile.title') }}
+        {{ withIdentity ? $t('employees.profile.title') : $t('employees.profile.employmentInfo') }}
       </h6>
       <VBtn
         v-if="!isEditing && canManage"

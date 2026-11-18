@@ -3,7 +3,8 @@
 // W-HR-UX-5 (P4) — action CONTEXTUELLE : programmer (et publier) un créneau pour CE collaborateur
 // directement depuis sa fiche, sans aller chercher la création dans la grille planning.
 import { $api } from '@/utils/api'
-import { formatDate, formatDateTime } from '@/utils/datetime'
+import { displayLocale, formatDate } from '@/utils/datetime'
+import StatusChip from '@/core/components/StatusChip.vue'
 import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
@@ -14,12 +15,14 @@ const { t } = useI18n()
 const router = useRouter()
 const { toast } = useAppToast()
 const loading = ref(true)
+const hm = iso => (iso ? new Date(iso).toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' }) : '')
 const shifts = ref([])
 
 const load = async () => {
   loading.value = true
   try {
-    const d = await $api(`/workforce/planning/shifts?employee_id=${props.employeeId}&per_page=10`)
+    // ADR-823 : les créneaux À VENIR d'abord (la liste montrait les plus anciens, février compris)
+    const d = await $api(`/workforce/planning/shifts?employee_id=${props.employeeId}&per_page=10&from=${new Date().toISOString().slice(0, 10)}`)
     shifts.value = d.data ?? d ?? []
   } catch { /* */ } finally { loading.value = false }
 }
@@ -73,17 +76,21 @@ const submit = async () => {
 
     <VSkeletonLoader v-if="loading" type="table-row@3" />
     <template v-else>
-      <VTable v-if="shifts.length" density="compact">
-        <thead><tr><th>{{ t('employeeFile.date') }}</th><th>{{ t('employeeFile.hours') }}</th><th>{{ t('employeeFile.status') }}</th></tr></thead>
-        <tbody>
-          <tr v-for="s in shifts" :key="s.id">
-            <td>{{ formatDate(s.date) }}</td>
-            <td>{{ s.start_at ? formatDateTime(s.start_at) : '—' }}</td>
-            <td><VChip size="x-small">{{ s.status }}</VChip></td>
-          </tr>
-        </tbody>
-      </VTable>
-      <div v-else class="text-center text-disabled py-4">{{ t('employeeFile.noPlanning') }}</div>
+      <VList v-if="shifts.length" density="compact" class="py-0" data-test="person-shifts">
+        <VListItem v-for="s in shifts" :key="s.id" class="px-0">
+          <template #prepend>
+            <VAvatar color="primary" variant="tonal" rounded size="36" class="me-3">
+              <VIcon icon="tabler-calendar-event" size="20" />
+            </VAvatar>
+          </template>
+          <VListItemTitle class="text-capitalize">{{ formatDate(s.date) }}</VListItemTitle>
+          <VListItemSubtitle>{{ s.start_at ? `${hm(s.start_at)} – ${hm(s.end_at)}` : '—' }}<span v-if="s.work_location?.name"> · {{ s.work_location.name }}</span></VListItemSubtitle>
+          <template #append>
+            <StatusChip domain="shift" :status="s.status" size="x-small" />
+          </template>
+        </VListItem>
+      </VList>
+      <div v-else class="text-center text-disabled py-4">{{ t('employeeFile.noUpcomingShift') }}</div>
       <VBtn class="mt-3" variant="text" size="small" append-icon="tabler-arrow-right" @click="router.push('/company/workforce/planning')">{{ t('employeeFile.seeAll') }}</VBtn>
     </template>
 
