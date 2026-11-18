@@ -1,0 +1,3 @@
+== stream_timeout=40 > max_execution_time=30 (real php-fpm)
+stream 200 lasted 30.104165s
+heartbeats=14 ; after: streams=0 global=0 ; fatal errors=/Users/djamel/Sites.noindex/leezr/storage/logs/laravel.log:22994

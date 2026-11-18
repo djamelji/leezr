@@ -17,6 +17,14 @@ class Adr826RealtimeConnectionTrackerTest extends TestCase
 
     private const U = 999102;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // ADR-827 : isolated key prefix — never touch the counters of the DEV application sharing this Redis
+        config(['database.redis.options.prefix' => 'adr826-test-'.getmypid().'-']);
+        Redis::purge(config('realtime.redis_connection', 'default'));
+    }
+
     private function conn()
     {
         return Redis::connection(config('realtime.redis_connection', 'default'));
@@ -24,7 +32,7 @@ class Adr826RealtimeConnectionTrackerTest extends TestCase
 
     private function cleanup(): void
     {
-        foreach (['active:'.self::U.':'.self::C, 'streams:'.self::U.':'.self::C, 'count:'.self::C] as $k) {
+        foreach (['active:'.self::U.':'.self::C, 'streams:'.self::U.':'.self::C, 'count:'.self::C, 'count:global', 'count:streams'] as $k) {
             $this->conn()->del('leezr:realtime:stream:'.$k);
         }
     }

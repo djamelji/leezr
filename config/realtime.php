@@ -75,6 +75,11 @@ return [
 
     'max_streams_global' => (int) env('REALTIME_MAX_STREAMS_GLOBAL', 500),
 
+    // ADR-827 — cap on OPEN STREAMS (not users) : each SSE stream holds one PHP-FPM worker for its whole life.
+    // 0 = no cap (default, unchanged behaviour). Size it below pm.max_children, keeping workers for ordinary
+    // requests ; beyond it new streams get 429 and the client falls back to polling.
+    'max_concurrent_streams' => (int) env('REALTIME_MAX_CONCURRENT_STREAMS', 0),
+
     'connect_throttle_per_minute' => (int) env('REALTIME_CONNECT_THROTTLE', 5),
 
     /*

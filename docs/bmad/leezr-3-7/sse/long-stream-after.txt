@@ -1,0 +1,3 @@
+== AFTER fix : stream_timeout=40, pool locks max_execution_time=30 (real php-fpm)
+stream 200 lasted 25.067407s
+heartbeats=12 ; after: streams=0 global=0 ; new fatal errors=0

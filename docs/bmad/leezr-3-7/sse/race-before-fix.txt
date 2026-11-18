@@ -1,0 +1,7 @@
+== BEFORE fix (HEAD code), isolated redis : bursts 2,4,3 same user
+K=2 during: global=2 company=2
+K=2 after : global=1 company=1
+K=4 during: global=5 company=5
+K=4 after : global=4 company=4
+K=3 during: global=7 company=7
+K=3 after : global=6 company=6

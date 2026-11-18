@@ -8,6 +8,7 @@ use App\Core\Realtime\Contracts\StreamTransport;
 use App\Core\Realtime\EventCategory;
 use App\Core\Realtime\MetricsCollector;
 use App\Core\Realtime\TopicRegistry;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -28,7 +29,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class RealtimeStreamController
 {
-    public function __invoke(Request $request, StreamTransport $transport): StreamedResponse
+    public function __invoke(Request $request, StreamTransport $transport): StreamedResponse|JsonResponse
     {
         $company = $request->attributes->get('company');
         $companyId = $company?->id;
@@ -44,7 +45,7 @@ class RealtimeStreamController
 
         // ADR-127: Connection governance — reject if limits exceeded
         // ADR-431: Skip ConnectionTracker for platform scope (companyId is null)
-        if ($companyId !== null && !ConnectionTracker::connect($userId, $companyId, $request->ip())) {
+        if ($companyId !== null && ! ConnectionTracker::connect($userId, $companyId, $request->ip())) {
             Log::warning('[realtime] connection rejected — limit exceeded', [
                 'user_id' => $userId,
                 'company_id' => $companyId,
@@ -73,6 +74,14 @@ class RealtimeStreamController
             // after a fatal error or when the client has gone (ignore_user_abort keeps control so the loop sees
             // connection_aborted() and ends normally).
             @set_time_limit($streamTimeout + 15);
+            // ADR-827 — measured under a real PHP-FPM pool : when the limit is locked by the pool
+            // (php_admin_value[max_execution_time]), set_time_limit() has no effect and the stream was still
+            // killed at the limit (fatal error). The stream then ends CLEANLY before the effective limit ; the
+            // browser reconnects as for any normal end of stream.
+            $effectiveLimit = (int) ini_get('max_execution_time');
+            if ($effectiveLimit > 0 && $effectiveLimit < $streamTimeout + 5) {
+                $streamTimeout = max(5, $effectiveLimit - 5);
+            }
             ignore_user_abort(true);
             $unregistered = false;
             register_shutdown_function(function () use (&$unregistered, $companyId, $userId) {
@@ -94,28 +103,28 @@ class RealtimeStreamController
                 'subscribed_topics' => $topicFilter,
             ]);
 
-            while (!connection_aborted() && (time() - $startedAt) < $streamTimeout) {
+            while (! connection_aborted() && (time() - $startedAt) < $streamTimeout) {
                 try {
                     // ADR-128: Use injected transport to read events
                     $events = $transport->poll($redisKey, $lastTimestamp);
 
                     foreach ($events as $event) {
                         $data = json_decode($event['json'], true);
-                        if (!$data || !isset($data['topic'])) {
+                        if (! $data || ! isset($data['topic'])) {
                             $lastTimestamp = $event['score'];
 
                             continue;
                         }
 
                         // Validate topic (defense in depth)
-                        if (!TopicRegistry::exists($data['topic'])) {
+                        if (! TopicRegistry::exists($data['topic'])) {
                             $lastTimestamp = $event['score'];
 
                             continue;
                         }
 
                         // ADR-127: Apply subscription filters
-                        if (!$this->matchesFilters($data, $categoryFilter, $topicFilter)) {
+                        if (! $this->matchesFilters($data, $categoryFilter, $topicFilter)) {
                             $lastTimestamp = $event['score'];
 
                             continue;
@@ -123,6 +132,7 @@ class RealtimeStreamController
 
                         if (! SseRealtimePublisher::deliverableTo($data, $userId)) { // ADR-733.2 confidentialité intra-tenant
                             $lastTimestamp = $event['score'];
+
                             continue;
                         }
 
@@ -204,16 +214,16 @@ class RealtimeStreamController
     private function matchesFilters(array $data, array $categoryFilter, array $topicFilter): bool
     {
         // Category filter
-        if (!empty($categoryFilter)) {
+        if (! empty($categoryFilter)) {
             $eventCategory = $data['category'] ?? 'invalidation';
-            if (!in_array($eventCategory, $categoryFilter, true)) {
+            if (! in_array($eventCategory, $categoryFilter, true)) {
                 return false;
             }
         }
 
         // Topic filter
-        if (!empty($topicFilter)) {
-            if (!in_array($data['topic'], $topicFilter, true)) {
+        if (! empty($topicFilter)) {
+            if (! in_array($data['topic'], $topicFilter, true)) {
                 return false;
             }
         }
@@ -230,7 +240,7 @@ class RealtimeStreamController
      */
     private function resolveSseEventType(array $data): string
     {
-        if (!isset($data['category'])) {
+        if (! isset($data['category'])) {
             return 'invalidate'; // v1 backward compat
         }
 

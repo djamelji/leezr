@@ -1,0 +1,7 @@
+== cap REALTIME_MAX_CONCURRENT_STREAMS=3, pm.max_children=4, one user opens 4 tabs
+tab4 429 0.051770s
+during: streams=3 global=1 ; GET /api/me 200 in 0.056526s
+tab1 200 20.258337s
+tab2 200 20.057185s
+tab3 200 20.065025s
+after: streams=0 global=0

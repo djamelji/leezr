@@ -1,0 +1,7 @@
+== race fix (isolated redis) : bursts 2,4,3 same user
+K=2 during: global=1 company=1 streams=2
+K=2 after : global=0 company=0 streams=0
+K=4 during: global=1 company=1 streams=4
+K=4 after : global=0 company=0 streams=0
+K=3 during: global=1 company=1 streams=3
+K=3 after : global=0 company=0 streams=0

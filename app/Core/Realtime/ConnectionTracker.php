@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Redis;
 class ConnectionTracker
 {
     private const KEY_PREFIX = 'leezr:realtime:stream';
+
     private const ACTIVE_TTL = 600; // 10min safety TTL on active keys
 
     /**
@@ -27,26 +28,46 @@ class ConnectionTracker
         }
 
         $activeKey = self::activeKey($userId, $companyId);
+        $streamsKey = self::streamsKey($userId, $companyId);
         // ADR-826 : the user may hold several streams at once (a reload opens the new stream before the server
         // notices the old one is gone — up to one heartbeat ; several tabs). Streams are reference-counted per
         // user and company : the user counts once against the limits while at least one stream is alive, and is
-        // only unregistered when the LAST stream ends (the first ending stream used to unregister a live one).
-        $alreadyConnected = (int) $conn->get(self::streamsKey($userId, $companyId)) > 0;
+        // only unregistered when the LAST stream ends.
+        // ADR-827 : the reference count is taken with ONE atomic INCR — exactly one of several simultaneous
+        // streams of the same user sees 1 and counts the user (the former read-then-increment let every
+        // simultaneous stream count it, and the counters leaked n-1 per burst until every new stream was refused).
+        $streams = (int) $conn->incr($streamsKey);
+        $conn->expire($streamsKey, self::ACTIVE_TTL);
+        $isNewUser = $streams === 1;
+        $release = function () use ($conn, $streamsKey) {
+            if ((int) $conn->decr($streamsKey) <= 0) {
+                $conn->del($streamsKey);
+            }
+        };
 
         // Only check limits for NEW connections (not reconnects from same user)
-        if (! $alreadyConnected) {
+        if ($isNewUser) {
             $maxPerCompany = config('realtime.max_streams_per_company', 100);
             $maxGlobal = config('realtime.max_streams_global', 500);
 
-            $companyCount = (int) $conn->get(self::companyCountKey($companyId));
-            if ($companyCount >= $maxPerCompany) {
-                return false;
-            }
+            if ((int) $conn->get(self::companyCountKey($companyId)) >= $maxPerCompany
+                || (int) $conn->get(self::globalCountKey()) >= $maxGlobal) {
+                $release();
 
-            $globalCount = (int) $conn->get(self::globalCountKey());
-            if ($globalCount >= $maxGlobal) {
                 return false;
             }
+        }
+
+        // ADR-827 : every open stream holds one PHP worker for its whole life — the per-user limits above do
+        // not bound that (one user, several tabs). Optional cap on the number of STREAMS, sized from the pool.
+        $streamsTotal = (int) $conn->incr(self::streamsTotalKey());
+        $conn->expire(self::streamsTotalKey(), self::ACTIVE_TTL);
+        $maxStreams = (int) config('realtime.max_concurrent_streams', 0);
+        if ($maxStreams > 0 && $streamsTotal > $maxStreams) {
+            $conn->decr(self::streamsTotalKey());
+            $release();
+
+            return false;
         }
 
         // Register/refresh connection
@@ -57,11 +78,9 @@ class ConnectionTracker
             'connected_at' => now()->toIso8601String(),
         ]));
         $conn->expire($activeKey, self::ACTIVE_TTL);
-        $conn->incr(self::streamsKey($userId, $companyId));
-        $conn->expire(self::streamsKey($userId, $companyId), self::ACTIVE_TTL);
 
         // Only increment counters for genuinely new connections
-        if (! $alreadyConnected) {
+        if ($isNewUser) {
             $conn->incr(self::companyCountKey($companyId));
             $conn->expire(self::companyCountKey($companyId), self::ACTIVE_TTL);
 
@@ -81,6 +100,11 @@ class ConnectionTracker
             $conn = self::redis();
         } catch (\Throwable) {
             return;
+        }
+
+        // ADR-827 : one stream fewer holding a worker
+        if ((int) $conn->get(self::streamsTotalKey()) > 0) {
+            $conn->decr(self::streamsTotalKey());
         }
 
         // ADR-826 : another stream of the same user is still alive → it stays registered and counted
@@ -180,6 +204,21 @@ class ConnectionTracker
     private static function activeKey(int $userId, int $companyId): string
     {
         return self::KEY_PREFIX.":active:{$userId}:{$companyId}";
+    }
+
+    private static function streamsTotalKey(): string
+    {
+        return self::KEY_PREFIX.':count:streams';
+    }
+
+    /** ADR-827 — number of open streams (each one holds a PHP worker). */
+    public static function streamsTotal(): int
+    {
+        try {
+            return (int) self::redis()->get(self::streamsTotalKey());
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     private static function streamsKey(int $userId, int $companyId): string

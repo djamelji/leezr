@@ -1,0 +1,2 @@
+K=3 streams on 4 workers : GET /api/me 200 in 0.039713s
+K=4 streams on 4 workers : GET /api/me 200 in 17.118572s
