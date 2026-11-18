@@ -35,6 +35,7 @@ const moduleStore = useModuleStore() // ADR-805
 // part entière, ouvertes par « Outils ». Chaque vue garde SA permission réelle : ranger deux
 // fonctions dans une vue ne fusionne ni leurs droits ni leurs données.
 const canHr = computed(() => moduleActive('workforce_documents') && can('workforce_documents.view'))
+const peopleView = ref('requests') // ADR-822 : registre affiché dans l'onglet Collaborateurs
 const canSignatures = computed(() => moduleActive('workforce_signature') && can('workforce_signature.view'))
 const canTemplates = computed(() => moduleActive('workforce_contract') && can('workforce_contract.view'))
 // ADR-767 : un importateur (`payslips.import` seul) suit SES lots ; la revue reste gated dans la vue et côté serveur.
@@ -323,15 +324,39 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
 
       <!-- Collaborateurs : pièces demandées aux personnes (documents.manage) + documents générés (registre RH) -->
       <div v-else-if="activeTab === 'people'">
-        <DocumentsRequests v-if="can('documents.manage')" />
+        <!-- ADR-822 — deux registres distincts, un à la fois : ce qui est DEMANDÉ aux personnes (en attente
+             de dépôt ou de vérification) et ce que l'entreprise a GÉNÉRÉ (contrats, attestations, à signer). -->
+        <VBtnToggle
+          v-if="can('documents.manage') && canHr"
+          v-model="peopleView"
+          mandatory
+          divided
+          density="comfortable"
+          variant="outlined"
+          color="primary"
+          class="mb-4"
+          data-test="documents-people-switch"
+        >
+          <VBtn
+            value="requests"
+            prepend-icon="tabler-file-import"
+            data-test="documents-people-requests"
+          >
+            {{ t('documents.peopleViews.requests') }}
+          </VBtn>
+          <VBtn
+            value="generated"
+            prepend-icon="tabler-file-certificate"
+            data-test="documents-people-generated-switch"
+          >
+            {{ t('documents.peopleViews.generated') }}
+          </VBtn>
+        </VBtnToggle>
+        <DocumentsRequests v-if="can('documents.manage') && (peopleView === 'requests' || !canHr)" />
         <div
-          v-if="canHr"
-          :class="can('documents.manage') ? 'mt-8' : ''"
+          v-if="canHr && (peopleView === 'generated' || !can('documents.manage'))"
           data-test="documents-people-generated"
         >
-          <h6 class="text-h6 mb-3">
-            {{ t('documents.views.generated') }}
-          </h6>
           <HrDocuments
             embedded
             only="documents"

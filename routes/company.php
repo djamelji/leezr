@@ -926,8 +926,8 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     // ADR-717 — remplacement guidé (candidats en lecture ; création+publication du remplacement).
     Route::get('shifts/{id}/replacement-candidates', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replacementCandidates'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts/{id}/replace', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replace'])->middleware($perm('workforce.planning_publish'));
-    Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->middleware($perm('workforce.planning_manage'));
-    Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
+    Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->whereNumber('id')->middleware($perm('workforce.planning_manage')); // ADR-822 : id non numérique = 404, plus 500
+    Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->whereNumber('id')->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));
 });
 

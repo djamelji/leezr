@@ -6439,7 +6439,11 @@
     "replaceFile": "Remplacer le fichier",
     "moreActions": "Plus d'actions",
     "replacedOn": "Remplacé le {date}",
-    "acceptedFormatsList": "Formats acceptés : {types}"
+    "acceptedFormatsList": "Formats acceptés : {types}",
+    "peopleViews": {
+      "requests": "Demandes en cours",
+      "generated": "Documents générés"
+    }
   },
   "billing.tax_exemption.reverse_charge_intra_eu": "Autoliquidation TVA intra-UE (art. 283-2 CGI)",
   "billing.tax_exemption.export_extra_eu": "Exonération TVA — export hors UE",
@@ -7696,7 +7700,8 @@
       "generatedAt": "Généré le",
       "generatedBy": "Généré par",
       "actions": "Actions",
-      "collaborator": "Collaborateur"
+      "collaborator": "Collaborateur",
+      "document": "Document"
     },
     "subjects": {
       "payrollLine": "Bulletin",
@@ -11927,7 +11932,7 @@
     "templates": "Modèles de contrat",
     "all": "Tous",
     "endingSoon": "Fin dans 60 jours",
-    "search": "Rechercher une personne",
+    "search": "Rechercher un nom",
     "loadError": "Impossible de charger les contrats.",
     "col": {
       "person": "Collaborateur",

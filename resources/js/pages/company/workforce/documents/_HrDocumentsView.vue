@@ -90,9 +90,9 @@ const signatureStatusOptions = [
 
 // ── Table headers ────────────────────────────────────────────
 const headers = computed(() => [
-  { title: t('workforceDocuments.columns.templateCode'), key: 'template_code', sortable: false },
+  // ADR-822 : une colonne « Document » (modèle + objet) au lieu de deux colonnes souvent vides.
+  { title: t('workforceDocuments.columns.document'), key: 'subject', sortable: false },
   { title: t('workforceDocuments.columns.collaborator'), key: 'collaborator', sortable: false },
-  { title: t('workforceDocuments.columns.subject'), key: 'subject', sortable: false },
   { title: t('workforceDocuments.columns.signatureStatus'), key: 'signature_status', sortable: false, width: 140 },
   { title: t('workforceDocuments.columns.generatedAt'), key: 'generated_at', sortable: false, width: 160 },
   { title: t('workforceDocuments.columns.generatedBy'), key: 'generated_by_name', sortable: false, width: 150 },
@@ -287,9 +287,9 @@ const activeTab = ref(props.only || 'documents')
       </div>
     </VAlert>
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards (ADR-822 : masquées dans l'espace Documents — les compteurs de bulletins relèvent de la paie) -->
     <VRow
-      v-if="stats"
+      v-if="stats && !embedded"
       class="card-grid card-grid-xs mb-6"
     >
       <VCol
@@ -480,7 +480,15 @@ const activeTab = ref(props.only || 'documents')
 
         <!-- Subject -->
         <template #item.subject="{ item }">
-          {{ formatSubject(item.subject_type, item.subject_id) }}
+          <div class="font-weight-medium text-high-emphasis">
+            {{ item.template?.name || item.template?.code || item.template_code || formatSubject(item.subject_type, item.subject_id) }}
+          </div>
+          <div
+            v-if="item.template?.name || item.template?.code || item.template_code"
+            class="text-caption text-medium-emphasis"
+          >
+            {{ formatSubject(item.subject_type, item.subject_id) }}
+          </div>
         </template>
 
         <!-- Signature status -->

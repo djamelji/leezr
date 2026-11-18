@@ -90,7 +90,8 @@ class ShipmentController
 
         return response()->json([
             'message' => 'Shipment assigned.',
-            'shipment' => $shipment,
+            // ADR-822 : même lecture que le détail (personne affectée + identifiant chauffeur lu dans le champ relié)
+            'shipment' => ShipmentReadModel::find(company: $request->attributes->get('company'), id: $shipment->id),
         ]);
     }
 
@@ -110,7 +111,7 @@ class ShipmentController
 
         return response()->json([
             'message' => 'Shipment status updated.',
-            'shipment' => $shipment,
+            'shipment' => ShipmentReadModel::find(company: $request->attributes->get('company'), id: $shipment->id), // ADR-822
         ]);
     }
 }

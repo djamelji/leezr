@@ -6669,7 +6669,9 @@ watch(activeTab, tab => {
   row-gap: 8px;
 }
 .plan-toolbar__search {
-  max-inline-size: 190px;
+  // ADR-822 : le libellé « Rechercher un collaborateur » était tronqué (« Recherch »).
+  flex: 0 1 240px;
+  min-inline-size: 200px;
 }
 .plan-week-label {
   min-inline-size: 150px;
