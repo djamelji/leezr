@@ -76,6 +76,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
       v-for="s in visibleSections"
       :key="s.value"
       class="asn-mtab flex-grow-1"
+      min-width="0"
       :variant="active === s.value ? 'tonal' : 'text'"
       :color="active === s.value ? 'primary' : 'medium-emphasis'"
       :disabled="s.disabled"
@@ -97,6 +98,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
     <VBtn
       v-if="overflowSections.length"
       class="asn-mtab flex-grow-1"
+      min-width="0"
       :variant="overflowActive ? 'tonal' : 'text'"
       :color="overflowActive ? 'primary' : 'medium-emphasis'"
       :aria-label="t('appSectionNav.more')"
@@ -137,6 +139,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
   gap: 2px;
 
   .asn-mtab {
+    flex: 1 1 0; // ADR-824 : largeur répartie, jamais dictée par le libellé (pas de débordement)
     min-block-size: 56px;
     block-size: 56px;
     min-inline-size: 0; // laisse le flex répartir sans débordement
@@ -144,6 +147,12 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
     border-radius: 0;
     text-transform: none;
     letter-spacing: normal;
+  }
+
+  .asn-mtab .v-btn__content {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
   }
 
   .asn-mtab__inner {

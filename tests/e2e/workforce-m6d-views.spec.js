@@ -24,8 +24,8 @@ test('M6.D — sous-nav unique : Semaine/Jour/Postes/Mois + Modèles', async ({ 
   await loginCompany(page)
   await gotoPlanning(page)
 
-  for (const tid of ['plan-view-planning', 'plan-view-calendar', 'plan-view-posts', 'plan-view-month', 'plan-view-templates'])
-    await expect(page.locator(`[data-test="${tid}"]`)).toBeVisible({ timeout: 10000 })
+  for (const tid of ['plan-view-planning', 'plan-view-calendar', 'plan-view-posts', 'plan-view-month', 'planning-actions-more'])
+    await expect(page.locator(`[data-test="${tid}"]`)).toBeVisible({ timeout: 10000 }) // ADR-824 : Modèles dans le menu « Plus »
 
   // Semaine → grille D1 ; Jour → timeline horaire FullCalendar ; Postes → vue besoins ; Mois → grille mois.
   await page.locator('[data-test="plan-view-planning"]').click()

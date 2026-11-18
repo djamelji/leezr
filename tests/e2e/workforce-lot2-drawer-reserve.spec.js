@@ -12,7 +12,8 @@ test('drawer : erreur de validation (contenu plus haut) → scroll + action du b
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(900)
-  await page.getByRole('button', { name: /Besoins de personnel/i }).click()
+  await page.locator('[data-test="grid-more"]').click() // ADR-823 : « Besoins de couverture » dans le menu « Plus » de la grille
+  await page.locator('[data-test="coverage-manage"]').click()
   await page.waitForTimeout(500)
   const drawer = page.locator('.v-navigation-drawer.wf-scroll-drawer', { has: page.getByRole('heading', { name: 'Besoins de personnel' }) })
 
@@ -42,7 +43,7 @@ test('drawer mobile 390 : scroll et action accessibles', async ({ page }) => {
   // MODÈLE, accessible sur mobile via l'onglet Modèles — même classe de correction partagée.
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.locator('[data-test="planning-actions-more"]').click() // ADR-824 : « Modèles » dans le menu de la ligne d'actions
+  await page.locator('[data-test="planning-more"]').click() // mobile : « Modèles » dans le menu « Plus » de l'en-tête
   await page.locator('[data-test="plan-view-templates"]').click()
   await page.waitForTimeout(600)
   await page.getByRole('button', { name: /Nouveau modèle|New template/i }).first().click()
