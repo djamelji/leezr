@@ -419,6 +419,7 @@
     "formatMinutes": true,
     "hundredthsToDays": true,
     "useSettingsEntry": true,
-    "useCatalogText": true
+    "useCatalogText": true,
+    "displayLocale": true
   }
 }

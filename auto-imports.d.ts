@@ -55,6 +55,7 @@ declare global {
   const defineComponent: typeof import('vue')['defineComponent']
   const definePage: typeof import('unplugin-vue-router/runtime')['definePage']
   const defineStore: typeof import('pinia')['defineStore']
+  const displayLocale: typeof import('./resources/js/utils/datetime.js')['displayLocale']
   const downloadBlob: typeof import('./resources/js/utils/pdf.js')['downloadBlob']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
@@ -474,6 +475,7 @@ declare module 'vue' {
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly definePage: UnwrapRef<typeof import('unplugin-vue-router/runtime')['definePage']>
     readonly defineStore: UnwrapRef<typeof import('pinia')['defineStore']>
+    readonly displayLocale: UnwrapRef<typeof import('./resources/js/utils/datetime.js')['displayLocale']>
     readonly downloadBlob: UnwrapRef<typeof import('./resources/js/utils/pdf.js')['downloadBlob']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
