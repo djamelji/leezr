@@ -1,0 +1,311 @@
+{
+  "generated_at": "2026-11-18T04:09:07+00:00",
+  "read_only": true,
+  "applied": false,
+  "summary": {
+    "driver_roles": 8,
+    "with_reviewed_rights": 8,
+    "members_concerned": 13,
+    "by_right": {
+      "members.view": 8,
+      "settings.view": 8,
+      "documents.view": 1
+    }
+  },
+  "roles": [
+    {
+      "company_id": 1,
+      "role_id": 7,
+      "members": 12,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 2,
+      "role_id": 2,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 3,
+      "role_id": 12,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 31,
+      "role_id": 29,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 32,
+      "role_id": 34,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 33,
+      "role_id": 39,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 34,
+      "role_id": 44,
+      "members": 0,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+      "explicit_customisations": 2,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company decision (the role was customised explicitly)"
+      }
+    },
+    {
+      "company_id": 101,
+      "role_id": 171,
+      "members": 1,
+      "administrative": false,
+      "needed_for_delivery": [
+        "shipments.view_own",
+        "shipments.manage_status",
+        "theme.view",
+        "theme.manage"
+      ],
+      "reviewed_rights": [
+        "members.view",
+        "documents.view",
+        "settings.view"
+      ],
+      "origin": "default role of the jobdomain registry at company creation (2026-11-16)",
+      "explicit_customisations": 0,
+      "consequences": [
+        "members.view : opens colleagues' profiles and personal fields (/company/members/{id}, /fields) and the account facet of person files",
+        "documents.view : opens the company vault and colleagues' documents (documentary supervision)",
+        "settings.view : reads company settings ; no operational use for a driver"
+      ],
+      "delivery_impact_of_removal": "none — delivery rights stay",
+      "remediation_preview": {
+        "remove": [
+          "members.view",
+          "documents.view",
+          "settings.view"
+        ],
+        "keep": [
+          "theme.view",
+          "theme.manage",
+          "workforce.timesheet_view",
+          "workforce.timesheet_submit",
+          "shipments.manage_status",
+          "shipments.view_own"
+        ],
+        "requires": "company or Platform decision with the company's agreement"
+      }
+    }
+  ],
+  "note": "DEV (lecture seule) — noms de société retirés ; aucune donnée personnelle"
+}
