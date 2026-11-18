@@ -59,6 +59,9 @@ test('A — créer → Annuler (disparition serveur) → Rétablir (persistance)
   const emp = cap.emps[0]; const date = cap.date
 
   // Arme le modèle (palette) puis clique la cellule → création (empile l'undo).
+  // ADR-825 : la palette est repliée par défaut (ADR-779, préférence mémorisée) — on l'ouvre si besoin
+  if (!(await page.locator('[data-test="palette-template"]').first().isVisible().catch(() => false)))
+    await page.locator('[data-test="template-palette-toggle"]').click()
   await page.locator('[data-test="palette-template"]', { hasText: name }).first().click()
   const [mk] = await Promise.all([
     page.waitForResponse(r => /\/planning\/shifts$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20000 }),

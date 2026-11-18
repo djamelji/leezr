@@ -26,7 +26,8 @@ test('desktop : blocs métier + résumé heures + bascule vue par postes', async
   // Blocs métier : le poste (nom) est affiché, pas seulement les heures.
   await expect(page.locator('.plan-shift__poste').first()).toBeVisible()
   // Résumé par collaborateur (heures · jours).
-  await expect(page.getByText(/\d+(\.\d+)?h · \d+ j/).first()).toBeVisible()
+  // ADR-825 : format commun des durées (« 16 h », « 2 h 30 ») — le résumé heures · jours reste exigé
+  await expect(page.getByText(/\d+\s?h(\s?\d+)? · \d+ j/).first()).toBeVisible()
 
   // Bascule vue par postes : lignes par catégorie + collaborateurs nominatifs.
   await page.locator('[data-test="view-posts"]').click()

@@ -3616,6 +3616,8 @@ watch(activeTab, tab => {
                 icon
                 variant="text"
                 size="x-small"
+                :aria-expanded="paletteOpen"
+                data-test="template-palette-toggle"
                 @click="paletteOpen = !paletteOpen"
               >
                 <VIcon :icon="paletteOpen ? 'tabler-chevron-down' : 'tabler-chevron-right'" size="18" />
