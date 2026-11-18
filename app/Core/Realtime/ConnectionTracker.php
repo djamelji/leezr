@@ -27,7 +27,11 @@ class ConnectionTracker
         }
 
         $activeKey = self::activeKey($userId, $companyId);
-        $alreadyConnected = (bool) $conn->get($activeKey);
+        // ADR-826 : the user may hold several streams at once (a reload opens the new stream before the server
+        // notices the old one is gone — up to one heartbeat ; several tabs). Streams are reference-counted per
+        // user and company : the user counts once against the limits while at least one stream is alive, and is
+        // only unregistered when the LAST stream ends (the first ending stream used to unregister a live one).
+        $alreadyConnected = (int) $conn->get(self::streamsKey($userId, $companyId)) > 0;
 
         // Only check limits for NEW connections (not reconnects from same user)
         if (! $alreadyConnected) {
@@ -53,6 +57,8 @@ class ConnectionTracker
             'connected_at' => now()->toIso8601String(),
         ]));
         $conn->expire($activeKey, self::ACTIVE_TTL);
+        $conn->incr(self::streamsKey($userId, $companyId));
+        $conn->expire(self::streamsKey($userId, $companyId), self::ACTIVE_TTL);
 
         // Only increment counters for genuinely new connections
         if (! $alreadyConnected) {
@@ -77,6 +83,11 @@ class ConnectionTracker
             return;
         }
 
+        // ADR-826 : another stream of the same user is still alive → it stays registered and counted
+        if ((int) $conn->decr(self::streamsKey($userId, $companyId)) > 0) {
+            return;
+        }
+        $conn->del(self::streamsKey($userId, $companyId));
         $conn->del(self::activeKey($userId, $companyId));
 
         // Decrement but never below zero
@@ -169,6 +180,11 @@ class ConnectionTracker
     private static function activeKey(int $userId, int $companyId): string
     {
         return self::KEY_PREFIX.":active:{$userId}:{$companyId}";
+    }
+
+    private static function streamsKey(int $userId, int $companyId): string
+    {
+        return self::KEY_PREFIX.":streams:{$userId}:{$companyId}";
     }
 
     private static function companyCountKey(int $companyId): string

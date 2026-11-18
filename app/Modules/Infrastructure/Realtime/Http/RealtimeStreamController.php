@@ -65,6 +65,23 @@ class RealtimeStreamController
                 ob_end_clean();
             }
 
+            // ADR-826 — measured on DEV (PHP-FPM, max_execution_time 30) : every stream was KILLED after 30 s
+            // (« Maximum execution time exceeded » in the polling transport, 22 989 occurrences ; 29 536 connects
+            // for 259 logged disconnects), the browser reconnected 3 s later, and the unregister below never ran.
+            // The stream is designed to live `stream_timeout` seconds : its execution limit follows that setting
+            // (bounded, plus a margin), and the unregister is guaranteed by a shutdown function — it also runs
+            // after a fatal error or when the client has gone (ignore_user_abort keeps control so the loop sees
+            // connection_aborted() and ends normally).
+            @set_time_limit($streamTimeout + 15);
+            ignore_user_abort(true);
+            $unregistered = false;
+            register_shutdown_function(function () use (&$unregistered, $companyId, $userId) {
+                if (! $unregistered && $companyId !== null) {
+                    $unregistered = true;
+                    ConnectionTracker::disconnect($userId, $companyId);
+                }
+            });
+
             $startedAt = time();
             $lastHeartbeat = time();
             $lastTimestamp = microtime(true);
@@ -145,7 +162,8 @@ class RealtimeStreamController
             }
 
             // ADR-127: Unregister connection (ADR-431: skip for platform scope)
-            if ($companyId !== null) {
+            if ($companyId !== null && ! $unregistered) {
+                $unregistered = true;
                 ConnectionTracker::disconnect($userId, $companyId);
             }
 
