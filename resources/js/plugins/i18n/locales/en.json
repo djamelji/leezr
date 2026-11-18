@@ -9484,7 +9484,8 @@
       "selectPromptDescription": "Choose an employee to view their leave balances.",
       "title": "Balance",
       "reserved": "Reserved",
-      "unavailable": "Balance unavailable"
+      "unavailable": "Balance unavailable",
+      "teamHint": "No balance for this year in your scope. Balances appear with the first accruals."
     },
     "config": {
       "newType": "New leave type",
@@ -10152,7 +10153,8 @@
       "pickDates": "Pick the dates: an estimate in calendar days is proposed, to be checked."
     },
     "openEntry": "Your clock-in of {date} was never closed. Your manager must correct it before you can start a new day.",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "meTitle": "My activity"
   },
   "settingsHub": {
     "title": "Settings",

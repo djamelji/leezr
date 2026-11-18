@@ -374,15 +374,18 @@ function signatureChipProps(status) {
           {{ t('workforceClock.endBreak') }}
         </VBtn>
 
+        <!-- ADR-823 : actualiser = action secondaire (icône), le pointage reste l'action principale -->
         <VBtn
-          variant="tonal"
-          color="primary"
-          prepend-icon="tabler-refresh"
+          icon
+          variant="text"
+          color="secondary"
           :loading="loading"
           :aria-label="t('workforceMe.refresh')"
+          :title="t('workforceMe.refresh')"
+          data-test="me-refresh"
           @click="clockStore.fetchProfile(); fetchDocuments()"
         >
-          {{ t('workforceMe.refresh') }}
+          <VIcon icon="tabler-refresh" />
         </VBtn>
       </template>
     </TimeSpaceHeader>

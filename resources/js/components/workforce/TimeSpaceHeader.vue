@@ -61,8 +61,9 @@ const views = computed(() => [
         v-if="!bare"
         class="min-w-0 flex-grow-1"
       >
+        <!-- ADR-823 : « Mon activité » pour l'espace personnel (le titre collectif « Planning & temps » prêtait à confusion) -->
         <h4 class="text-h4">
-          {{ t('timeSpace.title') }}
+          {{ active === 'me' ? t('timeSpace.meTitle') : t('timeSpace.title') }}
         </h4>
         <p
           v-if="subtitle && !smAndDown"

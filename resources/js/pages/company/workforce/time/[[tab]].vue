@@ -844,42 +844,43 @@ onMounted(() => {
         </div>
 
         <!-- KPI décisionnels cliquables (filtrent par statut) -->
-        <VRow
+        <!-- ADR-823 : même bande compacte que « Aujourd'hui » -->
+        <VCard
           v-if="stats"
-          class="card-grid card-grid-xs mb-6"
+          class="mb-6"
         >
-          <VCol
-            v-for="k in tsKpis"
-            :key="k.key"
-            cols="6"
-            sm="3"
-          >
-            <VCard
-              :class="{ 'border-primary': tsStatusFilter === k.status }"
-              class="cursor-pointer"
+          <div class="d-flex flex-wrap">
+            <div
+              v-for="(k, i) in tsKpis"
+              :key="k.key"
+              class="d-flex align-center gap-3 pa-4 flex-grow-1 cursor-pointer"
+              :class="{ 'border-e': i < tsKpis.length - 1, 'ts-kpi-active': tsStatusFilter === k.status }"
+              style="min-inline-size: 150px;"
               :data-test="`ts-kpi-${k.key}`"
               @click="applyTsStatus(k.status)"
             >
-              <VCardText class="d-flex align-center gap-3">
-                <VAvatar
-                  :color="k.color"
-                  variant="tonal"
-                  rounded
-                >
-                  <VIcon :icon="k.icon" />
-                </VAvatar>
-                <div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ k.value }}
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    {{ $t(`workforce.statuses.timesheet.${k.key}`) }}
-                  </div>
+              <VAvatar
+                :color="k.color"
+                variant="tonal"
+                rounded
+                size="34"
+              >
+                <VIcon
+                  :icon="k.icon"
+                  size="20"
+                />
+              </VAvatar>
+              <div>
+                <div class="text-h6 font-weight-medium">
+                  {{ k.value }}
                 </div>
-              </VCardText>
-            </VCard>
-          </VCol>
-        </VRow>
+                <div class="text-caption text-medium-emphasis">
+                  {{ $t(`workforce.statuses.timesheet.${k.key}`) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </VCard>
 
         <VCard>
           <!-- Filters -->
@@ -1507,3 +1508,7 @@ onMounted(() => {
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+.ts-kpi-active { background: rgba(var(--v-theme-primary), 0.08); }
+</style>

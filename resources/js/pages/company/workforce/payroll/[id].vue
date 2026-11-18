@@ -63,6 +63,14 @@ const preparation = computed(() => {
   return { step: '—', hint: '', color: 'secondary', icon: 'tabler-help' }
 })
 
+const runTotals = computed(() => [
+  ...(canReadComp.value ? [
+    { key: 'gross', icon: 'tabler-report-money', color: 'primary', label: 'payroll.totals.gross', value: formatCents(run.value?.total_gross_cents) },
+    { key: 'net', icon: 'tabler-wallet', color: 'success', label: 'payroll.totals.netPayable', value: formatCents(calculationTotals.value?.net_payable_cents) },
+    { key: 'cost', icon: 'tabler-building-bank', color: 'warning', label: 'payroll.totals.employerCost', value: formatCents(calculationTotals.value?.total_cost_employer_cents) },
+  ] : []),
+  { key: 'anomalies', icon: 'tabler-alert-triangle', color: run.value?.anomaly_count > 0 ? 'error' : 'secondary', label: 'payroll.totals.anomalies', value: run.value?.anomaly_count ?? 0, textClass: run.value?.anomaly_count > 0 ? 'text-error' : '' },
+])
 const anomalyGroups = computed(() => {
   const groups = {}
   for (const a of run.value?.anomalies || []) {
@@ -323,45 +331,44 @@ onBeforeUnmount(() => store.clearCurrentRun())
       </div>
     </VAlert>
 
-    <!-- D. Totals cards row -->
-    <VRow class="mb-6">
-      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
-        <VCard>
-          <VCardText class="text-center">
-            <VIcon icon="tabler-report-money" size="32" color="primary" class="mb-2" />
-            <div class="text-body-2 text-medium-emphasis mb-1">{{ $t('payroll.totals.gross') }}</div>
-            <div class="text-h5 font-weight-bold text-primary">{{ formatCents(run.total_gross_cents) }}</div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
-        <VCard>
-          <VCardText class="text-center">
-            <VIcon icon="tabler-wallet" size="32" color="success" class="mb-2" />
-            <div class="text-body-2 text-medium-emphasis mb-1">{{ $t('payroll.totals.netPayable') }}</div>
-            <div class="text-h5 font-weight-bold text-success">{{ formatCents(calculationTotals?.net_payable_cents) }}</div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol v-if="canReadComp" cols="12" sm="6" md="3">
-        <VCard>
-          <VCardText class="text-center">
-            <VIcon icon="tabler-building-bank" size="32" color="warning" class="mb-2" />
-            <div class="text-body-2 text-medium-emphasis mb-1">{{ $t('payroll.totals.employerCost') }}</div>
-            <div class="text-h5 font-weight-bold text-warning">{{ formatCents(calculationTotals?.total_cost_employer_cents) }}</div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol cols="12" :sm="canReadComp ? 6 : 12" :md="canReadComp ? 3 : 12">
-        <VCard>
-          <VCardText class="text-center">
-            <VIcon icon="tabler-alert-triangle" size="32" :color="run.anomaly_count > 0 ? 'error' : 'grey'" class="mb-2" />
-            <div class="text-body-2 text-medium-emphasis mb-1">{{ $t('payroll.totals.anomalies') }}</div>
-            <div class="text-h5 font-weight-bold" :class="run.anomaly_count > 0 ? 'text-error' : 'text-grey'">{{ run.anomaly_count ?? 0 }}</div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
+    <!-- D. Totaux — ADR-823 : bande compacte (montants réservés à workforce.compensation_read, inchangé) -->
+    <VCard
+      class="mb-6"
+      data-test="payroll-run-totals"
+    >
+      <div class="d-flex flex-wrap">
+        <div
+          v-for="(k, i) in runTotals"
+          :key="k.key"
+          class="d-flex align-center gap-3 pa-4 flex-grow-1"
+          :class="{ 'border-e': i < runTotals.length - 1 }"
+          style="min-inline-size: 180px;"
+        >
+          <VAvatar
+            :color="k.color"
+            variant="tonal"
+            rounded
+            size="38"
+          >
+            <VIcon
+              :icon="k.icon"
+              size="22"
+            />
+          </VAvatar>
+          <div>
+            <div
+              class="text-h6 font-weight-medium"
+              :class="k.textClass"
+            >
+              {{ k.value }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ $t(k.label) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </VCard>
 
     <!-- E. Anomaly banner — ADR-822 : regroupées par type (une ligne par personne noyait la page) -->
     <VAlert
@@ -394,7 +401,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
     <VCard class="mb-6">
       <VCardTitle class="d-flex align-center justify-space-between">
         <span>{{ $t('payroll.lines.title') }}</span>
-        <VChip size="small" color="primary" variant="tonal">{{ store.currentRunTotalLines }} {{ $t('payroll.employees') }}</VChip>
+        <VChip size="small" color="primary" variant="tonal">{{ $t('payroll.employeeCount', { n: store.currentRunTotalLines }, store.currentRunTotalLines) }}</VChip>
       </VCardTitle>
       <VDataTableServer
         :headers="lineHeaders" :items="store.currentRunLines" :items-length="store.currentRunTotalLines"

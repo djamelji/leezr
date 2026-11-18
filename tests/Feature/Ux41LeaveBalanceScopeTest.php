@@ -265,6 +265,20 @@ class Ux41LeaveBalanceScopeTest extends TestCase
         $get($this->userWith(['workforce.leave_request']))->assertForbidden();
     }
 
+    /** ADR-823 — team balances : same cached balances, limited to the reader's leave perimeter, never another company. */
+    public function test_team_balances_follow_the_leave_perimeter(): void
+    {
+        $get = fn (User $u, ?Company $as = null) => $this->actingAs($u)->getJson('/api/workforce/leaves/balances?year='.now()->year, ['X-Company-Id' => ($as ?? $this->company)->id]);
+        $hr = $this->userWith(['workforce.leave_request', 'workforce.leave_view_all']);
+        $all = collect($get($hr)->assertOk()->json('data'));
+        $this->assertEqualsCanonicalizing([$this->manager->id, $this->report->id, $this->stranger->id], $all->pluck('employee_id')->unique()->values()->all());
+        $this->assertSame(1700, $all->firstWhere('employee_id', $this->stranger->id)['available'], 'cached ledger balance, no recomputation');
+        $mgr = $this->userWith(['workforce.leave_request'], $this->manager);
+        $this->assertEqualsCanonicalizing([$this->manager->id, $this->report->id], collect($get($mgr)->assertOk()->json('data'))->pluck('employee_id')->all());
+        $this->assertSame([], $get($this->userWith(['workforce.leave_request']))->assertOk()->json('data'), 'no employee record : nothing');
+        $get($this->userWith(['workforce.view']))->assertForbidden();
+    }
+
     public function test_statistics_never_count_another_company(): void
     {
         $this->seedRequests();

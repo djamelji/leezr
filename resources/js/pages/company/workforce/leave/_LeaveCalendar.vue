@@ -7,6 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
+import frLocale from '@fullcalendar/core/locales/fr' // ADR-823 : textes FR complets (« +1 autre », boutons)
 import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 
 const props = defineProps({
@@ -60,6 +61,7 @@ const fetchEvents = (info, successCallback) => {
 const calendarOptions = computed(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
+  locales: [frLocale],
   locale: locale.value?.startsWith('fr') ? 'fr' : 'en',
   ...(props.firstDay !== null ? { firstDay: props.firstDay } : {}),
   height: 'auto',
@@ -102,4 +104,9 @@ defineExpose({ refetch })
     .fc-event { cursor: pointer; font-size: 0.75rem; }
   }
 }
+</style>
+
+<style lang="scss">
+// ADR-823 : styles Vuexy du calendrier (preset apps/calendar) — boutons et grille au thème
+@use "@core-scss/template/libs/full-calendar";
 </style>

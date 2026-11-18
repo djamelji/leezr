@@ -9484,7 +9484,8 @@
       "selectPromptDescription": "Choisissez un employé pour consulter ses soldes de congés.",
       "title": "Solde",
       "reserved": "Réservé",
-      "unavailable": "Solde indisponible"
+      "unavailable": "Solde indisponible",
+      "teamHint": "Aucun solde pour cette année dans votre périmètre. Les soldes apparaissent dès les premières acquisitions."
     },
     "config": {
       "newType": "Nouveau type de congé",
@@ -10152,7 +10153,8 @@
       "pickDates": "Choisissez les dates : une estimation en jours du calendrier est proposée, à vérifier."
     },
     "openEntry": "Votre pointage du {date} est resté ouvert. Votre responsable doit le corriger avant que vous puissiez commencer une nouvelle journée.",
-    "preferences": "Préférences"
+    "preferences": "Préférences",
+    "meTitle": "Mon activité"
   },
   "settingsHub": {
     "title": "Réglages",

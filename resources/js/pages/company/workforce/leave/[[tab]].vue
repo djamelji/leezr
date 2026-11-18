@@ -323,6 +323,27 @@ const balancesHeaders = computed(() => [
   { title: t('leaves.balances.available'), key: 'available', sortable: false, width: 140 },
 ])
 
+// ADR-823 — soldes de l'équipe (GET /workforce/leaves/balances, périmètre serveur)
+const teamBalances = ref([])
+const teamBalancesLoading = ref(false)
+const fetchTeamBalances = async () => {
+  teamBalancesLoading.value = true
+  try { teamBalances.value = (await $api('/workforce/leaves/balances', { query: { year: balancesYear.value } })).data || [] }
+  catch { teamBalances.value = [] }
+  finally { teamBalancesLoading.value = false }
+}
+const teamBalanceTypes = computed(() => [...new Map(teamBalances.value.map(b => [b.leave_type_id, { id: b.leave_type_id, name: b.leave_type_name || b.leave_type_code }])).values()])
+const teamBalanceRows = computed(() => {
+  const rows = {}
+  for (const b of teamBalances.value) {
+    rows[b.employee_id] ??= { employee_id: b.employee_id, name: b.employee_name || '—', byType: {} }
+    rows[b.employee_id].byType[b.leave_type_id] = b.available
+  }
+
+  return Object.values(rows).sort((a, b) => a.name.localeCompare(b.name))
+})
+watch([activeTab, balancesYear], () => { if (activeTab.value === 'balances' && !balancesEmployee.value) fetchTeamBalances() }, { immediate: true })
+
 const fetchBalances = async () => {
   if (!balancesEmployee.value) return
   balancesLoading.value = true
@@ -1020,19 +1041,73 @@ watch(activeTab, tab => {
             </VDataTableServer>
           </template>
 
+          <!-- ADR-823 — vue d'équipe : solde disponible par personne et par type (mêmes soldes du registre,
+               périmètre du lecteur appliqué par le serveur) ; un clic ouvre le détail de la personne. -->
           <template v-else>
-            <div class="text-center pa-8">
+            <VProgressLinear
+              v-if="teamBalancesLoading"
+              indeterminate
+            />
+            <VTable
+              v-if="teamBalanceRows.length"
+              class="text-no-wrap"
+              hover
+              data-test="leave-team-balances"
+            >
+              <thead>
+                <tr>
+                  <th>{{ $t('leaves.columns.employee') }}</th>
+                  <th
+                    v-for="lt in teamBalanceTypes"
+                    :key="lt.id"
+                    class="text-end"
+                  >
+                    {{ lt.name }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in teamBalanceRows"
+                  :key="row.employee_id"
+                  class="cursor-pointer"
+                  @click="balancesEmployee = row.employee_id"
+                >
+                  <td class="font-weight-medium">
+                    {{ row.name }}
+                  </td>
+                  <td
+                    v-for="lt in teamBalanceTypes"
+                    :key="lt.id"
+                    class="text-end"
+                  >
+                    <span
+                      v-if="row.byType[lt.id] !== undefined"
+                      :class="row.byType[lt.id] > 0 ? '' : 'text-error'"
+                    >{{ formatDuration(row.byType[lt.id]) }}</span>
+                    <span
+                      v-else
+                      class="text-disabled"
+                    >—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </VTable>
+            <div
+              v-else-if="!teamBalancesLoading"
+              class="text-center pa-8"
+            >
               <VIcon
-                icon="tabler-user-search"
+                icon="tabler-chart-bar-off"
                 size="48"
                 color="secondary"
                 class="mb-4"
               />
               <h6 class="text-h6 mb-2">
-                {{ $t('leaves.balances.selectPrompt') }}
+                {{ $t('leaves.balances.empty') }}
               </h6>
               <p class="text-body-1 text-medium-emphasis">
-                {{ $t('leaves.balances.selectPromptDescription') }}
+                {{ $t('leaves.balances.teamHint') }}
               </p>
             </div>
           </template>

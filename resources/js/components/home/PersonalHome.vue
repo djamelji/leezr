@@ -225,7 +225,7 @@ onMounted(async () => {
         </div>
         <div class="d-flex flex-wrap gap-6">
           <div v-for="b in clock.leaveBalances" :key="b.leave_type_id || b.label || b.name" class="d-flex flex-column">
-            <span class="text-h6 font-weight-medium text-high-emphasis">{{ (b.balance_hundredths != null ? (b.balance_hundredths / 100) : (b.balance ?? b.remaining ?? 0)) }} <span class="text-caption text-medium-emphasis">{{ t('employeeHome.days') }}</span></span>
+            <span class="text-h6 font-weight-medium text-high-emphasis">{{ ((b.available ?? b.balance_hundredths ?? 0) / 100).toLocaleString(displayLocale(), { maximumFractionDigits: 2 }) }} <span class="text-caption text-medium-emphasis">{{ t('employeeHome.days') }}</span></span>
             <span class="text-caption text-medium-emphasis">{{ b.leave_type_name || b.name || b.label }}</span>
           </div>
         </div>
