@@ -11986,5 +11986,9 @@
     "probation": "Période d'essai jusqu'au {date}",
     "empty": "Aucun contrat",
     "emptyHint": "Créez un contrat depuis la fiche d'un collaborateur."
+  },
+  "appSectionNav": {
+    "more": "Plus de sections",
+    "moreShort": "Plus"
   }
 }

@@ -3,13 +3,15 @@
 // Respecte la hiérarchie Vuexy : la barre d'onglets est la NAVIGATION SUPÉRIEURE de la page, placée
 // AU-DESSUS du contenu (le parent met le panneau en dessous), visuellement distincte du contenu.
 //   • desktop → onglets Vuexy icône + libellé (états actifs/bordures du thème) ;
-//   • mobile  → onglets ICÔNES SEULES, répartis sur la largeur, SANS scroll ni troncature ;
+//   • mobile  → onglets icône + libellé court (ADR-824 : les icônes seules n'étaient pas explicites),
+//              répartis sur la largeur, SANS scroll ;
 //              si trop nombreux → regroupement explicite « Plus » (jamais de compression/scroll).
 // Libellés conservés pour lecteurs d'écran (aria-label) + tooltip si l'icône peut être ambiguë.
 // Sync état (v-model) ⇒ routes/deep-links préservés par le parent. Générique, aucune logique métier.
 import { computed, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useContainerWidth } from '@/composables/useContainerWidth'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   // [{ value, label, icon, disabled? }]
@@ -19,6 +21,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const { smAndDown } = useDisplay()
+const { t } = useI18n()
 const isMobile = computed(() => smAndDown.value)
 
 const active = computed({
@@ -26,7 +29,7 @@ const active = computed({
   set: v => emit('update:modelValue', v),
 })
 
-// Répartition mobile : cible tactile ~56px ; on réserve une place pour « Plus » si débordement.
+// Répartition mobile : ~64px par onglet (icône + libellé court, tronqué au besoin) ; « Plus » si débordement.
 const barRef = ref(null)
 const { width } = useContainerWidth(barRef)
 const maxVisible = computed(() => Math.max(2, Math.floor((width.value || 360) / 64)))
@@ -82,14 +85,13 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
       :data-test="`asn-mtab-${s.value}`"
       @click="active = s.value"
     >
-      <VIcon :icon="s.icon" size="22" />
-      <VTooltip
-        activator="parent"
-        location="bottom"
-        open-delay="400"
-      >
-        {{ s.label }}
-      </VTooltip>
+      <span class="asn-mtab__inner">
+        <VIcon
+          :icon="s.icon"
+          size="20"
+        />
+        <span class="asn-mtab__label">{{ s.label }}</span>
+      </span>
     </VBtn>
 
     <VBtn
@@ -97,10 +99,16 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
       class="asn-mtab flex-grow-1"
       :variant="overflowActive ? 'tonal' : 'text'"
       :color="overflowActive ? 'primary' : 'medium-emphasis'"
-      aria-label="Plus de sections"
+      :aria-label="t('appSectionNav.more')"
       data-test="asn-more"
     >
-      <VIcon icon="tabler-dots" size="22" />
+      <span class="asn-mtab__inner">
+        <VIcon
+          icon="tabler-dots"
+          size="20"
+        />
+        <span class="asn-mtab__label">{{ t('appSectionNav.moreShort') }}</span>
+      </span>
       <VMenu
         activator="parent"
         location="bottom end"
@@ -129,10 +137,31 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
   gap: 2px;
 
   .asn-mtab {
-    min-block-size: 48px;
-    block-size: 48px;
+    min-block-size: 56px;
+    block-size: 56px;
     min-inline-size: 0; // laisse le flex répartir sans débordement
+    padding-inline: 4px;
     border-radius: 0;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .asn-mtab__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .asn-mtab__label {
+    max-inline-size: 100%;
+    overflow: hidden;
+    font-size: 0.6875rem;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

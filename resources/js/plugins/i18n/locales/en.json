@@ -11986,5 +11986,9 @@
     "probation": "Probation until {date}",
     "empty": "No contract",
     "emptyHint": "Create a contract from a person's file."
+  },
+  "appSectionNav": {
+    "more": "More sections",
+    "moreShort": "More"
   }
 }
