@@ -1,0 +1,68 @@
+{
+ "refused": {
+  "days_hourly": {
+   "s": 422,
+   "message": "A days-based package cannot be paid by the hour : choose a monthly or daily compensation."
+  },
+  "unknown": {
+   "s": 422,
+   "message": "The selected work model key is invalid."
+  }
+ },
+ "HoraireOk": {
+  "employee_id": 1855,
+  "contract_id": 567,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "PartielPlus": {
+  "employee_id": 1856,
+  "contract_id": 568,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "PartielOk": {
+  "employee_id": 1857,
+  "contract_id": 569,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "JoursOk": {
+  "employee_id": 1858,
+  "contract_id": 570,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "JoursHs": {
+  "employee_id": 1859,
+  "contract_id": 571,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "HeuresHs": {
+  "employee_id": 1860,
+  "contract_id": 572,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "Inconnu": {
+  "employee_id": 1861,
+  "contract_id": 573,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ },
+ "SansFeuille": {
+  "employee_id": 1862,
+  "contract_id": 574,
+  "e": 201,
+  "c": 201,
+  "act": 200
+ }
+}

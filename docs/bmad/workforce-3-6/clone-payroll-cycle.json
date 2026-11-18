@@ -1,0 +1,37 @@
+{
+ "create": "earlier (201)",
+ "compute": "earlier (200)",
+ "reasons": {
+  "HoraireOk": "prepared",
+  "PartielPlus": "part_time_hours_beyond_contract",
+  "PartielOk": "prepared",
+  "JoursOk": "prepared",
+  "JoursHs": "work_model_overtime_not_applicable",
+  "HeuresHs": "work_model_overtime_not_qualified",
+  "Inconnu": "work_model_unknown",
+  "SansFeuille": "missing_timesheet"
+ },
+ "calc": 200,
+ "validate_without_note": [
+  422,
+  "PayrollRun has error-level anomalies. A validation_note is required to proceed."
+ ],
+ "shown": [
+  "Forfait jours",
+  "Temps partiel",
+  "Forfait heures",
+  "Modèle de temps inconnu"
+ ],
+ "days_weekly_hours_field": 0,
+ "driver_validate": 403,
+ "other_tenant": 403,
+ "validate_with_note": [
+  200,
+  null
+ ],
+ "export": [
+  200,
+  null
+ ],
+ "run_id": 29
+}

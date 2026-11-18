@@ -29337,3 +29337,36 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - E2E historiques : 18 réussis, 2 sautés, 0 échec.
 - PHPUnit : 4714 réussis, 12 sautés, 3 échecs antérieurs (`ControllerSizeInvariant`, contrôleurs non touchés). Build propre.
 - En attente de décision : D-1 à D-9, dont la remédiation réelle (D-8) et le bouton Précédent sur les panneaux (D-7).
+
+## ADR-826 — Leezr 3.6 : la paie suit le modèle de temps, panneaux et historique, flux temps réel, pré-déploiement
+
+**Date** : 2026-11-18 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-WORKFORCE-3-6-FINAL.md`
+
+**Contexte**
+- La préparation de paie traitait tous les modèles de temps comme un horaire temps plein.
+- Le bouton Précédent devait fermer un panneau ouvert depuis une liste (D-7).
+- Le rapport 3.5 signalait des flux temps réel retenus 30 s.
+- Un audit de pré-déploiement était demandé.
+
+**Décisions**
+- `WorkModelPayrollGuard` : le moteur, de type horaire, ne prépare pas une ligne qu'il calculerait manifestement mal. Sont exclus avec un motif explicite, et une justification exigée à la validation :
+  - modèle inconnu ;
+  - forfait jours payé à l'heure, ou avec heures supplémentaires ;
+  - forfait heures avec dépassement ;
+  - temps partiel au-delà de son contrat.
+
+  Le forfait jours sans feuille a son propre motif. Aucun taux, seuil ni montant n'est ajouté ou modifié.
+- Création de contrat : refus d'un modèle inconnu et du forfait jours payé à l'heure. `workforce:work-model-remediate` fonctionne en diagnostic par défaut ; la correction est explicite, auditée, réversible et bornée par société.
+- Le formulaire de contrat suit le modèle (pas de durée hebdomadaire pour un forfait jours, pas de paie horaire).
+- D-7 : un panneau ouvert depuis une liste ajoute une entrée d'historique marquée (`state` natif de Vue Router). Un panneau ouvert par l'adresse n'en ajoute pas. Les onglets restent régis par ADR-475.
+- Flux SSE :
+  - la limite d'exécution suit `stream_timeout` (elle était tuée à 30 s par le `max_execution_time` de PHP-FPM) ;
+  - le désenregistrement est garanti par une fonction d'arrêt ;
+  - les flux sont comptés par utilisateur et société.
+
+**Conséquences**
+- Recette sur le clone (société 109, période d'octobre 2026) : 14 parcours ; validation sans note 422, chauffeur 403, autre société 403, export 200.
+- PHPUnit : 4717 réussis, 12 sautés, 3 échecs `ControllerSizeInvariant` historiques. Le nouvel échec `TenantScopeBypassGuard` a été corrigé. Build propre.
+- E2E pertinents verts sur le clone.
+- Pré-déploiement : **non prêt**. Bloquants : planificateur, workers, migration modifiée à vérifier, décision RBAC.
+- **Incident** : une spec a réinitialisé la paie d'avril 2026 de la société 1 sur le DEV. Une restauration est préparée mais non exécutée (D-13).
