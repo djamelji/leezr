@@ -11354,7 +11354,18 @@
       "done": "{n} request(s) created."
     },
     "peopleCount": "{n} person(s)",
-    "noDescription": "No mission described. Edit the position to explain what the person does."
+    "noDescription": "No mission described. Edit the position to explain what the person does.",
+    "usage": {
+      "title": "Position usage",
+      "subtitle": "Where this position is used today.",
+      "people": "{n} assigned person(s)",
+      "peopleHint": "See the people and the state of their file",
+      "hiring": "Hiring in progress for this position ({n})",
+      "fileProgress": "Information {fd}/{ft} · documents {dd}/{dt} — requirements copied into the file",
+      "unnamed": "Unnamed file",
+      "noHiring": "No hiring in progress for this position.",
+      "openHiring": "Open the Hiring space"
+    }
   },
   "hiring": {
     "title": "Hiring",

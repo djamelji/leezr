@@ -139,7 +139,20 @@ const loadRequirements = async () => {
 }
 const reqList = kind => (requirements.value?.state?.[kind] || []).filter(r => r.state === 'required')
   .map(r => (kind === 'documents' ? docLabel(r.code, r.label) : r.label))
-onMounted(() => { loadRequirements(); if (canDocs.value && !peopleLoaded.value) loadPeople() })
+// ADR-824 — « Utilisation du poste » : personnes affectées + dossiers d'embauche ouverts sur ce poste (lecture
+// existante filtrée par poste, réservée à workforce.manage comme l'espace Embauches — jamais pour les autres).
+const canHiring = computed(() => can('workforce.manage'))
+const hiringFiles = ref([])
+const hiringLoaded = ref(false)
+const loadHiring = async () => {
+  if (!canHiring.value)
+    return
+  hiringFiles.value = (await $api('/workforce/onboarding-files', { query: { job_role_id: id.value } }).catch(() => ({ invitations: [] }))).invitations || []
+  hiringLoaded.value = true
+}
+const openHiring = computed(() => hiringFiles.value.filter(f => !['done', 'abandoned'].includes(f.bucket)))
+const BUCKET_COLOR = { waiting_company: 'secondary', waiting_candidate: 'info', to_verify: 'warning', to_finalize: 'primary', done: 'success', abandoned: 'error' }
+onMounted(() => { loadRequirements(); loadHiring(); if (canDocs.value && !peopleLoaded.value) loadPeople() })
 
 watch(tab, v => {
   if (['people', 'fields', 'documents'].includes(v) && !peopleLoaded.value)
@@ -348,6 +361,66 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
                     </div>
                   </template>
                 </VCardText>
+              </VCard>
+            </VCol>
+            <VCol cols="12">
+              <VCard
+                :title="t('positions.usage.title')"
+                :subtitle="t('positions.usage.subtitle')"
+                data-test="position-usage"
+              >
+                <VList class="pt-0">
+                  <VListItem
+                    prepend-icon="tabler-users"
+                    :title="t('positions.usage.people', { n: position.employees_count ?? 0 })"
+                    :subtitle="t('positions.usage.peopleHint')"
+                    data-test="position-usage-people"
+                    @click="tab = 'people'"
+                  >
+                    <template #append>
+                      <VIcon
+                        icon="tabler-chevron-right"
+                        size="18"
+                        class="text-disabled"
+                      />
+                    </template>
+                  </VListItem>
+                  <template v-if="canHiring">
+                    <VDivider class="my-1" />
+                    <VListSubheader>
+                      {{ t('positions.usage.hiring', { n: openHiring.length }) }}
+                    </VListSubheader>
+                    <VListItem
+                      v-for="f in openHiring"
+                      :key="f.id"
+                      :to="`/company/workforce/hiring/${f.id}`"
+                      :title="f.name || t('positions.usage.unnamed')"
+                      :subtitle="t('positions.usage.fileProgress', { fd: f.fields_filled, ft: f.fields_total, dd: f.documents_deposited, dt: f.documents_total })"
+                      :data-test="`position-usage-file-${f.id}`"
+                    >
+                      <template #append>
+                        <VChip
+                          size="small"
+                          label
+                          :color="BUCKET_COLOR[f.bucket] || 'secondary'"
+                        >
+                          {{ t(`hiring.bucket.${f.bucket}`, f.bucket) }}
+                        </VChip>
+                      </template>
+                    </VListItem>
+                    <VListItem
+                      v-if="hiringLoaded && !openHiring.length"
+                      class="text-medium-emphasis"
+                      :title="t('positions.usage.noHiring')"
+                    />
+                    <VListItem
+                      prepend-icon="tabler-user-plus"
+                      :title="t('positions.usage.openHiring')"
+                      to="/company/workforce/hiring"
+                      data-test="position-usage-hiring-link"
+                    />
+                  </template>
+                </VList>
               </VCard>
             </VCol>
           </VRow>

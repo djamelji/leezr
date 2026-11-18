@@ -31,7 +31,9 @@ class OnboardingController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        return response()->json(['invitations' => $this->service($request)->index()]);
+        $request->validate(['job_role_id' => 'nullable|integer']);
+
+        return response()->json(['invitations' => $this->service($request)->index($request->filled('job_role_id') ? $request->integer('job_role_id') : null)]);
     }
 
     public function proposal(Request $request): JsonResponse

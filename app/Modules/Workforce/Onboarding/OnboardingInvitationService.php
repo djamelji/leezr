@@ -407,9 +407,15 @@ final class OnboardingInvitationService
     }
 
     /** Dashboard of the company : who was invited, started, missing, submitted, to review, expired. */
-    public function index(): array
+    /** @param int|null $jobRoleId ADR-824 : dossiers d'un poste (fiche poste › Utilisation) — même lecture, filtrée */
+    public function index(?int $jobRoleId = null): array
     {
-        return array_map(fn ($r) => $r + ['bucket' => HiringFileReadModel::bucket($r)], $this->rows()); // ADR-819
+        $rows = $this->rows();
+        if ($jobRoleId !== null) {
+            $rows = array_values(array_filter($rows, fn ($r) => $r['job_role_id'] === $jobRoleId));
+        }
+
+        return array_map(fn ($r) => $r + ['bucket' => HiringFileReadModel::bucket($r)], $rows); // ADR-819
     }
 
     private function rows(): array
@@ -429,6 +435,7 @@ final class OnboardingInvitationService
             'expires_at' => $i->expires_at?->toIso8601String(), 'submitted_at' => $i->submitted_at?->toIso8601String(),
             // ADR-818 — Embauches : poste, dépôts, pièces bloquées, finalisation (la fiche n'est plus préparatoire).
             'job_role' => $employees[$i->employee_id]?->jobRole?->title, 'hire_date' => $employees[$i->employee_id]?->hire_date?->toDateString(),
+            'job_role_id' => $i->job_role_id ?? $employees[$i->employee_id]?->job_role_id, // ADR-824
             'documents_deposited' => ($uploads[$i->id] ?? collect())->pluck('document_code')->unique()->count(),
             'documents_blocked' => ($uploads[$i->id] ?? collect())->whereIn('status', \App\Modules\Workforce\Onboarding\Models\OnboardingUpload::BLOCKING)->count(),
             'finalized' => isset($employees[$i->employee_id]) && ! $employees[$i->employee_id]->isPreparatory(),

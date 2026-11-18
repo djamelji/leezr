@@ -189,6 +189,19 @@ class Adr818HiringTest extends TestCase
         $this->assertSame('Livreur', $row['job_role']);
     }
 
+    /** ADR-824 — position page « Usage » : the same hiring files read, filtered by position, workforce.manage only. */
+    public function test_hiring_files_can_be_listed_for_one_position_only_by_hr(): void
+    {
+        $onDriver = $this->file();
+        $other = \App\Core\Workforce\JobRole::withoutGlobalScopes()->create(['company_id' => $this->a->id, 'title' => 'Bureau']);
+        $onOther = $this->file(['job_role_id' => $other->id, 'first_name' => 'Omar']);
+        $ids = fn (int $role) => collect($this->api($this->hr, 'GET', '/workforce/onboarding-files?job_role_id='.$role)->assertOk()->json('invitations'))->pluck('id')->all();
+        $this->assertSame([$onDriver], $ids($this->driver->id));
+        $this->assertSame([$onOther], $ids($other->id));
+        $this->assertCount(2, $this->api($this->hr, 'GET', '/workforce/onboarding-files')->json('invitations'), 'unfiltered list unchanged');
+        $this->api($this->member($this->a, ['workforce.view']), 'GET', '/workforce/onboarding-files?job_role_id='.$this->driver->id)->assertForbidden();
+    }
+
     public function test_requirement_authority_switch_is_explicit_previewed_reversible_and_isolated(): void
     {
         $driverUser = $this->member($this->a, [], $this->driverRole);

@@ -11354,7 +11354,18 @@
       "done": "{n} demande(s) créée(s)."
     },
     "peopleCount": "{n} personne(s)",
-    "noDescription": "Aucune mission décrite. Modifiez le poste pour expliquer ce que fait la personne."
+    "noDescription": "Aucune mission décrite. Modifiez le poste pour expliquer ce que fait la personne.",
+    "usage": {
+      "title": "Utilisation du poste",
+      "subtitle": "Où ce poste est utilisé aujourd'hui.",
+      "people": "{n} collaborateur(s) affecté(s)",
+      "peopleHint": "Voir les personnes et l'état de leur dossier",
+      "hiring": "Embauches en cours sur ce poste ({n})",
+      "fileProgress": "Informations {fd}/{ft} · documents {dd}/{dt} — exigences reprises dans le dossier",
+      "unnamed": "Dossier sans nom",
+      "noHiring": "Aucune embauche en cours sur ce poste.",
+      "openHiring": "Ouvrir l'espace Embauches"
+    }
   },
   "hiring": {
     "title": "Embauches",
