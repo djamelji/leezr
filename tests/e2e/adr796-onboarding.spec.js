@@ -7,12 +7,13 @@
 import { test, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import { loginCompany } from './helpers.js'
+import { recipeEval, recipePhp } from './recipe.js'
 
 const OUT = 'docs/bmad/adr796'
 const MAILPIT = 'http://localhost:8025/api/v1'
 const settle = (page, ms = 1200) => page.waitForTimeout(ms)
 const artisan = (...args) => execFileSync('php', ['artisan', ...args], { encoding: 'utf8' })
-const tinker = code => artisan('tinker', '--execute', code).trim().split('\n').pop()
+const tinker = code => recipeEval(code) // ADR-828 : guarded recipe command, never tinker
 
 async function mailTo(request, to) {
   for (let i = 0; i < 20; i++) {

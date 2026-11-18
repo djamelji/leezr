@@ -25,7 +25,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class OnboardingCleanupFixturesCommand extends Command
 {
-    protected $signature = 'onboarding:cleanup-fixtures {employee* : explicit HR record ids} {--apply : actually remove}';
+    protected $signature = 'onboarding:cleanup-fixtures {employee* : explicit HR record ids} {--apply : actually remove}
+        {--confirm-database= : required with --apply outside a marked clone : the live database name (ADR-828)}';
 
     protected $description = 'Remove explicitly listed onboarding acceptance-test fixtures (dry run by default)';
 
@@ -60,6 +61,13 @@ class OnboardingCleanupFixturesCommand extends Command
             $this->line('Dry run — nothing removed. Add --apply.');
 
             return self::SUCCESS;
+        }
+        // ADR-828 — destructive maintenance : marked clone, or explicit confirmation of the LIVE database
+        $authorization = app(\App\Console\Recipe\RecipeDatabaseGuard::class)->authorizeMaintenance($this->getName(), $this->option('confirm-database'));
+        if (! $authorization['allowed']) {
+            $this->error('Refused : '.implode(' ; ', $authorization['reasons']).'. Nothing removed.');
+
+            return self::FAILURE;
         }
         foreach ($employees as $e) {
             DB::transaction(fn () => $this->remove($e));

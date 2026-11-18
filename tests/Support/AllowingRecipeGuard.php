@@ -10,8 +10,13 @@ use App\Console\Recipe\RecipeDatabaseGuard;
  */
 class AllowingRecipeGuard extends RecipeDatabaseGuard
 {
-    public function assess(?string $command = null): array
+    public function assess(?string $command = null, ?string $connection = null): array
     {
         return ['allowed' => true, 'reasons' => [], 'identity' => ['test' => 'AllowingRecipeGuard']];
+    }
+
+    public function authorizeMaintenance(string $command, ?string $confirmDatabase, ?string $connection = null): array
+    {
+        return ['allowed' => true, 'mode' => 'test', 'reasons' => [], 'identity' => ['test' => 'AllowingRecipeGuard']];
     }
 }

@@ -3,6 +3,7 @@
 import { test } from '@playwright/test'
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { recipeEval, recipePhp } from './recipe.js'
 
 const REPO = '/Users/djamel/sites/leezr'
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
@@ -26,8 +27,8 @@ $req->refresh(); $req->metadata=array_merge($req->metadata??[],['required_format
 $s=SignatureSigner::where('signature_request_id',$req->id)->first();
 $t=SignatureTokenService::generate(); $s->token_hash=$t['hash']; $s->token_expires_at=$req->expires_at; $s->status='invited'; $s->save();
 echo 'RESULT='.$t['raw'].PHP_EOL;`
-  writeFileSync(`${SCRATCH}/wsig7-vis.php`, php)
-  const out = execSync(`php artisan tinker --execute="require '${SCRATCH}/wsig7-vis.php';"`, { cwd: REPO }).toString()
+  // ADR-828 : guarded recipe command (marked clone only), never tinker
+  const out = recipePhp(php)
 
   return out.match(/RESULT=([a-f0-9]+)/)[1]
 }

@@ -37,7 +37,8 @@ class WorkforcePlanningLoadTestCommand extends Command
     protected $signature = 'workforce:planning-loadtest
         {action : seed|purge|list}
         {--employees=25 : Nombre de collaborateurs à générer (slug m6e-load-{N})}
-        {--owner=owner@leezr.test : Email du user rattaché comme owner de la company isolée}';
+        {--owner=owner@leezr.test : Email du user rattaché comme owner de la company isolée}
+        {--confirm-database= : seed/purge hors clone marqué : nom de la base réellement connectée (ADR-828)}';
 
     protected $description = 'Banc de charge Smart Planning : companies de test isolées/purgeables (DEV only)';
 
@@ -62,6 +63,16 @@ class WorkforcePlanningLoadTestCommand extends Command
             return self::FAILURE;
         }
 
+        // ADR-828 — seed / purge écrivent : clone marqué, ou confirmation explicite de la base RÉELLEMENT connectée.
+        if (in_array($this->argument('action'), ['seed', 'purge'], true)) {
+            $authorization = app(\App\Console\Recipe\RecipeDatabaseGuard::class)->authorizeMaintenance($this->getName(), $this->option('confirm-database'));
+            if (! $authorization['allowed']) {
+                $this->error('REFUSÉ : '.implode(' ; ', $authorization['reasons']).'. Rien n\'a été écrit.');
+
+                return self::FAILURE;
+            }
+        }
+
         return match ($this->argument('action')) {
             'seed' => $this->seed(),
             'purge' => $this->purge(),
@@ -72,7 +83,7 @@ class WorkforcePlanningLoadTestCommand extends Command
 
     private function invalidAction(): int
     {
-        $this->error("Action inconnue. Utiliser : seed | purge | list.");
+        $this->error('Action inconnue. Utiliser : seed | purge | list.');
 
         return self::FAILURE;
     }

@@ -24,7 +24,6 @@ use App\Core\Modules\CompanyModuleActivationReason;
 use App\Core\Requirements\Requirement;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\EmploymentContract;
-use App\Core\Workforce\JobRole;
 use App\Modules\Core\People\ReadModels\PeopleListReadModel;
 use App\Modules\Workforce\Onboarding\Http\OnboardingPortalController;
 use App\Modules\Workforce\Onboarding\Models\OnboardingInvitation as Inv;
@@ -52,12 +51,14 @@ use Tests\TestCase;
  */
 class Adr7961OnboardingStabilizationTest extends TestCase
 {
-    use RefreshDatabase, SetsUpCompanyRbac, ActivatesCompanyModules;
+    use ActivatesCompanyModules, RefreshDatabase, SetsUpCompanyRbac;
 
     private const FIELDS = ['birth_date', 'nationality', 'iban', 'gender'];
 
     private Company $a;
+
     private Company $b;
+
     private User $hr;
 
     protected function setUp(): void
@@ -313,7 +314,7 @@ class Adr7961OnboardingStabilizationTest extends TestCase
         Notification::fake();
         $this->sentCode($s2);
         foreach (range(1, 3) as $_) {
-            $this->portal('POST', '/verify', ['code' => '999999' === $_ ? '0' : 'abcdef'], $s2)->assertStatus(422);
+            $this->portal('POST', '/verify', ['code' => $_ === '999999' ? '0' : 'abcdef'], $s2)->assertStatus(422);
         }
         $this->assertNotNull(Inv::find($id)->verification_locked_at);
         $this->portal('POST', '/code', [], $s2)->assertStatus(422);
@@ -549,6 +550,10 @@ class Adr7961OnboardingStabilizationTest extends TestCase
         $this->assertNotNull(Employee::withoutGlobalScopes()->find($fixture->id));
         $this->assertSame(1, MemberDocument::count());
 
+        // ADR-828 : outside a marked clone, --apply needs the explicit live database name — refused, nothing removed
+        $this->artisan('onboarding:cleanup-fixtures', ['employee' => [$fixture->id], '--apply' => true])->assertFailed();
+        $this->assertNotNull(Employee::withoutGlobalScopes()->find($fixture->id));
+        $this->app->instance(\App\Console\Recipe\RecipeDatabaseGuard::class, new \Tests\Support\AllowingRecipeGuard);
         $this->artisan('onboarding:cleanup-fixtures', ['employee' => [$fixture->id], '--apply' => true])->assertSuccessful();
         $this->assertNull(Employee::withoutGlobalScopes()->find($fixture->id));
         $this->assertSame(0, Inv::count() + MemberDocument::count() + DocumentRequest::count() + OnboardingValue::count());

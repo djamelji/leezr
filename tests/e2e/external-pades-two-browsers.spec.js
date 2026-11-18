@@ -6,14 +6,14 @@
 import { test, expect } from '@playwright/test'
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
+import { recipeEval, recipePhp } from './recipe.js'
 
 const REPO = '/Users/djamel/sites/leezr'
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
 
-function runTinker(php, file) {
-  writeFileSync(file, php)
-
-  return execSync(`php artisan tinker --execute="require '${file}';"`, { cwd: REPO }).toString()
+// ADR-828 : guarded recipe command (marked clone only), never tinker ; the file argument is kept for readability
+function runTinker(php, _file) {
+  return recipePhp(php)
 }
 
 /** Mint une demande pades_external (2 signataires) sur un VRAI PDF + 2 tokens. */

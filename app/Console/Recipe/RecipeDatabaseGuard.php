@@ -35,14 +35,46 @@ class RecipeDatabaseGuard
     public const PROTECTED_DATABASES = ['leezr', 'c1leezr', 'c1leezrdev'];
 
     /** @return array{allowed: bool, reasons: list<string>, identity: array<string, mixed>} */
-    public function assess(?string $command = null): array
+    public function assess(?string $command = null, ?string $connection = null): array
     {
-        $identity = $this->identify();
+        $identity = $this->identify($connection);
         $reasons = self::decide($identity, (string) app()->environment());
         $verdict = ['allowed' => $reasons === [], 'reasons' => $reasons, 'identity' => $identity];
         if ($reasons !== []) {
             $this->logRefusal($command, $verdict);
         }
+
+        return $verdict;
+    }
+
+    /**
+     * ADR-828 — legitimate MAINTENANCE writes (fixture cleanup, load-test tenant) that may intentionally run on
+     * the DEV : allowed on a marked clone ; elsewhere only with an explicit confirmation equal to the database
+     * the connection is REALLY on (never read from the environment) ; always refused in production.
+     *
+     * @return array{allowed: bool, mode: string, reasons: list<string>, identity: array<string, mixed>}
+     */
+    public function authorizeMaintenance(string $command, ?string $confirmDatabase, ?string $connection = null): array
+    {
+        $identity = $this->identify($connection);
+        $cloneReasons = self::decide($identity, (string) app()->environment());
+        if ($cloneReasons === []) {
+            return ['allowed' => true, 'mode' => 'marked_clone', 'reasons' => [], 'identity' => $identity];
+        }
+        $reasons = [];
+        if (app()->environment('production')) {
+            $reasons[] = 'APP_ENV is production';
+        }
+        $actual = $identity['actual'] ?? null;
+        if (! empty($identity['error']) || $actual === null || $actual === '') {
+            $reasons[] = 'connection not identifiable';
+        } elseif ($confirmDatabase === null || $confirmDatabase === '') {
+            $reasons[] = "not a marked clone : confirm the target explicitly with --confirm-database={$actual}";
+        } elseif ($confirmDatabase !== $actual) {
+            $reasons[] = "--confirm-database={$confirmDatabase} is not the live database ({$actual})";
+        }
+        $verdict = ['allowed' => $reasons === [], 'mode' => $reasons === [] ? 'explicit_confirmation' : 'refused', 'reasons' => $reasons, 'identity' => $identity];
+        $this->log($reasons === [] ? 'maintenance write explicitly confirmed' : 'maintenance write refused', $command, $verdict);
 
         return $verdict;
     }
@@ -89,9 +121,9 @@ class RecipeDatabaseGuard
     }
 
     /** @return array<string, mixed> read-only identity of the default connection */
-    public function identify(): array
+    public function identify(?string $connection = null): array
     {
-        $name = config('database.default');
+        $name = $connection ?? config('database.default');
         $config = (array) config("database.connections.{$name}", []);
         $driver = $config['driver'] ?? null;
         $identity = ['connection' => $name, 'driver' => $driver, 'configured' => null, 'actual' => null, 'markers' => null];
@@ -126,9 +158,14 @@ class RecipeDatabaseGuard
 
     private function logRefusal(?string $command, array $verdict): void
     {
+        $this->log('recipe command refused', $command, $verdict);
+    }
+
+    private function log(string $message, ?string $command, array $verdict): void
+    {
         try {
             Log::build(['driver' => 'single', 'path' => storage_path('logs/recipe-guard.log')])
-                ->warning('recipe command refused', ['command' => $command, 'reasons' => $verdict['reasons'], 'identity' => $verdict['identity'], 'pid' => getmypid()]);
+                ->warning($message, ['command' => $command, 'reasons' => $verdict['reasons'], 'identity' => $verdict['identity'], 'pid' => getmypid()]);
         } catch (Throwable) {
             // a logging failure never turns a refusal into an execution
         }

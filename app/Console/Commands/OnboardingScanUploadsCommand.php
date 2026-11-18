@@ -20,6 +20,12 @@ class OnboardingScanUploadsCommand extends Command
 
     public function handle(): int
     {
+        // ADR-828 — the simulated adapter writes a FAKE scan result : a recipe write, marked clone only.
+        if ($this->option('simulate') && ! ($v = app(\App\Console\Recipe\RecipeDatabaseGuard::class)->assess($this->getName().' --simulate'))['allowed']) {
+            $this->error('RECIPE GUARD — --simulate only runs on a marked isolated clone : '.implode(' ; ', $v['reasons']));
+
+            return self::FAILURE;
+        }
         if ($this->option('simulate') && app()->isProduction()) {
             $this->error('--simulate is refused in production.');
 

@@ -7,6 +7,7 @@ import { test, expect } from '@playwright/test'
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { loginCompany } from './helpers'
+import { recipeEval, recipePhp } from './recipe.js'
 
 const REPO = '/Users/djamel/sites/leezr'
 const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
@@ -30,10 +31,8 @@ $s=SignatureSigner::where('signature_request_id',$req->id)->first();
 $t=SignatureTokenService::generate(); $s->token_hash=$t['hash']; $s->token_expires_at=$req->expires_at; $s->status='invited'; $s->save();
 echo 'RESULT='.$t['raw'].':'.$req->id.PHP_EOL;
 `
-  const file = `${SCRATCH}/mint-sig.php`
-  writeFileSync(file, php)
-  // --execute require : aucun '$' dans la commande shell (le PHP vit dans le fichier).
-  const out = execSync(`php artisan tinker --execute="require '${file}';"`, { cwd: REPO }).toString()
+  // ADR-828 : guarded recipe command (marked clone only), never tinker
+  const out = recipePhp(php)
   const m = out.match(/RESULT=([a-f0-9]+):(\d+)/)
   if (!m) throw new Error('Could not mint signature link: ' + out)
 

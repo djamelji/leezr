@@ -6,10 +6,11 @@
 import { test, expect } from '@playwright/test'
 import { execFileSync } from 'node:child_process'
 import { loginCompany, loginPlatform, apiRequest } from './helpers.js'
+import { recipeEval, recipePhp } from './recipe.js'
 
 const OUT = 'docs/bmad/adr799'
 const settle = (page, ms = 900) => page.waitForTimeout(ms)
-const tinker = code => execFileSync('php', ['artisan', 'tinker', '--execute', code], { encoding: 'utf8' }).trim().split('\n').pop()
+const tinker = code => recipeEval(code) // ADR-828 : guarded recipe command, never tinker
 
 test('A — JobDomain en six onglets, preset publié depuis son onglet', async ({ page }) => {
   test.setTimeout(240000)
