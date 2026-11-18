@@ -84,7 +84,9 @@ class Adr788FieldAccessTest extends TestCase
         $keys = $driver->permissions()->pluck('key')->all();
         $this->assertNotContains('documents.view', $keys);
         $this->assertNotContains('members.invite', $keys);
-        $this->assertContains('members.view', $keys, 'annuaire conservé (ADR-777/787)');
+        $this->assertNotContains('members.view', $keys, 'ADR-823 : plus d\'annuaire par défaut pour un chauffeur');
+        $this->assertNotContains('settings.view', $keys, 'ADR-823');
+        $this->assertContains('shipments.view_own', $keys);
     }
 
     public function test_field_worker_without_documents_view_keeps_his_own_space_and_no_supervision(): void

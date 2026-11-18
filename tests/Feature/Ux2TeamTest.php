@@ -33,7 +33,8 @@ class Ux2TeamTest extends TestCase
     {
         $driver = $this->permissionsOf('logistique', 'driver');
 
-        $this->assertContains('members.view', $driver, 'a driver still sees the team');
+        // ADR-823 : le chauffeur ne consulte plus l'annuaire par défaut (profils et champs personnels des collègues).
+        $this->assertNotContains('members.view', $driver, 'no team directory by default (ADR-823)');
         $this->assertNotContains('members.invite', $driver, 'a field role does not invite');
         $this->assertNotContains('members.manage', $driver);
     }
@@ -43,7 +44,7 @@ class Ux2TeamTest extends TestCase
         // Every other preset role of the jobdomain that held the « Team Access » bundle keeps it.
         foreach (JobdomainRegistry::get('logistique')['default_roles'] as $key => $role) {
             if ($key === 'driver') {
-                $this->assertContains('members.team_view', $role['bundles']);
+                $this->assertNotContains('members.team_view', $role['bundles'], 'ADR-823 : no directory by default');
                 $this->assertNotContains('members.team_access', $role['bundles']);
 
                 continue;

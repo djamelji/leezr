@@ -249,10 +249,10 @@ class JobdomainRegistry
                         'dashboard_widgets' => ['compliance.rate', 'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today'],
                         'bundles' => [
                             'theme.full',
-                            // ADR-777 : un rôle de terrain consulte l'équipe ; il n'invite pas. Ne vaut que
-                            // pour les entreprises créées ensuite — les rôles existants ne sont pas modifiés.
-                            'members.team_view',
-                            'settings.company_info',
+                            // ADR-823 : plus d'annuaire (`members.view` ouvre profils et champs personnels des
+                            // collègues) ni de lecture des réglages société : rien de cela n'est nécessaire à la
+                            // livraison. Nouvelles attributions uniquement ; les rôles existants sont signalés
+                            // par `rbac:least-privilege-report`, jamais révoqués silencieusement.
                             // ADR-788 : plus de `documents.access` (documents.view = SUPERVISION : coffre Company,
                             // conformité, documents des collègues). Ses propres documents, bulletins et demandes
                             // passent par l'espace personnel, sans permission. Nouvelles sociétés uniquement.
