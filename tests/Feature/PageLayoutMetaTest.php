@@ -295,7 +295,7 @@ class PageLayoutMetaTest extends TestCase
         // tool is gated by its REAL permission, and the redirect only allows visible ones.
         $this->assertStringContainsString("show: can('documents.configure')", $content, 'settings tool gated by documents.configure (ADR-418)');
         $this->assertStringContainsString("show: can('documents.manage') }", $content, 'campaigns tool gated by documents.manage');
-        $this->assertStringContainsString('<DocumentsRequests v-if="can(\'documents.manage\')" />', $content, 'requests queue gated by documents.manage (ADR-418)');
+        $this->assertStringContainsString('<DocumentsRequests v-if="can(\'documents.manage\') && (peopleView === \'requests\' || !canHr)" />', $content, 'requests queue gated by documents.manage (ADR-418 ; ADR-822 : vue Demandes / Documents générés)');
         $this->assertStringContainsString("show: can('documents.view') }", $content, 'company vault and compliance gated by documents.view');
         $this->assertStringContainsString('const allowed = [...mainViews.value, ...toolViews.value].some(v => v.tab === target)', $content, 'a hidden view is never reachable by URL');
     }

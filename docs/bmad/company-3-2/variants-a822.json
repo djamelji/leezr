@@ -1,0 +1,398 @@
+[
+  {
+    "url": "/company/people/employee-1816",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/positions/19",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/positions/19",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/positions/19",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/positions/19",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/contracts",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/contracts",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/contracts",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/contracts",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/shipments/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/shipments/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/shipments/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/shipments/25",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/people",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/people",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/people",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/documents/people",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries/25",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-deliveries/25",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  }
+]

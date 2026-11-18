@@ -1,0 +1,358 @@
+{
+  "steps": [
+    {
+      "name": "activation workforce_leave",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "m": "Module enabled."
+      }
+    },
+    {
+      "name": "activation workforce_contract",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "m": "Module enabled."
+      }
+    },
+    {
+      "name": "fiche avec compte : Emploi + Au quotidien",
+      "ok": true,
+      "detail": {
+        "rows": 5
+      }
+    },
+    {
+      "name": "ligne Planning → rubrique Temps",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/people/employee-1816/time"
+    },
+    {
+      "name": "création collaborateur sans compte",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "fiche sans compte : accès « sans compte », données incomplètes signalées",
+      "ok": true,
+      "detail": {
+        "accessTxt": "Accès & autorisations\nAucun compte"
+      }
+    },
+    {
+      "name": "modification puis rechargement",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "création du poste",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "exigences du poste enregistrées",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "doc": "criminal_record",
+        "field": "personal_address_street"
+      }
+    },
+    {
+      "name": "aperçu des exigences effectives",
+      "ok": true,
+      "detail": {
+        "eff": "Exigences du poste\nCe qui est réellement demandé aux personnes de ce poste.\nChamps exigés (1)\nConfigurer\nAdresse personnelle\nDocuments demandés (1)\nConfigurer\nExtrait de casier judiciaire"
+      }
+    },
+    {
+      "name": "catalogue ≠ exigé : seul le document choisi est exigé",
+      "ok": true,
+      "detail": {
+        "req": [
+          "criminal_record"
+        ]
+      }
+    },
+    {
+      "name": "contrat actif déjà présent ; chevauchement refusé par la machine à états",
+      "ok": true,
+      "detail": {
+        "m": "Contract period overlaps an existing active contract for this employee; succession must be non-overlapping."
+      }
+    },
+    {
+      "name": "registre des contrats",
+      "ok": true,
+      "detail": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "filtre « fin dans 60 jours »",
+      "ok": true,
+      "detail": {
+        "first": "YC\nYanis Chauffeur51718\n\t\nCDD\n35 h / semaine\n\t\n1 nov. 2026 → 18 déc. 2026\nSe termine dans 30 jour(s)\n\t\nActif\n\t"
+      }
+    },
+    {
+      "name": "ligne → fiche collaborateur (contrat)",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/people/employee-1816/contract"
+    },
+    {
+      "name": "premier jour = dimanche (réglage société)",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "création d’un créneau",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "conflit signalé clairement (chevauchement)",
+      "ok": true,
+      "detail": {
+        "s": 422,
+        "m": "Cannot assign shift: employee already has a shift during this time."
+      }
+    },
+    {
+      "name": "modification du créneau",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "publication",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "grille : la semaine commence le dimanche",
+      "ok": true,
+      "detail": {
+        "head": "EMPLOYÉ\t\nDim.\n15\n\t\nLun.\n16\n\t\nMar.\n17\n\t\nMer.\n18\t\nJeu.\n19\n\t\nVen.\n20\n\t\nSam.\n21|EMPLOYÉ|Dim.\n15|Dim.|15|Lun.\n16|Lun.|16|Mar.\n17|Mar.|17|Mer.\n18|Mer.|18|Jeu.\n19|Jeu."
+      }
+    },
+    {
+      "name": "besoin « identifiant chauffeur » relié à un champ de la société",
+      "ok": true,
+      "detail": {
+        "field": "id_amzl_6lpu"
+      }
+    },
+    {
+      "name": "chauffeur sans identifiant : affectation désactivée pour lui seul",
+      "ok": true,
+      "detail": {
+        "disabled": [
+          "Yanis Chauffeur51718\nChauffeur-livreur · identifiant manquan"
+        ]
+      }
+    },
+    {
+      "name": "serveur : affectation refusée sans identifiant (seule cette action)",
+      "ok": true,
+      "detail": {
+        "s": 422
+      }
+    },
+    {
+      "name": "le reste du module fonctionne",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "identifiant saisi sur la fiche",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "affectation via l’interface + identifiant affiché",
+      "ok": true,
+      "detail": {
+        "idChip": "AMZ-90634"
+      }
+    },
+    {
+      "name": "Mon espace accessible",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "livraison visible côté chauffeur (carte)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "« Démarrer » depuis la carte → en cours",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "détail → livrée",
+      "ok": true,
+      "detail": {
+        "st": "delivered"
+      }
+    },
+    {
+      "name": "pointage clock-in → working",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "now": "completed"
+      }
+    },
+    {
+      "name": "pointage break/start → on_break",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "now": "completed"
+      }
+    },
+    {
+      "name": "pointage break/end → working",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "now": "completed"
+      }
+    },
+    {
+      "name": "pointage clock-out → completed",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "now": "completed"
+      }
+    },
+    {
+      "name": "action impossible dans l’état courant refusée (pause après fin)",
+      "ok": true,
+      "detail": {
+        "s": 404
+      }
+    },
+    {
+      "name": "demande de congé (salarié)",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "route interdite /company/workforce/contracts",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route interdite /company/workforce/payroll",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/home"
+    },
+    {
+      "name": "route interdite /company/workforce/hiring",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route interdite /company/workforce/organization/positions",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "API interdite GET /workforce/contracts",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API interdite GET /shipments/assignees",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API interdite GET /workforce/employees",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API interdite POST /workforce/job-roles",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "compteur « en attente » inclut la demande 2027",
+      "ok": true,
+      "detail": {
+        "pending": "1 En attente"
+      }
+    },
+    {
+      "name": "validation par le responsable",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/contracts",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /shipments/assignees",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "registre : aucun contrat d’une autre société",
+      "ok": true,
+      "detail": {
+        "n": 1
+      }
+    },
+    {
+      "name": "le salarié voit son congé approuvé",
+      "ok": true,
+      "detail": {
+        "status": "approved"
+      }
+    }
+  ],
+  "noAccountId": 1827,
+  "position": 19,
+  "shipment": 25,
+  "leave": 81
+}

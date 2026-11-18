@@ -29216,3 +29216,36 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 5. **Valeurs initiales du planning** : profil « planning » publié et versionné. Workforce possède les objets importés.
 
 **Conséquences** : 10 tests de dépendances ; recette navigateur dépendances 23/23 et scénario métier 38/38 ; pages non refondues listées au rapport (§20).
+
+## ADR-822 — Leezr 3.2 : finition UX/UI Company, registre des contrats, règle « inclus avec sa dépendance »
+
+**Date** : 2026-11-18 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-COMPANY-3-2-FINAL.md`
+
+**Contexte**
+- Pages Company inachevées : fiche personne en texte brut, aucune liste des contrats, compteurs incohérents (congés futurs, période de paie exportée), statuts bruts, livraisons inadaptées au téléphone.
+- Parrainage était présenté « inclus » alors que sa dépendance RH est payante.
+
+**Décision**
+1. **Refonte par parcours, sans nouveau moteur** :
+   - vue d'ensemble de la fiche (Emploi / Au quotidien, limitée aux fonctions exposées par le serveur) ;
+   - fiche poste (exigences effectives lues dans le registre) ;
+   - expédition et livraisons ;
+   - Documents RH (deux vues) ;
+   - bandes d'indicateurs (Pointage, Congés, Paie).
+2. **Registre des contrats en lecture seule** (`GET /api/workforce/contracts`, `ContractRegisterReadModel`) :
+   - périmètre salarié du lecteur, sans rémunération ;
+   - la machine à états reste sur la fiche.
+3. **« En attente » (congés)** compte toute demande à traiter, quelle que soit l'année.
+4. **Statut commercial `with_dependency`** :
+   - un module n'est « inclus » que si ses dépendances le sont au même palier ;
+   - sinon il est disponible une fois la dépendance achetée, jamais offert ;
+   - l'écart reste signalé (décision tarifaire) ;
+   - une modification qui en crée un est refusée.
+5. **Identifiant chauffeur** :
+   - affiché dans le sélecteur d'affectation (`GET /api/shipments/assignees`) et renvoyé après affectation ou changement d'état ;
+   - une valeur manquante bloque seulement l'affectation de cette personne.
+6. **`AppSurface` supprimé** au profit de `VCard variant="outlined"`.
+
+**Conséquences**
+- Recette navigateur 51/51 (clone, société fictive) ; 44 captures de variantes.
+- Planning, liste des postes, autres rubriques de la fiche, Paie en parcours et espace salarié : non refondus (rapport §13).
