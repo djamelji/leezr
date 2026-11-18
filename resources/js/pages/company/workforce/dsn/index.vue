@@ -101,6 +101,12 @@ onMounted(() => {
 
 // ── Stats ────────────────────────────────────────────────────
 const stats = computed(() => store.statistics)
+const dsnKpis = computed(() => [
+  { key: 'total', icon: 'tabler-file-description', color: 'primary', value: stats.value?.total ?? 0 },
+  { key: 'submitted', icon: 'tabler-send', color: 'info', value: stats.value?.by_status?.submitted ?? 0 },
+  { key: 'accepted', icon: 'tabler-circle-check', color: 'success', value: stats.value?.by_status?.accepted ?? 0 },
+  { key: 'rejected', icon: 'tabler-circle-x', color: 'error', value: stats.value?.by_status?.rejected ?? 0 },
+])
 
 // ── Format helpers ───────────────────────────────────────────
 function formatDate(dateStr) {
@@ -235,124 +241,42 @@ function goToDeclaration(id) {
       </VBtn>
     </div>
 
-    <!-- Stats Cards -->
-    <VRow
+    <!-- Stats — ADR-824 : bande compacte (même modèle que Pointage, Congés, Paie) -->
+    <VCard
       v-if="stats"
-      class="card-grid card-grid-xs mb-6"
+      class="mb-6"
+      data-test="dsn-stats"
     >
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-file-description"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('dsn.stats.total') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.total ?? 0 }}
-              </div>
+      <div class="d-flex flex-wrap">
+        <div
+          v-for="(k, i) in dsnKpis"
+          :key="k.key"
+          class="d-flex align-center gap-3 pa-4 flex-grow-1"
+          :class="{ 'border-e': i < dsnKpis.length - 1 }"
+          style="min-inline-size: 150px;"
+        >
+          <VAvatar
+            :color="k.color"
+            variant="tonal"
+            rounded
+            size="34"
+          >
+            <VIcon
+              :icon="k.icon"
+              size="20"
+            />
+          </VAvatar>
+          <div>
+            <div class="text-h6 font-weight-medium">
+              {{ k.value }}
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="info"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-send"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('dsn.stats.submitted') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.submitted ?? 0 }}
-              </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ $t(`dsn.stats.${k.key}`) }}
             </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="success"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-circle-check"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('dsn.stats.accepted') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.accepted ?? 0 }}
-              </div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-      <VCol
-        cols="6"
-        sm="3"
-      >
-        <VCard>
-          <VCardText class="d-flex align-center gap-3">
-            <VAvatar
-              color="error"
-              variant="tonal"
-              rounded
-              size="44"
-            >
-              <VIcon
-                icon="tabler-circle-x"
-                size="28"
-              />
-            </VAvatar>
-            <div>
-              <div class="text-body-2 text-medium-emphasis">
-                {{ $t('dsn.stats.rejected') }}
-              </div>
-              <div class="text-h5 font-weight-bold">
-                {{ stats.by_status?.rejected ?? 0 }}
-              </div>
-            </div>
-          </VCardText>
-        </VCard>
-      </VCol>
-    </VRow>
+          </div>
+        </div>
+      </div>
+    </VCard>
 
     <!-- Filters + Table -->
     <VCard>

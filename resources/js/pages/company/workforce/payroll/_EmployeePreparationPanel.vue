@@ -49,9 +49,12 @@ const close = () => emit('update:modelValue', false)
 </script>
 
 <template>
+  <!-- ADR-824 : disable-route-watcher — l'ouverture écrit ?line= dans l'adresse (lien profond) ; sans cela, Vuetify
+       refermait le panneau temporaire à ce changement de route : la ligne de paie n'était jamais consultable. -->
   <VNavigationDrawer class="wf-scroll-drawer"
     :model-value="modelValue"
     temporary
+    disable-route-watcher
     location="end"
     width="460"
     @update:model-value="v => emit('update:modelValue', v)"

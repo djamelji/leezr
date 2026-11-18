@@ -10,6 +10,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     _currentRunTotalLines: 0,
     _currentRunCalculations: null,
     _currentRunTotals: null,
+    _currentRunSummary: null,
     _currentLineDetail: null,
     _currentRunDocuments: [],
     _statistics: null,
@@ -24,6 +25,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
     currentRunTotalLines: state => state._currentRunTotalLines,
     currentRunCalculations: state => state._currentRunCalculations,
     currentRunTotals: state => state._currentRunTotals,
+    currentRunSummary: state => state._currentRunSummary,
     currentLineDetail: state => state._currentLineDetail,
     currentRunDocuments: state => state._currentRunDocuments,
     statistics: state => state._statistics,
@@ -61,7 +63,10 @@ export const usePayrollStore = defineStore('workforcePayroll', {
         const data = await $api(`/workforce/payroll/${id}`)
 
         this._currentRun = data.run ?? data
-        this._currentRunTotals = {
+        // ADR-824 : résumé de la période dans son PROPRE état. Il écrasait auparavant les totaux des calculs
+        // (forme différente) selon l'ordre d'arrivée des requêtes : Net / Coût affichaient « — » et le compte
+        // d'anomalies bloquantes retombait à 0.
+        this._currentRunSummary = {
           lines_summary: data.lines_summary ?? null,
           calculation_totals: data.calculation_totals ?? null,
         }
@@ -286,6 +291,7 @@ export const usePayrollStore = defineStore('workforcePayroll', {
       this._currentRunLines = []
       this._currentRunCalculations = null
       this._currentRunTotals = null
+      this._currentRunSummary = null
       this._currentLineDetail = null
       this._currentRunDocuments = []
     },

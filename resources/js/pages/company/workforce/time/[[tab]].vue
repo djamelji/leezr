@@ -745,13 +745,18 @@ onMounted(() => {
                   location="top"
                 >
                   <template #activator="{ props: tooltipProps }">
-                    <VIcon
+                    <!-- ADR-824 : anomalie lisible (libellé court) au lieu d'une icône seule -->
+                    <VChip
                       v-bind="tooltipProps"
-                      :icon="anomalyIcon(anomaly.type)"
                       :color="anomalyColor(anomaly.type)"
-                      size="20"
+                      :prepend-icon="anomalyIcon(anomaly.type)"
+                      size="x-small"
+                      label
+                      variant="tonal"
                       class="me-1"
-                    />
+                    >
+                      {{ $t(`timeTracking.anomalyShort.${anomaly.type}`, $t(`timeTracking.anomalies.${anomaly.type}`, anomaly.type)) }}
+                    </VChip>
                   </template>
                 </VTooltip>
               </template>

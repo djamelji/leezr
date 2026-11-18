@@ -9546,8 +9546,8 @@
     "reasonHidden": "Motif non visible avec vos droits."
   },
   "dsn": {
-    "title": "DSN - Declarations Sociales",
-    "subtitle": "Gestion des declarations sociales nominatives",
+    "title": "DSN — Déclarations sociales",
+    "subtitle": "Gestion des déclarations sociales nominatives",
     "exportDsn": "Exporter DSN",
     "backToList": "Retour a la liste",
     "statuses": {
@@ -9566,13 +9566,13 @@
       "timeout": "Expire"
     },
     "stats": {
-      "total": "Total declarations",
+      "total": "Total déclarations",
       "submitted": "Transmises",
-      "accepted": "Acceptees",
-      "rejected": "Rejetees"
+      "accepted": "Acceptées",
+      "rejected": "Rejetées"
     },
     "columns": {
-      "periodMonth": "Periode",
+      "periodMonth": "Période",
       "status": "Statut",
       "gatewayStatus": "Statut passerelle",
       "payloadHash": "Hash",
@@ -9580,7 +9580,7 @@
       "actions": "Actions"
     },
     "filters": {
-      "periodMonth": "Periode (AAAA-MM)",
+      "periodMonth": "Période (AAAA-MM)",
       "status": "Filtrer par statut"
     },
     "fields": {
@@ -9594,8 +9594,8 @@
       "poll": "Interroger le statut"
     },
     "emptyState": {
-      "title": "Aucune declaration DSN",
-      "description": "Exportez une declaration DSN depuis un run de paie pour commencer."
+      "title": "Aucune déclaration DSN",
+      "description": "Générez un fichier DSN depuis une période de paie validée. La transmission aux organismes n'est pas activée : le fichier est à contrôler avant tout dépôt."
     },
     "workflow": {
       "draft": "Brouillon",
@@ -9606,12 +9606,12 @@
       "rejected": "Rejete"
     },
     "detail": {
-      "periodLabel": "Periode",
+      "periodLabel": "Période",
       "payloadHash": "Hash :",
       "technicalDetails": "Détails techniques",
       "workflow": "Workflow",
       "generatedBy": "Genere par",
-      "exportedBy": "Exporte par",
+      "exportedBy": "Exporté par",
       "submittedBy": "Transmis par",
       "validationErrors": "Erreurs de validation",
       "validationErrorsDescription": "{count} erreur(s) de validation detectee(s)",
@@ -9632,13 +9632,13 @@
       "noChange": "Aucun changement de statut"
     },
     "audit": {
-      "created": "Declaration creee",
-      "validated": "Declaration validee",
-      "exported": "Declaration exportee",
-      "submitted": "Declaration transmise",
+      "created": "Déclaration créée",
+      "validated": "Déclaration validée",
+      "exported": "Déclaration exportée",
+      "submitted": "Déclaration transmise",
       "polled": "Statut interroge",
-      "accepted": "Declaration acceptee",
-      "rejected": "Declaration rejetee"
+      "accepted": "Déclaration acceptée",
+      "rejected": "Déclaration rejetée"
     },
     "exported": "Déclaration DSN exportée",
     "submitted": "Déclaration DSN soumise",

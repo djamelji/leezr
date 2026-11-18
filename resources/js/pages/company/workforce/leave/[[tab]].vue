@@ -372,7 +372,7 @@ const accrualModeOptions = [
 ]
 
 const configHeaders = computed(() => [
-  { title: t('leaves.config.columns.code'), key: 'code', sortable: false, width: 120 },
+  // ADR-824 : le libellé d'abord (le code technique passe en sous-titre)
   { title: t('leaves.config.columns.name'), key: 'name', sortable: false },
   { title: t('leaves.config.columns.accrualMode'), key: 'accrual_mode', sortable: false, width: 150 },
   { title: t('leaves.config.columns.annualDays'), key: 'annual_entitlement_hundredths', sortable: false, width: 130 },
@@ -515,7 +515,12 @@ const router = useRouter()
 
 onMounted(async () => {
   // W-G3 : deep-link depuis la fiche collaborateur (?tab=calendar&employee=<id>).
-  if (route.params.tab || route.query.tab) activeTab.value = String(route.params.tab || route.query.tab)
+  // ADR-824 : un onglet inconnu affichait une page vide → alias lisible (types → config), sinon repli sur Demandes.
+  if (route.params.tab || route.query.tab) {
+    const asked = String(route.params.tab || route.query.tab)
+    const alias = { types: 'config', 'leave-types': 'config' }[asked] || asked
+    activeTab.value = ['requests', 'calendar', 'balances', 'config'].includes(alias) ? alias : 'requests'
+  }
   if (route.query.employee) calEmployee.value = Number(route.query.employee)
 
   await Promise.all([
@@ -1134,10 +1139,11 @@ watch(activeTab, tab => {
               </span>
             </template>
 
-            <!-- Name -->
+            <!-- Name (+ code technique, + description) -->
             <template #item.name="{ item }">
-              <div>
-                <span class="font-weight-medium">{{ item.name }}</span>
+              <div class="py-2">
+                <span class="font-weight-medium text-high-emphasis">{{ item.name }}</span>
+                <span class="text-caption text-disabled ms-2">{{ item.code }}</span>
                 <div
                   v-if="item.description"
                   class="text-body-2 text-medium-emphasis"
@@ -1160,7 +1166,8 @@ watch(activeTab, tab => {
 
             <!-- Annual Days -->
             <template #item.annual_entitlement_hundredths="{ item }">
-              {{ item.annual_entitlement_hundredths != null ? formatDuration(item.annual_entitlement_hundredths) : '\u2014' }}
+              <!-- ADR-824 : « — » pour un congé sans acquisition (« 0 jour » laissait croire à un droit nul) -->
+              {{ item.annual_entitlement_hundredths && item.accrual_mode !== 'none' ? formatDuration(item.annual_entitlement_hundredths) : '\u2014' }}
             </template>
 
             <!-- Requires Approval -->

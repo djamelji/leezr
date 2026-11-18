@@ -19,7 +19,7 @@ const store = usePayrollStore()
 // PRODUCT-UX-2 / LOT C3 — unified "Paie & déclarations" space: periods are the
 // central object; DSN declarations (period-linked) live in a dedicated tab.
 const canDeclare = computed(() => can('workforce.payroll_export'))
-const activeTab = ref((route.params.tab || route.query.tab) === 'declarations' && canDeclare.value ? 'declarations' : 'periods')
+const activeTab = ref(['declarations', 'dsn'].includes(route.params.tab || route.query.tab) && canDeclare.value ? 'declarations' : 'periods') // ADR-824 : alias « dsn »
 const syncTabPath = v => {
   const { tab: _, ...query } = route.query
   const tab = v === 'periods' ? undefined : v

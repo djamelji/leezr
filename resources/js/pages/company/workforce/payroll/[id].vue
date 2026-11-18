@@ -30,6 +30,8 @@ const lineDetailLoading = ref(false)
 const run = computed(() => store.currentRun)
 const calculationTotals = computed(() => store.currentRunTotals)
 const hasCalculations = computed(() => store.currentRunCalculations?.length > 0)
+// ADR-824 : la liste des lignes ne porte pas les montants calculés — lus dans les calculs déjà chargés (aucun recalcul)
+const calcByLine = computed(() => Object.fromEntries((store.currentRunCalculations || []).map(c => [c.payroll_line_id, c])))
 const lineDetail = computed(() => store.currentLineDetail)
 const runDocuments = computed(() => store.currentRunDocuments)
 
@@ -237,7 +239,7 @@ function goContract() {
 }
 function goFiche() {
   if (!panelEmployeeId.value) return
-  router.push({ name: 'company-workforce-employees-id', params: { id: panelEmployeeId.value } })
+  router.push({ path: `/company/people/employee-${panelEmployeeId.value}` }) // ADR-824 : fiche unifiée directement
 }
 function goLeave() {
   if (!panelEmployeeId.value) return
@@ -431,8 +433,8 @@ onBeforeUnmount(() => store.clearCurrentRun())
           <span :class="item.total_overtime_minutes > 0 ? 'text-warning font-weight-medium' : ''">{{ formatHours(item.total_overtime_minutes) }}</span>
         </template>
         <template #item.gross_basis_cents="{ item }">{{ formatCents(item.gross_basis_cents) }}</template>
-        <template #item.net_payable="{ item }">{{ formatCents(item.net_payable_cents) }}</template>
-        <template #item.employer_cost="{ item }">{{ formatCents(item.employer_cost_cents) }}</template>
+        <template #item.net_payable="{ item }">{{ formatCents(item.net_payable_cents ?? calcByLine[item.id]?.net_payable_cents) }}</template>
+        <template #item.employer_cost="{ item }">{{ formatCents(item.employer_cost_cents ?? calcByLine[item.id]?.total_cost_employer_cents) }}</template>
         <template #item.preparation="{ item }">
           <VChip size="small" :color="lineReadiness(item).color" variant="tonal">
             <VIcon :icon="lineReadiness(item).icon" size="14" class="me-1" />
