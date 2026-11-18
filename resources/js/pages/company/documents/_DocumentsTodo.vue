@@ -81,9 +81,12 @@ const nothing = computed(() => !toReview.value && !rows.value.length)
           {{ t('documents.todo.follow') }}
         </VCardTitle>
       </VCardItem>
+      <!-- ADR-830 : a list of LINKS — Vuetify's role="list" forbids link children (axe aria-required-children) -->
       <VList
         lines="one"
         class="py-0"
+        role="navigation"
+        :aria-label="t('documents.views.todo')"
       >
         <VListItem
           v-for="r in rows"

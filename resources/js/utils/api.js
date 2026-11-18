@@ -92,6 +92,10 @@ export const $api = ofetch.create({
         useRuntimeStore().teardown()
       } catch {}
 
+      // ADR-830 : back to THIS screen after re-login — same mechanism as the router guard (ADR-357,
+      // sessionStorage `auth_redirect`, validated by safeRedirect at login).
+      rememberReturnPath()
+
       // Show expired dialog instead of hard redirect (ADR-358b)
       const { useSessionExpired } = await import('@/composables/useSessionExpired')
       useSessionExpired().trigger('/login')
@@ -138,3 +142,12 @@ export const $api = ofetch.create({
     }
   },
 })
+
+/** ADR-830 — remember the current company screen for the post-login redirect (never the entry pages). */
+export function rememberReturnPath() {
+  if (typeof window === 'undefined') return
+  const path = window.location.pathname + window.location.search
+  if (['/', '/home', '/dashboard', '/login'].includes(window.location.pathname) || window.location.pathname.startsWith('/platform')) return
+  try { sessionStorage.setItem('auth_redirect', path) }
+  catch { /* storage unavailable : default landing */ }
+}

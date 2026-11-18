@@ -19,6 +19,7 @@ import { buildSnapshot } from './invariants'
 import { bootMachine } from './bootMachine'
 import { reloadTenantScoped, resetTenantScoped } from './tenantScoped'
 import { createRealtimeClient } from '@/core/realtime/RealtimeClient'
+import { rememberReturnPath } from '@/utils/api'
 import { createChannelRouter } from '@/core/realtime/ChannelRouter'
 import { domainEventBus } from '@/core/realtime/DomainEventBus'
 import { getTopicHandler } from '@/core/realtime/topicHandlers'
@@ -194,6 +195,9 @@ export const useRuntimeStore = defineStore('runtime', {
 
         notifStore.setPlatformMode(false)
         notifStore.fetchUnreadCount().catch(() => {})
+
+        // ADR-830 : polling profile — badge refreshed every 30 s while no SSE stream is live
+        this._startNotifPoll('company')
       }
 
       if (bootMachine.isReady.value && scope === 'platform') {
@@ -332,6 +336,7 @@ export const useRuntimeStore = defineStore('runtime', {
         // Redirect to login
         if (typeof window !== 'undefined') {
           const isPlat = window.location.pathname.startsWith('/platform')
+          if (!isPlat) rememberReturnPath() // ADR-830 : each tab comes back to its own screen
           window.location.href = isPlat ? '/platform/login' : '/login'
         }
         break
@@ -361,6 +366,7 @@ export const useRuntimeStore = defineStore('runtime', {
         try { resolveStore('platformAuth')._persistUser(null) } catch {}
         if (typeof window !== 'undefined') {
           const isPlat = window.location.pathname.startsWith('/platform')
+          if (!isPlat) rememberReturnPath() // ADR-830 : each tab comes back to its own screen
           window.location.href = isPlat ? '/platform/login' : '/login'
         }
         break
@@ -546,20 +552,28 @@ export const useRuntimeStore = defineStore('runtime', {
     // Platform notification polling (no SSE available for platform scope)
     // Uses recursive setTimeout to prevent request accumulation.
     _startPlatformNotifPoll() {
+      this._startNotifPoll('platform')
+    },
+
+    // ADR-830 : same 30 s notification poll for the COMPANY scope, so the polling profile (SSE off, capped
+    // or fallen back) keeps the badge current. While a company SSE stream is live it only re-arms (no request).
+    _startNotifPoll(scope) {
       this._stopPlatformNotifPoll()
 
       const poll = async () => {
         // Stop if scope changed or runtime no longer ready
-        if (bootMachine.scope.value !== 'platform' || !bootMachine.isReady.value) {
+        if (bootMachine.scope.value !== scope || !bootMachine.isReady.value) {
           _platformNotifPollTimer = null
 
           return
         }
 
-        try {
-          await resolveStore('notification').fetchUnreadCount({ _authCheck: true })
+        if (scope !== 'company' || !_realtimeActive) {
+          try {
+            await resolveStore('notification').fetchUnreadCount({ _authCheck: true })
+          }
+          catch { /* logged inside store */ }
         }
-        catch { /* logged inside store */ }
 
         // Schedule next tick only after completion (no accumulation)
         _platformNotifPollTimer = setTimeout(poll, 30_000)

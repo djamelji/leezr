@@ -81,11 +81,14 @@ const color = severity => ({ error: 'error', warning: 'warning', info: 'info' }[
     </VCardText>
 
     <template v-else>
+      <!-- ADR-830 : a list of LINKS — Vuetify's role="list" forbids link children (axe aria-required-children) -->
       <VList
         v-if="priorities.length"
         lines="one"
         density="comfortable"
         class="py-0"
+        role="navigation"
+        :aria-label="t('home.sections.todo')"
       >
         <VListItem
           v-for="p in priorities"
