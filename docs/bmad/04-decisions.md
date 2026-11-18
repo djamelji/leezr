@@ -29249,3 +29249,33 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Conséquences**
 - Recette navigateur 51/51 (clone, société fictive) ; 44 captures de variantes.
 - Planning, liste des postes, autres rubriques de la fiche, Paie en parcours et espace salarié : non refondus (rapport §13).
+
+## ADR-823 — Leezr 3.3 : finalisation Company, rôle chauffeur au moindre privilège, dates dans la langue de l'interface
+
+**Date** : 2026-11-18 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-COMPANY-3-3-FINAL.md`
+
+**Contexte**
+- Planning, Postes, fiche collaborateur, onglets secondaires Temps / Congés / Paie et espace salarié restaient partiellement repris.
+- Le rôle « Chauffeur-livreur » donnait l'annuaire (profils et champs personnels des collègues) et la lecture des réglages. Le preset RBAC publié lui donnait aussi le coffre documentaire, alors qu'ADR-788 l'avait retiré.
+- Les dates restaient en français pour un utilisateur anglophone.
+
+**Décision**
+1. **Chauffeur par défaut** = thème + livraisons.
+   - Registre et preset `logistique_rbac` v4 publiés.
+   - Rôles existants jamais révoqués silencieusement : `rbac:least-privilege-report` les signale.
+   - ADR-777 (« le chauffeur voit l'équipe ») est remplacé sur ce point.
+2. **Dates** : `displayLocale()` = région du marché + langue de l'interface, pour tous les formats non légaux. Les factures gardent la locale du marché.
+3. **Fiche collaborateur** : un seul éditeur par champ.
+   - L'éditeur RH (écrivain canonique) prime.
+   - Le formulaire du compte n'affiche plus que les champs que l'éditeur RH ne montre pas.
+4. **Soldes d'équipe** : lecture `GET /workforce/leaves/balances` (soldes du registre, périmètre du lecteur).
+5. **Planning** :
+   - une barre d'outils, actions secondaires dans un menu libellé ;
+   - publication en bandeau conditionnel ;
+   - aucune règle ni aucun état modifié.
+6. **`AppPageHeader` conservé** : pas d'équivalent Vuexy, valeur responsive.
+
+**Conséquences**
+- Recette navigateur 60/60, dont un parcours de paie complet sur une société fictive autorisée ; 48 captures de variantes.
+- E2E Planning comparés au code de référence : aucune régression.
+- Restes listés au rapport §3.

@@ -1,0 +1,409 @@
+{
+  "steps": [
+    {
+      "name": "planning : navigation sur plusieurs semaines",
+      "ok": true,
+      "detail": {
+        "w0": "16 Nov. – 22 Nov. 2026",
+        "w2": "30 Nov. – 6 Déc. 2026"
+      }
+    },
+    {
+      "name": "synthèse de semaine dans l’en-tête de période",
+      "ok": true,
+      "detail": {
+        "summary": "0 créneau(x)\n0 Publiés\n0 Brouillons\n0 min Heures planifiées"
+      }
+    },
+    {
+      "name": "menu « Plus » avec actions libellées",
+      "ok": true,
+      "detail": {
+        "menu": "Affichage Regrouper par équipe Liste simple Affichage compact Actions de la semaine Copier la semaine précédente Copier la semaine Besoins de personnel"
+      }
+    },
+    {
+      "name": "vue Mois (plusieurs semaines)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "premier jour = dimanche",
+      "ok": true,
+      "detail": {
+        "head": "EMPLOYÉ|Dim.\n15|Lun.\n16|Mar.\n17|Mer.\n18|Jeu.\n19|Ven.\n20|Sam.\n21"
+      }
+    },
+    {
+      "name": "planning mobile : vue jour adaptée (pas la grille compressée)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "création d’un créneau depuis l’interface",
+      "ok": true,
+      "detail": {
+        "created": 6675
+      }
+    },
+    {
+      "name": "modification du créneau",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "fiche : créneaux à venir avec horaires et statut traduit",
+      "ok": true,
+      "detail": {
+        "listed": "19 Nov. 2026\n01:20 – 02:20\nBrouillon\n19 Nov. 2026\n05:00 – 06:00\nPublié\n25 Nov. 2026\n09:00 – 13:00\nPublié\n27 Nov. 2026\n09"
+      }
+    },
+    {
+      "name": "création et modification d’un poste",
+      "ok": true,
+      "detail": {
+        "s": [
+          201,
+          200
+        ]
+      }
+    },
+    {
+      "name": "liste des postes : recherche",
+      "ok": true,
+      "detail": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "filtre « sans personne »",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "ligne → fiche poste",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/workforce/organization/positions/25"
+    },
+    {
+      "name": "exigences du poste visibles (indépendantes du RBAC)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "fiche : une seule saisie par champ (pas de formulaire concurrent)",
+      "ok": true,
+      "detail": {
+        "hire": 1
+      }
+    },
+    {
+      "name": "groupes de champs traduits",
+      "ok": true,
+      "detail": {
+        "groupsRaw": 0
+      }
+    },
+    {
+      "name": "accès : permissions lisibles, groupées",
+      "ok": true,
+      "detail": {
+        "perms": "Documents View Membres Voir les membres Paramètres de l'entreprise Voir les paramètres Shipments Gérer le statut Voir me"
+      }
+    },
+    {
+      "name": "collaborateur sans compte : fiche sans accès",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "pointage clock-in",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "pointage break/start",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "pointage break/end",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "pointage clock-out",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "création d’un congé (salarié)",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "historique des pointages (30 jours) sur la fiche",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "feuilles de temps : bande d’indicateurs",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "validation via l’interface (repli API)",
+      "ok": true,
+      "detail": {
+        "st": "approved"
+      }
+    },
+    {
+      "name": "soldes : vue d’équipe sans sélection préalable",
+      "ok": true,
+      "detail": {
+        "team": "EMPLOYÉ CONGÉS PAYÉS RTT Paul Paie15912 2,08 jours 1 jour Paul Paie24463 2,08 jours 1 jour Paul Paie74184 2,08 jours 1 j"
+      }
+    },
+    {
+      "name": "calendrier des congés au thème et en français",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "module Préparation de la paie activé (achat sur clone fictif)",
+      "ok": true,
+      "detail": {
+        "s": 200,
+        "m": "Module enabled."
+      }
+    },
+    {
+      "name": "salarié fictif sous contrat rémunéré",
+      "ok": true,
+      "detail": {
+        "s": [
+          201,
+          201,
+          200
+        ]
+      }
+    },
+    {
+      "name": "feuille de temps générée, soumise, approuvée, verrouillée",
+      "ok": true,
+      "detail": {
+        "s": [
+          201,
+          200,
+          200,
+          200
+        ],
+        "m": ""
+      }
+    },
+    {
+      "name": "création d’une période",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "collecte (compute)",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "estimations (compute-calculations)",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "détail : statut traduit",
+      "ok": true,
+      "detail": {
+        "chip": "Calculé"
+      }
+    },
+    {
+      "name": "validation de la période",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "export disponible",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "liste : période comptée une fois (Exportées)",
+      "ok": true,
+      "detail": {
+        "kpis": "3 Périodes 0 En préparation 0 Validées 3 Exportées"
+      }
+    },
+    {
+      "name": "espace salarié mobile /home",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:8821/home"
+      }
+    },
+    {
+      "name": "espace salarié mobile /company/workforce/me",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:8821/company/workforce/me"
+      }
+    },
+    {
+      "name": "espace salarié mobile /company/my-space/overview",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:8821/company/my-space/overview"
+      }
+    },
+    {
+      "name": "espace salarié mobile /company/my-deliveries",
+      "ok": true,
+      "detail": {
+        "url": "http://127.0.0.1:8821/company/my-deliveries"
+      }
+    },
+    {
+      "name": "route administrative refusée /company/workforce/contracts",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route administrative refusée /company/workforce/payroll",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route administrative refusée /company/workforce/hiring",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route administrative refusée /company/workforce/organization/positions",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "route administrative refusée /company/roles",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/403"
+    },
+    {
+      "name": "API refusée GET /workforce/contracts",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API refusée GET /workforce/leaves/balances",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API refusée GET /workforce/payroll",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "API refusée PUT /company/settings",
+      "ok": true,
+      "detail": {
+        "s": 404
+      }
+    },
+    {
+      "name": "nouvelle société fictive créée",
+      "ok": true,
+      "detail": {
+        "s": 201,
+        "cid": 122
+      }
+    },
+    {
+      "name": "chauffeur : ni annuaire, ni réglages, ni coffre documentaire",
+      "ok": true,
+      "detail": {
+        "perms": "shipments.manage_status,shipments.view_own,theme.manage,theme.view"
+      }
+    },
+    {
+      "name": "rôle existant (109) préservé, non révoqué silencieusement",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "autre société refusée /workforce/leaves/balances",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/contracts",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/payroll",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "soldes : aucun salarié d’une autre société",
+      "ok": true,
+      "detail": {
+        "n": 12
+      }
+    },
+    {
+      "name": "anglais : interface et dates en anglais",
+      "ok": true,
+      "detail": {
+        "txt": "Day to day Schedule 19 Nov 2026 · 01:20–02:20 Last clock-in 18 Nov 2026 · Completed Leave Congés payés: 0.97 days available HR documents 0 document(s) Access & "
+      }
+    },
+    {
+      "name": "français : retour aux dates françaises",
+      "ok": true,
+      "detail": null
+    }
+  ],
+  "leave": 87
+}

@@ -1,0 +1,434 @@
+[
+  {
+    "url": "/company/workforce/planning",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/planning",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/planning",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/planning",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/roles",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/roles",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/roles",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/organization/roles",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/profile",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/profile",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/profile",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/profile",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/time",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/time",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/access",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/access",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/access",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/people/employee-1816/access",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time/timesheets",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time/timesheets",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time/timesheets",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/time/timesheets",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/balances",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/balances",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/balances",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/balances",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/calendar",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/calendar",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/calendar",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/leave/calendar",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/payroll/17",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/payroll/17",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/payroll/17",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/payroll/17",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/home",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/home",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/home",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/home",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/workforce/me",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "dark",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "fr",
+    "htmlLang": "fr",
+    "scheme": "light",
+    "w": 390,
+    "overflow": false,
+    "raw": []
+  },
+  {
+    "url": "/company/my-space/overview",
+    "lang": "en",
+    "htmlLang": "en",
+    "scheme": "light",
+    "w": 1440,
+    "overflow": false,
+    "raw": []
+  }
+]
