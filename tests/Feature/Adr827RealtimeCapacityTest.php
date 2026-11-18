@@ -99,7 +99,7 @@ class Adr827RealtimeCapacityTest extends TestCase
         $user = User::factory()->create();
         Membership::create(['user_id' => $user->id, 'company_id' => $company->id, 'role' => 'owner']);
         Model::reguard();
-        config(['realtime.max_concurrent_streams' => 1]);
+        config(['realtime.driver' => 'sse', 'realtime.max_concurrent_streams' => 1]); // ADR-829 : off → 204
         $this->conn()->set('leezr:realtime:stream:count:streams', 1);
 
         $this->actingAs($user)->get('/api/realtime/stream?company_id='.$company->id)

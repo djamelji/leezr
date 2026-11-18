@@ -644,6 +644,14 @@ export const useRuntimeStore = defineStore('runtime', {
           this._journalVersion++
           this._startNavPoll()
         },
+        // ADR-829: a lost stream must not leave the tab with neither SSE nor polling
+        onDisconnected: () => {
+          _realtimeActive = false
+          this._startNavPoll()
+        },
+        // ADR-829: retry SSE only for the same, still-ready company session
+        canRecover: () => this._phase === 'ready' && this._scope === 'company'
+          && resolveStore('auth').currentCompanyId === companyId,
       })
 
       _realtimeClient.connect()
@@ -678,6 +686,8 @@ export const useRuntimeStore = defineStore('runtime', {
           _journal.log('realtime:fallback', { reason: 'Platform SSE failed' })
           this._journalVersion++
         },
+        onDisconnected: () => { _realtimeActive = false },
+        canRecover: () => this._phase === 'ready' && this._scope === 'platform',
       })
 
       _realtimeClient.connect()

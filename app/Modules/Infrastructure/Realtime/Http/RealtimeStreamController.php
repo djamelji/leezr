@@ -9,7 +9,6 @@ use App\Core\Realtime\EventCategory;
 use App\Core\Realtime\MetricsCollector;
 use App\Core\Realtime\StreamLifetime;
 use App\Core\Realtime\TopicRegistry;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -30,8 +29,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class RealtimeStreamController
 {
-    public function __invoke(Request $request, StreamTransport $transport): StreamedResponse|JsonResponse
+    public function __invoke(Request $request, StreamTransport $transport): \Symfony\Component\HttpFoundation\Response
     {
+        if (config('realtime.driver') !== 'sse') { // ADR-829 degraded mode : no stream, no worker held, the client polls
+            return response()->noContent(); // 204 : EventSource stops ; bounded recovery probes only
+        }
         $company = $request->attributes->get('company');
         $companyId = $company?->id;
         $userId = $request->user()->id;

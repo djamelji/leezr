@@ -53,5 +53,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: ['api/runtime-error']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // ADR-829 (D-20) — every /api/* route answers in JSON, whatever the Accept header : an EventSource
+        // (Accept: text/event-stream) without a session got a 302 to the HTML login page instead of a 401.
+        // 401 = not authenticated, 403 = authenticated but not allowed, 429 = capacity ; never an HTML page.
+        $exceptions->shouldRenderJsonWhen(fn ($request) => $request->is('api/*') || $request->expectsJson());
     })->create();
