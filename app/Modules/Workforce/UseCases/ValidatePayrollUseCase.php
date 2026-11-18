@@ -21,8 +21,12 @@ class ValidatePayrollUseCase
             throw new \DomainException('Cannot validate PayrollRun with zero employees.');
         }
 
-        // Guard: error anomalies require validation_note
-        if ($run->hasErrorAnomalies() && empty($validationNote)) {
+        // Guard: error anomalies require validation_note — ADR-824 : une vraie justification (une note faite
+        // d'espaces passait le contrôle). Ces anomalies de PÉRIODE excluent des salariés (sans feuille verrouillée,
+        // sans rémunération…) : elles ne bloquent pas, elles exigent une décision écrite. Les anomalies de CALCUL
+        // (ci-dessous) bloquent toujours.
+        $validationNote = $validationNote !== null ? trim($validationNote) : null;
+        if ($run->hasErrorAnomalies() && ($validationNote === null || $validationNote === '')) {
             throw new \DomainException('PayrollRun has error-level anomalies. A validation_note is required to proceed.');
         }
 

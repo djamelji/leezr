@@ -8470,7 +8470,9 @@
         "zero_worked_minutes": "Zero worked hours",
         "compensation_gap": "Compensation gap"
       },
-      "andMore": " and {n} more"
+      "andMore": " and {n} more",
+      "excluded": "excluded from the period",
+      "warning": "to check"
     },
     "lines": {
       "title": "Payroll Lines by Employee",
@@ -8542,7 +8544,9 @@
         "title": "Validate Payroll Run",
         "message": "Are you sure you want to validate this payroll run? This action is irreversible.",
         "noteLabel": "Validation note (optional)",
-        "notePlaceholder": "Add a justification note..."
+        "notePlaceholder": "Add a justification note...",
+        "excluded": "{n} employee(s) will be excluded from this period. A written justification is mandatory and kept in the history.",
+        "noteRequiredLabel": "Justification (required)"
       },
       "delete": {
         "title": "Delete Draft",
@@ -8597,7 +8601,10 @@
       "actContract": "View contract",
       "actLeave": "Check absences",
       "actFiche": "Open employee file",
-      "actRecompute": "Recompute period"
+      "actRecompute": "Recompute period",
+      "blockedCalcHint": "{n} calculation(s) have blocking anomalies: fix the source (contract, pay, time) then recompute. Validation is refused while they exist.",
+      "needsNote": "Validation with justification",
+      "needsNoteHint": "{n} employee(s) are not included in this period (timesheet not locked, missing pay…). Fix and recompute, or validate with a written justification."
     },
     "lineStatus": {
       "toFix": "To fix",

@@ -46,15 +46,26 @@ const workflowSteps = computed(() => {
 
 // ── Preparation guidance (honest, derived from status + calculations) ────────
 const errorAnomalies = computed(() => (run.value?.anomalies ?? []).filter(a => a.severity === 'error'))
+const blockingCount = computed(() => calculationTotals.value?.blocking_anomalies_count ?? 0)
+const excludedCount = computed(() => new Set(errorAnomalies.value.map(a => a.employee_id).filter(Boolean)).size)
+const noteRequired = computed(() => errorAnomalies.value.length > 0)
+const canConfirmValidation = computed(() => !noteRequired.value || validationNote.value.trim().length > 0)
 const preparation = computed(() => {
   const status = run.value?.status
   if (status === 'draft')
     return { step: t('payroll.prep.draft'), hint: t('payroll.prep.draftHint'), color: 'info', icon: 'tabler-calculator' }
   if (status === 'computed' && !hasCalculations.value)
     return { step: t('payroll.prep.computed'), hint: t('payroll.prep.computedHint'), color: 'info', icon: 'tabler-math-function' }
+  // ADR-824 — trois cas, alignés sur la règle serveur (ValidatePayrollUseCase) :
+  //  1. anomalies de CALCUL bloquantes → validation refusée (corriger puis recalculer) ;
+  //  2. anomalies de PÉRIODE de niveau erreur → salariés EXCLUS de la période ; validation possible avec une
+  //     justification écrite obligatoire (décision tracée), jamais présentée comme « bloquée » ;
+  //  3. sinon → prête à valider.
+  if (status === 'computed' && blockingCount.value > 0)
+    return { step: t('payroll.prep.blocked'), hint: t('payroll.prep.blockedCalcHint', { n: blockingCount.value }), color: 'error', icon: 'tabler-alert-circle' }
   if (status === 'computed')
     return errorAnomalies.value.length
-      ? { step: t('payroll.prep.blocked'), hint: t('payroll.prep.blockedHint'), color: 'error', icon: 'tabler-alert-circle' }
+      ? { step: t('payroll.prep.needsNote'), hint: t('payroll.prep.needsNoteHint', { n: excludedCount.value }), color: 'warning', icon: 'tabler-alert-triangle' }
       : { step: t('payroll.prep.readyToValidate'), hint: t('payroll.prep.readyToValidateHint'), color: 'warning', icon: 'tabler-checks' }
   if (status === 'validated')
     return { step: t('payroll.prep.validated'), hint: t('payroll.prep.validatedHint'), color: 'success', icon: 'tabler-file-certificate' }
@@ -280,7 +291,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
             <VBtn v-if="run.status === 'computed' && !hasCalculations" v-can="'workforce.payroll_prepare'" color="info" variant="outlined" :loading="store.loading" data-test="pr-compute-calc" @click="handleComputeCalculations">
               <VIcon start icon="tabler-math-function" />{{ $t('payroll.actions.computeCalculations') }}
             </VBtn>
-            <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" data-test="pr-validate-open" @click="showValidateDialog = true">
+            <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" :disabled="blockingCount > 0" data-test="pr-validate-open" @click="showValidateDialog = true">
               <VIcon start icon="tabler-check" />{{ $t('payroll.actions.validate') }}
             </VBtn>
             <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" variant="outlined" :loading="store.loading" @click="handleGenerateDrafts">
@@ -393,6 +404,7 @@ onBeforeUnmount(() => store.clearCurrentRun())
           class="me-1"
         />
         <strong>{{ $t(`payroll.anomalies.types.${g.type}`, g.type) }} ({{ g.names.length }})</strong>
+        <VChip size="x-small" label class="ms-1" :color="g.severity === 'error' ? 'warning' : 'info'" variant="tonal">{{ g.severity === 'error' ? $t('payroll.anomalies.excluded') : $t('payroll.anomalies.warning') }}</VChip>
         <span class="text-medium-emphasis"> — {{ g.names.slice(0, 5).join(', ') }}<span v-if="g.names.length > 5">{{ $t('payroll.anomalies.andMore', { n: g.names.length - 5 }) }}</span></span>
       </div>
     </VAlert>
@@ -486,12 +498,15 @@ onBeforeUnmount(() => store.clearCurrentRun())
         <VCardTitle>{{ $t('payroll.dialogs.validate.title') }}</VCardTitle>
         <VCardText>
           <p class="mb-4">{{ $t('payroll.dialogs.validate.message') }}</p>
-          <AppTextField v-model="validationNote" data-test="pr-validate-note" type="textarea" :label="$t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
+          <VAlert v-if="noteRequired" type="warning" variant="tonal" density="compact" class="mb-4" data-test="pr-validate-excluded">
+            {{ $t('payroll.dialogs.validate.excluded', { n: excludedCount }) }}
+          </VAlert>
+          <AppTextField v-model="validationNote" data-test="pr-validate-note" type="textarea" :label="noteRequired ? $t('payroll.dialogs.validate.noteRequiredLabel') : $t('payroll.dialogs.validate.noteLabel')" :placeholder="$t('payroll.dialogs.validate.notePlaceholder')" rows="3" />
         </VCardText>
         <VCardActions>
           <VSpacer />
           <VBtn variant="text" @click="showValidateDialog = false">{{ $t('payroll.dialogs.cancel') }}</VBtn>
-          <VBtn data-test="pr-validate-confirm" color="success" :loading="store.loading" @click="handleValidate">{{ $t('payroll.actions.validate') }}</VBtn>
+          <VBtn data-test="pr-validate-confirm" color="success" :loading="store.loading" :disabled="!canConfirmValidation" @click="handleValidate">{{ $t('payroll.actions.validate') }}</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>

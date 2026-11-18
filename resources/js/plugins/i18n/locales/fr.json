@@ -8470,7 +8470,9 @@
         "zero_worked_minutes": "Aucune heure travaillée",
         "compensation_gap": "Écart de rémunération"
       },
-      "andMore": " et {n} autre(s)"
+      "andMore": " et {n} autre(s)",
+      "excluded": "exclu de la période",
+      "warning": "à vérifier"
     },
     "lines": {
       "title": "Lignes de paie par employé",
@@ -8542,7 +8544,9 @@
         "title": "Valider le bulletin de paie",
         "message": "Êtes-vous sûr de vouloir valider ce bulletin de paie ? Cette action est irréversible.",
         "noteLabel": "Note de validation (optionnel)",
-        "notePlaceholder": "Ajouter une note justificative..."
+        "notePlaceholder": "Ajouter une note justificative...",
+        "excluded": "{n} salarié(s) seront exclus de cette période. Une justification écrite est obligatoire ; elle est conservée dans l'historique.",
+        "noteRequiredLabel": "Justification (obligatoire)"
       },
       "delete": {
         "title": "Supprimer le brouillon",
@@ -8597,7 +8601,10 @@
       "actContract": "Consulter le contrat",
       "actLeave": "Vérifier les absences",
       "actFiche": "Ouvrir le dossier du salarié",
-      "actRecompute": "Recalculer la période"
+      "actRecompute": "Recalculer la période",
+      "blockedCalcHint": "{n} calcul(s) présentent des anomalies bloquantes : corrigez la source (contrat, rémunération, temps) puis recalculez. La validation est refusée tant qu'elles existent.",
+      "needsNote": "Validation avec justification",
+      "needsNoteHint": "{n} salarié(s) ne sont pas inclus dans cette période (feuille de temps non verrouillée, rémunération manquante…). Vous pouvez corriger puis recalculer, ou valider en justifiant ce choix par écrit."
     },
     "lineStatus": {
       "toFix": "À corriger",
