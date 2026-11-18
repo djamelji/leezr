@@ -1,0 +1,14 @@
+{
+    "tool": "restore-company1-april2026",
+    "mode": "restore",
+    "apply": true,
+    "checks": [],
+    "conflicts": [
+        "schema drift on workforce_payroll_runs : columns differ from the verified rows"
+    ],
+    "target": {
+        "d": "leezr_audit827_conflict",
+        "u": "3e824880-f953-11f0-82c3-5c060a208435",
+        "h": "192.168.11.107"
+    }
+}

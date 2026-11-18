@@ -1,0 +1,30 @@
+{
+    "tool": "restore-company1-april2026",
+    "mode": "restore",
+    "apply": true,
+    "checks": [
+        "schema identical to the verified rows"
+    ],
+    "conflicts": [],
+    "target": {
+        "d": "leezr_audit827_conflict",
+        "u": "3e824880-f953-11f0-82c3-5c060a208435",
+        "h": "192.168.11.107"
+    },
+    "state": {
+        "restored_rows_present": {
+            "workforce_timesheet_periods": false,
+            "workforce_payroll_runs": false,
+            "workforce_payroll_lines": false,
+            "workforce_payroll_calculations": false,
+            "workforce_payroll_ytd_snapshots": false
+        },
+        "sheet_143": {
+            "state": "as_created_by_incident",
+            "dependents": 0
+        }
+    },
+    "backup": "/private/tmp/claude-501/-Users-djamel-sites-leezr/d77db7dd-3250-4392-ac07-9878722802d9/scratchpad/c37/backups/backup-leezr_audit827_conflict-20261118T101332Z.json",
+    "result": "rolled_back",
+    "error": "SQLSTATE[45000]: <<Unknown error>>: 1644 forced failure 3.7"
+}

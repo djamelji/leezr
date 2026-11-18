@@ -1,0 +1,16 @@
+{
+    "tool": "restore-company1-april2026",
+    "mode": "restore",
+    "apply": true,
+    "checks": [
+        "schema identical to the verified rows"
+    ],
+    "conflicts": [
+        "company 1 or employee 3 (company 1) missing"
+    ],
+    "target": {
+        "d": "leezr_audit827_conflict",
+        "u": "3e824880-f953-11f0-82c3-5c060a208435",
+        "h": "192.168.11.107"
+    }
+}

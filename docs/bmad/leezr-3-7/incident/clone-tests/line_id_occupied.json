@@ -1,0 +1,29 @@
+{
+    "tool": "restore-company1-april2026",
+    "mode": "restore",
+    "apply": true,
+    "checks": [
+        "schema identical to the verified rows"
+    ],
+    "conflicts": [
+        "workforce_payroll_lines id 9 is occupied by a different row (company 1)"
+    ],
+    "target": {
+        "d": "leezr_audit827_conflict",
+        "u": "3e824880-f953-11f0-82c3-5c060a208435",
+        "h": "192.168.11.107"
+    },
+    "state": {
+        "restored_rows_present": {
+            "workforce_timesheet_periods": false,
+            "workforce_payroll_runs": false,
+            "workforce_payroll_calculations": false,
+            "workforce_payroll_ytd_snapshots": false
+        },
+        "sheet_143": {
+            "state": "as_created_by_incident",
+            "dependents": 0
+        }
+    },
+    "result": "refused"
+}

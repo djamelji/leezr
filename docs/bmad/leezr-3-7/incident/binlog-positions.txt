@@ -1,0 +1,37 @@
+#261118  8:04:01 server id 1  end_log_pos 282785880 CRC32 0x532a2581 	Query	thread_id=154797	exec_time=0	error_code=0
+# at 282785880
+#261118  8:04:01 server id 1  end_log_pos 282786005 CRC32 0xd929db3b 	Table_map: `leezr`.`workforce_payroll_calculations` mapped to number 4317
+# at 282786005
+#261118  8:04:01 server id 1  end_log_pos 282786129 CRC32 0x759badd4 	Table_map: `leezr`.`workforce_payroll_ytd_snapshots` mapped to number 4320
+--
+#261118  8:04:01 server id 1  end_log_pos 282802467 CRC32 0x61db58f5 	Query	thread_id=154797	exec_time=0	error_code=0
+# at 282802467
+#261118  8:04:01 server id 1  end_log_pos 282802575 CRC32 0x82841e9e 	Table_map: `leezr`.`workforce_payroll_lines` mapped to number 4318
+# at 282802575
+#261118  8:04:01 server id 1  end_log_pos 282802700 CRC32 0x38285189 	Table_map: `leezr`.`workforce_payroll_calculations` mapped to number 4317
+# at 282802700
+#261118  8:04:01 server id 1  end_log_pos 282802824 CRC32 0x0a3d4430 	Table_map: `leezr`.`workforce_payroll_ytd_snapshots` mapped to number 4320
+--
+#261118  8:04:01 server id 1  end_log_pos 282804785 CRC32 0x0e96c633 	Query	thread_id=154797	exec_time=0	error_code=0
+# at 282804785
+#261118  8:04:01 server id 1  end_log_pos 282804911 CRC32 0x081508ed 	Table_map: `leezr`.`workforce_payroll_runs` mapped to number 4319
+# at 282804911
+#261118  8:04:01 server id 1  end_log_pos 282805019 CRC32 0x8c443ce8 	Table_map: `leezr`.`workforce_payroll_lines` mapped to number 4318
+# at 282805019
+#261118  8:04:01 server id 1  end_log_pos 282805162 CRC32 0xc147d1a7 	Table_map: `leezr`.`workforce_dsn_declarations` mapped to number 4305
+# at 282805162
+#261118  8:04:01 server id 1  end_log_pos 282805287 CRC32 0xd2e503ec 	Table_map: `leezr`.`workforce_payroll_calculations` mapped to number 4317
+# at 282805287
+#261118  8:04:01 server id 1  end_log_pos 282805369 CRC32 0x91eb710f 	Table_map: `leezr`.`workforce_dsn_submission_locks` mapped to number 4306
+# at 282805369
+#261118  8:04:01 server id 1  end_log_pos 282805493 CRC32 0x60f04614 	Table_map: `leezr`.`workforce_payroll_ytd_snapshots` mapped to number 4320
+--
+#261118  8:04:01 server id 1  end_log_pos 282808817 CRC32 0xd6b5339c 	Query	thread_id=154798	exec_time=0	error_code=0
+# at 282808817
+#261118  8:04:01 server id 1  end_log_pos 282808935 CRC32 0x1f129ad6 	Table_map: `leezr`.`workforce_timesheet_periods` mapped to number 4335
+# at 282808935
+#261118  8:04:01 server id 1  end_log_pos 282809037 CRC32 0xa3a8a6c4 	Table_map: `leezr`.`workforce_timesheet_lines` mapped to number 4334
+--
+#261118  8:04:01 server id 1  end_log_pos 282809343 CRC32 0x10fa1da6 	Query	thread_id=154798	exec_time=0	error_code=0
+# at 282809343
+#261118  8:04:01 server id 1  end_log_pos 282809461 CRC32 0xbe4ec35b 	Table_map: `leezr`.`workforce_timesheet_periods` mapped to number 4335
