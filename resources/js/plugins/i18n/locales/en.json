@@ -8186,7 +8186,13 @@
       "abandon": "Abandon draft",
       "abandonTitle": "Abandon this draft contract",
       "abandonHint": "The draft never came into force. It stays in the history with its documents; a signature in progress is cancelled.",
-      "abandonReason": "Reason"
+      "abandonReason": "Reason",
+      "packageWeeklyHours": "Package weekly volume (hours)",
+      "workModelHint": {
+        "horaire": "Clocked time; overtime beyond the reference duration. Beyond a part time: reported, not prepared for payroll.",
+        "forfait_heures": "Agreed volume of hours; going beyond is reported and not prepared for payroll.",
+        "forfait_jours": "Tracked in days, without overtime; payroll preparation needs a locked timesheet and refuses overtime."
+      }
     },
     "contractTypes": {
       "cdi": "Permanent (CDI)",

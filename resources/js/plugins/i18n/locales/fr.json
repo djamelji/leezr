@@ -8186,7 +8186,13 @@
       "abandon": "Abandonner le brouillon",
       "abandonTitle": "Abandonner ce contrat en brouillon",
       "abandonHint": "Le brouillon n'est jamais entré en vigueur. Il reste dans l'historique avec ses documents ; une signature en cours est annulée.",
-      "abandonReason": "Motif"
+      "abandonReason": "Motif",
+      "packageWeeklyHours": "Volume hebdomadaire du forfait (heures)",
+      "workModelHint": {
+        "horaire": "Temps pointé ; heures supplémentaires au-delà de la durée de référence. Au-delà d'un temps partiel : signalé, non préparé en paie.",
+        "forfait_heures": "Volume d'heures convenu ; un dépassement est signalé et n'est pas préparé en paie.",
+        "forfait_jours": "Suivi en jours, sans heures supplémentaires ; la préparation de paie exige une feuille verrouillée et refuse les heures supplémentaires."
+      }
     },
     "contractTypes": {
       "cdi": "CDI",

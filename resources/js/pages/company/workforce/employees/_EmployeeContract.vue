@@ -4,6 +4,7 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { useCan } from '@/composables/useCan'
 import AppMoneyField from '@/components/AppMoneyField.vue'
+import { useAppToast } from '@/composables/useAppToast'
 
 const props = defineProps({
   employee: { type: Object, required: true },
@@ -14,6 +15,7 @@ const emit = defineEmits(['updated'])
 const { t, locale } = useI18n()
 const { can } = useCan()
 const store = useEmployeesStore()
+const { toast } = useAppToast()
 
 const contracts = computed(() => props.employee.contracts || [])
 const currentContract = computed(() => contracts.value.find(c => c.is_current))
@@ -39,11 +41,21 @@ watch(isDrawerOpen, v => {
     formData.value.start_date = props.employee.hire_date
 })
 
-const compensationTypes = [
+const allCompensationTypes = [
   { title: t('employees.compensationTypes.monthly'), value: 'monthly' },
   { title: t('employees.compensationTypes.hourly'), value: 'hourly' },
   { title: t('employees.compensationTypes.daily'), value: 'daily' },
 ]
+
+// ADR-826 : le formulaire suit le modèle de temps (même règle que le serveur) — un forfait jours ne se paie pas à
+// l'heure et ne se décrit pas en heures hebdomadaires ; un forfait heures décrit son volume.
+const isDaysPackage = computed(() => formData.value.work_model_key === 'forfait_jours')
+const compensationTypes = computed(() => isDaysPackage.value ? allCompensationTypes.filter(c => c.value !== 'hourly') : allCompensationTypes)
+const weeklyHoursLabel = computed(() => formData.value.work_model_key === 'forfait_heures' ? t('employees.contract.packageWeeklyHours') : t('employees.contract.weeklyHours'))
+watch(() => formData.value.work_model_key, m => {
+  if (m === 'forfait_jours' && formData.value.compensation_type === 'hourly')
+    formData.value.compensation_type = 'monthly'
+})
 
 const contractTypes = [
   { title: t('employees.contractTypes.cdi'), value: 'cdi' },
@@ -66,11 +78,13 @@ const submitContract = async () => {
   formLoading.value = true
   try {
     await store.createContract(props.employee.id, formData.value)
+      .catch(e => { toast(e?.data?.message || t('common.error'), 'error'); throw e })
     isDrawerOpen.value = false
     // Reset form
     formData.value = { contract_type: 'cdi', work_model_key: 'horaire', weekly_hours: 35, start_date: '', convention_collective_id: null, compensation_type: 'monthly', base_salary_cents: null, hourly_rate_cents: null, daily_rate_cents: null }
     emit('updated')
   }
+  catch { /* message affiché ci-dessus */ }
   finally {
     formLoading.value = false
   }
@@ -371,13 +385,20 @@ const formatSalary = (cents, currency) => {
                 v-model="formData.work_model_key"
                 :items="workModelOptions"
                 :label="$t('employees.contract.workModel')"
+                :hint="$t(`employees.contract.workModelHint.${formData.work_model_key}`)"
+                persistent-hint
+                data-test="contract-work-model"
               />
             </VCol>
-            <VCol cols="12">
+            <VCol
+              v-if="!isDaysPackage"
+              cols="12"
+            >
               <AppTextField
                 v-model="formData.weekly_hours"
-                :label="$t('employees.contract.weeklyHours')"
+                :label="weeklyHoursLabel"
                 type="number"
+                data-test="contract-weekly-hours"
               />
             </VCol>
             <VCol cols="12">
