@@ -32,7 +32,7 @@ test('employee requests leave → manager approves → persists (multi-user)', a
   // 1) Employee self-service request → 201 Created (ANO-007 path).
   await loginCompany(page, 'bob@leezr.test')
   await requestLeave(page, from, to, 3)
-  const created = await clickAndExpectApi(page, { urlIncludes: '/workforce/me/leaves', method: 'POST' },
+  const created = await clickAndExpectApi(page, { urlPath: '/api/workforce/me/leaves', method: 'POST' },
     () => page.locator('[data-test="me-leave-submit"]').click())
   expect(created.status()).toBe(201)
 
@@ -65,7 +65,7 @@ test('validation: inverted date range is rejected by the server (422)', async ({
   await loginCompany(page, 'bob@leezr.test')
   await requestLeave(page, '2027-09-10', '2027-09-05', 2) // date_to before date_from
   const [resp] = await Promise.all([
-    page.waitForResponse(r => r.url().includes('/workforce/me/leaves') && r.request().method() === 'POST'),
+    page.waitForResponse(r => new URL(r.url()).pathname === '/api/workforce/me/leaves' && r.request().method() === 'POST'),
     page.locator('[data-test="me-leave-submit"]').click(),
   ])
   expect(resp.status()).toBe(422)

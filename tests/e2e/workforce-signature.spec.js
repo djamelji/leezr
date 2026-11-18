@@ -23,8 +23,8 @@ use App\\Modules\\Workforce\\Signature\\Models\\SignatureSigner;
 use Illuminate\\Support\\Facades\\Storage;
 $cid=1; $uid=App\\Core\\Models\\User::where('email','owner@leezr.test')->first()->id;
 $tpl=DocumentTemplate::create(['company_id'=>$cid,'code'=>'e2e-'.uniqid(),'name'=>'Attestation E2E','subject_type'=>'employee','body_html'=>'<p>x</p>','variables_schema'=>[],'version'=>1,'is_active'=>true]);
-$p='documents/generated/'.$cid.'/2026/10/'.uniqid().'.pdf'; Storage::disk('local')->put($p,'%PDF-1.4 e2e');
-$doc=GeneratedDocument::create(['company_id'=>$cid,'document_template_id'=>$tpl->id,'template_version'=>1,'subject_type'=>'employee','subject_id'=>1,'generated_by'=>$uid,'generated_at'=>now(),'file_path'=>$p,'file_size_bytes'=>12,'generation_snapshot'=>['x'=>1],'signature_status'=>'none']);
+$p='documents/generated/'.$cid.'/2026/10/'.uniqid().'.pdf'; $pdf=Barryvdh\\DomPDF\\Facade\\Pdf::loadHTML('<h1>Attestation E2E</h1>')->output(); Storage::disk('local')->put($p,$pdf); // ADR-829 : a REAL PDF — PAdES sealing is required (a 12-byte stub fails closed)
+$doc=GeneratedDocument::create(['company_id'=>$cid,'document_template_id'=>$tpl->id,'template_version'=>1,'subject_type'=>'employee','subject_id'=>1,'generated_by'=>$uid,'generated_at'=>now(),'file_path'=>$p,'file_size_bytes'=>strlen($pdf),'generation_snapshot'=>['x'=>1],'signature_status'=>'none']);
 $req=app(CreateSignatureRequestUseCase::class)->execute($cid,$uid,$doc->id,[['role'=>'employee','name'=>'E2E Signer','email'=>'e2e@example.test','order'=>1]],null,'sequential',null);
 app(SendSignatureRequestUseCase::class)->execute($cid,$uid,$req->id);
 $s=SignatureSigner::where('signature_request_id',$req->id)->first();
@@ -68,7 +68,7 @@ test('full browser signing journey — no false success', async ({ page }) => {
   await page.waitForTimeout(1500)
   await page.getByText('Attestation E2E').first().click()
   await page.waitForTimeout(1200)
-  await expect(page.locator('.v-navigation-drawer')).toContainText(/Terminée/i)
-  await expect(page.locator('.v-navigation-drawer')).toContainText(/Télécharger le document signé/i)
+  await expect(page.locator('.v-navigation-drawer--active')).toContainText(/Terminée/i)
+  await expect(page.locator('.v-navigation-drawer--active')).toContainText(/Télécharger le document signé/i)
   // Rejet du rejeu + toutes les voies d'échec (expiré/révoqué/hors-séquence/double/preuve) : PHPUnit WorkforceSignatureTest.
 })

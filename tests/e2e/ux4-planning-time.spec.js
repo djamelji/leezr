@@ -93,11 +93,14 @@ test('UX4 responsable : créneau, absence, présences (propriétaire, registre d
     await page.locator('.fc-timegrid-slot-lane[data-time="09:00:00"]').first().waitFor()
     let read = await meter(page)
     net.mark('créer créneau')
-    await page.locator('.fc-timegrid-slot-lane[data-time="09:00:00"]').first().scrollIntoViewIfNeeded()
+    // ADR-824 bounded the day view height : bring the WHOLE range (end of the drag included) on screen.
+    await page.locator('.fc-timegrid-slot-lane[data-time="11:30:00"]').first().scrollIntoViewIfNeeded()
     await page.waitForTimeout(300)
     const a = await page.locator('.fc-timegrid-slot-lane[data-time="09:00:00"]').first().boundingBox()
     const b = await page.locator('.fc-timegrid-slot-lane[data-time="11:30:00"]').first().boundingBox()
-    const x = a.x + a.width * 0.6
+    // ADR-829 (D-21) : the slot-lane box spans the axis too (x can be negative) — aim inside the DAY column.
+    const col = await page.locator('.fc-timegrid-col:not(.fc-timegrid-axis)').first().boundingBox()
+    const x = col.x + col.width * 0.6
     await page.mouse.move(x, a.y + 4)
     await page.mouse.down()
     await page.mouse.move(x, a.y + 40, { steps: 5 })
@@ -291,6 +294,8 @@ test('UX4 salarié mobile : pointage ouvert expliqué, demander une absence (Bob
   const m = {}
   let leaveId = null
   try {
+    // ADR-829 (D-21) : Bob's balance is shared with the leave specs that run before ; credit THIS run (3 days asked).
+    execFileSync('php', ['artisan', 'e2e:prepare-leave-fixture', '--employee=3', '--leave-type=1', '--days=5', `--key=${run.runId}`], { encoding: 'utf8' })
     await loginCompany(page, 'bob@leezr.test')
     run.useCompany(await page.evaluate(() => decodeURIComponent((document.cookie.match(/currentCompanyId=([^;]+)/) || [])[1] || '')))
     await push(page, '/company/workforce/me')
@@ -428,9 +433,10 @@ test('UX4 captures : tablette, smartphone, sombre ; anciennes routes', async ({ 
   await setTheme(page, 'light')
   await page.waitForTimeout(500)
   // Anciennes routes et liens de l'accueil : toujours valides.
-  for (const p of ['/company/workforce/time?tab=entries', '/company/workforce/leave', '/company/workforce/planning']) {
+  // ADR-829 (D-21) : tabs now live in the path — the legacy « ?tab=entries » link lands on its canonical page.
+  for (const [p, landing] of [['/company/workforce/time?tab=entries', '/company/workforce/time/entries'], ['/company/workforce/leave', '/company/workforce/leave'], ['/company/workforce/planning', '/company/workforce/planning']]) {
     await page.goto(p, { waitUntil: 'networkidle' })
-    expect(new URL(page.url()).pathname).toBe(p.split('?')[0])
+    expect(new URL(page.url()).pathname, p).toBe(landing)
   }
   expect(net.bad.filter(b => b.js || b.status >= 500), 'aucune erreur').toEqual([])
 })

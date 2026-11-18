@@ -35,7 +35,11 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
     await expect(page.locator('[data-test="jd-publication"]')).toBeVisible({ timeout: 20000 })
     await page.locator('[data-test="jd-advanced-diagnostics"]').click() // ADR-821 : diagnostic dans Configuration initiale › avancé
     await expect(page.locator('[data-test="jd-compat-rbac"]')).toContainText('sans équivalent')
-    await expect(page.locator('[data-test="jd-draft-rbac"]')).toBeVisible()
+    // ADR-829 (D-21) : the draft action exists only while some legacy roles have no preset equivalent. Since
+    // `logistique_rbac` v4 is published the count can be 0 — the button must then be absent, not visible.
+    const legacyOnly = Number((await page.locator('[data-test="jd-compat-rbac"]').innerText()).match(/(\d+)\s*sans équivalent/)?.[1])
+    expect(Number.isInteger(legacyOnly)).toBeTruthy()
+    await expect(page.locator('[data-test="jd-draft-rbac"]')).toHaveCount(legacyOnly > 0 ? 1 : 0)
     await page.locator('[data-test="jd-legacy"] button').first().click()
     await expect(page.locator('[data-test="jd-legacy"]')).toContainText('Rôles')
     await page.locator('[data-test="jd-load-plan"]').click()
@@ -57,20 +61,9 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
     fixture.presets.push(v1.id)
     await api('POST', `/presets/rbac/${v1.id}/publish`)
 
-    // ── Domaine fictif : identité + association d'un preset (version épinglée) ──
-    await page.goto(`/platform/jobdomains/${fixture.jobdomain}`)
-    await expect(page.locator('[data-test="jd-identity"]')).toBeVisible({ timeout: 20000 })
-    await page.locator('[data-test="jd-sector"] input').fill('Recette fictive')
-    await page.locator('[data-test="jd-save-identity"]').click()
-    await expect(page.getByText('Enregistré.').first()).toBeVisible()
-    await page.locator('[data-test="jd-family-rbac"]').click()
-    await page.getByRole('option', { name: new RegExp(family) }).click()
-    await page.locator('[data-test="jd-save-presets"]').click()
-    await expect(page.locator('[data-test="jd-preset-rbac"]')).toContainText('v1', { timeout: 15000 })
-    await settle(page)
-    await page.screenshot({ path: `${OUT}/jobdomain-presets-association.jpg`, type: 'jpeg', quality: 65 })
-
     // ── Administration des presets : filtre, détail, nouvelle version, comparaison, publication, aperçu ──
+    // ADR-820 / ADR-829 (D-21) : done while the family is still a LIBRARY family — once a JobDomain recommends
+    // it, its versions are managed from that JobDomain and the catalog only links there.
     await page.goto('/platform/catalog/presets?kind=rbac')
     await expect(page.locator('[data-test="preset-table"]')).toBeVisible({ timeout: 20000 })
     await page.locator('[data-test="preset-table"] tr', { hasText: family }).first().click()
@@ -88,6 +81,24 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
     await settle(page)
     await page.screenshot({ path: `${OUT}/presets-admin-detail.jpg`, type: 'jpeg', quality: 65 })
 
+    // ── Domaine fictif : identité + association d'un preset (version épinglée) ──
+    await page.goto(`/platform/jobdomains/${fixture.jobdomain}`)
+    await expect(page.locator('[data-test="jd-identity"]')).toBeVisible({ timeout: 20000 })
+    await page.locator('[data-test="jd-sector"] input').fill('Recette fictive')
+    // ADR-821 (D-21) : one save for the General section ; a published family is associated from
+    // Configuration initiale › avancé › family › « use a shared preset » (no manual version choice any more).
+    await page.locator('[data-test="jd-save-general"]').click()
+    await expect(page.getByText('Enregistré.').first()).toBeVisible()
+    await page.locator('[data-test="jd-tabbtn-setup"]').click()
+    await page.locator('[data-test="jd-advanced-families"]').click()
+    await page.locator('[data-test="jd-family-rbac"]').click()
+    await page.locator('[data-test="jd-share-rbac"] .v-field').first().click()
+    await page.getByRole('option', { name: new RegExp(`E2E RBAC ${stamp}`) }).click()
+    await page.locator('[data-test="jd-share-rbac"]').getByRole('button', { name: 'Associer' }).click()
+    await expect(page.locator('[data-test="jd-tab-rbac"]')).toContainText('En vigueur', { timeout: 15000 })
+    await settle(page)
+    await page.screenshot({ path: `${OUT}/jobdomain-presets-association.jpg`, type: 'jpeg', quality: 65 })
+
     // Une nouvelle version ne réapplique rien et ne change pas la version épinglée du domaine.
     let rec = (await api('GET', `/jobdomains/${family}/preset-recommendations`)).recommendations[0]
     expect(rec.effective_version).toBe(2) // non épinglée → dernière publiée (recommandation, pas application)
@@ -99,7 +110,7 @@ test('JobDomain modernisé et administration des presets', async ({ page }) => {
     // ── Mobile ──
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/platform/jobdomains/${fixture.jobdomain}`)
-    await expect(page.locator('[data-test="jd-presets"]')).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('[data-test="jd-identity"]')).toBeVisible({ timeout: 20000 })
     await settle(page)
     await page.screenshot({ path: `${OUT}/jobdomain-profile-mobile.jpg`, fullPage: true, type: 'jpeg', quality: 65 })
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

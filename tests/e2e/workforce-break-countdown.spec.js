@@ -8,9 +8,14 @@ import { loginCompany, clickAndExpectApi } from './helpers'
 // Plus: the countdown target follows the per-Company resolved break config.
 
 function reset(targetMinutes) {
-  execFileSync('php', ['artisan', 'e2e:reset-clock-day', '--employee=3'], { cwd: process.cwd(), stdio: 'pipe' })
+  execFileSync('php', ['artisan', 'e2e:reset-clock-day', '--employee=3', '--clear-open-days'], { cwd: process.cwd(), stdio: 'pipe' })
   execFileSync('php', ['artisan', 'e2e:set-break-target', '--company=1', `--minutes=${targetMinutes}`], { cwd: process.cwd(), stdio: 'pipe' })
 }
+
+// ADR-829 (D-21) : leave the company baseline (30 min) behind, whatever the outcome — no state leaks into other specs.
+test.afterAll(() => {
+  execFileSync('php', ['artisan', 'e2e:set-break-target', '--company=1', '--minutes=30'], { cwd: process.cwd(), stdio: 'pipe' })
+})
 
 function parseClock(txt) {
   const m = (txt || '').match(/(\d+):(\d{2})/)

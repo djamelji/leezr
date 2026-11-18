@@ -15,7 +15,7 @@ use App\Core\Workforce\TimeEntry;
  */
 class E2EResetClockDayCommand extends RecipeCommand
 {
-    protected $signature = 'e2e:reset-clock-day {--employee=3} {--date=}';
+    protected $signature = 'e2e:reset-clock-day {--employee=3} {--date=} {--clear-open-days : also remove EARLIER days left open (they block clock-in until a manager corrects them)}';
 
     protected $description = "Delete an employee's time entries for a day so the clock workflow is replayable (local/testing only)";
 
@@ -32,10 +32,18 @@ class E2EResetClockDayCommand extends RecipeCommand
 
         $deleted = TimeEntry::withoutGlobalScopes()
             ->where('employee_id', $employeeId)
-            ->where('date', $date)
+            ->whereDate('date', $date)
             ->delete();
 
-        $this->info("Reset clock day for employee #{$employeeId} on {$date}: {$deleted} time entr(y/ies) removed.");
+        // ADR-829 (D-21) : a day left open earlier (clock_out null) blocks a new clock-in by design (ADR-779 banner) ;
+        // the replay precondition is « no open day », so the spec asks for it explicitly. Breaks cascade with it.
+        $stale = 0;
+        if ($this->option('clear-open-days')) {
+            $stale = TimeEntry::withoutGlobalScopes()->where('employee_id', $employeeId)->whereDate('date', '<', $date)
+                ->whereNull('clock_out')->delete();
+        }
+
+        $this->info("Reset clock day for employee #{$employeeId} on {$date}: {$deleted} time entr(y/ies) removed, {$stale} earlier open day(s) removed.");
 
         return self::SUCCESS;
     }

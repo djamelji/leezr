@@ -5,12 +5,14 @@ import { loginCompany, apiRequest } from './helpers'
 
 // Deterministic baseline: the child add-on starts cleanly 'available' (clear any grace-period row).
 test.beforeAll(() => {
-  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=logistics_tracking'],
+  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=workforce_contract'],
     { cwd: process.cwd(), stdio: 'pipe' })
 })
 
 // Module DEPENDENCY behaviour against the live company (owner session):
-//   logistics_tracking REQUIRES logistics_shipments (DependencyGraph).
+//   workforce_contract REQUIRES workforce_documents (DependencyGraph).
+//   ADR-829 (D-21) : logistics_tracking is 'preview' since ADR-732 (never activatable) ; workforce_contract is the
+//   sellable leaf add-on with a declared parent. The baseline (child ACTIVE on company 1) is restored at the end.
 //   - Activating the child keeps/pulls the parent (entitlement + reason graph).
 //   - The child becomes navigable/entitled; the parent is unaffected.
 //   - Deactivating the child restores state and leaves the parent active.
@@ -18,8 +20,8 @@ test.beforeAll(() => {
 // (ModuleDependencyTest: orphan cleanup) — shipments is plan-included and not disablable here.
 // This test restores all state it changes.
 
-const CHILD = 'logistics_tracking'
-const PARENT = 'logistics_shipments'
+const CHILD = 'workforce_contract'
+const PARENT = 'workforce_documents'
 
 async function modules(page) {
   const r = await apiRequest(page, { method: 'GET', path: '/api/modules' })
@@ -38,7 +40,7 @@ test('activating a child keeps its required parent; deactivating restores (depen
   // Precondition: child available (inactive), parent active.
   const before = await modules(page)
   expect(before[CHILD]?.active, `${CHILD} starts inactive`).toBe(false)
-  expect(before[PARENT]?.active, `${PARENT} is active (plan-included)`).toBe(true)
+  expect(before[PARENT]?.active, `${PARENT} is active`).toBe(true)
 
   try {
     // Activate the child → its required parent must be/stay active.
@@ -60,5 +62,7 @@ test('activating a child keeps its required parent; deactivating restores (depen
     const restored = await modules(page)
     expect(restored[CHILD]?.active, `${CHILD} restored to inactive`).toBe(false)
     expect(restored[PARENT]?.active, 'parent unaffected by child deactivation').toBe(true)
+    const back = await apiRequest(page, { method: 'PUT', path: `/api/modules/${CHILD}/enable` }) // clone baseline
+    expect(back.status, 'baseline restored').toBe(200)
   }
 })

@@ -1,6 +1,12 @@
 // @ts-check
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { loginCompany, apiRequest } from './helpers'
+
+// ADR-829 (D-21) : the spec prepares its own state (it read whatever an earlier spec left — 45 min on A).
+test.beforeAll(() => {
+  execFileSync('php', ['artisan', 'e2e:setup-two-companies', '--a-minutes=30', '--b-minutes=45'], { cwd: process.cwd(), stdio: 'pipe' })
+})
 
 // LOT I — the headline Workforce 2.0 proof: ONE installation serving TWO companies with different
 // trades and conventions, each with its OWN server-resolved break rule, fully isolated.

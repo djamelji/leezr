@@ -58,12 +58,14 @@ export async function loginPlatform(page, email = 'admin@leezr.com', password = 
 }
 
 // Click an action and assert the triggered API call succeeds (real integration).
-export async function clickAndExpectApi(page, { urlIncludes, method }, action) {
+// ADR-829 : `urlPath` matches the exact pathname (e.g. a POST /x must not be confused with POST /x/preview).
+export async function clickAndExpectApi(page, { urlIncludes, urlPath, method }, action) {
+  const hit = r => (urlPath ? new URL(r.url()).pathname === urlPath : r.url().includes(urlIncludes))
   const [resp] = await Promise.all([
-    page.waitForResponse(r => r.url().includes(urlIncludes) && r.request().method() === method, { timeout: 20000 }),
+    page.waitForResponse(r => hit(r) && r.request().method() === method, { timeout: 20000 }),
     action(),
   ])
-  expect(resp.status(), `${method} ${urlIncludes} → ${resp.status()}`).toBeLessThan(400)
+  expect(resp.status(), `${method} ${urlPath || urlIncludes} → ${resp.status()}`).toBeLessThan(400)
   return resp
 }
 

@@ -14,7 +14,7 @@ use App\Core\Workforce\Services\LeaveLedger;
  */
 class E2EPrepareLeaveFixtureCommand extends RecipeCommand
 {
-    protected $signature = 'e2e:prepare-leave-fixture {--employee=3} {--leave-type=1} {--days=25}';
+    protected $signature = 'e2e:prepare-leave-fixture {--employee=3} {--leave-type=1} {--days=25} {--key= : ADR-829 — run id : one credit per spec run (default : once per employee/type/year)}';
 
     protected $description = 'Seed a coherent leave balance for an E2E demo employee (local/testing only)';
 
@@ -40,7 +40,7 @@ class E2EPrepareLeaveFixtureCommand extends RecipeCommand
             entryType: 'accrual',
             periodKey: $year,
             correlationId: 'e2e-leave-fixture',
-            idempotencyKey: "e2e-leave-accrual-{$employeeId}-{$leaveTypeId}-{$year}",
+            idempotencyKey: "e2e-leave-accrual-{$employeeId}-{$leaveTypeId}-{$year}".($this->option('key') ? '-'.preg_replace('/[^A-Za-z0-9_-]/', '', (string) $this->option('key')) : ''),
             description: 'E2E fixture: annual leave accrual',
         );
 

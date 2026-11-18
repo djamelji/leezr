@@ -10,7 +10,7 @@ import { loginCompany, clickAndExpectApi } from './helpers'
 // for today (e2e:reset-clock-day, local/testing-guarded). This resets the day to 'not_started'
 // so the real clock-in flow runs every time — it does NOT bypass any clock rule.
 test.beforeAll(() => {
-  execFileSync('php', ['artisan', 'e2e:reset-clock-day', '--employee=3'], {
+  execFileSync('php', ['artisan', 'e2e:reset-clock-day', '--employee=3', '--clear-open-days'], {
     cwd: process.cwd(), stdio: 'pipe',
   })
 })

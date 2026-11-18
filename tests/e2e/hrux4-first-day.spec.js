@@ -268,13 +268,17 @@ test('W-HR-UX-4 — premier jour du salarié, A→Z (RH + salarié + manager)', 
   })
 
   await step(emp, 'E1-employee-requests-leave', async () => {
+    // ADR-829 (D-21) : a hire of the day has accrued < 1 day (90/100 on the clone) and the engine refuses
+    // a 1-day request — correctly. The journey is about the request/approval flow, so the balance is
+    // credited by the guarded fixture (marked clone only), exactly as ux4 does.
+    php(['e2e:prepare-leave-fixture', `--employee=${employeeId}`, '--leave-type=1', '--days=5'])
     await emp.goto('/company/workforce/me', { waitUntil: 'domcontentloaded' })
     await emp.waitForTimeout(1500)
     await emp.locator('[data-test="me-request-leave"]').click()
     await emp.waitForTimeout(600)
     // Type de congé : ouvre le select et choisit le 1er solde disponible.
     await emp.locator('[data-test="me-leave-type"]').click()
-    const opt = emp.locator('.v-overlay-container .v-list-item, .v-menu .v-list-item').first()
+    const opt = emp.locator('.v-overlay-container .v-list-item, .v-menu .v-list-item').filter({ hasText: 'Congés payés' }).first()
     await opt.waitFor({ state: 'visible', timeout: 6000 })
     await opt.click()
     const dnext = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
@@ -283,10 +287,10 @@ test('W-HR-UX-4 — premier jour du salarié, A→Z (RH + salarié + manager)', 
     await emp.locator('[data-test="me-leave-days"] input').fill('1')
     await shot(emp, 'E1-leave-form')
     const [r] = await Promise.all([
-      emp.waitForResponse(x => x.url().includes('/workforce/me/leaves') && x.request().method() === 'POST', { timeout: 20000 }),
+      emp.waitForResponse(x => new URL(x.url()).pathname === '/api/workforce/me/leaves' && x.request().method() === 'POST', { timeout: 20000 }), // not …/deduction-preview
       emp.locator('[data-test="me-leave-submit"]').click(),
     ])
-    expect(r.status(), 'leave request <400').toBeLessThan(400)
+    expect(r.status(), `leave request <400 : ${r.status() >= 400 ? await r.text() : ''}`).toBeLessThan(400)
     leaveRequestId = (await r.json())?.id
     await shot(emp, 'E1-leave-submitted')
   })

@@ -123,10 +123,14 @@ test('éditeurs de presets, cycle de vie, exigences entreprise, parité', async 
     await page.goto('/platform/catalog/presets')
     await expect(page.locator('[data-test="preset-table"]')).toBeVisible({ timeout: 30000 })
     await page.locator('[data-test="preset-table"] tr', { hasText: `${family}_req` }).first().click()
-    await page.locator('[data-test="preset-detail"]').getByRole('button', { name: 'Nouvelle version (brouillon)' }).click()
-    await expect(page.locator('[data-test="preset-edit"]')).toBeVisible({ timeout: 60000 })
-    await page.locator('[data-test="preset-edit"]').click()
-    await expect(page.locator('[data-test="preset-editor"]')).toBeVisible()
+    // ADR-820 / ADR-829 (D-21) : a family recommended by a JobDomain is versioned from that JobDomain ; the
+    // catalog only links to it (no « Nouvelle version » there). The mobile editor is checked on a new preset.
+    await expect(page.locator('[data-test="preset-open-jobdomain"]').first()).toBeVisible({ timeout: 30000 })
+    await expect(page.locator('[data-test="preset-detail"]').getByRole('button', { name: 'Nouvelle version (brouillon)' })).toHaveCount(0)
+    await page.locator('[data-test="preset-detail"] button[aria-label="Fermer"]').click()
+    await page.locator('[data-test="preset-new"]').click()
+    await page.locator('[data-test="preset-new-requirements"]').click()
+    await expect(page.locator('[data-test="preset-editor"]')).toBeVisible({ timeout: 20000 })
     await settle(page)
     await page.screenshot({ path: `${OUT}/editor-mobile.jpg`, fullPage: true, type: 'jpeg', quality: 65 })
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

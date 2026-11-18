@@ -6,17 +6,19 @@ import { loginCompany, clickAndExpectApi } from './helpers'
 // Start from a deterministic 'available' baseline: clear any add-on subscription / grace-period
 // row left by a previous run (end-of-period deactivation keeps the module active until period end).
 test.beforeAll(() => {
-  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=logistics_tracking'],
+  execFileSync('php', ['artisan', 'e2e:reset-module-addon', '--company=1', '--module=workforce_contract'],
     { cwd: process.cwd(), stdio: 'pipe' })
 })
 
 // Module activation/deactivation round-trip driven by the owner on the isolated local base.
-// Target: logistics_tracking — a paid add-on in the 'available' state (so this also exercises
-// the add-on quote flow + entitlement). We activate it then deactivate it, restoring state,
-// and never touch modules other specs depend on (workforce*, logistics_shipments).
+// Target: workforce_contract — a SELLABLE paid add-on (addon_pricing) that no other module requires.
+// ADR-829 (D-21) : logistics_tracking is 'preview' since ADR-732 (never sellable, no activate button) and every
+// other sellable add-on is active on company 1 — the reset puts workforce_contract back to 'available', the spec
+// activates it (quote flow) then deactivates it, and finally restores the original ACTIVE state through the
+// same real endpoint (PUT /modules/{key}/enable), so the specs that use contracts keep their baseline.
 // Real endpoints: PUT /modules/{key}/enable and /disable, with persistence checked via /api/modules.
 
-const KEY = 'logistics_tracking'
+const KEY = 'workforce_contract'
 
 // Read the live module catalog through the authenticated session (what the API actually returns).
 async function getModule(page, key) {
@@ -48,7 +50,7 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
   expect(before.display_state, `${KEY} must start available`).toBe('available')
 
   // ─── Activate (add-on quote flow) ─────────────────────────────────────────
-  await page.getByRole('tab', { name: 'À découvrir' }).click()
+  await page.locator('[data-test="modules-filter-options"]').click() // ADR-829 : tabs became catalog filters
   await page.waitForTimeout(800)
   await page.locator(`[data-test="module-activate-${KEY}"]`).click()
   // Quote dialog → wait for the quote to load (confirm is disabled until quoteData arrives) → PUT enable.
@@ -65,7 +67,7 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
   // ─── Deactivate ───────────────────────────────────────────────────────────
   await page.goto('/company/modules', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
-  await page.getByRole('tab', { name: 'Actifs' }).click()
+  await page.locator('[data-test="modules-filter-active"]').click()
   await page.waitForTimeout(800)
   await page.locator(`[data-test="module-deactivate-${KEY}"]`).click()
   // Deactivate dialog (shows proration preview for add-ons) → confirm → PUT disable.
@@ -80,4 +82,15 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
     after.is_active === false || after.scheduledOff,
     `${KEY} deactivation recorded (is_active=${after.is_active}, scheduledOff=${after.scheduledOff})`,
   ).toBeTruthy()
+
+  // Restore the clone baseline (module active on company 1) through the real endpoint.
+  const restored = await page.evaluate(async k => {
+    const get = n => (document.cookie.match(new RegExp(n + '=([^;]+)')) || [])[1]
+    const res = await fetch(`/api/modules/${k}/enable`, { method: 'PUT', credentials: 'include',
+      headers: { 'X-XSRF-TOKEN': decodeURIComponent(get('XSRF-TOKEN') || ''), 'X-Company-Id': decodeURIComponent(get('currentCompanyId') || ''), Accept: 'application/json' } })
+
+    return res.status
+  }, KEY)
+  expect(restored, 'baseline restored').toBeLessThan(300)
+  expect((await getModule(page, KEY)).is_active).toBe(true)
 })

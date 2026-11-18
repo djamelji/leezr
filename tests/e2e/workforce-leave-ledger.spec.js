@@ -34,7 +34,7 @@ async function bobRequests(page, { from, to, reason }) {
   await page.locator('[data-test="me-leave-to"] input').fill(to)
   await page.locator('[data-test="me-leave-days"] input').fill(String(DAYS))
   await page.locator('[data-test="me-leave-reason"] textarea').first().fill(reason)
-  const created = await clickAndExpectApi(page, { urlIncludes: '/workforce/me/leaves', method: 'POST' },
+  const created = await clickAndExpectApi(page, { urlPath: '/api/workforce/me/leaves', method: 'POST' } /* not …/deduction-preview */,
     () => page.locator('[data-test="me-leave-submit"]').click())
   expect(created.status(), 'self-service leave created').toBe(201)
 }
