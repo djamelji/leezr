@@ -1,0 +1,181 @@
+{
+    "database": "leezr",
+    "mode": "simulation",
+    "batch": null,
+    "summary": {
+        "would_apply": 8
+    },
+    "roles": [
+        {
+            "company_id": 1,
+            "role_id": 7,
+            "members": 12,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 2,
+            "role_id": 2,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 3,
+            "role_id": 12,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 31,
+            "role_id": 29,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 32,
+            "role_id": 34,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 33,
+            "role_id": 39,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 34,
+            "role_id": 44,
+            "members": 0,
+            "remove": [
+                "members.view",
+                "settings.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        },
+        {
+            "company_id": 101,
+            "role_id": 171,
+            "members": 1,
+            "remove": [
+                "members.view",
+                "settings.view",
+                "documents.view"
+            ],
+            "keep": [
+                "theme.view",
+                "theme.manage",
+                "workforce.timesheet_view",
+                "workforce.timesheet_submit",
+                "shipments.manage_status",
+                "shipments.view_own"
+            ],
+            "delivery_rights": [
+                "shipments.view_own",
+                "shipments.manage_status"
+            ],
+            "explicit_customisations": 0,
+            "status": "would_apply"
+        }
+    ]
+}

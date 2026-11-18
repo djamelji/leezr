@@ -29402,3 +29402,23 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Une spec E2E à fixtures lancée contre le DEV échoue désormais en refus franc, sans aucune écriture : les recettes à écriture passent par un clone marqué.
 - Les écritures par `artisan tinker --execute` dans 9 specs (dont 3 suppressions de presets créés par la spec) ne sont pas couvertes par ce garde (risque résiduel, D-15).
 - La restauration DEV, les vérifications en lecture seule de la PROD, le dimensionnement du pool et le RBAC chauffeur restent des décisions (D-8, D-10, D-13 à D-17).
+
+## ADR-828 — Leezr 3.8 : plus aucune voie d'écriture E2E non protégée, maintenance confirmée, billing async verrouillé, readiness sur preuves
+
+**Date** : 2026-11-18
+**Contexte** : après ADR-827, neuf specs écrivaient encore par `artisan tinker --execute`, qu'aucun garde ne couvre. Le garde ne contrôlait que la connexion par défaut. Les commandes de maintenance `onboarding:cleanup-fixtures`, `workforce:planning-loadtest` et `onboarding:scan-uploads --simulate` écrivaient sur toute base non-production. Avec `--async`, les commandes de facturation envoyaient des jobs dans des files que personne ne consomme.
+**Décision** :
+- **`e2e:php <fichier>`** (`RecipeCommand`) devient le point d'entrée unique des scripts de fixtures des specs, via `tests/e2e/recipe.js`. Les 9 specs n'appellent plus `tinker`, et leurs assertions métier sont inchangées.
+- **Connexions secondaires** : toute connexion déjà ouverte au démarrage d'une commande de recette, ou ouverte pendant son exécution (`ConnectionEstablished`, déclenché avant la première requête), doit elle-même être un clone marqué. Sinon, elle est écartée et la commande est annulée.
+- **Maintenance** (`RecipeDatabaseGuard::authorizeMaintenance`) :
+  - les modes en lecture seule et en simulation restent libres ;
+  - `cleanup-fixtures --apply` et `planning-loadtest seed/purge` sont autorisés sur un clone marqué, ou ailleurs avec `--confirm-database` égal à la base **réellement connectée** ;
+  - ces écritures sont toujours refusées en production et sont journalisées ;
+  - `scan-uploads --simulate`, qui écrit une fausse analyse, est une écriture de recette réservée au clone marqué.
+- **Facturation** : `--async` de `billing:renew`, `billing:process-dunning` et `billing:reconcile` est refusé tant que `BILLING_ASYNC_QUEUES_ENABLED` est faux (valeur par défaut). Le refus intervient avant tout enregistrement et rien n'est envoyé. Le mode synchrone planifié et les règles de facturation sont inchangés. Le gabarit du worker `deploy/templates/leezr-queue-billing.service.example` est préparé, non branché.
+- **Capacité SSE** : la recette navigateur sur un pool isolé confirme le plafond par flux, le 429, le repli sur le polling sans nouvelle tentative SSE, la libération à la fermeture d'onglet, la reconnexion et l'isolation entre sociétés. Le dimensionnement s'appuie sur les mesures (rapport 3.8, §5 et §6).
+
+**Conséquences** :
+- Aucune spec ne peut plus écrire hors d'un clone marqué par les commandes artisan. Un accès direct par PDO à une autre base reste hors de portée du garde (risque résiduel documenté).
+- Le nettoyage de fixtures sur le DEV reste possible, mais seulement de façon explicite, en nommant la base réellement connectée.
+- Les vérifications de production ne sont pas réalisées, faute d'accès en lecture seule autorisé. Les commandes sont fournies dans `docs/bmad/leezr-3-8/PRODUCTION-READONLY-CHECKS.md`.
