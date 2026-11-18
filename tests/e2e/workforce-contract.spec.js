@@ -62,11 +62,13 @@ test('full generation from the employee file: default pre-selected → faithful 
   page.on('pageerror', e => errors.push(e.message))
 
   await loginCompany(page, 'owner@leezr.test')
+  // ADR-826 : la fiche salarié est la fiche unifiée (ADR-768) ; la génération passe par son menu Actions.
   await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
   await page.locator('.v-data-table tbody tr').first().click()
-  await expect(page).toHaveURL(/\/company\/workforce\/employees\/\d+/, { timeout: 8000 })
+  await expect(page).toHaveURL(/\/company\/people\/employee-\d+/, { timeout: 15000 })
 
-  await page.locator('[data-test="generate-contract"]').click()
+  await page.locator('[data-test="person-actions-menu"]').click()
+  await page.locator('[data-test="person-action-generate-contract"]').click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText(/Générer un contrat|Generate a contract/)).toBeVisible({ timeout: 6000 })
 
@@ -82,8 +84,10 @@ test('full generation from the employee file: default pre-selected → faithful 
   await expect(page.locator('.v-snackbar, [role="alert"]').first()).toBeVisible({ timeout: 15000 })
 
   // Téléchargement d'un contrat via la route sécurisée → PDF VALIDE (fichier réel).
-  await page.goto('/company/workforce/documents', { waitUntil: 'networkidle' })
-  await page.waitForTimeout(1000)
+  // ADR-826 : les documents générés vivent dans l'espace Documents › Collaborateurs › Documents générés (ADR-766/822)
+  await page.goto('/company/documents/people', { waitUntil: 'networkidle' })
+  await page.locator('[data-test="documents-people-generated-switch"]').click()
+  await page.waitForTimeout(1500)
   const dlBtn = page.locator('.v-data-table tbody .tabler-download, .v-data-table tbody [title*="élécharg"], .v-data-table tbody [title*="ownload"]').first()
   await expect(dlBtn).toBeVisible({ timeout: 8000 })
   const [download] = await Promise.all([
