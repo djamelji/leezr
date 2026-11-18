@@ -182,6 +182,23 @@ class Adr821ModuleDependencyTest extends TestCase
         $this->assertTrue($plan['coherent']);
     }
 
+    /** ADR-822 — Referral needs HR : while HR is a paid option, Referral is never « included » nor activated without HR. */
+    public function test_referral_is_included_only_with_its_paid_dependency(): void
+    {
+        PlatformModule::where('key', 'workforce')->update(['addon_pricing' => ['pricing_model' => 'flat', 'pricing_params' => ['price_monthly' => 10]]]);
+        foreach (\App\Core\Plans\PlanRegistry::keys() as $plan) {
+            $st = ModuleDependencyResolver::commercialStatus('workforce_referral', $plan);
+            $this->assertNotSame('included', $st, "never presented as included ($plan)");
+        }
+        $this->assertSame('with_dependency', ModuleDependencyResolver::commercialStatus('workforce_referral', 'business'));
+        $gap = collect(ModuleDependencyResolver::planCoverage())->where('module', 'workforce_referral')->first();
+        $this->assertSame('workforce', $gap['dependency'], 'reported as a gap needing a pricing decision');
+
+        $preview = ModuleDependencyResolver::forCompany($this->company, 'workforce_referral');
+        $this->assertContains('workforce', $preview['purchase'], 'activating Referral announces the HR purchase');
+        $this->assertNotContains('workforce_referral', $preview['purchase'], 'Referral itself has no price');
+    }
+
     public function test_paid_option_listed_by_the_business_is_never_given_away_but_historical_rights_stay(): void
     {
         $historical = $this->company('H');

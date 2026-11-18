@@ -26,7 +26,7 @@ class PlanModulesController extends Controller
             $status = ModuleDependencyResolver::commercialStatus($m->key, $key);
             $deps = array_map(fn ($d) => ['key' => $d, 'name' => ModuleRegistry::definitions()[$d]->name ?? $d,
                 'status' => ModuleDependencyResolver::commercialStatus($d, $key)], ModuleDependencyResolver::requiresOf($m->key));
-            $gaps = $status === 'not_included' ? [] : array_values(array_filter($deps, fn ($d) => $status === 'included' ? $d['status'] !== 'included' : $d['status'] === 'not_included'));
+            $gaps = $status === 'not_included' ? [] : array_values(array_filter($deps, fn ($d) => in_array($status, ['included', 'with_dependency'], true) ? $d['status'] !== 'included' : $d['status'] === 'not_included'));
             $rows[] = ['key' => $m->key, 'name' => $m->name, 'status' => $status, 'dependencies' => $deps, 'gaps' => $gaps];
         }
 

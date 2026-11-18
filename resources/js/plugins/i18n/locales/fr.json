@@ -11788,30 +11788,34 @@
     "commercial": {
       "included": "Inclus dans cette offre",
       "option": "Option payante",
-      "not_included": "Non inclus"
+      "not_included": "Non inclus",
+      "with_dependency": "Inclus avec sa dépendance payante"
     },
     "commercialShort": {
       "included": "inclus",
       "option": "option",
-      "not_included": "non"
+      "not_included": "non",
+      "with_dependency": "avec dép."
     },
     "advancedFamilies": "Options avancées de la configuration initiale",
     "advancedFamiliesHint": "Rôles, organisation, exigences suggérées et valeurs initiales du planning — versions et publication.",
     "commercialAll": {
       "included": "Inclus partout",
       "option": "Option payante",
-      "not_included": "Hors offre"
+      "not_included": "Hors offre",
+      "with_dependency": "Inclus avec sa dépendance payante"
     }
   },
   "planModules": {
     "title": "Modules de l'offre",
     "hint": "Lu depuis chaque module (offre minimale et prix d'option). Pour modifier, ouvrez le module : une modification qui laisserait une dépendance non couverte est refusée.",
-    "gaps": "Dépendances non couvertes à corriger : {list}.",
+    "gaps": "Dépendances non couvertes : {list}. Ces modules ne sont jamais présentés comme inclus ni activés sans leur dépendance ; corriger demande une décision tarifaire (prix propre du module ou dépendance incluse dans l’offre).",
     "filter": {
       "included": "Inclus",
       "option": "En option",
       "not_included": "Non inclus",
-      "all": "Tous"
+      "all": "Tous",
+      "with_dependency": "Avec dépendance payante"
     },
     "module": "Module",
     "inOffer": "Dans cette offre",
@@ -11820,7 +11824,8 @@
     "status": {
       "included": "Inclus",
       "option": "En option",
-      "not_included": "Non inclus"
+      "not_included": "Non inclus",
+      "with_dependency": "Inclus avec sa dépendance"
     }
   },
   "platformModulesCatalog": {

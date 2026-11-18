@@ -11,7 +11,7 @@ const { moduleName } = useCatalogText()
 const data = ref(null)
 const filter = ref('included')
 onMounted(async () => { data.value = await $platformApi(`/plans/${props.planKey}/modules`).catch(() => null) })
-const TONE = { included: 'success', option: 'warning', not_included: 'secondary' }
+const TONE = { included: 'success', with_dependency: 'info', option: 'warning', not_included: 'secondary' }
 const rows = computed(() => (data.value?.modules || []).filter(m => filter.value === 'all' || m.status === filter.value))
 const count = s => (data.value?.modules || []).filter(m => s === 'all' || m.status === s).length
 const gaps = computed(() => (data.value?.modules || []).filter(m => m.gaps.length))
@@ -49,7 +49,7 @@ const gaps = computed(() => (data.value?.modules || []).filter(m => m.gaps.lengt
           selected-class="text-primary"
         >
           <VChip
-            v-for="s in ['included', 'option', 'not_included', 'all']"
+            v-for="s in ['included', 'with_dependency', 'option', 'not_included', 'all']"
             :key="s"
             :value="s"
             variant="tonal"

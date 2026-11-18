@@ -145,7 +145,7 @@ const toggle = (list, k, on) => {
   if (!on && i >= 0) list.splice(i, 1)
 }
 const names = keys => keys.map(k => moduleName(k, byKey.value[k]?.name || k)).join(', ')
-const COMMERCIAL_TONE = { included: 'success', option: 'warning', not_included: 'secondary' }
+const COMMERCIAL_TONE = { included: 'success', with_dependency: 'info', option: 'warning', not_included: 'secondary' }
 const startNotIncluded = computed(() => composition.value.modules.filter(m => isStart(m.key) && Object.values(m.commercial).some(s => s !== 'included')))
 const MODULE_HEADERS = computed(() => [
   { title: t('jobdomainExperience.module'), key: 'name' },

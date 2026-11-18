@@ -74,8 +74,32 @@ final class ModuleDependencyResolver
 
     // ── Commercial coherence (plans) ─────────────────────────────────────────────────────────────
 
-    /** included | option | not_included for one module at one plan level (no module list on plans : read from the module). */
-    public static function commercialStatus(string $key, string $planKey, ?array $override = null): string
+    /**
+     * included | with_dependency | option | not_included for one module at one plan level (no module list on
+     * plans : read from the module).
+     *
+     * ADR-822 — a module can only be « included » when every dependency is included at the same level. A module
+     * without price whose dependency is a paid option is « with_dependency » : available at no extra cost ONCE the
+     * dependency is bought, never presented as included and never granted without it (e.g. Referral → HR).
+     *
+     * @param  array<string, array>  $all  pending overrides of the other modules (dependencies)
+     */
+    public static function commercialStatus(string $key, string $planKey, ?array $override = null, array $all = []): string
+    {
+        $base = self::baseCommercialStatus($key, $planKey, $override);
+        if ($base !== 'included') {
+            return $base;
+        }
+        foreach (self::requiresOf($key) as $dep) {
+            if (self::baseCommercialStatus($dep, $planKey, $all[$dep] ?? null) !== 'included') {
+                return 'with_dependency';
+            }
+        }
+
+        return 'included';
+    }
+
+    private static function baseCommercialStatus(string $key, string $planKey, ?array $override = null): string
     {
         $m = ModuleRegistry::definitions()[$key] ?? null;
         if (! $m) {
@@ -108,13 +132,15 @@ final class ModuleDependencyResolver
         $keys = $modules ?? array_keys(array_filter(ModuleRegistry::definitions(), fn ($m) => $m->scope === 'company'));
         foreach (PlanRegistry::keys() as $plan) {
             foreach ($keys as $key) {
-                $status = self::commercialStatus($key, $plan, $overrides[$key] ?? null);
+                $status = self::commercialStatus($key, $plan, $overrides[$key] ?? null, $overrides);
                 if ($status === 'not_included') {
                     continue;
                 }
                 foreach (self::requiresOf($key) as $dep) {
-                    $depStatus = self::commercialStatus($dep, $plan, $overrides[$dep] ?? null);
-                    $covered = $status === 'included' ? $depStatus === 'included' : $depStatus !== 'not_included';
+                    $depStatus = self::commercialStatus($dep, $plan, $overrides[$dep] ?? null, $overrides);
+                    // ADR-822 : « with_dependency » (sans prix, dépendance payante) reste signalé — corriger demande une
+                    // décision tarifaire (prix propre ou dépendance incluse) ; une modification qui en crée un est refusée.
+                    $covered = in_array($status, ['included', 'with_dependency'], true) ? $depStatus === 'included' : $depStatus !== 'not_included';
                     if (! $covered) {
                         $violations[] = ['plan' => $plan, 'module' => $key, 'status' => $status, 'dependency' => $dep, 'dependency_status' => $depStatus];
                     }

@@ -11788,30 +11788,34 @@
     "commercial": {
       "included": "Included in this plan",
       "option": "Paid option",
-      "not_included": "Not included"
+      "not_included": "Not included",
+      "with_dependency": "Included with its paid dependency"
     },
     "commercialShort": {
       "included": "included",
       "option": "option",
-      "not_included": "no"
+      "not_included": "no",
+      "with_dependency": "with dep."
     },
     "advancedFamilies": "Advanced initial configuration",
     "advancedFamiliesHint": "Roles, organisation, suggested requirements and planning starting values — versions and publication.",
     "commercialAll": {
       "included": "Always included",
       "option": "Paid option",
-      "not_included": "Not in any plan"
+      "not_included": "Not in any plan",
+      "with_dependency": "Included with its paid dependency"
     }
   },
   "planModules": {
     "title": "Plan modules",
     "hint": "Read from each module (minimum plan and option price). To change it, open the module: a change leaving a dependency uncovered is refused.",
-    "gaps": "Uncovered dependencies to fix: {list}.",
+    "gaps": "Uncovered dependencies: {list}. These modules are never shown as included nor activated without their dependency; fixing it requires a pricing decision (own price for the module, or dependency included in the plan).",
     "filter": {
       "included": "Included",
       "option": "Optional",
       "not_included": "Not included",
-      "all": "All"
+      "all": "All",
+      "with_dependency": "With paid dependency"
     },
     "module": "Module",
     "inOffer": "In this plan",
@@ -11820,7 +11824,8 @@
     "status": {
       "included": "Included",
       "option": "Optional",
-      "not_included": "Not included"
+      "not_included": "Not included",
+      "with_dependency": "Included with its dependency"
     }
   },
   "platformModulesCatalog": {

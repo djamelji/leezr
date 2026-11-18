@@ -1126,7 +1126,7 @@ const planLabel = planKey => {
                 :key="p"
                 label
                 variant="tonal"
-                :color="{ included: 'success', option: 'warning', not_included: 'secondary' }[st]"
+                :color="{ included: 'success', with_dependency: 'info', option: 'warning', not_included: 'secondary' }[st]"
               >
                 {{ p }} · {{ t(`planModules.status.${st}`) }}
               </VChip>
