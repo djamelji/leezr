@@ -29279,3 +29279,32 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Recette navigateur 60/60, dont un parcours de paie complet sur une société fictive autorisée ; 48 captures de variantes.
 - E2E Planning comparés au code de référence : aucune régression.
 - Restes listés au rapport §3.
+
+## ADR-824 — Leezr 3.4 : validation de paie fidèle à la règle serveur, finitions Workforce, audit RBAC chauffeur
+
+**Date** : 2026-11-18 · **Statut** : DEV local, non poussé · **Rapport** : `docs/bmad/LEEZR-COMPANY-3-4-FINAL.md`
+
+**Contexte**
+- La recette 3.3 avait validé une période de paie que l'interface déclarait bloquée.
+- Plusieurs écrans Workforce restaient à finir.
+- Les rôles chauffeur historiques gardaient des droits non nécessaires.
+
+**Décision**
+1. **Validation de paie** — deux niveaux, conformes au moteur existant :
+   - anomalies de **période** (salariés exclus) → validation avec **justification écrite obligatoire** (une justification vide ou faite d'espaces est refusée) ;
+   - anomalies de **calcul** → refus.
+   - L'interface affiche exactement ces deux états. Aucun calcul n'est modifié.
+2. **Planning** : un niveau d'en-tête et les mêmes actions dans les quatre vues ; vue Jour bornée et localisée ; vue Postes filtrable et repliable ; vue Mois sans débordement mobile.
+3. **Fiche poste** : utilisation (personnes, embauches du poste) par la lecture existante filtrée, réservée à `workforce.manage`.
+4. **Écrans secondaires** :
+   - panneau de ligne de paie ouvert durablement (`disable-route-watcher`) ;
+   - état des totaux de période séparé de celui des calculs ;
+   - alias et repli pour les onglets de congés ;
+   - DSN présentée dans son périmètre réel.
+5. **Navigation de section mobile** : icône + libellé, même composant.
+6. **Audit `rbac:driver-role-audit`** : lecture seule, aperçu de remédiation ; aucune application sans autorisation spécifique.
+
+**Conséquences**
+- Recette 37/37 ; 6 tests de règles de paie.
+- E2E comparés au code de fin de 3.3 : aucune régression.
+- Remédiation chauffeur préparée, non appliquée.

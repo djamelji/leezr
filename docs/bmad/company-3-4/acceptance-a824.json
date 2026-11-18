@@ -1,0 +1,254 @@
+{
+  "steps": [
+    {
+      "name": "exclusions présentées comme « validation avec justification » (pas « bloquant »)",
+      "ok": true,
+      "detail": {
+        "prep": "Prochaine action: Validation avec justification\n21 salarié(s) ne sont pas inclus dans cette période (feuille de temps non verrouillée, rémunération manquante…)."
+      }
+    },
+    {
+      "name": "confirmation impossible sans justification",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "API : refus sans justification et avec une justification vide",
+      "ok": true,
+      "detail": {
+        "s": [
+          422,
+          422
+        ]
+      }
+    },
+    {
+      "name": "validation d’une période avec justification (interface)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "période déjà validée : refus",
+      "ok": true,
+      "detail": {
+        "s": 422
+      }
+    },
+    {
+      "name": "export après validation",
+      "ok": true,
+      "detail": {
+        "s": 200
+      }
+    },
+    {
+      "name": "anomalie de calcul : bouton Valider désactivé et motif affiché",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "API : anomalie de calcul bloquante refusée même avec justification",
+      "ok": true,
+      "detail": {
+        "s": 422,
+        "m": "Cannot validate: 1 calculation(s) have blocking anomalies."
+      }
+    },
+    {
+      "name": "ligne de paie : panneau ouvert, provenance affichée",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "totaux : net à payer affiché (plus de « — »)",
+      "ok": true,
+      "detail": {
+        "net": "2 100,00 € Brut total 1 643,88 € Net à payer 2 901,99 € Coût employeur 21 Anomalies"
+      }
+    },
+    {
+      "name": "DSN : identité employeur incomplète → refus expliqué, aucun fichier",
+      "ok": true,
+      "detail": {
+        "s": 422,
+        "m": "L'identité de l'employeur requise par la DSN est incomplète ou invalide (SIRET, code NAF, adresse, c"
+      }
+    },
+    {
+      "name": "DSN : contrôle des données salariés → brouillon avec erreurs explicites, rien de transmis",
+      "ok": true,
+      "detail": {
+        "s": 422,
+        "st": "draft",
+        "m": "DSN validation failed with 7 error(s). Declaration saved as draft (ID: 3). Errors: [\"Employee Paie93728 Paul: missing ma"
+      }
+    },
+    {
+      "name": "DSN : transmission présentée comme désactivée, libellés accentués",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Semaine : actions dans l’en-tête (Nouveau créneau, Préparer, Plus)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Semaine : navigation",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Jour : français, ouverture à 6 h, actions présentes",
+      "ok": true,
+      "detail": {
+        "head": "\t\nmercredi\n\n\nJournée\n\t\n\n\n\n00 H\n\t\n\t\n\n01 H\n\t\n\t\n\n02 H\n\t\n\t\n\n03 H"
+      }
+    },
+    {
+      "name": "Jour : navigation",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Postes : jours repliables + filtre, ou état vide utile (aucun besoin configuré)",
+      "ok": true,
+      "detail": {
+        "open": 0,
+        "empty": true
+      }
+    },
+    {
+      "name": "Mois : grille affichée",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "Mois mobile : pas de débordement",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "création (interface) et modification d’un créneau",
+      "ok": true,
+      "detail": {
+        "created": 6699,
+        "s": 200
+      }
+    },
+    {
+      "name": "dossier d’embauche ouvert sur le poste",
+      "ok": true,
+      "detail": {
+        "s": 201
+      }
+    },
+    {
+      "name": "fiche poste : utilisation (personnes + embauches)",
+      "ok": true,
+      "detail": {
+        "usage": "Utilisation du poste Où ce poste est utilisé aujourd'hui. 1 collaborateur(s) affecté(s) Voir les personnes et l'état de leur dossier Embauches en cours sur ce p"
+      }
+    },
+    {
+      "name": "lien vers le dossier d’embauche",
+      "ok": true,
+      "detail": "http://127.0.0.1:8821/company/workforce/hiring/18"
+    },
+    {
+      "name": "présences : liste et filtres",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "types de congés : alias « types » (plus de page vide)",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "type système : modification refusée (règle existante)",
+      "ok": true,
+      "detail": {
+        "s": 422
+      }
+    },
+    {
+      "name": "création et modification autorisées d’un type personnalisé",
+      "ok": true,
+      "detail": {
+        "s": [
+          201,
+          200
+        ]
+      }
+    },
+    {
+      "name": "espace salarié mobile : onglets libellés",
+      "ok": true,
+      "detail": {
+        "labels": [
+          "Aperçu",
+          "Mes documents",
+          "Mes bulletins"
+        ]
+      }
+    },
+    {
+      "name": "chauffeur : modification des types de congés refusée",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "chauffeur : refus GET /workforce/payroll",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "chauffeur : refus GET /workforce/onboarding-files",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "chauffeur : refus GET /workforce/dsn",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "chauffeur : refus POST /workforce/payroll/27/validate",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/onboarding-files?job_role_id=1",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/dsn",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    },
+    {
+      "name": "autre société refusée /workforce/payroll/27",
+      "ok": true,
+      "detail": {
+        "s": 403
+      }
+    }
+  ],
+  "run": 27
+}
