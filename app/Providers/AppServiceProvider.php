@@ -29,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // ADR-830 : unnamed `throttle:N,M` limits its own route. Bound in the container (not as an alias) so the
+        // middleware keeps its priority slot and `withoutMiddleware(ThrottleRequests::class)` still disables it.
+        $this->app->bind(\Illuminate\Routing\Middleware\ThrottleRequests::class, \App\Http\Middleware\RouteScopedThrottleRequests::class);
+
         $this->app->singleton(BillingManager::class);
 
         $this->app->bind(BillingProvider::class, function ($app) {
