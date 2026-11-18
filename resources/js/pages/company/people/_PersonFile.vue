@@ -1,4 +1,5 @@
 <script setup>
+import { displayLocale } from '@/utils/datetime'
 // ADR-753 (Phase 1) + ADR-768 (M7 LOT 2) — fiche Collaborateur UNIFIÉE et OPÉRATIONNELLE (Core).
 // Un seul parcours pour gérer une personne : identité, accès & rôle, emploi, contrat, planning,
 // temps, congés, documents, bulletins, historique. Aucun moteur reconstruit : chaque section
@@ -549,7 +550,7 @@ const requestMissing = async () => {
                       >
                         <div class="d-flex justify-space-between gap-2 flex-wrap">
                           <span class="text-body-2 font-weight-medium">{{ historyLabel(e.action) }}</span>
-                          <span class="text-caption text-medium-emphasis">{{ new Date(e.created_at).toLocaleString('fr-FR') }}</span>
+                          <span class="text-caption text-medium-emphasis">{{ new Date(e.created_at).toLocaleString(displayLocale()) }}</span>
                         </div>
                         <div class="text-caption text-medium-emphasis">
                           {{ te(`people.historyBy.${e.actor_type}`) ? t(`people.historyBy.${e.actor_type}`) : e.actor_type }}

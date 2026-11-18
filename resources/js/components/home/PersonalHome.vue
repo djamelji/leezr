@@ -1,4 +1,5 @@
 <script setup>
+import { displayLocale } from '@/utils/datetime'
 // ADR-751 (P3) — Accueil OPÉRATIONNEL de l'employé `/home`. PAS une copie du dashboard de
 // gestion `/dashboard` : orienté ACTION (« que dois-je faire maintenant ? »). Composition
 // ADAPTATIVE par modules + capacités + données RÉELLES (self-service, tenant-scoped). La
@@ -36,7 +37,7 @@ const canDeliveries = computed(() => canModule('logistics_shipments') && can('sh
 const isEmployee = computed(() => !!clock.employee)
 
 const firstName = computed(() => auth.user?.first_name || auth.user?.name?.split(' ')?.[0] || '')
-const todayLabel = computed(() => new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))
+const todayLabel = computed(() => new Date().toLocaleDateString(displayLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))
 
 // ── Pointage (réutilise le store self-service — serveur = source de vérité) ──
 const busy = ref(false)
@@ -61,7 +62,7 @@ const fmtHM = sec => {
 
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`
 }
-const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''
+const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' }) : ''
 const relDay = iso => {
   if (!iso) return ''
   const d = new Date(iso); const today = new Date()
@@ -69,7 +70,7 @@ const relDay = iso => {
   if (diff === 0) return t('employeeHome.today')
   if (diff === 1) return t('employeeHome.tomorrow')
 
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(displayLocale(), { weekday: 'long', day: 'numeric', month: 'short' })
 }
 
 // ── Cartes d'action (compteurs réels, liens vers l'outil concerné) ──

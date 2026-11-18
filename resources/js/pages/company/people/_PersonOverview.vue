@@ -5,7 +5,7 @@
 import MoneyDisplay from '@/core/components/MoneyDisplay.vue'
 import { usePersonStore } from '@/modules/company/people/person.store'
 import { useCan } from '@/composables/useCan'
-import { formatDate } from '@/utils/datetime'
+import { displayLocale, formatDate } from '@/utils/datetime'
 
 defineProps({
   accountMeta: { type: Object, required: true },
@@ -40,7 +40,7 @@ const doneCount = computed(() => steps.value.filter(s => s.done).length)
 // ADR-822 — « Au quotidien » : une ligne par fonction RÉELLEMENT disponible (le serveur n'envoie
 // planning / time / leave / documents que si le module est actif ET la section autorisée).
 const has = key => (store.sections || []).includes(key)
-const hm = iso => (iso ? new Date(iso).toLocaleTimeString(locale.value, { hour: '2-digit', minute: '2-digit' }) : '')
+const hm = iso => (iso ? new Date(iso).toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' }) : '')
 const daily = computed(() => {
   const e = emp.value
   const rows = []

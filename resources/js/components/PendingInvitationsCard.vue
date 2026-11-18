@@ -1,4 +1,5 @@
 <script setup>
+import { displayLocale } from '@/utils/datetime'
 // M7 LOT 2 — invitations en attente de l'utilisateur CONNECTÉ (compte pré-existant invité par une
 // entreprise). Rien n'est activé tant que la personne n'a pas accepté elle-même. Endpoints hors
 // contexte company (`/my-invitations`). Ne rend rien s'il n'y a aucune invitation (mode bandeau).
@@ -131,7 +132,7 @@ onMounted(load)
           </div>
           <div class="text-caption text-medium-emphasis">
             {{ t('invitations.noAccessUntilAccepted') }}
-            <span v-if="inv.expires_at">{{ t('invitations.validUntil', { date: new Date(inv.expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }) }}</span>
+            <span v-if="inv.expires_at">{{ t('invitations.validUntil', { date: new Date(inv.expires_at).toLocaleDateString(displayLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) }) }}</span>
           </div>
         </div>
         <div class="d-flex gap-2">

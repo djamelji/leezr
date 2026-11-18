@@ -1,4 +1,5 @@
 <script setup>
+import { displayLocale } from '@/utils/datetime'
 // ADR-768 (M7 LOT 2) — onglet « Accès & autorisations » de la fiche unifiée. Toutes les actions
 // appellent les endpoints sécurisés existants (MembershipSecurityPolicy, GlobalIdentityPolicy) :
 // rôle, suspension / réactivation, retrait, relance d'invitation, identifiants. L'affichage suit
@@ -63,8 +64,8 @@ const restore = () => run('restore', () => store.restoreAccess(), 'people.access
 
 // M7 LOT 3 — état RÉEL de l'invitation (envoi de l'e-mail, échéance), fourni par le serveur.
 const invitation = computed(() => account.value.invitation || null)
-const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '')
-const fmtDateTime = iso => (iso ? new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
+const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString(displayLocale(), { day: 'numeric', month: 'long', year: 'numeric' }) : '')
+const fmtDateTime = iso => (iso ? new Date(iso).toLocaleString(displayLocale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
 
 // Relance : le serveur renvoie l'issue réelle de l'envoi — jamais de « envoyé » si l'e-mail a échoué.
 const resend = async () => {

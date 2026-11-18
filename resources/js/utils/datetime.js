@@ -1,4 +1,23 @@
 import { useWorldStore } from '@/core/stores/world'
+import { getI18n } from '@/plugins/i18n'
+
+/**
+ * ADR-823 — locale used to format dates : the market locale (fr-FR, en-GB…) gives the regional conventions,
+ * but the LANGUAGE follows the interface. A user who chose English in a French company reads « Nov 18, 2026 »,
+ * not « 18 nov. 2026 ». Same i18n source as the rest of the interface (no third localisation logic).
+ */
+export function displayLocale() {
+  const world = useWorldStore()
+  const market = world.locale || 'en-US'
+  let ui = null
+  try { ui = String(getI18n().global.locale.value || '').slice(0, 2) }
+  catch { ui = null }
+  if (!ui || market.toLowerCase().startsWith(ui))
+    return market
+  const region = market.split('-')[1]
+
+  return region ? `${ui}-${region}` : ui
+}
 
 /**
  * Format an ISO date string to a human-readable date/time string.
@@ -15,7 +34,7 @@ export function formatDateTime(isoString, { locale, timeZone } = {}) {
 
   const world = useWorldStore()
 
-  return new Intl.DateTimeFormat(locale || world.locale, {
+  return new Intl.DateTimeFormat(locale || displayLocale(), {
     timeZone: timeZone || world.timezone,
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -37,7 +56,7 @@ export function formatDate(isoString, { locale, timeZone } = {}) {
 
   const world = useWorldStore()
 
-  return new Intl.DateTimeFormat(locale || world.locale, {
+  return new Intl.DateTimeFormat(locale || displayLocale(), {
     timeZone: timeZone || world.timezone,
     dateStyle: 'medium',
   }).format(new Date(isoString))
