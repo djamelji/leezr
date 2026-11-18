@@ -1,3 +1,8 @@
+<script>
+// ADR-825 : demande d'ouverture partagée entre instances (voir plus bas)
+let campaignOpenRequested = 0 // horodatage de la demande (0 = aucune)
+</script>
+
 <script setup>
 // ADR-761 (DMS M4) — campagnes documentaires collectives : liste, création (type + ciblage +
 // prévisualisation réelle + échéance + message), suivi (partition + progression).
@@ -87,13 +92,21 @@ onMounted(fetchAll)
 // ADR-778 (UX3) : « Demande collective » du menu Nouveau ouvre directement la création.
 const route = useRoute()
 const router = useRouter()
+// ADR-825 : la page Documents affiche son contenu, puis un squelette pendant son chargement, puis à nouveau le
+// contenu : ce composant est monté, démonté puis remonté. La demande « ?new=campaign » consommée par la
+// première instance était perdue (lien « Demande collective » sans effet). Elle est donc mémorisée au
+// niveau du module et honorée par l'instance qui reste affichée.
 watch(() => route.query.new, v => {
   if (v !== 'campaign') return
-  drawer.value = true
+  campaignOpenRequested = Date.now()
   const { new: _, ...query } = route.query
 
   router.replace({ query })
 }, { immediate: true })
+// Honorée seulement si récente : quitter la page sans fermer ne rouvre pas le tiroir à la visite suivante.
+onMounted(() => { if (campaignOpenRequested && Date.now() - campaignOpenRequested < 15000) drawer.value = true })
+// La demande ne retombe que lorsque l'utilisateur ferme le tiroir (un démontage ne la consomme pas).
+watch(drawer, open => { if (!open) campaignOpenRequested = 0 })
 </script>
 
 <template>
@@ -162,11 +175,15 @@ watch(() => route.query.new, v => {
     </VCardText>
 
     <!-- Drawer création -->
+    <!-- ADR-825 : disable-route-watcher — ouvert par ?new=campaign puis l'adresse est nettoyée : sans cela Vuetify
+         refermait le tiroir temporaire à ce changement de route (même défaut que la ligne de paie, ADR-824). -->
     <VNavigationDrawer
       v-model="drawer"
       temporary
+      disable-route-watcher
       location="end"
       width="440"
+      data-test="campaign-drawer"
     >
       <div class="pa-5">
         <h5 class="text-h5 mb-4">

@@ -259,6 +259,7 @@ onMounted(async () => {
   if (lineParam) {
     const item = store.currentRunLines.find(l => String(l.id) === String(lineParam))
     if (item) openLineDetail(item)
+    else { const { line: _, ...q } = route.query; router.replace({ query: q }) } // ADR-825 : ligne inconnue → adresse nettoyée
   }
 })
 onBeforeUnmount(() => store.clearCurrentRun())

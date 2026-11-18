@@ -29,7 +29,10 @@ export function useAsyncAction(asyncFn, options = {}) {
 
   const data = ref(initialData)
   const error = ref(null)
-  const isLoading = ref(false)
+  // ADR-825 : avec `immediate`, l'état est « en chargement » dès le départ. Sinon le contenu s'affichait un
+  // instant puis le squelette le remplaçait (contenu démonté puis remonté : un tiroir ouvert par l'adresse se
+  // perdait, cf. Documents › Campagnes).
+  const isLoading = ref(immediate)
   let lastArgs = []
 
   const isError = computed(() => error.value !== null)
