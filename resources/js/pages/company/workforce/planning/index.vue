@@ -1961,18 +1961,40 @@ const submitShift = async () => {
       notes: shiftFormData.value.notes || null,
     }
 
-    if (isShiftEditMode.value) {
-      await store.updateShift(editingShift.value.id, payload)
-      toast(t('planning.shiftUpdated'), 'success')
-    } else {
-      await store.createShift(payload)
-      toast(t('planning.shiftCreated'), 'success')
+    const editing = isShiftEditMode.value
+    const shiftId = editingShift.value?.id
+    const successMsg = t(editing ? 'planning.shiftUpdated' : 'planning.shiftCreated')
+    // ADR-831 — the shift drawer follows the SAME over-staffing confirmation as the grid writes (Lot 4B1) : the
+    // server refuses (422, nothing written) and returns a signature ; the manager confirms in the existing dialog
+    // and the write is replayed WITH that signature. Before, the drawer only showed the refusal as an error toast.
+    const write = (ack = null, reason = null) => {
+      const body = ack ? { ...payload, overstaffing_ack: ack, overstaffing_reason: reason } : payload
+
+      return editing ? store.updateShift(shiftId, body) : store.createShift(body)
+    }
+    const done = async () => {
+      toast(successMsg, 'success')
+      isShiftDrawerOpen.value = false
+      resetShiftForm()
+      fetchWeekData()
+      calRef.value?.refetch?.() // ADR-779 : la vue Jour montre aussitôt le créneau créé/modifié
     }
 
-    isShiftDrawerOpen.value = false
-    resetShiftForm()
-    fetchWeekData()
-    calRef.value?.refetch?.() // ADR-779 : la vue Jour montre aussitôt le créneau créé/modifié
+    try {
+      await write()
+    } catch (e) {
+      if (!isOverstaffingError(e)) throw e
+      overstaffingInfo.value = overstaffingPayload(e)
+      overstaffingReason.value = ''
+      overstaffingRetry = async (ack, reason) => {
+        await write(ack, reason)
+        await done()
+      }
+      overstaffingDialog.value = true
+
+      return
+    }
+    await done()
   } catch (error) {
     toast(shiftErrorMessage(error.data?.message || error.response?._data?.message), 'error')
   } finally {
