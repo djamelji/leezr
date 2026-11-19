@@ -1,227 +1,239 @@
 # Leezr 4.0 RC2 — Plan de synchronisation du DEV distant (dev.leezr.com)
 
-> **Audit et préparation uniquement.** Aucun push, aucun fetch/pull, aucun reset, aucune connexion distante, aucun
-> déploiement n'ont été effectués. Tout ce qui concerne le serveur est **à vérifier** avec les commandes en lecture
-> seule de la section 3 ; rien n'est déduit des références locales au-delà de ce qu'elles prouvent.
+> **Audit et préparation uniquement** (révisé le 2026-11-19, mission « audit pré-déploiement »). Aucun push, aucun
+> fetch/pull, aucun reset, aucune connexion SSH, aucune migration ni seeder distants, aucun déploiement.
 > DEV distant ≠ production : `dev` → `web3` (`dev.leezr.com`, base `c1leezrdev`) ; `main` → `web2` (`leezr.com`).
+> Outils prêts : `docs/bmad/leezr-4-0/dev-sync/` — `remote-audit.sh` (R1–R14, lecture seule), `remote-backup.sh`
+> (S1–S2), `clone-test.sh` (S3, poste local), `post-deploy-recette.md` (recette courte).
 
-## 0. Point capital
+## 0. Tableau de bord
 
-**Pousser `dev` = déployer.** `.github/workflows/deploy.yml` se déclenche sur tout push vers `dev` (et `main`) :
-build sur GitHub Actions, envoi de l'artefact, puis `deploy/deploy_release.sh` sur `web3` (migrations, workers,
-caches, bascule du lien `current`). Il n'existe pas de « push sans déploiement » sur cette branche. Le workflow
-n'exécute **aucun test** avant de déployer.
+| Statut | Éléments |
+|---|---|
+| **Vérifié (local)** | état Git ; contenu des 212 commits ; chaîne de migrations depuis l'état exact d'`origin/dev` (y compris l'échec historique `2026_10_30_150000`) → 347/347, schéma identique ; workflow et script de déploiement lus ligne à ligne ; effets réels de `SystemSeeder` (audit du code + exécution sur clone simulé) ; trois scripts exécutés localement (audit : aucune fuite de secret ; clone : vert) ; aucune écriture sur le DEV local (journal binaire) |
+| **Attend l'accès distant (lecture seule)** | R1–R14 : révision et dernier déploiement, `APP_ENV`, migrations, PHP, files et workers, planificateur, FPM, Redis, variables, stockage, sauvegardes, temps réel, signatures échues, catalogue Platform éventuellement édité |
+| **Attend une sauvegarde** | S1 base `c1leezrdev`, S2 fichiers + `.env`, S4 copie hors serveur |
+| **Attend un clone** | S3 : restauration d'essai, migrations sur **données réelles** du DEV distant, `SystemSeeder` avec différences exactes, `--dry-run` des signatures |
+| **Exécutable dès autorisation** | `remote-audit.sh`, puis `remote-backup.sh`, puis `clone-test.sh` (dans cet ordre) |
+| **Bloquant avant le push** | (1) R1–R14 relevés ; (2) S1/S2 vérifiés et rapatriés ; (3) S3 vert ; (4) arbitrages SystemSeeder (§5) ; (5) `fetch` autorisé et `origin/dev` ancêtre de `dev` ; (6) `APP_ENV` confirmé ; (7) autorisation explicite du push = déploiement |
 
 ## 1. État Git local
 
 | Élément | Valeur |
 |---|---|
-| Branche | `dev` |
-| HEAD | `17f5178a` (docs ADR-831, 2026-11-19) |
-| `origin/dev` (référence locale) | `459a7d3c` — mise à jour **par push** le 2026-11-09 20:13 (reflog) |
-| Avance / retard | **212 commits en avance, 0 en retard** ; `origin/dev` est ancêtre de `dev` → push en **avance rapide** |
-| Dernier fetch | 2026-11-08 (`FETCH_HEAD`) |
-| `main` local | = `origin/main` = `7d49e784` (non concerné) |
-| Arbre de travail | propre hors fichiers protégés : `CLAUDE.md`, `components.d.ts`, `typed-router.d.ts` (modifiés), `docs/bmad/DMS-ARCHITECTURE.md` (non suivi), 14 captures `docs/bmad/ux2-777` (modifiées) — **à préserver, ne pas commiter** |
+| Branche / HEAD | `dev` / `355a8c18` (plan initial ; ce document en ajoute un) |
+| `origin/dev` (référence locale) | `459a7d3c`, mise à jour **par push** le 2026-11-09 20:13 ; dernier fetch : 2026-11-08 |
+| Avance / retard | **214 commits en avance (212 RC2 + 2 commits de plan), 0 en retard** ; `origin/dev` ancêtre de `dev` → avance rapide |
+| `main` | = `origin/main` = `7d49e784` (non concerné) |
+| Fichiers à préserver, ne pas commiter | `CLAUDE.md`, `components.d.ts`, `typed-router.d.ts` (modifiés), `docs/bmad/DMS-ARCHITECTURE.md` (non suivi), 14 captures `docs/bmad/ux2-777` |
 
-Limite : sans fetch, rien ne prouve que `origin/dev` n'a pas avancé depuis le 2026-11-09 (autre poste, interface
-GitHub). Si c'est le cas, le push sera **refusé** (non fast-forward) : ne jamais forcer ; faire constater la
-divergence d'abord (§7, étape 1).
+Sans fetch, rien ne prouve que `origin/dev` n'a pas avancé : en cas de divergence le push est refusé ; jamais de `--force`.
 
 ## 2. Commits à synchroniser
 
-212 commits, ADR-475 → ADR-831 (premier : `ef8803b6` ADR-748b, 2026-11-09 ; dernier : `17f5178a`). Contenu majeur :
-DMS M0→M6, M7 (consolidation Company), L3→L7 (presets versionnés, contributions, champs salarié, onboarding,
-JobDomain), ADR-800→824 (rationalisation, assistants modules, inscription Logistique, refonte Company 2.0/3.x),
-3.5→4.0 RC2 (gardes de recette, SSE/polling, relances à une tentative par échéance, limiteurs par route,
-qualification E2E).
+ADR-748b → ADR-831 : DMS M0→M6, M7, L3→L7, ADR-800→824, 3.5→4.0 RC2. Exploitation : **44 migrations ajoutées, 1
+modifiée** ; `composer.lock` et `pnpm-lock.yaml` inchangés ; nouvelles clés d'environnement toutes avec défaut sûr
+(`BILLING_ASYNC_QUEUES_ENABLED=false`, `REALTIME_MAX_CONCURRENT_STREAMS=0`, `DOCUMENT_SCANNER=none`,
+`SIGNATURE_EXTERNAL_ENABLED=false`, `ONBOARDING_RETENTION_AUTO_APPLY=false`, `JOBDOMAIN_VERSIONED_INIT=true`…) ;
+**6 nouvelles tâches planifiées** : `workforce:signature-expire` (horaire), `members:invitations-expire` (horaire,
+trace), `onboarding:expire` (horaire), `onboarding:scan-uploads` (10 min), `onboarding:retention` (03:30, sans
+`--apply`), `referrals:purge` (03:40). Seule `signature-expire` modifie des données existantes (demandes échues →
+expirées, liens révoqués) : mesurée par R14 et par le clone.
 
-Changements d'exploitation à connaître :
+## 3. Audit distant (LOT 1) — `remote-audit.sh`
 
-| Sujet | Changement |
+**Accès nécessaire** : session SSH avec le **compte shell ISPConfig propre au site web3** (sans `sudo`, droits
+limités au site), clé dédiée à cet audit. **Ne pas utiliser** l'identité de déploiement CI (`secrets.VPS_USER`),
+partagée avec la production et capable de `sudo` (constat du 2026-11-08). Si ce compte ne peut pas lire
+`/etc/php/*/fpm/pool.d` ou `/etc/cron.d`, R7/R8 indiquent « illisible » : relevé via le panneau ISPConfig.
+
+**Exécution** (une seule commande, sortie à rapatrier) :
+`bash remote-audit.sh > remote-audit-<horodatage>.txt 2>&1`
+
+**Revue ligne à ligne** :
+
+| Contrôle | Commandes | Lecture seule | Secret | Job / config | État vérifiable obtenu |
+|---|---|---|---|---|---|
+| R1 révision | `readlink`, `grep APP_BUILD_VERSION`, `ls releases` | oui | non (version) | non | release active, SHA, releases de retour |
+| R2 déploiement | `tail deploy.log` filtré (`password/secret/token/key=/credential` exclus) | oui | filtré | non | succès/échec du 09/11 |
+| R3 environnement | `artisan config:show app.env/app.debug/app.url` | oui | non | non | `production` ou non (conséquences §5, §8) |
+| R4 migrations | `artisan migrate:status` ; SQL `migrations`, index et colonnes de signature | oui (`SELECT`, session `READ ONLY`) | non | non | en attente ; état 1/2/3 de la migration modifiée |
+| R5 PHP | `php -v`, `php -m`, `command -v gs tesseract convert` | oui | non | non | version, extensions, outils |
+| R6 files | `systemctl list-units/cat` (sans `sudo`), `config:show queue.default`, SQL `jobs`/`failed_jobs` par file | oui | non (`ExecStart` sans secret) | non (aucun `queue:*` exécuté) | workers, files `billing*` vides |
+| R7 planificateur | `crontab -l`, `/etc/cron.d`, `systemctl list-units leezr-scheduler*`, logs scheduler | oui | non | non | source unique cron |
+| R8 FPM | lecture du pool, `nproc`, `free` | oui | non | non | `pm.max_children` (profil polling maintenu) |
+| R9 Redis/cache | `config:show` préfixes, client, cache, session | oui | non (préfixes) | non | isolation web2/web3 |
+| R10 variables | **présence** de 21 clés ; valeurs de 8 clés non secrètes | oui | non | non | configuration à compléter |
+| R11 stockage | `df`, `du`, `ls -ld` | oui | non | non | place pour release + sauvegarde |
+| R12 sauvegardes | `ls shared/backups` | oui | non | non | sauvegardes existantes |
+| R13 temps réel | `config:show realtime.*` | oui | non | non | polling ou SSE |
+| R14 signatures échues | SQL `COUNT(*)` équivalent au `--dry-run` (la commande n'existe pas dans la version en ligne) | oui | non | non | volume que la tâche horaire expirera |
+| Référence recette | `COUNT(*)` de 23 tables ; plans, métiers (empreinte SHA2 des rôles), marchés, presets publiés | oui | non (aucune donnée personnelle) | non | base de comparaison après déploiement ; détection d'éditions Platform |
+
+Garanties techniques : identifiants DB écrits dans un fichier temporaire 600 supprimé à la sortie (jamais en argument
+ni à l'écran) ; aucune commande artisan d'écriture ; effet de bord possible : une ligne de journal applicatif.
+**Validation locale** : exécuté contre une arborescence simulée et la base DEV locale → sortie complète, aucune
+valeur de `APP_KEY`, `DB_PASSWORD`, `MAIL_PASSWORD` retrouvée dans la sortie ; deux corrections faites
+(lecture de `config:show`, `MD5` indisponible → `SHA2`).
+
+**Rapport attendu** (à reporter dans ce document) : SHA en ligne et date ; `APP_ENV` ; nombre de migrations en
+attente et état de `2026_10_30_150000` ; workers actifs ; source du planificateur ; `pm.max_children` ; préfixes
+Redis ; clés absentes ; espace libre ; sauvegardes existantes ; `REALTIME_DRIVER` ; demandes échues ; comptages
+de référence ; plans/métiers/marchés tels qu'en base.
+
+## 4. Processus de déploiement (LOT 2)
+
+| Point | Constat (`.github/workflows/deploy.yml`, `deploy/deploy_release.sh`, `deploy/rollback.sh`) |
 |---|---|
-| Migrations | **44 ajoutées, 1 modifiée** (`2026_10_30_150000_add_signer_identity_to_signers`) |
-| Dépendances | `composer.lock` et `pnpm-lock.yaml` **inchangés** ; `package.json` : script `test:js` seulement |
-| `.env.example` | `BILLING_ASYNC_QUEUES_ENABLED=false` |
-| Nouvelles clés (toutes avec défaut sûr) | `REALTIME_MAX_CONCURRENT_STREAMS` (0), `DOCUMENT_SCANNER` (`none`), `CLAMAV_SOCKET`, `DOCUMENT_SCANNER_TIMEOUT/MAX_ATTEMPTS`, `DOCUMENTS_GENERATED_DISK` (`local`), `JOBDOMAIN_VERSIONED_INIT` (`true`), `JOBDOMAIN_VERSIONED_INIT_JOBDOMAINS` (`*`), `JOBDOMAIN_LEGACY_EDITING` (`false`), `MEMBERS_INVITATION_TTL_DAYS` (14), `ONBOARDING_RETENTION_AUTO_APPLY` (`false`), `SIGNATURE_EXTERNAL_*` (désactivé), `WORKFORCE_EMPLOYEE_NUMBER_PREFIX` (`EMP-`) |
-| Tâches planifiées nouvelles | `workforce:signature-expire` (horaire), `members:invitations-expire` (horaire, trace d'audit), `onboarding:expire` (horaire), `onboarding:scan-uploads` (10 min), `onboarding:retention` (03:30, sans `--apply` par défaut), `referrals:purge` (03:40) |
-| Déploiement | `deploy/templates/leezr-queue-billing.service.example` (modèle seulement, non installé) |
-| Route | `/api/_recipe/identity` non enregistrée si `APP_ENV=production` ; 404 hors clone marqué sinon |
+| Déclenchement | **automatique** sur tout push vers `dev` (et `main`) ; file `deploy-dev` sans annulation ; **aucun test** dans le workflow |
+| Build (GitHub) | PHP 8.3, `composer install --no-dev`, Node 22, pnpm 10.28.1 `--frozen-lockfile`, build front, artefact `tar.gz` |
+| Cible | `web3` (`/var/www/clients/client1/web3`), contrôle `/up` après déploiement |
+| Étapes serveur | [0] dépendances système → [1] release `releases/<ts>_<sha>` → [2] artefact → [3] liens `shared/.env` et `shared/storage` → [4] `APP_BUILD_VERSION` → **[5] `migrate --force` (base partagée, AVANT la bascule)** → [5.5] `leezr:dev-bootstrap` (ignoré si `APP_ENV=production`) → [6/6.5] unités systemd `queue:work` `ai` et `default` réécrites et activées → [6.7] suppression d'un planificateur systemd redondant → [7] caches + `optimize` → [8] contrôle de santé → **[9] bascule atomique** de `current` et du webroot, `reload` PHP-FPM, `restart` des deux workers, purge des releases au-delà de 5 |
+| Migrations | exécutées sur la base partagée **avant** la bascule : pendant la fenêtre, l'ancien code tourne sur le nouveau schéma (compatible : migrations additives) ; si le contrôle de santé échoue, l'ancienne release reste en ligne **mais les migrations restent appliquées** |
+| Services | PHP-FPM rechargé ; workers `ai` et `default` redémarrés ; aucun worker `billing` (modèle seulement) |
+| Planificateur | non touché : le cron ISPConfig appelle `current/artisan schedule:run` → les **nouvelles tâches démarrent dès la bascule** |
+| Sauvegarde | **aucune en DEV** (la sauvegarde vérifiée ADR-737 est réservée à `main`) |
+| Registres | **non resynchronisés en DEV** (`SystemSeeder` réservé à `main`) |
+| Retour arrière | `rollback.sh` : bascule du lien vers une release précédente + `reload` FPM ; **ne redémarre pas les workers** ; suggère `migrate:rollback` (à proscrire, §7) |
+| Suspendre le déclenchement | (a) **commit de tête contenant `[skip ci]`** : GitHub n'exécute pas le workflow pour ce push → code poussé sans déploiement ; (b) désactiver le workflow (`gh workflow disable "Build & Deploy"` ou interface Actions) — **attention : suspend aussi `main`** ; (c) ne pas pousser. Aucune modification du workflow faite ici. |
 
-## 3. État distant connu et informations manquantes
+## 5. `SystemSeeder` (LOT 3)
 
-Connu (notes et historique, **non vérifié aujourd'hui**) : dernier push `dev` = `459a7d3c` (2026-11-09) ; PHP 8.4
-sur le VPS (CI en 8.3) ; Redis via `predis` ; cron ISPConfig = source unique du planificateur (ADR-739) ;
-workers systemd namespacés par site (ADR-738) ; le DEV distant tournerait en `APP_ENV=production` (mention ADR,
-à confirmer) ; comptes SSH de déploiement sans `sudo`.
+### 5.1 Effets réels (audit du code)
 
-Inconnu — **à relever en lecture seule** (`APP=/var/www/clients/client1/web3`, `PHP=/usr/bin/php8.4`), commandes
-détaillées et interprétation : `docs/bmad/leezr-3-8/PRODUCTION-READONLY-CHECKS.md` en remplaçant `web2` par `web3`
-et `c1leezr` par `c1leezrdev` :
+| Composant | Écriture | Écrase une configuration existante ? |
+|---|---|---|
+| `PlatformSeeder` | `ModuleRegistry`, `JobdomainRegistry`, `DocumentTypeCatalog`, `PlatformPermissionCatalog` ; rôles `super_admin`/`admin` | **oui** : rôle Platform `admin` ← **toutes** les permissions Platform (`sync`) ; mot de passe admin jamais réécrit hors `local/testing` ; comptes de test seulement en `local/testing` ou `LEEZR_SEED_TEST_ADMINS` |
+| `PlanRegistry::sync` | `plans` | **oui : nom, description, prix mensuel/annuel, essai, limites** remis aux valeurs du code |
+| `ModuleRegistry::sync` | `platform_modules` | nom, description, ordre ; **activation globale préservée** |
+| `JobdomainRegistry::sync` | `jobdomains` | **oui : libellé, description, modules, champs, rôles recommandés, documents, presets** ; disponibilité commerciale préservée |
+| `CompanyPermissionCatalog::sync` | `company_permissions` | libellé, module, `is_admin` des clés existantes ; ajoute les nouvelles |
+| `FieldDefinitionCatalog`, `ModuleContributionCatalog` | définitions Platform (`company_id` nul), propositions modèles | n'impose rien aux sociétés |
+| `MarketRegistry::sync` | marchés, langues, statuts juridiques | **oui : devise, taux de TVA, locale, fuseau** ; actif/défaut préservés |
+| `NotificationTopicSeeder` | thèmes de notification | ajoute |
+| `ModuleProductConfigSeeder` | tarification des modules | **initialise seulement** (jamais d'écrasement) |
+| `PaymentModuleSeeder` | module interne, règle « manuel » | remet le module interne actif et la règle manuelle inactive ; Stripe et profils de paiement **seulement en `local/testing`** (appel API Stripe dans ce cas) |
+| `MarketRuleSetSeeder`, `ConventionCollectiveSeeder`, `WorkforcePayrollRuleSeeder` | règles de marché, conventions, règles de paie | **oui** si édités dans Platform (valeurs du code) |
+| Modèles de bulletins et de contrat | modèles Platform (`company_id` nul) | créés si absents / `updateOrCreate` par code+version |
 
-| # | Vérification | Commande (lecture seule) | Pourquoi |
+Données des sociétés existantes : **aucune écriture** hors `local/testing` (vérifié par le code et par le clone).
+Les définitions des plans, marchés, règles de paie et conventions **n'ont pas changé** depuis `origin/dev` : ces
+composants ne modifient donc quelque chose que si une **édition Platform** a eu lieu sur le DEV distant — c'est ce que
+détectent la section « catalogue » de R-audit et l'étape 5 du clone. Les définitions qui ont changé (métiers, manifestes
+de 27 modules → permissions, navigation) sont précisément ce que le DEV distant doit recevoir.
+
+Constat transversal (production comprise) : ce comportement s'applique **à chaque déploiement de production**, où
+`SystemSeeder` tourne systématiquement — toute édition Platform de plans, marchés ou métiers y serait remise aux
+valeurs du code. À traiter par une décision distincte (non modifié ici).
+
+### 5.2 Exécution sur clone (`clone-test.sh`, étape 5)
+
+Le script prend un instantané des tables de catalogue (**hors horodatages**) et des `CHECKSUM TABLE`, exécute
+`SystemSeeder` (`APP_ENV=production`, cache et mail en mémoire, files sur le clone, temps réel coupé), puis classe :
+- **KO** : table hors catalogue modifiée (donnée de société) ; valeur existante modifiée/retirée dans `plans`,
+  `markets`, `market_rule_sets`, `convention_collective_rules`, `platform_role_permission`, `platform_payment_method_rules` ;
+- **ARB** (à arbitrer avant exécution distante) : valeur existante remplacée dans `jobdomains`, `platform_modules`,
+  `company_permissions`, `field_definitions`, `document_types` ;
+- **OK** : inchangé ou ajouts seulement.
+
+**Exécution de validation** (clone simulé du DEV local, `leezr_clone_devsim831d`, 2026-11-19) : **vert** — aucune table
+hors catalogue modifiée ; plans, marchés, règles de paie, conventions, règles de paiement **inchangés** ; ajouts :
+4 permissions société (`workforce.view_all`, `workforce_referral.refer/review/manage`), module `workforce_referral`,
+thème de notification de parrainage, 2 permissions Platform pour le rôle `admin` ; **ARB** : `jobdomains` logistique —
+rôle **chauffeur recommandé** pour les nouvelles sociétés passant de `theme.full, members.team_view,
+settings.company_info, documents.access, shipments.delivery` à `theme.full, shipments.delivery` (moindre privilège,
+ADR-823 ; ne touche pas les rôles des sociétés existantes, sujet D-8). Le DEV local lui-même n'avait pas ces
+permissions et ce module : confirmation qu'aucun déploiement DEV ne resynchronise les catalogues.
+
+**Arbitrages requis avant `SystemSeeder` distant** : (1) accepter l'alignement du catalogue `jobdomains` sur le code ;
+(2) si le clone du DEV distant montre une édition Platform de plans/marchés/règles (KO) : décider de la conserver
+(alors ne pas lancer `SystemSeeder` complet, mais seulement `CompanyPermissionCatalog`, `ModuleRegistry`,
+`NotificationTopicSeeder` et `modules:sync-contributions`) ou de l'abandonner.
+
+## 6. Sauvegardes et clone (LOT 4)
+
+| # | Étape | Outil | Contrôle d'intégrité |
 |---|---|---|---|
-| R1 | Révision déployée | `readlink -f $APP/current` ; `grep '^APP_BUILD_VERSION=' $APP/shared/.env` ; `ls -1t $APP/releases \| head -3` | confirmer `459a7d3c` (ou autre) et l'existence d'une release de retour |
-| R2 | Dernier déploiement | `tail -60 $APP/shared/storage/logs/deploy.log` | savoir si le déploiement du 09/11 a réussi |
-| R3 | Environnement | `cd $APP/current && $PHP artisan config:show app.env` | `production` ⇒ `leezr:dev-bootstrap` ignoré, recettes refusées ; sinon voir §5 |
-| R4 | Migrations | `$PHP artisan migrate:status --no-ansi \| grep -c Pending` ; état de `2026_10_30_150000` et de la table `workforce_signature_enrollments` (requêtes §2 du document 3.8) | identifier l'état (1, 2 ou 3) de la migration modifiée |
-| R5 | PHP | `$PHP -v \| head -1` ; `$PHP -m \| grep -iE 'gd\|imagick\|zip\|intl\|bcmath\|pdo_mysql\|mbstring'` | compatibilité |
-| R6 | Files | `systemctl list-units 'leezr-queue-*' --all --no-pager` ; `$PHP artisan config:show queue.default` ; SQL `SELECT queue, COUNT(*) FROM jobs GROUP BY queue` et idem `failed_jobs` | aucun job `billing*` en attente |
-| R7 | Planificateur | `crontab -l 2>/dev/null \| grep schedule:run` ; `systemctl list-units 'leezr-scheduler*' --all --no-pager` | une seule source (cron) |
-| R8 | PHP-FPM | `grep -hE '^(pm\|pm\.max_children\|request_terminate_timeout)' /etc/php/8.4/fpm/pool.d/web3.conf` | profil polling recommandé tant que non mesuré |
-| R9 | Redis | `$PHP artisan config:show database.redis.options.prefix` ; `config:show cache.default` ; `config:show realtime.redis_prefix` | préfixes **différents** de `web2` |
-| R10 | Variables (présence) | boucle §8 du document 3.8 + `DOCUMENT_SCANNER JOBDOMAIN_VERSIONED_INIT MEMBERS_INVITATION_TTL_DAYS` | aucune valeur secrète affichée |
-| R11 | Stockage | `df -h $APP` ; `du -sh $APP/shared/storage` ; `ls -ld $APP/shared/storage/app/private` | place pour release + sauvegarde |
-| R12 | Sauvegardes | `ls -lt $APP/shared/backups 2>/dev/null \| head` | **le déploiement DEV ne sauvegarde pas la base** (§6) |
-| R13 | SSE / polling | `$PHP artisan config:show realtime.driver` ; `config:show realtime.max_concurrent_streams` | conserver polling (`null`) |
-| R14 | Signatures échues | `$PHP artisan workforce:signature-expire --dry-run` | compter ce que la nouvelle tâche horaire expirera après déploiement |
+| S1 | Dump `c1leezrdev` (routines, triggers, `--single-transaction`) | `remote-backup.sh` | `gzip -t` ; `CREATE TABLE` du dump = tables de la base ; marqueur `Dump completed` ; `sha256` ; comptages par table (`.counts.tsv`) |
+| S2 | `shared/storage/app` + copie `.env` (600) | `remote-backup.sh` | `tar -tzf` ; `sha256` |
+| S4 | Rapatriement sur le poste | `scp` (compte web3) | `shasum -a 256 -c` côté poste |
+| S3.1 | Restauration d'essai **hors serveur** dans un clone marqué `leezr_clone_devremote_*` | `clone-test.sh` étapes 1–2 | comptages identiques à `.counts.tsv` ; clone reconnu par la garde de recette |
+| S3.2 | Migrations RC2 sur le clone | étape 3 | `migrate` sans échec ; 0 en attente |
+| S3.3 | Schéma et données | étape 4 | colonnes et index identiques au schéma RC2 de référence ; **aucune table n'a perdu de lignes** |
+| S3.4 | `SystemSeeder` | étape 5 | §5.2 |
+| S3.5 | Tâches nouvelles | étape 6 | `signature-expire --dry-run` |
 
-## 4. Compatibilité des migrations
+`clone-test.sh` validé localement de bout en bout (4 exécutions, 3 corrections : lignes GTID ignorées à l'import,
+limite `GROUP_CONCAT`, horodatages exclus ; garde testée en `APP_ENV=local`). Clones de validation conservés :
+`leezr_clone_devsim831`, `…831b`, `…831c`, `…831d` (suppression soumise à autorisation).
 
-**Prouvé localement (2026-11-19)** sur une base jetable `leezr_audit831sync` :
-1. application des **303 migrations exactes d'`origin/dev`** (extraites par `git show`, sans checkout) : la version
-   historique de `2026_10_30_150000` échoue sur MySQL (`Identifier name … too long`) → état partiel reproduit
-   (table créée, index absent, migration non enregistrée) — c'est l'un des trois états possibles du DEV distant ;
-2. puis `migrate` du code RC2 : **61 migrations appliquées, 0 échec, 347/347 enregistrées**, index réparé
-   (`wf_sig_enroll_signer_created_idx`) ;
-3. schéma obtenu **identique** au DEV local (2 563 colonnes, index identiques).
+**Ce qu'une restauration de code n'annule pas** : les migrations. Elles s'exécutent avant la bascule ; un retour à
+l'ancienne release laisse le schéma RC2 en place. C'est sans risque ici (migrations additives, ancien code compatible) ;
+le retour des **données** n'est possible que par restauration de S1, sur décision humaine, avec perte des écritures
+postérieures.
 
-Analyse des 44 nouvelles migrations : additives (création de tables et colonnes, `->change()` vers nullable) ; les
-suppressions sont dans les `down()`. Écritures de données dans `up()` : remplissage de nouvelles colonnes (DMS sujets,
-`preparatory_at`), catalogue Platform (`jobdomains` logistique : rôles recommandés, `signup_available`,
-`allow_custom_fields`), nouvelle version publiée du preset RBAC logistique, ajout de permissions Platform
-(`insertOrIgnore`). **Aucune migration ne modifie les rôles ou permissions des sociétés existantes** (remédiation
-RBAC historique non appliquée, conformément à D-8).
-
-Reste à prouver : le passage sur les **données** du DEV distant → clone de `c1leezrdev` (§6, étape S3).
-
-## 5. Configurations nécessaires (DEV distant)
-
-| Clé | Valeur recommandée | Motif |
-|---|---|---|
-| `BILLING_ASYNC_QUEUES_ENABLED` | `false` | aucun worker `billing` ; `--async` refusé (ADR-828) |
-| `REALTIME_DRIVER` | `null` (polling, profil A) | capacité FPM non mesurée (D-10) |
-| `REDIS_PREFIX` / `CACHE_PREFIX` | propres à `web3`, différents de `web2` | isolation |
-| `QUEUE_CONNECTION` | inchangé (`database`) | workers existants |
-| `DOCUMENT_SCANNER` | `none` (défaut) **ou** `clamav` si installé | `none` = échec fermé : les dépôts d'onboarding restent en quarantaine (recette de l'onboarding candidat incomplète) ; `simulated` interdit hors DEV/tests |
-| `ONBOARDING_RETENTION_AUTO_APPLY` | `false` | pas de purge automatique |
-| `SIGNATURE_EXTERNAL_ENABLED` | `false` | aucun prestataire réel |
-| `JOBDOMAIN_VERSIONED_INIT` | `true` (défaut) | nouvelles sociétés initialisées par les presets publiés (ADR-820) |
-| `APP_ENV` | à confirmer (R3) | `production` : bootstrap DEV ignoré, gardes de recette actives |
-
-Après déploiement, sur un DEV distant existant, **les registres ne sont pas resynchronisés** : la branche DEV de
-`deploy_release.sh` ne lance pas `SystemSeeder` (seule la production le fait). Les nouvelles permissions,
-nouveaux modules et métiers des 212 commits n'apparaîtraient donc pas. Correction proposée (autorisation requise) :
-`php artisan db:seed --class=SystemSeeder --force` — idempotent, exécuté à chaque déploiement de **production** ;
-il ne réécrit jamais un mot de passe hors `local/testing`, ne crée les comptes de test qu'en `local/testing` ou avec
-`LEEZR_SEED_TEST_ADMINS`. À exécuter d'abord sur le clone S3 et comparer les tables des sociétés avant/après.
-
-Si `APP_ENV` n'est pas `production` : `leezr:dev-bootstrap` activera (idempotent) 7 modules Workforce sur
-`leezr-logistics` et marquera `workforce_contract/signature` disponibles en test — à accepter explicitement ou à
-éviter en confirmant `APP_ENV=production`.
-
-## 6. Sauvegardes à réaliser (avant tout push)
-
-Le déploiement DEV **ne sauvegarde pas** la base (la sauvegarde vérifiée ADR-737 ne concerne que `main`).
-
-| # | Sauvegarde | Commande indicative (sur `web3`, sans secret en ligne de commande) |
-|---|---|---|
-| S1 | Base `c1leezrdev` | `mysqldump --defaults-extra-file=<fichier 600 hors webroot> --single-transaction --quick --routines --no-tablespaces c1leezrdev \| gzip > $APP/shared/backups/pre-rc2_$(date -u +%Y%m%dT%H%M%SZ).sql.gz` puis `gzip -t`, `grep -c 'CREATE TABLE'`, marqueur `Dump completed` |
-| S2 | Fichiers | `tar czf $APP/shared/backups/pre-rc2-storage_<ts>.tgz -C $APP/shared storage/app` ; copie de `shared/.env` (chmod 600, hors webroot) |
-| S3 | Clone de test | restaurer S1 dans une base jetable (hors serveur public ou locale, marquée `leezr_clone_*`), y jouer `migrate`, `SystemSeeder`, `workforce:signature-expire --dry-run`, et comparer les comptages métier avant/après |
-| S4 | Copie hors serveur | rapatrier S1/S2 (chiffrés si possible) |
-
-## 7. Procédure de push (après autorisation)
-
-1. Constater l'état distant : `git fetch origin` (**autorisation requise**), puis `git log --oneline dev..origin/dev`
-   doit être vide et `git merge-base --is-ancestor origin/dev dev` vrai. Sinon : arrêt, analyse, aucun `--force`.
-2. Vérifier l'arbre : `git status` = fichiers protégés seulement ; ne pas les ajouter.
-3. `git push origin dev` (**déclenche le déploiement**, §8).
-4. Suivre GitHub Actions (build puis deploy) ; ne pas pousser autre chose avant la fin (file `deploy-dev`).
-
-Ne pas toucher `main` (production).
-
-## 8. Procédure de déploiement DEV distant
-
-Prérequis : R1–R14 relevés, S1–S4 faits et vérifiés, S3 vert, configuration §5 validée, fenêtre annoncée.
-
-Déroulé automatique (`deploy_release.sh`, branche `dev`) : dépendances système → release `releases/<ts>_<sha>` →
-artefact → liens `shared/.env` et `shared/storage` → `APP_BUILD_VERSION` → `migrate --force` (additif) →
-`leezr:dev-bootstrap` (ignoré si `production`) → workers AI et default (systemd namespacés) → suppression d'un
-éventuel planificateur systemd redondant → caches (`optimize`) → contrôle de santé **avant** bascule → bascule
-atomique de `current`. Tout échec avant la bascule laisse l'ancienne release en ligne.
-
-Étapes manuelles après bascule (autorisation requise) :
-1. `php artisan db:seed --class=SystemSeeder --force` (§5), si validé sur S3 ;
-2. `php artisan config:show billing.async_queues_enabled` → `false` ; `realtime.driver` → `null` ;
-3. `php artisan migrate:status --no-ansi | grep -c Pending` → 0 ;
-4. surveiller la première exécution des nouvelles tâches (`workforce:signature-expire` : comparer à R14).
-
-## 9. Smoke tests
-
-**Lecture seule** (aucune écriture hors sessions de connexion) :
-
-| Parcours | Contrôle |
-|---|---|
-| Santé | `/up` = 200 ; `APP_BUILD_VERSION` = `17f5178a` |
-| Platform | connexion ; tableau de bord sans 5xx ; JobDomains (logistique « proposé à l'inscription ») ; presets publiés présents (familles logistique : catalogue, planning, RBAC, exigences) ; modules et dépendances ; plans et droits commerciaux |
-| Company (compte existant) | connexion ; accueil `/home` ; Équipe (liste, fiche, rubriques) ; Planning (4 modes) ; Temps & pointages ; Absences ; Préparation de la paie (lecture) ; Expéditions et livraisons ; Documents |
-| Billing | onglets facturation sans erreur ; **aucun** paiement, aucune relance déclenchée |
-| RBAC | livreur : pas de paie collective, pas de section accès d'un collègue ; profil exploitation : listes limitées à son périmètre ; paie : seulement la paie |
-| Multi-tenant | changement de société : données et menus suivent ; `X-Company-Id` d'une société non membre → refus |
-| Temps réel | `/api/realtime/stream` : 401 JSON sans session, 204 avec session (polling) |
-| Journaux | aucune 5xx dans `storage/logs/laravel.log` ; `failed_jobs` stable |
-
-**Avec écritures — uniquement sur une société fictive dédiée** (créée pour la recette, jamais une société existante),
-après autorisation : onboarding Company (inscription Logistique) ; Équipe et embauche (collaborateur fictif, contrat
-brouillon) ; Planning (créneau, publication, confirmation de sureffectif) ; pointage (entrée/sortie) ; congés (demande
-puis approbation) ; préparation de paie (période sans calcul définitif) ; expéditions (création, affectation) ;
-documents (dépôt) ; Billing en sandbox sans moyen de paiement réel. Les commandes `e2e:*` restent refusées sur ce
-serveur (non marqué) : la recette passe par l'interface.
-
-Recette automatisée : **impossible sur le DEV distant par construction** (ADR-831 : la campagne exige un clone
-marqué). Elle a été faite localement (460/0/5) ; sur le serveur, la recette est manuelle ou par specs en lecture
-seule adaptées, sur autorisation distincte.
-
-## 10. Procédure de rollback
+## 7. Retour arrière
 
 | Situation | Action |
 |---|---|
-| Échec avant bascule | rien à faire : l'ancienne release reste active (vérifier `readlink -f current`) |
-| Régression applicative après bascule, migrations additives sans perte | `deploy/rollback.sh` (bascule du lien vers la release précédente) ; les colonnes et tables ajoutées restent (compatibles avec l'ancien code) |
-| Données dégradées | restauration de S1 sur **décision humaine** (perte des écritures postérieures au dump) |
-| Tâche planifiée indésirable | suspendre via l'écran Platform des tâches planifiées ou commenter la ligne de crontab, sans redéploiement |
-| Temps réel | rester/revenir en profil A : `REALTIME_DRIVER=null` puis `php artisan config:cache` |
+| Échec avant bascule | rien : ancienne release active (vérifier `readlink -f current`) ; migrations éventuellement appliquées, compatibles |
+| Régression applicative | `deploy/rollback.sh` **puis** redémarrer les workers `ai`/`default` du site (le script ne le fait pas) ; schéma conservé |
+| Données dégradées | restauration de S1 (décision humaine) |
+| Tâche planifiée indésirable | suspension depuis l'écran Platform des tâches planifiées ; sinon ligne de cron commentée (panneau ISPConfig) |
+| Temps réel | `REALTIME_DRIVER=null` + `config:cache` |
 
-Ne jamais lancer `leezr:dev-reset` ni `migrate:fresh` pour « réparer ».
+**Interdit** : `migrate:rollback` (les `down()` suppriment tables et colonnes avec leurs données), `migrate:fresh`,
+`leezr:dev-reset`.
 
-## 11. Risques résiduels
+## 8. Procédure (après autorisations)
+
+1. Autoriser et exécuter `remote-audit.sh` ; reporter le rapport (§3).
+2. Configuration : `BILLING_ASYNC_QUEUES_ENABLED=false`, `REALTIME_DRIVER=null`, préfixes Redis propres à web3,
+   `DOCUMENT_SCANNER` décidé ; `APP_ENV` confirmé (si différent de `production` : `leezr:dev-bootstrap` active 7 modules
+   Workforce sur `leezr-logistics` et `PaymentModuleSeeder` appellerait Stripe — à éviter).
+3. `remote-backup.sh` ; rapatriement S4.
+4. `clone-test.sh` sur le dump rapatrié → **vert** obligatoire ; arbitrages §5.2.
+5. `git fetch origin` autorisé ; `git merge-base --is-ancestor origin/dev dev` vrai ; `git log dev..origin/dev` vide.
+6. `git push origin dev` = déploiement (suivre GitHub Actions jusqu'à « DEPLOY OK »).
+7. Sur le serveur : `migrate:status` → 0 en attente ; `SystemSeeder` **ou** sous-ensemble décidé (§5.2).
+8. Recette `post-deploy-recette.md`.
+
+## 9. Recette après déploiement (LOT 5)
+
+`docs/bmad/leezr-4-0/dev-sync/post-deploy-recette.md` : P0 santé (5 contrôles), Platform A1–A8 (JobDomains, presets,
+modules, plans, sociétés, facturation, tâches), Company C1–C7, RBAC et isolation R1–R4 — **en lecture seule** ;
+écritures P1–P10 **uniquement** dans une société fictive dédiée créée pour la recette (inscription Logistique,
+onboarding, embauche, planning avec confirmation de sureffectif, pointage, congés, préparation de paie sans calcul
+définitif, expéditions, document, suspension finale). Aucun paiement réel ; aucune campagne E2E sur le serveur.
+
+## 10. Risques résiduels
 
 | Risque | Niveau | Traitement |
 |---|---|---|
-| `origin/dev` a pu avancer depuis le 09/11 | moyen | fetch autorisé + contrôle d'ascendance ; jamais de `--force` |
-| Le déploiement du 09/11 a pu échouer (état distant inconnu) | moyen | R1/R2 |
-| État de la migration `2026_10_30_150000` sur le DEV distant | faible | convergence prouvée localement pour l'état partiel ; R4 + S3 |
-| Pas de sauvegarde automatique en DEV | élevé si oublié | S1–S4 obligatoires |
-| Registres non resynchronisés en DEV | moyen | `SystemSeeder` après validation S3 |
-| `APP_ENV` du DEV distant différent de `production` | moyen | R3 ; conséquences §5 |
-| Nouvelles tâches planifiées agissant sur des données existantes (signatures échues) | faible | R14 ; données de recette, pré-lancement |
-| Scanner de documents `none` : dépôts d'onboarding en quarantaine | faible | décision : ClamAV (installation root via ISPConfig) ou accepter |
-| Workflow sans tests avant déploiement | faible | tests faits localement sur le même SHA |
-| Identité SSH partagée DEV/production (constat 2026-11-08) | moyen | séparer les clés de déploiement (hors de ce plan) |
+| `origin/dev` avancé depuis le 09/11 | moyen | étape 5 |
+| Déploiement du 09/11 échoué / état inconnu | moyen | R1/R2 |
+| Pas de sauvegarde automatique en DEV | élevé si oublié | S1–S4 bloquants |
+| Édition Platform écrasée par `SystemSeeder` | moyen | clone étape 5 ; sous-ensemble si KO |
+| Même écrasement à chaque déploiement de production | moyen | décision distincte |
+| `APP_ENV` ≠ `production` | moyen | R3 |
+| Migrations appliquées avant la bascule, non annulées par un retour de code | faible (additives) | S1 pour les données |
+| `rollback.sh` sans redémarrage des workers | faible | étape manuelle §7 |
+| Workflow sans tests | faible | tests faits localement sur le même SHA |
+| Identité SSH CI partagée DEV/production avec `sudo` | moyen | audit avec le compte du site ; séparation des clés à décider |
 
-## 12. Opérations nécessitant autorisation
+## 11. Opérations nécessitant autorisation
 
-1. **Lecture seule distante** : SSH sur `web3` pour R1–R14 (aucune écriture).
-2. **Sauvegardes** S1, S2, S4 sur le serveur (écritures dans `shared/backups`, hors données applicatives).
-3. **Clone de test** S3 (restauration du dump dans une base jetable, locale ou isolée).
-4. `git fetch origin` (constat de divergence).
-5. **`git push origin dev`** = déploiement automatique sur `dev.leezr.com`.
-6. `db:seed --class=SystemSeeder --force` après déploiement.
-7. Choix `DOCUMENT_SCANNER` (et installation ClamAV si retenu — opération root via ISPConfig).
-8. Recette avec écritures sur une société fictive dédiée.
-9. Toute restauration de S1 (rollback de données).
+1. SSH en lecture seule (compte web3) pour `remote-audit.sh`.
+2. `remote-backup.sh` (écritures dans `shared/backups` uniquement) et rapatriement.
+3. `clone-test.sh` sur le dump rapatrié (poste local, clone marqué).
+4. Arbitrages `SystemSeeder` (§5.2).
+5. `git fetch origin`.
+6. `git push origin dev` = déploiement automatique.
+7. `SystemSeeder` (ou sous-ensemble) sur le DEV distant.
+8. Choix `DOCUMENT_SCANNER` (ClamAV = opération root via ISPConfig).
+9. Recette avec écritures sur la société fictive.
+10. Toute restauration de S1.
+11. Suppression des clones locaux (`leezr_audit831sync`, `leezr_clone_devsim831*`, `leezr_recipe831*`).
 
-Restent hors de ce plan et inchangés : production (`main`, D-11), Company 1 (D-13), remédiation RBAC historique
-(D-8), SSE en production (D-10), Billing asynchrone (D-17), suppression des clones locaux (dont
-`leezr_audit831sync`, créé par ce plan).
+Hors périmètre et inchangés : production (D-11), Company 1 (D-13), remédiation RBAC historique (D-8), SSE en production
+(D-10), Billing asynchrone (D-17).
