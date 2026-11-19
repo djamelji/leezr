@@ -81,7 +81,7 @@ const formattedRefunds = computed(() => {
       />
       <div
         v-else-if="!data"
-        class="d-flex align-center justify-center h-100 text-disabled"
+        class="d-flex align-center justify-center h-100 text-medium-emphasis"
       >
         {{ t('platformBilling.widgets.noData') }}
       </div>
@@ -100,6 +100,7 @@ const formattedRefunds = computed(() => {
           :color="ratioColor"
           rounded
           :height="density === 'S' ? 6 : 8"
+          :aria-label="t('platformBilling.widgets.refundRatio')"
         />
 
         <!-- M/L: revenue/refund breakdown -->

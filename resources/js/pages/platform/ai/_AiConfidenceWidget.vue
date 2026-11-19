@@ -25,7 +25,7 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
 
     <div class="widget-body">
       <VSkeletonLoader v-if="loading" type="text" />
-      <div v-else-if="!data" class="d-flex align-center justify-center h-100 text-disabled">
+      <div v-else-if="!data" class="d-flex align-center justify-center h-100 text-medium-emphasis">
         {{ t('common.noData') }}
       </div>
       <template v-else>

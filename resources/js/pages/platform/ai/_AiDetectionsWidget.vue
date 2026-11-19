@@ -27,7 +27,7 @@ const total = computed(() => (data.value?.data?.expirations ?? 0) + (data.value?
 
     <div class="widget-body">
       <VSkeletonLoader v-if="loading" type="text" />
-      <div v-else-if="!data" class="d-flex align-center justify-center h-100 text-disabled">
+      <div v-else-if="!data" class="d-flex align-center justify-center h-100 text-medium-emphasis">
         {{ t('common.noData') }}
       </div>
       <template v-else>

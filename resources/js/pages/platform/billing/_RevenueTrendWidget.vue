@@ -300,7 +300,7 @@ function openDrilldown() {
       />
       <div
         v-else-if="!data || !data.chart?.series?.length"
-        class="d-flex align-center justify-center h-100 text-disabled"
+        class="d-flex align-center justify-center h-100 text-medium-emphasis"
       >
         {{ t('platformBilling.widgets.noData') }}
       </div>

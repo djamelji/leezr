@@ -1607,7 +1607,8 @@
       "weekly_rest_min_hours": "Repos hebdomadaire minimal (h)",
       "overtime_daily_threshold_hours": "Seuil heures supplémentaires / jour (h)",
       "night_work_start": "Début du travail de nuit",
-      "night_work_end": "Fin du travail de nuit"
+      "night_work_end": "Fin du travail de nuit",
+      "splittable": "Pause fractionnable"
     },
     "advancedRules": "Réglages détaillés (pauses, maxima, heures supplémentaires)",
     "advancedRulesIntro": "Règles complémentaires non couvertes par le formulaire ci-dessus, avec leur provenance (loi, convention, entreprise). Les réglages du formulaire ne sont pas répétés ici."

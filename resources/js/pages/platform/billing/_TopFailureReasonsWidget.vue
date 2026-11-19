@@ -55,7 +55,7 @@ const reasons = computed(() => props.data?.reasons || [])
       />
       <div
         v-else-if="!reasons.length"
-        class="d-flex align-center justify-center h-100 text-disabled"
+        class="d-flex align-center justify-center h-100 text-medium-emphasis"
       >
         {{ t('platformBilling.widgets.noData') }}
       </div>

@@ -1608,7 +1608,8 @@
       "weekly_rest_min_hours": "Minimum weekly rest (h)",
       "overtime_daily_threshold_hours": "Overtime daily threshold (h)",
       "night_work_start": "Night work start",
-      "night_work_end": "Night work end"
+      "night_work_end": "Night work end",
+      "splittable": "Splittable break"
     },
     "advancedRules": "Detailed settings (breaks, maxima, overtime)",
     "advancedRulesIntro": "Additional rules not covered by the form above, with their origin (law, agreement, company). Settings of the form are not repeated here."

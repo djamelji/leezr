@@ -47,7 +47,7 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
       />
       <div
         v-else-if="!store.hasData"
-        class="d-flex align-center justify-center h-100 text-disabled"
+        class="d-flex align-center justify-center h-100 text-medium-emphasis"
       >
         {{ t('compliance.noData') }}
       </div>
