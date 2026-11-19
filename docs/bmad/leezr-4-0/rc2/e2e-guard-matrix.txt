@@ -1,0 +1,25 @@
+ADR-831 — E2E target guard, refusal matrix (2026-11-19, local, no secret)
+Servers : 8831 = php -S on marked clone leezr_recipe831 ; 8832 = php -S on the DEV database (leezr) ;
+          8833 = php -S, APP_ENV=production, on leezr_recipe831. Spec used : tests/e2e/ux1-home.spec.js.
+
+Probe (curl GET /api/_recipe/identity)
+  clone 8831          -> 200 {"clone":true,"database":"leezr_recipe831"}
+  DEV https://leezr.test -> 404 {"clone":false}
+  DEV-backed 8832     -> 404 {"clone":false}
+  production-like 8833 -> 404 route not registered
+
+npx playwright test <spec>
+  default (leezr.test)                                  -> refused : E2E refused on the DEV (leezr.test)
+  E2E_ALLOW_DEV=1                                       -> refused : E2E_ALLOW_DEV was withdrawn (ADR-831)
+  E2E_ALLOW_DEV=1 + clone                               -> refused : E2E_ALLOW_DEV was withdrawn (ADR-831)
+  127.0.0.1:8832 (DEV db) + E2E_DB_DATABASE=clone       -> refused : does not run on a marked isolated clone (probe 404)
+  127.0.0.1:8832 (DEV db) + E2E_DB_DATABASE=leezr       -> refused : does not run on a marked isolated clone (probe 404)
+  clone server, no E2E_DB_DATABASE                      -> refused : E2E_DB_DATABASE is not set
+  clone server 831 + E2E_DB_DATABASE=leezr_recipe830    -> refused : runs on leezr_recipe831, not on leezr_recipe830
+  production-like server 8833                           -> refused : probe 404
+  clone server + APP_ENV=production for recipe commands -> refused : recipe commands not on a marked clone (APP_ENV is production)
+  clone server 831 + E2E_DB_DATABASE=leezr_recipe831    -> accepted : 9 passed
+
+Unchanged and still in force (ADR-827/828) : RecipeCommand identity check on the live connection, clone marker,
+secondary connections, e2e:* and e2e:php refusals ; PHPUnit Adr827RecipeGuardTest, Adr828RecipeHardeningTest,
+Adr831RecipeIdentityProbeTest green.

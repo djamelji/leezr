@@ -1,0 +1,38 @@
+{
+  "adr": "ADR-831",
+  "date": "2026-11-19",
+  "campaigns": [
+    {
+      "campaign": "campaign-1 leezr_recipe831b",
+      "startTime": "2026-11-19T06:14:09.256Z",
+      "duration": 5261208.545,
+      "expected": 457,
+      "skipped": 6,
+      "unexpected": 2,
+      "flaky": 0
+    },
+    {
+      "campaign": "campaign-2 leezr_recipe831c",
+      "startTime": "2026-11-19T07:46:42.840Z",
+      "duration": 5216761.642,
+      "expected": 459,
+      "skipped": 6,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  ],
+  "lot4c1_rerun_after_fix": {
+    "clone": "leezr_recipe831c",
+    "repeat_each": 2,
+    "passed": 4,
+    "skipped": 0,
+    "failed": 0
+  },
+  "consolidated": {
+    "total": 465,
+    "passed": 460,
+    "failed": 0,
+    "skipped_justified": 5,
+    "removed": 0
+  }
+}

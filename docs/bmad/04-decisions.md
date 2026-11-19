@@ -29456,3 +29456,22 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Conséquences** :
 - Le code est candidat ; le déploiement reste suspendu aux preuves de production (D-11) et aux décisions D-10, D-13, D-8, D-17 (activation de l'asynchrone).
 - Les specs E2E historiques en échec pour dérive d'interface sont listées et qualifiées dans le rapport 4.0, pas masquées.
+
+---
+
+## ADR-831 — Leezr 4.0 RC2 : 58 échecs E2E qualifiés un par un, preuve d'identité de la cible E2E, trois défauts produit corrigés
+
+**Date** : 2026-11-19
+**Contexte** : la 4.0 RC laissait 58 échecs E2E (59 entrées) « dérive d'interface probable », non qualifiés individuellement, et un drapeau `E2E_ALLOW_DEV=1` qui laissait une campagne écrire sur le DEV par l'API. Mission RC2 : qualifier chaque échec avec preuve (A test obsolète, B fixture, C défaut produit, D environnement, E fonctionnalité retirée, F indéterminé), corriger sans affaiblir, sécuriser les recettes, rejouer la campagne intégrale sur un clone neuf.
+**Décision** :
+- **Cible E2E prouvée par le serveur** : nouvelle route `GET /api/_recipe/identity` (non enregistrée en production) qui répond 200 `{clone:true, database}` uniquement si l'application servie tourne sur un clone marqué (même décision que `RecipeDatabaseGuard`, lue sur la connexion réelle), 404 sinon. `tests/e2e/global-setup.js` l'exige avant le premier test et vérifie aussi que les commandes de recette visent la même base (`recipe:status`). **`E2E_ALLOW_DEV` est retiré** : aucun drapeau ne permet plus de viser le DEV. Refus prouvés : DEV par défaut, drapeau, drapeau + clone, serveur local branché sur le DEV, base déclarée différente, variable absente, serveur en `APP_ENV=production`, commandes de recette en production.
+- **Défauts produit (C) corrigés** :
+  1. *Création de créneau depuis le tiroir « Nouveau créneau »* : le refus de sureffectif (422 `overstaffing_requires_confirmation`, ADR-719) n'était qu'un toast d'erreur ; le tiroir suit désormais la même confirmation que la grille (dialogue existant, rejeu avec la signature serveur). Aucun changement serveur.
+  2. *Navigation Company* : un lien de menu nommé héritait de l'onglet courant (vue-router conserve les paramètres optionnels du parent de layout) — depuis `/company/workforce/leave/config`, « Préparation de la paie » menait à `/payroll/config`. `useCompanyNav` remet `tab` à vide pour les cibles qui en ont un (test `tests/js/company-nav-tab-isolation.test.mjs`).
+  3. *Accessibilité* : barre du ratio de remboursement sans libellé (axe `aria-progressbar-name`) ; message « Aucune donnée disponible » en `text-disabled` (2,29:1 clair, 2,83:1 sombre) → `text-medium-emphasis` sur les 26 widgets Platform et Company qui le partagent. Traduction manquante `hrSettings.rules.splittable` (clé brute affichée). Aucun fichier `@core` modifié.
+- **Tests obsolètes (A, 49)** réalignés sur les décisions identifiées (ADR-639, 691, 717, 735, 775, 777, 779, 797-799, 802, 817, 818, 820, 822-824), assertions métier conservées ou renforcées ; deux sauts silencieux « palette indisponible » (m1b, m2) supprimés — la palette était seulement repliée.
+- **Fixtures (B, 6)** : plus aucune dépendance aux seeders lancés à la main sur le DEV ; feuille brouillon générée par le vrai cas d'usage via `e2e:php` (`tests/e2e/timesheet-fixtures.js`), pointage via `e2e:prepare-clock`, collaborateurs fictifs au registre d'exécution, nettoyage par identifiants exacts.
+- **Retirés de la cible construite (E, 3)** : `ui-lab-*`, `presentation-resize` — laboratoires `devOnly` depuis ADR-818 ; ignorés avec ce motif quand la route redirige, exécutés avec le serveur Vite.
+**Conséquences** :
+- Aucune spec supprimée ; aucun moteur Billing, Workforce, RBAC ou DMS modifié côté serveur.
+- Verdict code : GO sous conditions (rapport `docs/bmad/LEEZR-4-0-RC2-FINAL.md`) ; production : NO-GO tant que les vérifications réelles (D-11) ne sont pas faites.
