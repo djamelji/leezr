@@ -192,6 +192,7 @@ const acceptSuggestion = suggestion => {
             v-else-if="canEdit"
             variant="text"
             size="small"
+            class="lzr-text-action"
             prepend-icon="tabler-adjustments"
             data-test="home-customize"
             @click="customizing = true"

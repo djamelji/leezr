@@ -185,6 +185,9 @@
 .lzr-link:hover { text-decoration: underline; }
 .v-theme--dark .lzr-link { color: #a9a2ff; }
 .lzr-cta.v-btn { background-color: #5d50e6 !important; color: #fff !important; }
+// ADR-831 — the shared primary (ADR-332) fails AA as TEXT on dark surfaces (#5d50e6 on #25293c = 2.57:1) :
+// a text action opting in uses the same AA token as .lzr-link in dark (beats Vuetify's .text-primary !important).
+.v-theme--dark .v-btn.lzr-text-action { color: #a9a2ff !important; }
 
 // Contraste AA des grands KPI « warning » sur fond clair (ADR-745) : l'amber Vuetify
 // par défaut échoue sur blanc. On fonce uniquement en thème clair ; en dark l'amber

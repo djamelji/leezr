@@ -3136,6 +3136,8 @@ watch(activeTab, tab => {
                 icon
                 variant="text"
                 size="small"
+                :aria-label="$t('common.previous')"
+                data-test="mobile-day-prev"
                 @click="mobilePrevDay"
               >
                 <VIcon icon="tabler-chevron-left" />
@@ -3157,6 +3159,8 @@ watch(activeTab, tab => {
                 icon
                 variant="text"
                 size="small"
+                :aria-label="$t('common.next')"
+                data-test="mobile-day-next"
                 @click="mobileNextDay"
               >
                 <VIcon icon="tabler-chevron-right" />
