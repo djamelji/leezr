@@ -10,9 +10,10 @@ import { useNavStore } from '@/core/stores/nav'
 export function useCompanyNav() {
   const auth = useAuthStore()
   const navStore = useNavStore()
+  const router = useRouter()
 
   const navItems = computed(() => {
-    return companyGroupsToNavItems(navStore.companyGroups, auth)
+    return companyGroupsToNavItems(navStore.companyGroups, auth, router)
   })
 
   /**
@@ -35,8 +36,9 @@ export function useCompanyNav() {
  * Titles are i18n KEYS — @layouts components translate via getDynamicI18nProps.
  * Frontend only applies last-barrier permission check.
  */
-function companyGroupsToNavItems(groups, auth) {
+function companyGroupsToNavItems(groups, auth, router) {
   const items = []
+  const target = to => isolateTabParam(to, router)
 
   for (const group of groups) {
     // ADR-775 : groups placed in the avatar menu are not side-menu entries.
@@ -50,7 +52,7 @@ function companyGroupsToNavItems(groups, auth) {
       const navItem = {
         // ADR-775 : an intent space labels its entry (`labelKey`) ; otherwise the item's own label.
         title: item.labelKey || `nav.company.${item.key}`,
-        to: item.to,
+        to: target(item.to),
         icon: { icon: item.icon },
         permission: item.permission || null,
       }
@@ -60,7 +62,7 @@ function companyGroupsToNavItems(groups, auth) {
       // ADR-781 (UX5) : a HUB entry (Réglages) is ONE link to its hub page ; its entries live there.
       const children = (item.hub ? [] : (item.children || [])).map(c => ({
         title: `nav.company.${c.key}`,
-        to: c.to,
+        to: target(c.to),
         icon: { icon: c.icon },
       }))
 
@@ -79,6 +81,21 @@ function companyGroupsToNavItems(groups, auth) {
 
     return auth.hasPermission(item.permission)
   }).filter(orphanHeadingFilter)
+}
+
+/**
+ * ADR-831 — a named menu target never inherits the CURRENT page's optional `tab`.
+ * vue-router keeps the optional params of the parent record when a named location gives none, and every page is
+ * wrapped in a layout parent carrying `:tab?` : from /company/workforce/leave/config, « Préparation de la paie »
+ * resolved to /company/workforce/payroll/config. A target whose route has a `tab` param and gives none explicitly
+ * resets it (default tab) ; routes without `tab` are left untouched (no discarded-param warning).
+ */
+export function isolateTabParam(to, router) {
+  if (!to || typeof to !== 'object' || Array.isArray(to) || !to.name || (to.params && 'tab' in to.params)) return to
+  const record = router?.getRoutes().find(r => r.name === to.name)
+
+  // '' (not undefined : vue-router drops nullish params before merging, which would re-inherit the current one)
+  return record && /:tab\b/.test(record.path) ? { ...to, params: { ...(to.params || {}), tab: '' } } : to
 }
 
 /**

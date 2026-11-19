@@ -420,6 +420,8 @@
     "hundredthsToDays": true,
     "useSettingsEntry": true,
     "useCatalogText": true,
-    "displayLocale": true
+    "displayLocale": true,
+    "isolateTabParam": true,
+    "rememberReturnPath": true
   }
 }

@@ -85,6 +85,7 @@ declare global {
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const isolateTabParam: typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']
   const kFormatter: typeof import('@core/utils/formatters')['kFormatter']
   const lengthValidator: typeof import('@core/utils/validators')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
@@ -141,6 +142,7 @@ declare global {
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
   const refreshCsrf: typeof import('./resources/js/utils/csrf.js')['refreshCsrf']
   const regexValidator: typeof import('@core/utils/validators')['regexValidator']
+  const rememberReturnPath: typeof import('./resources/js/utils/api.js')['rememberReturnPath']
   const requiredValidator: typeof import('@core/utils/validators')['requiredValidator']
   const resetTypography: typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']
   const resolveComponent: typeof import('vue')['resolveComponent']
@@ -505,6 +507,7 @@ declare module 'vue' {
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
+    readonly isolateTabParam: UnwrapRef<typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']>
     readonly kFormatter: UnwrapRef<typeof import('@core/utils/formatters')['kFormatter']>
     readonly lengthValidator: UnwrapRef<typeof import('@core/utils/validators')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
@@ -561,6 +564,7 @@ declare module 'vue' {
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly refreshCsrf: UnwrapRef<typeof import('./resources/js/utils/csrf.js')['refreshCsrf']>
     readonly regexValidator: UnwrapRef<typeof import('@core/utils/validators')['regexValidator']>
+    readonly rememberReturnPath: UnwrapRef<typeof import('./resources/js/utils/api.js')['rememberReturnPath']>
     readonly requiredValidator: UnwrapRef<typeof import('@core/utils/validators')['requiredValidator']>
     readonly resetTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['resetTypography']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
