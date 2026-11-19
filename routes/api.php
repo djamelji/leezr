@@ -31,6 +31,11 @@ Route::get('/public/version', fn () => response()->json([
     'version' => config('app.build_version', 'dev'),
 ]))->middleware('throttle:60,1');
 
+// ADR-831 — E2E target proof : 200 only when the served app runs on a marked isolated clone (never in production).
+if (! app()->isProduction()) {
+    Route::get('/_recipe/identity', \App\Modules\Infrastructure\System\Http\RecipeIdentityController::class)->middleware('throttle:60,1');
+}
+
 // Public theme (primary color + typography for unauthenticated pages)
 Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:30,1');
 

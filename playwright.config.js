@@ -7,11 +7,15 @@ import { defineConfig } from '@playwright/test'
 // et marqué (ADR-827) servi par sa propre instance :
 //   E2E_BASE_URL=http://127.0.0.1:8821 E2E_DB_DATABASE=leezr_recipe_x pnpm test:e2e
 // E2E_DB_DATABASE est transmis aux commandes artisan lancées par les specs (DB_DATABASE + préfixe Redis dédié).
-// Viser le DEV (leezr.test) exige un choix explicite : E2E_ALLOW_DEV=1.
+// ADR-831 — aucun drapeau ne permet de viser le DEV : E2E_ALLOW_DEV est retiré, et tests/e2e/global-setup.js
+// exige, avant le premier test, la preuve que l'application servie ET les commandes de recette sont sur le
+// clone marqué E2E_DB_DATABASE (sonde /api/_recipe/identity lue par le serveur sur sa connexion réelle).
 const baseURL = process.env.E2E_BASE_URL || 'https://leezr.test'
 
-if (/(^|\/\/)leezr\.test/.test(baseURL) && process.env.E2E_ALLOW_DEV !== '1')
-  throw new Error('E2E refused on the DEV (leezr.test): run against a marked clone (E2E_BASE_URL + E2E_DB_DATABASE), or set E2E_ALLOW_DEV=1 explicitly.')
+if (process.env.E2E_ALLOW_DEV)
+  throw new Error('E2E_ALLOW_DEV was withdrawn (ADR-831): a campaign only runs against a marked clone (E2E_BASE_URL + E2E_DB_DATABASE).')
+if (/(^|\/\/)leezr\.test/.test(baseURL))
+  throw new Error('E2E refused on the DEV (leezr.test): run against a marked clone (E2E_BASE_URL + E2E_DB_DATABASE).')
 
 if (process.env.E2E_DB_DATABASE) {
   process.env.DB_DATABASE = process.env.E2E_DB_DATABASE
@@ -20,6 +24,7 @@ if (process.env.E2E_DB_DATABASE) {
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/global-setup.js',
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
