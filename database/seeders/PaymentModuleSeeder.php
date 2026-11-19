@@ -17,12 +17,14 @@ class PaymentModuleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Internal payment module (always installed + active)
-        PlatformPaymentModule::updateOrCreate(
-            ['provider_key' => 'internal'],
-            [
+        // ADR-832 — the internal module is a technical definition (name, description) ; its activation, health and
+        // order are operated in Platform › Payments (creation only). The default manual rule is a Platform choice.
+        \App\Core\System\SystemSync::reconcile('platform_payment_modules', PlatformPaymentModule::class, ['provider_key' => 'internal'],
+            code: [
                 'name' => 'Internal (Manual)',
                 'description' => 'Built-in manual payment processing — no external provider required.',
+            ],
+            createOnly: [
                 'is_installed' => true,
                 'is_active' => true,
                 'health_status' => 'healthy',
@@ -31,18 +33,9 @@ class PaymentModuleSeeder extends Seeder
         );
 
         // Default rule: manual method via internal provider (disabled — Stripe preferred)
-        PlatformPaymentMethodRule::updateOrCreate(
-            [
-                'method_key' => 'manual',
-                'provider_key' => 'internal',
-                'market_key' => null,
-                'plan_key' => null,
-                'interval' => null,
-            ],
-            [
-                'priority' => 0,
-                'is_active' => false,
-            ],
+        \App\Core\System\SystemSync::reconcile('platform_payment_method_rules', PlatformPaymentMethodRule::class,
+            ['method_key' => 'manual', 'provider_key' => 'internal', 'market_key' => null, 'plan_key' => null, 'interval' => null],
+            createOnly: ['priority' => 0, 'is_active' => false],
         );
 
         // Stripe payment module (test mode for dev)

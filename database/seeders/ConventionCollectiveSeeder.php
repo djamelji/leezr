@@ -15,9 +15,11 @@ class ConventionCollectiveSeeder extends Seeder
 {
     public function run(): void
     {
-        $cc = ConventionCollective::updateOrCreate(
+        // ADR-832 — convention reference and its rules : legal reference owned by the code (no Platform editor),
+        // aligned and reported ; companies confirm/adapt their convention in their own settings, never here.
+        $cc = \App\Core\System\SystemSync::reconcile('convention_collectives', ConventionCollective::class,
             ['idcc' => '3248', 'market_key' => 'FR'],
-            [
+            code: [
                 'short_name' => 'Métallurgie',
                 'full_name' => 'Convention collective nationale de la métallurgie',
                 'brochure_number' => '3109',
@@ -89,16 +91,8 @@ class ConventionCollectiveSeeder extends Seeder
         ];
 
         foreach ($rules as $rule) {
-            ConventionCollectiveRule::updateOrCreate(
-                [
-                    'convention_collective_id' => $cc->id,
-                    'domain' => $rule['domain'],
-                    'rule_type' => $rule['rule_type'],
-                    'rule_key' => $rule['rule_key'],
-                    'effective_from' => $rule['effective_from'],
-                ],
-                $rule
-            );
+            $match = ['convention_collective_id' => $cc->id, 'domain' => $rule['domain'], 'rule_type' => $rule['rule_type'], 'rule_key' => $rule['rule_key'], 'effective_from' => $rule['effective_from']];
+            \App\Core\System\SystemSync::reconcile('convention_collective_rules', ConventionCollectiveRule::class, $match, code: array_diff_key($rule, $match));
         }
     }
 }

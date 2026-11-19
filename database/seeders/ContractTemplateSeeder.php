@@ -30,16 +30,16 @@ class ContractTemplateSeeder extends Seeder
 <p><em>Document d'exemple non validé juridiquement — à adapter par l'entreprise.</em></p>
 HTML;
 
-        DocumentTemplate::updateOrCreate(
+        // ADR-832 — Platform demo template : identity owned by the code, content administered (a code evolution
+        // replaces it only while unchanged ; a real evolution is a new version).
+        \App\Core\System\SystemSync::reconcile('document_templates', DocumentTemplate::class,
             ['company_id' => null, 'code' => 'contract_cdi_fr_demo', 'version' => 1],
-            [
-                'platform_template_id' => null,
+            code: ['platform_template_id' => null, 'subject_type' => 'contract', 'is_system' => true],
+            administered: [
                 'name' => 'Contrat CDI (exemple)',
                 'description' => 'Modèle de démonstration — non validé juridiquement.',
-                'subject_type' => 'contract',
                 'body_html' => $body,
                 'variables_schema' => [],
-                'is_system' => true,
                 'is_active' => true,
                 'paper_size' => 'a4',
                 'paper_orientation' => 'portrait',

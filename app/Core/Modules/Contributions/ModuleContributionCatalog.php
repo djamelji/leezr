@@ -88,6 +88,9 @@ final class ModuleContributionCatalog
             $attrs = ['fingerprint' => $fp, 'payload' => $item['payload'], 'status' => $status, 'detail' => $detail,
                 'field_definition_id' => $fieldId, 'document_type_id' => $docId];
             if ($row) {
+                if (! $changed) {
+                    unset($attrs['payload']); // ADR-832 — same fingerprint = same content ; MySQL JSON key order made it look dirty (rewritten every run)
+                }
                 $row->fill($attrs + ($changed ? ['version' => $n['version']] : []))->save();
             } else {
                 ModuleContribution::create($attrs + ['module_key' => $module, 'kind' => $item['kind'], 'ref' => $item['ref'], 'version' => $n['version']]);

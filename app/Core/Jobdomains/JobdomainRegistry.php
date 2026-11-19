@@ -381,9 +381,13 @@ class JobdomainRegistry
 
             $mergedFields = array_merge($coreFields, array_values($jobdomainOnly));
 
-            $jd = Jobdomain::updateOrCreate(
-                ['key' => $key],
-                [
+            // ADR-832 — a JobDomain is ADMINISTERED : label, description and default modules are edited in
+            // Platform › JobDomains ; the legacy roles/fields/documents/Workforce proposals are read-only there
+            // (ADR-797) but may have been edited through `jobdomains.legacy_editing` or carry an older code value.
+            // All evolve only while unchanged since the code last wrote them ; otherwise preserved + reported.
+            // Commercial availability is a Platform decision fixed at creation (Logistics Only).
+            \App\Core\System\SystemSync::reconcile('jobdomains', Jobdomain::class, ['key' => $key],
+                administered: [
                     'label' => $definition['label'],
                     'description' => $definition['description'] ?? null,
                     'default_modules' => $definition['default_modules'] ?? [],
@@ -393,12 +397,8 @@ class JobdomainRegistry
                     // M5 (ADR-728) — propositions métier Workforce (presets importables par la Company).
                     'workforce_presets' => $definition['workforce_presets'] ?? static::workforcePresetsFor($key),
                 ],
+                createOnly: ['signup_available' => $key === 'logistique'],
             );
-            // Logistics Only : la disponibilité commerciale est fixée à la CRÉATION puis pilotée par Platform
-            // (jamais réécrite par un sync). Seul le métier livré (logistique) est proposé par défaut.
-            if ($jd->wasRecentlyCreated) {
-                $jd->forceFill(['signup_available' => $key === 'logistique'])->save();
-            }
         }
     }
 

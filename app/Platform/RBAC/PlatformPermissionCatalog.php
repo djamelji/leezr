@@ -45,17 +45,27 @@ class PlatformPermissionCatalog
     /**
      * Sync platform permissions to the database.
      */
-    public static function sync(): void
+    /**
+     * ADR-832 — a permission is a technical definition owned by the code (key, label, module, admin flag) :
+     * always aligned, changes reported. Returns the keys created by this run (offered to the roles that follow
+     * the catalog, never re-imposed afterwards).
+     *
+     * @return list<string>
+     */
+    public static function sync(): array
     {
+        $created = [];
         foreach (static::all() as $permission) {
-            PlatformPermission::updateOrCreate(
-                ['key' => $permission['key']],
-                [
-                    'label' => $permission['label'],
-                    'module_key' => $permission['module_key'],
-                    'is_admin' => $permission['is_admin'],
-                ],
-            );
+            $row = \App\Core\System\SystemSync::reconcile('platform_permissions', PlatformPermission::class, ['key' => $permission['key']], code: [
+                'label' => $permission['label'],
+                'module_key' => $permission['module_key'],
+                'is_admin' => $permission['is_admin'],
+            ]);
+            if ($row->wasRecentlyCreated) {
+                $created[] = $permission['key'];
+            }
         }
+
+        return $created;
     }
 }

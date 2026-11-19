@@ -90,21 +90,20 @@ class PlanRegistry
      */
     public static function sync(): void
     {
+        // ADR-832 — a plan is ADMINISTERED (Platform › Plans edits every field, ADR-588 traces price changes) :
+        // the code creates missing plans and follows its own evolutions only while Platform has not changed them.
         foreach (static::seedDefaults() as $key => $def) {
-            Plan::updateOrCreate(
-                ['key' => $key],
-                [
-                    'name' => $def['name'],
-                    'level' => $def['level'],
-                    'description' => $def['description'] ?? '',
-                    'price_monthly' => ($def['price_monthly'] ?? 0) * 100,
-                    'price_yearly' => ($def['price_yearly'] ?? 0) * 100,
-                    'is_popular' => $def['is_popular'] ?? false,
-                    'trial_days' => $def['trial_days'] ?? 0,
-                    'feature_labels' => $def['feature_labels'] ?? [],
-                    'limits' => $def['limits'] ?? [],
-                ],
-            );
+            \App\Core\System\SystemSync::reconcile('plans', Plan::class, ['key' => $key], administered: [
+                'name' => $def['name'],
+                'level' => $def['level'],
+                'description' => $def['description'] ?? '',
+                'price_monthly' => ($def['price_monthly'] ?? 0) * 100,
+                'price_yearly' => ($def['price_yearly'] ?? 0) * 100,
+                'is_popular' => $def['is_popular'] ?? false,
+                'trial_days' => $def['trial_days'] ?? 0,
+                'feature_labels' => $def['feature_labels'] ?? [],
+                'limits' => $def['limits'] ?? [],
+            ]);
         }
 
         static::clearCache();

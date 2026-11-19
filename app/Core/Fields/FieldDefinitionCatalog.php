@@ -464,19 +464,19 @@ class FieldDefinitionCatalog
     public static function sync(): void
     {
         foreach (static::all() as $field) {
-            FieldDefinition::updateOrCreate(
+            // ADR-832 — scope and type are structural (existing values depend on them : a divergence is reported,
+            // never applied) ; label, translations, rules, options and order are edited in Platform › Fields.
+            \App\Core\System\SystemSync::reconcile('field_definitions', FieldDefinition::class,
                 ['company_id' => null, 'code' => $field['code']],
-                [
-                    'scope' => $field['scope'],
+                code: ['is_system' => true, 'created_by_platform' => true],
+                administered: [
                     'label' => $field['label'],
                     'translations' => $field['translations'] ?? null,
-                    'type' => $field['type'],
                     'validation_rules' => $field['validation_rules'] ?? null,
                     'options' => $field['options'] ?? null,
-                    'is_system' => true,
-                    'created_by_platform' => true,
                     'default_order' => $field['default_order'] ?? 0,
                 ],
+                structural: ['scope' => $field['scope'], 'type' => $field['type']],
             );
         }
     }

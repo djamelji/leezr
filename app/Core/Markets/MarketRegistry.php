@@ -3,6 +3,7 @@
 namespace App\Core\Markets;
 
 use App\Core\Markets\SvgSanitizer;
+use App\Core\System\SystemSync;
 
 /**
  * DB-backed market registry with in-memory cache.
@@ -89,36 +90,42 @@ class MarketRegistry
     {
         $defaults = static::seedDefaults();
 
-        // Sync languages first (markets reference them)
+        // ADR-832 — languages, markets and legal statuses are ADMINISTERED (Platform › Markets edits names,
+        // locale, currency, VAT of legal statuses ; the market VAT rate and EU flag come from the Platform import) :
+        // created by the code, then they follow a code evolution only while unchanged ; activation and default
+        // choice are Platform decisions (creation only) ; a flag is only filled when empty.
+        $freshLanguages = [];
         foreach ($defaults['languages'] as $key => $lang) {
-            Language::updateOrCreate(
-                ['key' => $key],
-                [
+            $row = SystemSync::reconcile('languages', Language::class, ['key' => $key],
+                administered: [
                     'name' => $lang['name'],
                     'native_name' => $lang['native_name'],
                     'sort_order' => $lang['sort_order'] ?? 0,
-                    // Preserve admin decisions for is_active/is_default
-                    'is_active' => Language::where('key', $key)->value('is_active') ?? ($lang['is_active'] ?? true),
-                    'is_default' => Language::where('key', $key)->value('is_default') ?? ($lang['is_default'] ?? false),
+                ],
+                createOnly: [
+                    'is_active' => $lang['is_active'] ?? true,
+                    'is_default' => $lang['is_default'] ?? false,
                 ],
             );
+            if ($row->wasRecentlyCreated) {
+                $freshLanguages[] = $key;
+            }
         }
 
-        // Sync markets
         foreach ($defaults['markets'] as $key => $def) {
             $existingMarket = Market::where('key', $key)->first();
 
             $flagData = [];
-            if (!$existingMarket || empty($existingMarket->flag_code)) {
+            if (! $existingMarket || empty($existingMarket->flag_code)) {
                 $flagData['flag_code'] = $def['flag_code'] ?? null;
             }
-            if (!$existingMarket || empty($existingMarket->flag_svg)) {
+            if (! $existingMarket || empty($existingMarket->flag_svg)) {
                 $flagData['flag_svg'] = isset($def['flag_svg']) ? SvgSanitizer::sanitize($def['flag_svg']) : null;
             }
 
-            $market = Market::updateOrCreate(
-                ['key' => $key],
-                array_merge([
+            $market = SystemSync::reconcile('markets', Market::class, ['key' => $key],
+                code: $flagData,
+                administered: [
                     'name' => $def['name'],
                     'currency' => $def['currency'],
                     'vat_rate_bps' => $def['vat_rate_bps'] ?? 0,
@@ -126,37 +133,37 @@ class MarketRegistry
                     'timezone' => $def['timezone'],
                     'dial_code' => $def['dial_code'],
                     'sort_order' => $def['sort_order'] ?? 0,
-                    'is_active' => ($existingMarket?->is_active) ?? ($def['is_active'] ?? true),
-                    'is_default' => ($existingMarket?->is_default) ?? ($def['is_default'] ?? false),
                     'is_eu' => $def['is_eu'] ?? false,
-                ], $flagData),
+                ],
+                createOnly: [
+                    'is_active' => $def['is_active'] ?? true,
+                    'is_default' => $def['is_default'] ?? false,
+                ],
             );
 
-            // Sync legal statuses for this market
             foreach ($def['legal_statuses'] ?? [] as $ls) {
                 $isVatApplicable = $ls['is_vat_applicable'] ?? true;
 
-                LegalStatus::updateOrCreate(
-                    ['market_key' => $key, 'key' => $ls['key']],
-                    [
+                SystemSync::reconcile('legal_statuses', LegalStatus::class, ['market_key' => $key, 'key' => $ls['key']],
+                    administered: [
                         'name' => $ls['name'],
                         'description' => $ls['description'] ?? null,
                         'is_vat_applicable' => $isVatApplicable,
                         'vat_rate' => $isVatApplicable ? ($ls['vat_rate'] ?? 0) : null,
                         'sort_order' => $ls['sort_order'] ?? 0,
-                        'is_default' => LegalStatus::where('market_key', $key)
-                            ->where('key', $ls['key'])
-                            ->value('is_default') ?? ($ls['is_default'] ?? false),
                     ],
+                    createOnly: ['is_default' => $ls['is_default'] ?? false],
                 );
             }
 
-            // Sync market ↔ language pivots
-            if (!empty($def['languages'])) {
-                $languageKeys = Language::whereIn('key', $def['languages'])->pluck('key')->all();
-                $market->languages()->syncWithoutDetaching(
-                    array_combine($languageKeys, array_fill(0, count($languageKeys), []))
-                );
+            // Market ↔ language links : each declared language is offered once (a link removed in Platform stays removed)
+            if (! empty($def['languages'])) {
+                $declared = Language::whereIn('key', $def['languages'])->pluck('key')->all();
+                $attach = SystemSync::offerMembers('market_languages', $key, $declared,
+                    $market->languages()->pluck('languages.key')->all(), $freshLanguages, $market->wasRecentlyCreated);
+                if ($attach !== []) {
+                    $market->languages()->syncWithoutDetaching(array_fill_keys($attach, []));
+                }
             }
         }
 

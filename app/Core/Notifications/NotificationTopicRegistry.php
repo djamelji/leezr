@@ -136,14 +136,17 @@ class NotificationTopicRegistry
     public static function sync(): void
     {
         foreach (static::$topics as $key => $definition) {
-            NotificationTopic::updateOrCreate(
-                ['key' => $key],
-                [
-                    'label' => $definition['label'],
+            // ADR-832 — category/scope/description define the topic (code) ; label, icon, severity, channels,
+            // order and activation are edited in Platform › Notifications : they evolve only while unchanged.
+            \App\Core\System\SystemSync::reconcile('notification_topics', NotificationTopic::class, ['key' => $key],
+                code: [
                     'description' => $definition['description'] ?? null,
                     'category' => $definition['category'],
-                    'icon' => $definition['icon'],
                     'scope' => $definition['scope'],
+                ],
+                administered: [
+                    'label' => $definition['label'],
+                    'icon' => $definition['icon'],
                     'severity' => $definition['severity'] ?? 'info',
                     'default_channels' => $definition['default_channels'],
                     'is_active' => $definition['is_active'] ?? true,

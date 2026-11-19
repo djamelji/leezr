@@ -9,22 +9,32 @@ use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Markets\MarketRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Core\Plans\PlanRegistry;
+use App\Core\System\SystemSync;
 use App\Platform\Models\PlatformPermission;
 use App\Platform\RBAC\PlatformPermissionCatalog;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Log;
 
 /**
- * System seeder — safe to run on any environment (local, staging, production).
- * 100% idempotent: running N times produces the exact same state.
+ * System seeder — synchronisation of the SYSTEM DEFINITIONS (ADR-832), safe on any environment.
+ * Idempotent: a second run changes nothing.
  *
- * Seeds: Platform RBAC, Module catalog, Jobdomain catalog.
+ * Installs missing definitions and aligns what the code owns (permissions, module manifests, legal references) ;
+ * configuration administered in Platform (plans, markets, JobDomains, fields, topics, role grants, payment
+ * choices) is created once and then follows the code ONLY while unchanged since the code last wrote it —
+ * otherwise it is preserved and reported as a conflict (`SystemSync`). Published presets and Company data are
+ * never written. Deliberate alignment of an administered value: `php artisan system:sync --adopt=...`.
  * Does NOT seed demo data (users, companies, shipments).
  */
 class SystemSeeder extends Seeder
 {
     public function run(): void
     {
+        $owner = ! SystemSync::active(); // `db:seed --class=SystemSeeder` (deploy) or `system:sync` (owner = command)
+        if ($owner) {
+            SystemSync::begin();
+        }
+
         // ─── Platform RBAC (permissions, roles, super_admin) ─────
         $this->call(PlatformSeeder::class);
 
@@ -70,6 +80,27 @@ class SystemSeeder extends Seeder
 
         // ─── Cleanup stale permissions ───────────────────────────
         $this->cleanupStalePermissions();
+
+        if ($owner) {
+            self::printReport($this->command);
+            SystemSync::end();
+        }
+    }
+
+    public static function printReport($command): void
+    {
+        if (! $command) {
+            return;
+        }
+        $summary = SystemSync::summary();
+        $command->info('System sync: '.($summary === [] ? 'no change' : json_encode($summary)));
+        foreach (SystemSync::report() as $e) {
+            if (! in_array($e['type'], ['conflict', 'structural_conflict', 'removed', 'evolved', 'adopted'], true)) {
+                continue;
+            }
+            $line = sprintf('  %-19s %s:%s %s', $e['type'], $e['subject'], $e['key'], $e['field'] ?? implode(',', (array) ($e['keys'] ?? [])));
+            str_contains($e['type'], 'conflict') ? $command->warn($line.(isset($e['adopt']) ? '  (--adopt='.$e['adopt'].')' : '')) : $command->line($line);
+        }
     }
 
     private function cleanupStalePermissions(): void
@@ -81,6 +112,7 @@ class SystemSeeder extends Seeder
         if ($stalePlatform->isNotEmpty()) {
             $keys = $stalePlatform->pluck('key')->toArray();
             Log::warning('SystemSeeder: removing stale platform permissions', ['keys' => $keys]);
+            SystemSync::note('removed', 'platform_permissions', '*', ['keys' => $keys]);
             PlatformPermission::whereNotIn('key', $platformKeys)->delete();
         }
 
@@ -91,6 +123,7 @@ class SystemSeeder extends Seeder
         if ($staleCompany->isNotEmpty()) {
             $keys = $staleCompany->pluck('key')->toArray();
             Log::warning('SystemSeeder: removing stale company permissions', ['keys' => $keys]);
+            SystemSync::note('removed', 'company_permissions', '*', ['keys' => $keys]);
             CompanyPermission::whereNotIn('key', $companyKeys)->delete();
         }
     }

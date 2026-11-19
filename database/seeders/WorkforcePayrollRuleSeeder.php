@@ -474,15 +474,11 @@ class WorkforcePayrollRuleSeeder extends Seeder
 
         foreach ($rules as $rule) {
             $rule['effective_from'] = Carbon::parse($rule['effective_from']);
-            MarketRuleSet::updateOrCreate(
-                [
-                    'market_key' => $rule['market_key'],
-                    'domain' => $rule['domain'],
-                    'rule_key' => $rule['rule_key'],
-                    'effective_from' => $rule['effective_from'],
-                ],
-                $rule,
-            );
+            // ADR-832 — legal reference owned by the code (no Platform editor ; a Company adapts it through its
+            // own overrides, never here) : aligned on the code, every value change reported ; a new legal value
+            // is a new row (effective_from).
+            $match = ['market_key' => $rule['market_key'], 'domain' => $rule['domain'], 'rule_key' => $rule['rule_key'], 'effective_from' => $rule['effective_from']];
+            \App\Core\System\SystemSync::reconcile('market_rule_sets', MarketRuleSet::class, $match, code: array_diff_key($rule, $match));
         }
     }
 }

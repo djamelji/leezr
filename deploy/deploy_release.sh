@@ -235,8 +235,10 @@ if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "production
 
   log "→ [5/9] migrate --force (production — aucun reset destructif)"
   $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
-  log "→ [5.5] db:seed SystemSeeder (données de référence idempotentes)"
-  $PHP_BIN artisan db:seed --class=SystemSeeder --force 2>&1 | tee -a "$LOG_FILE"
+  # ADR-832 : synchronisation des définitions système — installe les nouveautés, n'écrase plus aucune
+  # configuration administrée dans Platform (conflits signalés dans le journal et le rapport JSON).
+  log "→ [5.5] system:sync (définitions système ; configurations Platform préservées — ADR-832)"
+  $PHP_BIN artisan system:sync --force --json="$SHARED_DIR/storage/logs/system-sync-$TIMESTAMP.json" 2>&1 | tee -a "$LOG_FILE"
 else
   # DEV (web3) : déploiement NON destructif par défaut (ADR-654). `migrate --force` est additif ;
   # le seeding est idempotent (bootstrap) sur une base existante → collaborateurs, contrats,
@@ -247,6 +249,10 @@ else
   $PHP_BIN artisan migrate --force 2>&1 | tee -a "$LOG_FILE"
   log "→ [5.5] leezr:dev-bootstrap (non destructif : population initiale si vide, sinon bootstrap idempotent)"
   $PHP_BIN artisan leezr:dev-bootstrap 2>&1 | tee -a "$LOG_FILE"
+  # ADR-832 : le DEV reçoit enfin les nouvelles définitions (modules, permissions, thèmes) à chaque déploiement,
+  # sans écraser ce qui a été réglé dans Platform (prouvé sur clones : docs/bmad/LEEZR-4-0-SYSTEMSEEDER-FINAL.md).
+  log "→ [5.6] system:sync (définitions système ; configurations Platform préservées — ADR-832)"
+  $PHP_BIN artisan system:sync --force --json="$SHARED_DIR/storage/logs/system-sync-$TIMESTAMP.json" 2>&1 | tee -a "$LOG_FILE"
 fi
 
 # ADR-422: Fix permissions on seeded document files (created as root, needs to be readable by web user)

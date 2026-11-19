@@ -14,6 +14,7 @@ use App\Platform\Models\PlatformUser;
 use App\Core\Jobdomains\JobdomainRegistry;
 use App\Core\Modules\ModuleRegistry;
 use App\Platform\RBAC\PlatformPermissionCatalog;
+use App\Core\System\SystemSync;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -31,22 +32,21 @@ class PlatformSeeder extends Seeder
         \App\Core\Documents\DocumentTypeCatalog::sync();
 
         // Create permissions from catalog (module-driven, single source of truth)
-        PlatformPermissionCatalog::sync();
+        $freshPermissions = PlatformPermissionCatalog::sync();
 
-        // Create super_admin role (structural — no pivot sync needed, bypass is in PlatformUser::hasPermission)
-        $superAdmin = PlatformRole::updateOrCreate(
-            ['key' => 'super_admin'],
-            ['name' => 'Super Admin'],
-        );
+        // ADR-832 — role names are editable in Platform › Roles : written at creation only.
+        // super_admin is structural (no pivot : PlatformUser::hasPermission bypasses).
+        $superAdmin = SystemSync::reconcile('platform_roles', PlatformRole::class, ['key' => 'super_admin'], createOnly: ['name' => 'Super Admin']);
+        $admin = SystemSync::reconcile('platform_roles', PlatformRole::class, ['key' => 'admin'], createOnly: ['name' => 'Admin']);
 
-        // Create admin role (full platform access — super_admin bypasses checks entirely)
-        $admin = PlatformRole::updateOrCreate(
-            ['key' => 'admin'],
-            ['name' => 'Admin'],
-        );
-
-        // Admin gets all platform permissions (super_admin doesn't need pivot — hasPermission bypasses)
-        $admin->permissions()->sync(PlatformPermission::pluck('id')->toArray());
+        // ADR-832 — the admin role is OFFERED every catalog permission once (new permissions of a deployment
+        // included) ; a permission an administrator removed from it in Platform is never re-imposed.
+        $byKey = PlatformPermission::pluck('id', 'key')->all();
+        $attach = SystemSync::offerMembers('platform_role_permission', 'admin', array_keys($byKey),
+            $admin->permissions()->pluck('platform_permissions.key')->all(), $freshPermissions, $admin->wasRecentlyCreated);
+        if ($attach !== []) {
+            $admin->permissions()->syncWithoutDetaching(array_map(fn ($k) => $byKey[$k], $attach));
+        }
 
         // Create platform admin user.
         // SÉCURITÉ : aucun mot de passe prédéfini hors local/testing. En dev public/prod,
@@ -54,7 +54,8 @@ class PlatformSeeder extends Seeder
         // sinon un aléatoire fort (reset via "mot de passe oublié"). Jamais réécrit au redéploiement.
         $isDevEnv = app()->environment(['local', 'testing']);
         $adminExists = PlatformUser::where('email', 'admin@leezr.com')->exists();
-        $adminAttrs = ['first_name' => 'Djamel', 'last_name' => 'Ji'];
+        // ADR-832 — the profile name belongs to the account owner : written at creation only.
+        $adminAttrs = $adminExists ? [] : ['first_name' => 'Djamel', 'last_name' => 'Ji'];
         if ($isDevEnv) {
             $adminAttrs['password'] = 'password';
         } elseif (!$adminExists) {

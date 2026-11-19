@@ -198,14 +198,16 @@ class ModuleRegistry
     public static function sync(): void
     {
         foreach (static::definitions() as $key => $manifest) {
-            PlatformModule::updateOrCreate(
-                ['key' => $key],
-                [
+            // ADR-832 — name/description/order are the module manifest (Platform displays its own
+            // display_name_override / description_override / commercial config, never written here) ;
+            // the global activation is a Platform decision : set at creation only.
+            \App\Core\System\SystemSync::reconcile('platform_modules', PlatformModule::class, ['key' => $key],
+                code: [
                     'name' => $manifest->name,
                     'description' => $manifest->description,
                     'sort_order' => $manifest->sortOrder,
-                    'is_enabled_globally' => PlatformModule::where('key', $key)->value('is_enabled_globally') ?? true,
                 ],
+                createOnly: ['is_enabled_globally' => true],
             );
         }
     }
