@@ -29492,3 +29492,18 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 - Écarts historiques réels du DEV local signalés, non appliqués : rôle chauffeur recommandé du JobDomain logistique (moindre privilège ADR-823) et 2 permissions Platform absentes du rôle `admin` → décision humaine (`--adopt`).
 - Les conflits restent visibles à chaque passage (journal `system_sync.conflict`, sortie du déploiement, rapport JSON) jusqu'à décision ; pas d'écran Platform dédié (non créé : UI absente du stock).
 - Rapport : `docs/bmad/LEEZR-4-0-SYSTEMSEEDER-FINAL.md`.
+
+## ADR-833 — Un seul mécanisme de déploiement : l'ancien webhook est neutralisé, DevSeeder refuse une base peuplée
+
+**Date** : 2026-11-19
+**Statut** : Accepté (code local, non poussé). Suppression du webhook GitHub, rotation des identifiants et restauration DEV : **en attente d'autorisation**.
+
+**Contexte** : le déploiement DEV du 2026-11-19 (`82e35416`) a mis en évidence un webhook GitHub resté actif (`push → https://leezr.com/webhook.php`, servi par le site de production `web2`) alors que `docs/deploy.md` le disait déprécié. À chaque push il lançait `current/deploy.sh <branche>` en parallèle de GitHub Actions : git clone, `migrate`, `SystemSeeder`, puis `DevSeeder` sur `dev`. 489 exécutions sur DEV depuis février (9 complètes, les autres arrêtées par `DevSeeder` après écriture). Le 2026-11-19, `DevSeeder` a réappliqué les presets de rôles des sociétés 1 et 2, remis la société 2 en essai et levé des pièces obligatoires. Sur `main`, le même chemin s'exécute sur la production (non audité : accès production non autorisé).
+
+**Décision** :
+1. **GitHub Actions est le seul mécanisme de déploiement** (`dev` → web3, `main` → web2, `deploy/deploy_release.sh`). `deploy.sh` et `public/webhook.php` deviennent des coquilles inertes (aucune commande ; réponse 410).
+2. **Garde de release héritée** (`App\Core\System\DeploymentGuard`, écouteur `CommandStarting` dans `AppServiceProvider`) : artisan refuse toute commande depuis `releases/AAAAMMJJ_HHMMSS` (format de l'ancien script ; la CI produit `AAAAMMJJHHMMSS[_sha]`). Comme l'ancien script exécute l'artisan du code **fraîchement cloné**, il échoue dès `composer install` (`package:discover`), avant toute écriture — même si un ancien `deploy.sh` est encore celui qui s'exécute.
+3. **Garde DevSeeder** : refus en production ; autorisé seulement en local/testing, sur une base **sans société** (première population, `dev:reset` après purge) ou sur un clone de recette marqué. Une base distante peuplée est toujours refusée.
+4. Restauration DEV : script ciblé par clés métier, transactionnel, simulation par défaut, préconditions = état laissé par le seeder, postconditions = état d'avant déploiement (`docs/bmad/leezr-4-0/incident-833/restore-companies-1-2.php`). Testé sur clone, **non appliqué**.
+
+**Conséquences** : le premier push après ce commit sera encore intercepté par l'ancien `deploy.sh` (celui de la release courante), mais celui-ci échouera à son premier appel artisan ; la suppression du webhook dans GitHub reste nécessaire. L'incident ADR-663 (mot de passe SSH commun DEV/PROD/ISPConfig, présent dans l'historique d'un dépôt **public**) est toujours ouvert : rotation requise. Rapport : `docs/bmad/LEEZR-4-0-DEPLOYMENT-INCIDENT-FINAL.md`.

@@ -87,6 +87,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ADR-833 — the retired webhook/deploy.sh pipeline (releases/YYYYMMDD_HHMMSS) may not run any artisan command.
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Console\Events\CommandStarting::class, fn ($event) => \App\Core\System\DeploymentGuard::assertNotLegacyRelease(base_path(), (string) $event->command));
+
         // ADR-801.1 — `database` sessions record the Company identity in user_id and the Platform identity
         // in platform_user_id (each with its own FK), instead of "whatever guard is the default".
         \Illuminate\Support\Facades\Session::extend('database', fn ($app) => new \App\Core\Auth\ScopedDatabaseSessionHandler(

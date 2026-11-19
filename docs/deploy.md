@@ -276,13 +276,22 @@ chmod -R ug+w /var/www/clients/client1/web2/shared/storage
 
 ---
 
-## Ancien système (webhook)
+## Ancien système (webhook) — RETIRÉ (ADR-833)
 
-L'ancien système (`public/webhook.php` + `deploy.sh`) est **déprécié**. Il reste dans le repo pour référence mais n'est plus utilisé. Le nouveau système (GitHub Actions) le remplace complètement.
+Le webhook GitHub `push → https://leezr.com/webhook.php` était resté **actif** alors que ce document le disait déprécié :
+à chaque push il lançait `current/deploy.sh <branche>` (git clone, `migrate`, `SystemSeeder`, et `DevSeeder` sur `dev`)
+**en parallèle** de GitHub Actions, avec l'identité du site de production (`web2`). Incident du 2026-11-19 :
+`docs/bmad/LEEZR-4-0-DEPLOYMENT-INCIDENT-FINAL.md`.
 
-Pour désactiver l'ancien webhook :
-1. Supprimer le webhook dans GitHub Settings → Webhooks
-2. (Optionnel) Supprimer `public/webhook.php` du repo
+État depuis ADR-833 :
+- `deploy.sh` et `public/webhook.php` sont des **coquilles inertes** (aucune commande, réponse 410) — effectives sur un
+  environnement dès que sa release courante les contient ;
+- artisan **refuse de s'exécuter** depuis un répertoire `releases/AAAAMMJJ_HHMMSS` (format de l'ancien script) : même un
+  ancien `deploy.sh` encore présent échoue à son premier appel artisan (`package:discover`), avant toute écriture en base ;
+- `DevSeeder` refuse une base peuplée hors local/testing/clone de recette marqué.
+
+Reste à faire (autorisation requise) : supprimer le webhook dans GitHub Settings → Webhooks (id `595692752`).
+Un seul mécanisme par environnement : GitHub Actions (`dev` → web3, `main` → web2).
 
 ---
 

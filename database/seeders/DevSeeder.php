@@ -43,6 +43,8 @@ class DevSeeder extends Seeder
 
     public function run(): void
     {
+        \App\Core\System\DeploymentGuard::assertDemoSeedAllowed(); // ADR-833 — never on a populated remote database
+
         // ─── Notification topics (system-level registry sync) ────
         $this->call(NotificationTopicSeeder::class);
 
