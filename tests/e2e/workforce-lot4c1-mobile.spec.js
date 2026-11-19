@@ -42,16 +42,21 @@ async function enterMobile(page) {
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(900)
 }
-// Avance jour par jour jusqu'à voir un shift au créneau distinctif (max 8 pas).
-async function navigateToLabel(page, label) {
-  for (let i = 0; i < 8; i++) {
-    if (await page.getByText(label, { exact: false }).first().isVisible().catch(() => false)) return true
-    // ADR-831 — the mobile day navigator (named button) ; « first chevron-right button » could hit a folded menu group
-    await page.locator('[data-test="mobile-day-next"]').click()
-    await page.waitForTimeout(500)
+// ADR-831 — go to the shift's DATE with the mobile day navigator, in the right direction. The former loop only
+// moved forward (max 8 steps) from today : a free day earlier in the week (e.g. Monday when run on a Thursday) was
+// never reached and the test silently skipped, depending on the weekday of the run.
+async function navigateToDate(page, label, isoDate) {
+  const today = new Date()
+  const start = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const diff = Math.round((Date.UTC(y, m - 1, d) - start) / 86400000)
+  const step = page.locator(`[data-test="mobile-day-${diff >= 0 ? 'next' : 'prev'}"]`)
+  for (let i = 0; i < Math.abs(diff); i++) {
+    await step.click()
+    await page.waitForTimeout(350)
   }
 
-  return false
+  return page.getByText(label, { exact: false }).first().isVisible().catch(() => false)
 }
 
 test('A — vue mobile : « Déplacer vers » un brouillon → Annuler → persistance, scroll fonctionnel', async ({ page }) => {
@@ -67,8 +72,8 @@ test('A — vue mobile : « Déplacer vers » un brouillon → Annuler → persi
   await enterMobile(page)
   // La grille desktop est masquée ; la vue jour mobile est affichée.
   await expect(page.locator('.planning-grid')).toHaveCount(0)
-  const found = await navigateToLabel(page, '02:02')
-  test.skip(!found, 'Shift non atteint dans la vue jour (fenêtre/semaine).')
+  const found = await navigateToDate(page, '02:02', from)
+  expect(found, `the prepared shift (${from} 02:02) is reached in the mobile day view`).toBe(true)
   const shiftRow = page.locator('div.d-flex.align-center.gap-1', { hasText: '02:02' }).first()
 
   // Scroll vertical fonctionnel (pas bloqué par une interaction tactile).
