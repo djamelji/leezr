@@ -1,0 +1,169 @@
+{
+ "dry_run": false,
+ "adopt": [],
+ "summary": {
+  "conflict": 12,
+  "created": 6
+ },
+ "entries": [
+  {
+   "type": "created",
+   "subject": "platform_modules",
+   "key": "workforce_referral"
+  },
+  {
+   "type": "conflict",
+   "subject": "jobdomains",
+   "key": "logistique",
+   "field": "label",
+   "database": "Logistique (Platform)",
+   "code": "Logistique",
+   "baseline": "unknown",
+   "adopt": "jobdomains:logistique:label"
+  },
+  {
+   "type": "conflict",
+   "subject": "jobdomains",
+   "key": "logistique",
+   "field": "default_modules",
+   "database": [
+    "core.members"
+   ],
+   "code": [
+    "core.theme",
+    "core.members",
+    "core.settings",
+    "core.documents",
+    "logistics_shipments",
+    "core.documentation"
+   ],
+   "baseline": "unknown",
+   "adopt": "jobdomains:logistique:default_modules"
+  },
+  {
+   "type": "conflict",
+   "subject": "jobdomains",
+   "key": "logistique",
+   "field": "default_roles",
+   "database": "{\"dispatcher\": {\"archetype\": \"operations_center\", \"bundles\": [\"theme.full\", \"members.team_access\", \"members.team_management\", \"settings.company_info\", \"documents.access\", \"documents.processing\", \"ship…",
+   "code": "{\"dispatcher\": {\"archetype\": \"operations_center\", \"bundles\": [\"theme.full\", \"members.team_access\", \"members.team_management\", \"settings.company_info\", \"documents.access\", \"documents.processing\", \"ship…",
+   "baseline": "unknown",
+   "adopt": "jobdomains:logistique:default_roles"
+  },
+  {
+   "type": "conflict",
+   "subject": "platform_role_permission",
+   "key": "admin",
+   "field": "member:manage_theme_settings",
+   "database": "absent",
+   "code": "declared",
+   "baseline": "unknown",
+   "adopt": "platform_role_permission:admin:member:manage_theme_settings"
+  },
+  {
+   "type": "conflict",
+   "subject": "platform_role_permission",
+   "key": "admin",
+   "field": "member:view_system_health",
+   "database": "absent",
+   "code": "declared",
+   "baseline": "unknown",
+   "adopt": "platform_role_permission:admin:member:view_system_health"
+  },
+  {
+   "type": "conflict",
+   "subject": "platform_role_permission",
+   "key": "admin",
+   "field": "member:view_usage_monitoring",
+   "database": "absent",
+   "code": "declared",
+   "baseline": "unknown",
+   "adopt": "platform_role_permission:admin:member:view_usage_monitoring"
+  },
+  {
+   "type": "conflict",
+   "subject": "plans",
+   "key": "business",
+   "field": "price_monthly",
+   "database": 424200,
+   "code": 7900,
+   "baseline": "unknown",
+   "adopt": "plans:business:price_monthly"
+  },
+  {
+   "type": "conflict",
+   "subject": "plans",
+   "key": "business",
+   "field": "price_yearly",
+   "database": 4242000,
+   "code": 79000,
+   "baseline": "unknown",
+   "adopt": "plans:business:price_yearly"
+  },
+  {
+   "type": "conflict",
+   "subject": "plans",
+   "key": "business",
+   "field": "trial_days",
+   "database": 21,
+   "code": 14,
+   "baseline": "unknown",
+   "adopt": "plans:business:trial_days"
+  },
+  {
+   "type": "created",
+   "subject": "notification_topics",
+   "key": "workforce.referral_received"
+  },
+  {
+   "type": "conflict",
+   "subject": "notification_topics",
+   "key": "billing.payment_failed",
+   "field": "label",
+   "database": "Libellé Platform 832",
+   "code": "Payment Failed",
+   "baseline": "unknown",
+   "adopt": "notification_topics:billing.payment_failed:label"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.refer"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.review"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.manage"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce.view_all"
+  },
+  {
+   "type": "conflict",
+   "subject": "markets",
+   "key": "FR",
+   "field": "vat_rate_bps",
+   "database": 1999,
+   "code": 2000,
+   "baseline": "unknown",
+   "adopt": "markets:FR:vat_rate_bps"
+  },
+  {
+   "type": "conflict",
+   "subject": "legal_statuses",
+   "key": "FR|sas",
+   "field": "vat_rate",
+   "database": 5.5,
+   "code": 20,
+   "baseline": "unknown",
+   "adopt": "legal_statuses:FR|sas:vat_rate"
+  }
+ ]
+}

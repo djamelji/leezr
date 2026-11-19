@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Leezr 4.0 RC2 — S3 : restauration d'essai + test des migrations + test de SystemSeeder sur un CLONE local du DEV
+# Leezr 4.0 RC2 — S3 : restauration d'essai + test des migrations + synchronisation système (ADR-832) sur un CLONE local du DEV
 # distant. Exécuté sur le POSTE (jamais sur le serveur), depuis la racine du dépôt au SHA à déployer (dev = RC2).
 #
 #   bash docs/bmad/leezr-4-0/dev-sync/clone-test.sh <dump.sql.gz> <mysql-option-file> [clone_name]
@@ -58,24 +58,35 @@ counts > "$OUT/counts-after-migrate.tsv"
 join -t$'\t' <(sort "$OUT/counts-before.tsv") <(sort "$OUT/counts-after-migrate.tsv") | awk -F'\t' '$2>$3{print $1": "$2" -> "$3}' > "$OUT/rows-lost.txt"
 [ ! -s "$OUT/rows-lost.txt" ] && ok "aucune table n'a perdu de lignes" || ko "lignes perdues (rows-lost.txt)"
 
-step "5. SystemSeeder (catalogue Platform) — différences exactes"
+step "5. Synchronisation système (ADR-832) — différences exactes"
 checksums > "$OUT/checksum-before-seeder.tsv"; dumprows > "$OUT/catalog-before.tsv"
-if art db:seed --class=SystemSeeder --force > "$OUT/systemseeder.log" 2>&1; then ok "SystemSeeder"; else ko "SystemSeeder (systemseeder.log)"; fi
+if art system:sync --force --json="$PWD/$OUT/system-sync.json" > "$OUT/systemseeder.log" 2>&1; then ok "system:sync"; else ko "system:sync (systemseeder.log)"; fi
 checksums > "$OUT/checksum-after-seeder.tsv"; dumprows > "$OUT/catalog-after.tsv"
 diff "$OUT/checksum-before-seeder.tsv" "$OUT/checksum-after-seeder.tsv" | grep '^[<>]' | awk '{print $2}' | sort -u > "$OUT/tables-changed-by-seeder.txt" || true
 diff "$OUT/catalog-before.tsv" "$OUT/catalog-after.tsv" > "$OUT/catalog-diff.txt" || true
 echo "  tables touchées (checksum) : $(tr '\n' ' ' < "$OUT/tables-changed-by-seeder.txt")" | tee -a "$OUT/verdict.txt"
-echo "  catalogue — valeurs modifiées (hors horodatage) : $(grep -E '^[<>] ' "$OUT/catalog-diff.txt" | awk -F'\t' '{sub(/^[<>] /,"",$1); print $1}' | sort | uniq -c | tr '\n' ' ')" | tee -a "$OUT/verdict.txt"
-CATRX="^($(echo $CATALOG | tr ' ' '|')|jobs|cache|cache_locks|sessions|migrations)$"
+echo "  rapport : $(grep -m1 'System sync' "$OUT/systemseeder.log")" | tee -a "$OUT/verdict.txt"
+CATRX="^($(echo $CATALOG | tr ' ' '|')|system_sync_baselines|jobs|cache|cache_locks|sessions|migrations)$"
 grep -vE "$CATRX" "$OUT/tables-changed-by-seeder.txt" > "$OUT/non-catalog-changed.txt" || true
 [ ! -s "$OUT/non-catalog-changed.txt" ] && ok "aucune table hors catalogue modifiée (données des sociétés intactes)" || ko "tables hors catalogue modifiées : $(tr '\n' ' ' < "$OUT/non-catalog-changed.txt")"
-for t in plans markets market_rule_sets convention_collective_rules platform_role_permission platform_payment_method_rules; do
-  if grep -qE "^< $t	" "$OUT/catalog-diff.txt"; then ko "$t : valeur existante modifiée ou retirée par SystemSeeder (édition Platform remise aux valeurs du code ? à arbitrer)"
-  elif grep -qE "^> $t	" "$OUT/catalog-diff.txt"; then ok "$t : ajouts seulement ($(grep -cE "^> $t	" "$OUT/catalog-diff.txt"))"
-  else ok "$t inchangé"; fi; done
-
-for t in jobdomains platform_modules company_permissions field_definitions document_types; do
-  grep -qE "^< $t	" "$OUT/catalog-diff.txt" && echo "  ARB $t : valeur(s) existante(s) remplacée(s) par le code — détail catalog-diff.txt ; décision AVANT SystemSeeder distant" | tee -a "$OUT/verdict.txt"; done
+# ADR-832 : une valeur administrée n'est jamais remplacée sans --adopt ; seules évoluent les valeurs inchangées depuis
+# la dernière écriture du code (aucune au premier passage : pas de référence) et les définitions techniques (code).
+python3 - "$OUT/system-sync.json" <<'PYJ' | tee -a "$OUT/verdict.txt"
+import json, sys
+r = json.load(open(sys.argv[1]))
+ev = [e for e in r['entries'] if e['type'] in ('evolved', 'adopted')]
+print(f"  {'OK' if not ev else 'KO'}  valeurs administrées remplacées : {len(ev)}")
+for e in r['entries']:
+    if 'conflict' in e['type']:
+        print(f"  ARB {e['subject']}:{e['key']} {e.get('field')} — base={json.dumps(e.get('database'), ensure_ascii=False)[:120]} code={json.dumps(e.get('code'), ensure_ascii=False)[:120]} (conservé ; --adopt={e.get('adopt')})")
+for e in r['entries']:
+    if e['type'] == 'code_updated':
+        print(f"  info définition technique alignée : {e['subject']}:{e['key']} {','.join(e.get('fields', []))}")
+PYJ
+grep -q '^  KO  valeurs administrées' "$OUT/verdict.txt" && FAIL=1
+art system:sync --force > "$OUT/systemseeder-2.log" 2>&1; checksums > "$OUT/checksum-after-seeder-2.tsv"
+VOL='$1!~/^(jobs|cache|cache_locks|sessions)$/'
+diff <(awk -F'\t' "$VOL" "$OUT/checksum-after-seeder.tsv") <(awk -F'\t' "$VOL" "$OUT/checksum-after-seeder-2.tsv") > /dev/null && ok "seconde synchronisation : aucune table modifiée (idempotence)" || ko "seconde synchronisation : écarts (checksum-after-seeder-2.tsv)"
 
 step "6. Tâches planifiées nouvelles — effet prévisible"
 art workforce:signature-expire --dry-run | tee -a "$OUT/verdict.txt"

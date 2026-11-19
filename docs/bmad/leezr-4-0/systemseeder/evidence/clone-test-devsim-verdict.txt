@@ -1,0 +1,35 @@
+
+== 1. Intégrité du dump
+  OK  sha256
+  OK  gzip
+
+== 2. Restauration d'essai dans leezr_clone_devremote_sim832b (clone marqué)
+  OK  comptages identiques à la source (     197 tables)
+  OK  clone marqué reconnu par la garde
+
+== 3. Migrations RC2 sur le clone
+  en attente : 1
+  OK  migrate
+  OK  0 migration en attente
+
+== 4. Schéma et données après migration
+  OK  colonnes identiques à leezr_clone_sync832b
+  OK  index identiques à leezr_clone_sync832b
+  OK  aucune table n'a perdu de lignes
+
+== 5. Synchronisation système (ADR-832) — différences exactes
+  OK  system:sync
+  tables touchées (checksum) : company_permissions notification_topics platform_modules system_sync_baselines 
+  rapport : System sync: {"conflict":3,"created":6}
+  OK  aucune table hors catalogue modifiée (données des sociétés intactes)
+  OK  valeurs administrées remplacées : 0
+  ARB jobdomains:logistique default_roles — base={"dispatcher": {"archetype": "operations_center", "bundles": ["theme.full", "members.team_access", "members.team_managem code={"dispatcher": {"archetype": "operations_center", "bundles": ["theme.full", "members.team_access", "members.team_managem (conservé ; --adopt=jobdomains:logistique:default_roles)
+  ARB platform_role_permission:admin member:view_system_health — base="absent" code="declared" (conservé ; --adopt=platform_role_permission:admin:member:view_system_health)
+  ARB platform_role_permission:admin member:view_usage_monitoring — base="absent" code="declared" (conservé ; --adopt=platform_role_permission:admin:member:view_usage_monitoring)
+  OK  seconde synchronisation : aucune table modifiée (idempotence)
+
+== 6. Tâches planifiées nouvelles — effet prévisible
+[signature.expire] {"dry_run":true,"due":0}
+
+== Verdict
+  CLONE VERT — preuves : storage/app/recipe-clones/leezr_clone_devremote_sim832b

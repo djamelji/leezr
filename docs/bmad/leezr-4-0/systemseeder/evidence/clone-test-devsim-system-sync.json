@@ -1,0 +1,70 @@
+{
+ "dry_run": false,
+ "adopt": [],
+ "summary": {
+  "conflict": 3,
+  "created": 6
+ },
+ "entries": [
+  {
+   "type": "created",
+   "subject": "platform_modules",
+   "key": "workforce_referral"
+  },
+  {
+   "type": "conflict",
+   "subject": "jobdomains",
+   "key": "logistique",
+   "field": "default_roles",
+   "database": "{\"dispatcher\": {\"archetype\": \"operations_center\", \"bundles\": [\"theme.full\", \"members.team_access\", \"members.team_management\", \"settings.company_info\", \"documents.access\", \"documents.processing\", \"ship…",
+   "code": "{\"dispatcher\": {\"archetype\": \"operations_center\", \"bundles\": [\"theme.full\", \"members.team_access\", \"members.team_management\", \"settings.company_info\", \"documents.access\", \"documents.processing\", \"ship…",
+   "baseline": "unknown",
+   "adopt": "jobdomains:logistique:default_roles"
+  },
+  {
+   "type": "conflict",
+   "subject": "platform_role_permission",
+   "key": "admin",
+   "field": "member:view_system_health",
+   "database": "absent",
+   "code": "declared",
+   "baseline": "unknown",
+   "adopt": "platform_role_permission:admin:member:view_system_health"
+  },
+  {
+   "type": "conflict",
+   "subject": "platform_role_permission",
+   "key": "admin",
+   "field": "member:view_usage_monitoring",
+   "database": "absent",
+   "code": "declared",
+   "baseline": "unknown",
+   "adopt": "platform_role_permission:admin:member:view_usage_monitoring"
+  },
+  {
+   "type": "created",
+   "subject": "notification_topics",
+   "key": "workforce.referral_received"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.refer"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.review"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce_referral.manage"
+  },
+  {
+   "type": "created",
+   "subject": "company_permissions",
+   "key": "workforce.view_all"
+  }
+ ]
+}

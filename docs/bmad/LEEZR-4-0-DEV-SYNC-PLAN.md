@@ -10,12 +10,12 @@
 
 | Statut | Éléments |
 |---|---|
-| **Vérifié (local)** | état Git ; contenu des 212 commits ; chaîne de migrations depuis l'état exact d'`origin/dev` (y compris l'échec historique `2026_10_30_150000`) → 347/347, schéma identique ; workflow et script de déploiement lus ligne à ligne ; effets réels de `SystemSeeder` (audit du code + exécution sur clone simulé) ; trois scripts exécutés localement (audit : aucune fuite de secret ; clone : vert) ; aucune écriture sur le DEV local (journal binaire) |
+| **Vérifié (local)** | état Git ; contenu des 212 commits ; chaîne de migrations depuis l'état exact d'`origin/dev` (y compris l'échec historique `2026_10_30_150000`) → 347/347, schéma identique ; workflow et script de déploiement lus ligne à ligne ; effets réels de `SystemSeeder` (audit du code + exécution sur clone simulé) ; **synchronisation système corrigée (ADR-832) : configurations Platform préservées, prouvé sur clones (ancien code : 8 décisions sur 10 écrasées ; nouveau : 10/10 préservées, idempotent, installation vierge OK)** ; trois scripts exécutés localement (audit : aucune fuite de secret ; clone : vert) ; aucune écriture sur le DEV local (journal binaire) |
 | **Attend l'accès distant (lecture seule)** | R1–R14 : révision et dernier déploiement, `APP_ENV`, migrations, PHP, files et workers, planificateur, FPM, Redis, variables, stockage, sauvegardes, temps réel, signatures échues, catalogue Platform éventuellement édité |
 | **Attend une sauvegarde** | S1 base `c1leezrdev`, S2 fichiers + `.env`, S4 copie hors serveur |
-| **Attend un clone** | S3 : restauration d'essai, migrations sur **données réelles** du DEV distant, `SystemSeeder` avec différences exactes, `--dry-run` des signatures |
+| **Attend un clone** | S3 : restauration d'essai, migrations sur **données réelles** du DEV distant, `system:sync` avec rapport des conflits, `--dry-run` des signatures |
 | **Exécutable dès autorisation** | `remote-audit.sh`, puis `remote-backup.sh`, puis `clone-test.sh` (dans cet ordre) |
-| **Bloquant avant le push** | (1) R1–R14 relevés ; (2) S1/S2 vérifiés et rapatriés ; (3) S3 vert ; (4) arbitrages SystemSeeder (§5) ; (5) `fetch` autorisé et `origin/dev` ancêtre de `dev` ; (6) `APP_ENV` confirmé ; (7) autorisation explicite du push = déploiement |
+| **Bloquant avant le push** | (1) R1–R14 relevés ; (2) S1/S2 vérifiés et rapatriés ; (3) S3 vert ; (4) arbitrages des conflits signalés par `system:sync` sur le clone (§5.3) ; (5) `fetch` autorisé et `origin/dev` ancêtre de `dev` ; (6) `APP_ENV` confirmé ; (7) autorisation explicite du push = déploiement |
 
 ## 1. État Git local
 
@@ -93,13 +93,16 @@ de référence ; plans/métiers/marchés tels qu'en base.
 | Services | PHP-FPM rechargé ; workers `ai` et `default` redémarrés ; aucun worker `billing` (modèle seulement) |
 | Planificateur | non touché : le cron ISPConfig appelle `current/artisan schedule:run` → les **nouvelles tâches démarrent dès la bascule** |
 | Sauvegarde | **aucune en DEV** (la sauvegarde vérifiée ADR-737 est réservée à `main`) |
-| Registres | **non resynchronisés en DEV** (`SystemSeeder` réservé à `main`) |
+| Registres | avant ADR-832 : **non resynchronisés en DEV** (`SystemSeeder` réservé à `main`) ; **désormais** : étape [5.6] `system:sync --force --json` en DEV, [5.5] `system:sync` en production (§5.3) |
 | Retour arrière | `rollback.sh` : bascule du lien vers une release précédente + `reload` FPM ; **ne redémarre pas les workers** ; suggère `migrate:rollback` (à proscrire, §7) |
 | Suspendre le déclenchement | (a) **commit de tête contenant `[skip ci]`** : GitHub n'exécute pas le workflow pour ce push → code poussé sans déploiement ; (b) désactiver le workflow (`gh workflow disable "Build & Deploy"` ou interface Actions) — **attention : suspend aussi `main`** ; (c) ne pas pousser. Aucune modification du workflow faite ici. |
 
 ## 5. `SystemSeeder` (LOT 3)
 
-### 5.1 Effets réels (audit du code)
+> **Mise à jour ADR-832 (2026-11-19)** : les écrasements décrits en §5.1 sont **corrigés**. §5.1–5.2 restent comme
+> trace de l'ancien comportement ; la conduite à tenir est en §5.3. Rapport : `docs/bmad/LEEZR-4-0-SYSTEMSEEDER-FINAL.md`.
+
+### 5.1 Effets réels (audit du code, avant ADR-832)
 
 | Composant | Écriture | Écrase une configuration existante ? |
 |---|---|---|
@@ -126,7 +129,7 @@ Constat transversal (production comprise) : ce comportement s'applique **à chaq
 `SystemSeeder` tourne systématiquement — toute édition Platform de plans, marchés ou métiers y serait remise aux
 valeurs du code. À traiter par une décision distincte (non modifié ici).
 
-### 5.2 Exécution sur clone (`clone-test.sh`, étape 5)
+### 5.2 Exécution sur clone (`clone-test.sh`, étape 5, avant ADR-832)
 
 Le script prend un instantané des tables de catalogue (**hors horodatages**) et des `CHECKSUM TABLE`, exécute
 `SystemSeeder` (`APP_ENV=production`, cache et mail en mémoire, files sur le clone, temps réel coupé), puis classe :
@@ -145,10 +148,37 @@ settings.company_info, documents.access, shipments.delivery` à `theme.full, shi
 ADR-823 ; ne touche pas les rôles des sociétés existantes, sujet D-8). Le DEV local lui-même n'avait pas ces
 permissions et ce module : confirmation qu'aucun déploiement DEV ne resynchronise les catalogues.
 
-**Arbitrages requis avant `SystemSeeder` distant** : (1) accepter l'alignement du catalogue `jobdomains` sur le code ;
-(2) si le clone du DEV distant montre une édition Platform de plans/marchés/règles (KO) : décider de la conserver
-(alors ne pas lancer `SystemSeeder` complet, mais seulement `CompanyPermissionCatalog`, `ModuleRegistry`,
-`NotificationTopicSeeder` et `modules:sync-contributions`) ou de l'abandonner.
+~~Arbitrages requis avant `SystemSeeder` distant~~ — remplacés par §5.3.
+
+### 5.3 Synchronisation système corrigée (ADR-832) — conduite pour le DEV distant
+
+| Question | Réponse fondée sur les tests |
+|---|---|
+| La synchronisation peut-elle écraser une décision Platform ? | **Non** : une valeur administrée n'évolue que si elle est restée égale à la dernière valeur écrite par le code ; sinon conservée et signalée (`conflict`). Sur une base sans référence (le DEV distant), **toute** valeur différente du code est conservée. Prouvé : clone du DEV local, 10 décisions fictives → 10 préservées ; même scénario avec l'ancien code → 8 écrasées |
+| Installe-t-elle les nouveautés ? | Oui : module `workforce_referral`, 4 permissions Company, thème de notification, permissions Platform nouvelles offertes au rôle `admin` |
+| Touche-t-elle aux sociétés, presets, historiques ? | Non : empreintes `CHECKSUM TABLE` identiques hors catalogue ; presets identiques |
+| Idempotente ? | Oui : 2ᵉ passage sans aucune écriture (clone DEV et installation vierge MySQL) |
+| **Doit-elle tourner automatiquement au déploiement DEV ?** | **Oui** (étape [5.6] ajoutée à `deploy/deploy_release.sh`, effective au premier push autorisé) : elle ne peut plus effacer une configuration et le DEV n'a jamais reçu les nouvelles définitions. Condition : `clone-test.sh` vert sur la copie réelle (étape 5 = exactement ce que fera le déploiement) |
+
+`clone-test.sh` étape 5 exécute désormais `system:sync --force --json` sur le clone, puis : **KO** si une table hors
+catalogue change, si une valeur administrée est remplacée (`evolved`/`adopted` sans décision) ou si le 2ᵉ passage
+écrit quoi que ce soit ; **ARB** pour chaque conflit (valeur conservée, alignement possible par `--adopt`).
+Validation locale (dump simulé du DEV local, `leezr_clone_devremote_sim832b`, référence de schéma = clone du DEV local
+migré `leezr_clone_sync832b`) : **vert** ; 3 ARB, qui sont les vrais écarts historiques du DEV local :
+
+| ARB | Valeur conservée | Valeur du code | Décision à prendre |
+|---|---|---|---|
+| `jobdomains:logistique:default_roles` | chauffeur recommandé avec `members.team_view`, `settings.company_info`, `documents.access` | `theme.full`, `shipments.delivery` (ADR-823) | adopter (recommandé : ne touche que les **nouvelles** sociétés) ou conserver |
+| `platform_role_permission:admin:member:view_system_health` | absente du rôle `admin` | déclarée | adopter ou laisser retirée (super_admin non concerné) |
+| `platform_role_permission:admin:member:view_usage_monitoring` | idem | déclarée | idem |
+
+Adopter sur le DEV distant, après déploiement et seulement sur décision :
+`php artisan system:sync --force --adopt=jobdomains:logistique:default_roles` (simulable avec `--dry-run`).
+Le clone de la copie réelle peut révéler d'autres conflits (éditions Platform réelles) : ils seront conservés par défaut.
+
+**Note de méthode** : la référence de schéma de l'étape 4 (`REFDB`) doit être le DEV local **migré** (ou un clone
+migré de celui-ci) : une base installée à neuf diffère du DEV par le nom d'un index historique
+(`wf_sig_enroll_company_idx`), écart sans rapport avec ADR-832.
 
 ## 6. Sauvegardes et clone (LOT 4)
 
@@ -160,7 +190,7 @@ permissions et ce module : confirmation qu'aucun déploiement DEV ne resynchroni
 | S3.1 | Restauration d'essai **hors serveur** dans un clone marqué `leezr_clone_devremote_*` | `clone-test.sh` étapes 1–2 | comptages identiques à `.counts.tsv` ; clone reconnu par la garde de recette |
 | S3.2 | Migrations RC2 sur le clone | étape 3 | `migrate` sans échec ; 0 en attente |
 | S3.3 | Schéma et données | étape 4 | colonnes et index identiques au schéma RC2 de référence ; **aucune table n'a perdu de lignes** |
-| S3.4 | `SystemSeeder` | étape 5 | §5.2 |
+| S3.4 | `system:sync` (ADR-832) | étape 5 | §5.3 : aucune valeur administrée remplacée ; 2ᵉ passage sans écriture |
 | S3.5 | Tâches nouvelles | étape 6 | `signature-expire --dry-run` |
 
 `clone-test.sh` validé localement de bout en bout (4 exécutions, 3 corrections : lignes GTID ignorées à l'import,
@@ -192,10 +222,10 @@ postérieures.
    `DOCUMENT_SCANNER` décidé ; `APP_ENV` confirmé (si différent de `production` : `leezr:dev-bootstrap` active 7 modules
    Workforce sur `leezr-logistics` et `PaymentModuleSeeder` appellerait Stripe — à éviter).
 3. `remote-backup.sh` ; rapatriement S4.
-4. `clone-test.sh` sur le dump rapatrié → **vert** obligatoire ; arbitrages §5.2.
+4. `clone-test.sh` sur le dump rapatrié (`REFDB` = DEV local migré) → **vert** obligatoire ; arbitrages des conflits §5.3.
 5. `git fetch origin` autorisé ; `git merge-base --is-ancestor origin/dev dev` vrai ; `git log dev..origin/dev` vide.
 6. `git push origin dev` = déploiement (suivre GitHub Actions jusqu'à « DEPLOY OK »).
-7. Sur le serveur : `migrate:status` → 0 en attente ; `SystemSeeder` **ou** sous-ensemble décidé (§5.2).
+7. Sur le serveur : `migrate:status` → 0 en attente ; lire `shared/storage/logs/system-sync-<horodatage>.json` (même conflits que le clone) ; `--adopt` seulement sur décision (§5.3).
 8. Recette `post-deploy-recette.md`.
 
 ## 9. Recette après déploiement (LOT 5)
@@ -213,8 +243,9 @@ définitif, expéditions, document, suspension finale). Aucun paiement réel ; a
 | `origin/dev` avancé depuis le 09/11 | moyen | étape 5 |
 | Déploiement du 09/11 échoué / état inconnu | moyen | R1/R2 |
 | Pas de sauvegarde automatique en DEV | élevé si oublié | S1–S4 bloquants |
-| Édition Platform écrasée par `SystemSeeder` | moyen | clone étape 5 ; sous-ensemble si KO |
-| Même écrasement à chaque déploiement de production | moyen | décision distincte |
+| Édition Platform écrasée par la synchronisation | **traité (ADR-832)** | conservée et signalée ; clone étape 5 |
+| Même écrasement à chaque déploiement de production | **traité (ADR-832)** | production passe à `system:sync` ; premier passage : conflits `unknown` conservés |
+| Conflits signalés mais non traités | faible | visibles à chaque déploiement (journal, JSON) ; décision `--adopt` |
 | `APP_ENV` ≠ `production` | moyen | R3 |
 | Migrations appliquées avant la bascule, non annulées par un retour de code | faible (additives) | S1 pour les données |
 | `rollback.sh` sans redémarrage des workers | faible | étape manuelle §7 |
@@ -226,14 +257,14 @@ définitif, expéditions, document, suspension finale). Aucun paiement réel ; a
 1. SSH en lecture seule (compte web3) pour `remote-audit.sh`.
 2. `remote-backup.sh` (écritures dans `shared/backups` uniquement) et rapatriement.
 3. `clone-test.sh` sur le dump rapatrié (poste local, clone marqué).
-4. Arbitrages `SystemSeeder` (§5.2).
+4. Arbitrages des conflits `system:sync` (§5.3).
 5. `git fetch origin`.
 6. `git push origin dev` = déploiement automatique.
-7. `SystemSeeder` (ou sous-ensemble) sur le DEV distant.
+7. `--adopt` éventuels sur le DEV distant (la synchronisation elle-même fait partie du déploiement).
 8. Choix `DOCUMENT_SCANNER` (ClamAV = opération root via ISPConfig).
 9. Recette avec écritures sur la société fictive.
 10. Toute restauration de S1.
-11. Suppression des clones locaux (`leezr_audit831sync`, `leezr_clone_devsim831*`, `leezr_recipe831*`).
+11. Suppression des clones locaux (`leezr_audit831sync`, `leezr_clone_devsim831*`, `leezr_recipe831*`, et ADR-832 : `leezr_clone_sync832`, `…832b`, `…832old`, `…832old2`, `leezr_clone_blank832`, `leezr_clone_devsim832`, `leezr_clone_devremote_sim832`, `…832b`).
 
 Hors périmètre et inchangés : production (D-11), Company 1 (D-13), remédiation RBAC historique (D-8), SSE en production
 (D-10), Billing asynchrone (D-17).

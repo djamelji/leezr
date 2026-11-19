@@ -1,0 +1,12 @@
+== Valeurs administrées (avant → après synchronisation 1)
+  OK  toutes les valeurs administrées fictives sont identiques
+== Nouveaux éléments techniques
+  modules ajoutés : workforce_referral 
+  permissions Platform ajoutées : 
+  permissions Company ajoutées : workforce_referral.manage workforce_referral.refer workforce_referral.review workforce.view_all 
+== Tables modifiées par la synchronisation 1 : company_permissions notification_topics platform_modules system_sync_baselines 
+  OK  aucune donnée Company / historique modifiée
+  OK  presets publiés intacts (checksum identique)
+== Synchronisation 2
+  OK  seconde exécution : aucune table modifiée
+  CLONE VERT — preuves : storage/app/recipe-clones/leezr_clone_sync832b/sync

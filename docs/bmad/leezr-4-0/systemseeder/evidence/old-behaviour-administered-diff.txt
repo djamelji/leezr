@@ -1,0 +1,22 @@
+1,4c1,4
+< plan 424200/4242000/21
+< legal_status_vat 5.50
+< market_vat_bps 1999
+< jobdomain Logistique (Platform) ["core.members"]
+---
+> plan 7900/79000/14
+> legal_status_vat 20.00
+> market_vat_bps 2000
+> jobdomain Logistique ["core.theme", "core.members", "core.settings", "core.documents", "logistics_shipments", "core.documentation"]
+6,8c6,8
+< manual_rule 1/7
+< admin_has_removed_perm 0
+< admin_name Administrateurs (Platform)
+---
+> manual_rule 0/0
+> admin_has_removed_perm 1
+> admin_name Admin
+10c10
+< topic_label 1
+---
+> topic_label 0

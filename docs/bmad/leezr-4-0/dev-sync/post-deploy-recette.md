@@ -1,6 +1,6 @@
 # Recette courte après synchronisation du DEV distant (dev.leezr.com)
 
-> Après déploiement **et** après `SystemSeeder` (s'il est autorisé). Durée cible : 60 à 90 min. Pas de campagne E2E
+> Après déploiement (qui inclut désormais `system:sync`, ADR-832). Durée cible : 60 à 90 min. Pas de campagne E2E
 > sur le serveur (ADR-831 : les specs exigent un clone marqué). Chaque ligne : résultat observé + capture si écart.
 > **L** = lecture seule (aucune écriture hors session de connexion). **É** = écriture, **uniquement** dans la société
 > fictive dédiée `Recette RC2 <date>` créée en P1 ; jamais dans une société existante.
@@ -14,15 +14,16 @@
 | P0.3 | `curl -s -H 'Accept: application/json' https://dev.leezr.com/api/realtime/stream -w ' %{http_code}'` | JSON 401 (pas de redirection 302) |
 | P0.4 | `curl -s -o /dev/null -w '%{http_code}' https://dev.leezr.com/api/_recipe/identity` | 404 (route absente en production, ou clone non marqué) |
 | P0.5 | serveur : `php artisan migrate:status \| grep -c Pending` ; `config:show billing.async_queues_enabled` ; `config:show realtime.driver` | 0 ; false ; null |
+| P0.6 | serveur : rapport `shared/storage/logs/system-sync-<horodatage>.json` du déploiement ; `php artisan system:sync --dry-run` | conflits = ceux du clone ; aucun `evolved`/`adopted` non décidé ; aucune écriture hors conflits au 2ᵉ passage |
 
 ## Platform (compte administrateur Platform)
 
 | # | Parcours | Type | Attendu |
 |---|---|---|---|
 | A1 | Connexion, tableau de bord | L | aucun 5xx, états vides lisibles |
-| A2 | JobDomains › Logistique | L | « Proposé à l'inscription » actif ; rôle chauffeur recommandé = moindre privilège (si SystemSeeder appliqué) |
+| A2 | JobDomains › Logistique | L | « Proposé à l'inscription » actif ; rôle chauffeur recommandé = moindre privilège **si** `--adopt=jobdomains:logistique:default_roles` a été décidé, sinon valeur conservée |
 | A3 | Presets | L | familles logistique publiées (catalogue, planning, RBAC, exigences) |
-| A4 | Modules | L | `workforce_referral` présent (si SystemSeeder) ; dépendances affichées ; activations globales inchangées |
+| A4 | Modules | L | `workforce_referral` présent (installé par `system:sync`) ; dépendances affichées ; activations globales inchangées |
 | A5 | Plans | L | prix, essais et limites **identiques** au relevé R-audit (aucun changement de tarif) |
 | A6 | Sociétés | L | nombre = relevé R-audit ; société 1 et autres intactes |
 | A7 | Facturation | L | onglets sans erreur ; aucune relance déclenchée hors calendrier ; `jobs` sans `billing*` |

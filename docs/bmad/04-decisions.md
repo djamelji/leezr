@@ -29475,3 +29475,20 @@ Les documents générés lisaient l'identité de l'employeur dans des colonnes `
 **Conséquences** :
 - Aucune spec supprimée ; aucun moteur Billing, Workforce, RBAC ou DMS modifié côté serveur.
 - Verdict code : GO sous conditions (rapport `docs/bmad/LEEZR-4-0-RC2-FINAL.md`) ; production : NO-GO tant que les vérifications réelles (D-11) ne sont pas faites.
+
+## ADR-832 — Synchronisation système : un déploiement installe les définitions du code sans écraser les décisions prises dans Platform
+
+**Date** : 2026-11-19
+**Contexte** : `SystemSeeder` (lancé à chaque déploiement de production, jamais en DEV) remettait aux valeurs du code des configurations administrées dans Platform : prix, essais et limites des plans (`updateOrCreate`), TVA des marchés et des statuts juridiques, libellé et modules par défaut des JobDomains, permissions du rôle Platform `admin` (`sync` complet), nom des rôles, règle de paiement manuel, libellés des thèmes de notification et des champs système. Prouvé sur clone du DEV local avec l'ancien code : 8 décisions fictives sur 10 écrasées (`docs/bmad/leezr-4-0/systemseeder/evidence/old-behaviour-*`).
+**Décision** :
+- **Propriété par champ** (`App\Core\System\SystemSync::reconcile`) : *code* (définition technique — permissions, manifeste de module, références légales sans éditeur Platform : règles de marché, conventions) toujours aligné et signalé ; *administré* (valeur modifiable dans Platform) écrit à la création, puis aligné sur une évolution du code **seulement s'il n'a pas changé depuis la dernière écriture du code** (référence `system_sync_baselines`, règle à trois points) ; *création seule* (activation, disponibilité, défauts, santé) ; *structurel* (type et portée d'un champ : écart signalé, jamais appliqué).
+- Relations ensemblistes (`offerMembers`) : une permission du catalogue est **offerte une fois** au rôle `admin` (les nouvelles d'un déploiement incluses) ; une permission retirée dans Platform n'est jamais réimposée. Même règle pour les langues d'un marché.
+- Installation existante sans référence (antérieure à ADR-832) : toute valeur différente du code est **conservée et signalée** (`baseline: unknown`) ; l'alignement est un acte délibéré : `php artisan system:sync --adopt=<sujet>:<clé>:<champ>` (journalisé). `--dry-run` simule dans une transaction annulée ; `--json` produit le rapport.
+- Séparation des opérations : installation vierge et synchronisation de déploiement = `system:sync` (même code, `SystemSeeder` conservé pour la compatibilité `db:seed`) ; modification volontaire = écrans Platform ; migration exceptionnelle de données = migration dédiée (modèle ADR-823) ou `--adopt` explicite. Presets versionnés, données Company et historiques jamais écrits (prouvé par empreintes).
+- `deploy_release.sh` : production `system:sync --force --json` (au lieu de `db:seed`) ; **DEV : `system:sync` ajouté** après `leezr:dev-bootstrap` (le DEV ne recevait jamais les nouveaux modules et permissions).
+- Défaut corrigé au passage : `ModuleContributionCatalog` réécrivait ses propositions à chaque passage (ordre des clés JSON MySQL) → non idempotent.
+**Conséquences** :
+- Recette sur clones : installation vierge MySQL (200 créations, 0 conflit ; 2ᵉ/3ᵉ passage sans aucune écriture) ; clone du DEV local avec 10 décisions fictives : 10 préservées, nouveaux éléments installés (module `workforce_referral`, 4 permissions Company, thème), presets et tables Company identiques, 2ᵉ passage sans écriture ; `clone-test.sh` vert.
+- Écarts historiques réels du DEV local signalés, non appliqués : rôle chauffeur recommandé du JobDomain logistique (moindre privilège ADR-823) et 2 permissions Platform absentes du rôle `admin` → décision humaine (`--adopt`).
+- Les conflits restent visibles à chaque passage (journal `system_sync.conflict`, sortie du déploiement, rapport JSON) jusqu'à décision ; pas d'écran Platform dédié (non créé : UI absente du stock).
+- Rapport : `docs/bmad/LEEZR-4-0-SYSTEMSEEDER-FINAL.md`.

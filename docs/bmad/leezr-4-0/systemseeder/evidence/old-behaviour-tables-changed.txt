@@ -1,0 +1,15 @@
+company_permissions
+convention_collective_rules
+document_templates
+field_definitions
+jobdomains
+legal_statuses
+market_rule_sets
+markets
+module_contributions
+notification_topics
+plans
+platform_modules
+platform_payment_method_rules
+platform_role_permission
+platform_roles

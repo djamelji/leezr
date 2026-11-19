@@ -1,0 +1,12 @@
+== Valeurs administrées (avant → après synchronisation 1)
+  KO  valeurs administrées modifiées : 8 (administered-diff.txt)
+== Nouveaux éléments techniques
+  modules ajoutés : workforce_referral 
+  permissions Platform ajoutées : 
+  permissions Company ajoutées : workforce_referral.manage workforce_referral.refer workforce_referral.review workforce.view_all 
+== Tables modifiées par la synchronisation 1 : company_permissions convention_collective_rules document_templates field_definitions jobdomains legal_statuses market_rule_sets markets module_contributions notification_topics plans platform_modules platform_payment_method_rules platform_role_permission platform_roles 
+  OK  aucune donnée Company / historique modifiée
+  OK  presets publiés intacts (checksum identique)
+== Synchronisation 2
+  OK  seconde exécution : aucune table modifiée
+  CLONE ROUGE — storage/app/recipe-clones/leezr_clone_sync832old2/sync

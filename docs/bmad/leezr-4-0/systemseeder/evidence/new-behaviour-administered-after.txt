@@ -1,0 +1,10 @@
+plan 424200/4242000/21
+legal_status_vat 5.50
+market_vat_bps 1999
+jobdomain Logistique (Platform) ["core.members"]
+module_disabled payments.stripe=0
+manual_rule 1/7
+admin_has_removed_perm 0
+admin_name Administrateurs (Platform)
+custom_role_perms 1,2
+topic_label 1
