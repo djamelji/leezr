@@ -270,10 +270,36 @@ export async function openPlanningTemplates(page, { navigate = true } = {}) {
   if (navigate) await page.goto('/company/workforce/planning', { waitUntil: 'domcontentloaded' })
   // desktop : « Plus » of the header ; mobile : the dedicated header menu (ADR-824)
   const more = page.locator('[data-test="planning-actions-more"]:visible, [data-test="planning-more"]:visible').first()
-  await more.waitFor({ state: 'visible', timeout: 30000 })
+  // ADR-831 — the view mode is remembered (cookie `planningViewMode`) : the page may reopen ON the templates view,
+  // where the header « Plus » is hidden. Already there → nothing to open.
+  const templatesView = page.locator('[data-test="template-new"]:visible').first()
+  await more.or(templatesView).first().waitFor({ state: 'visible', timeout: 30000 })
+  if (await templatesView.isVisible()) return
   await more.click()
   const item = page.locator('[data-test="plan-view-templates"]')
   await item.waitFor({ state: 'visible', timeout: 10000 })
   await item.click()
   await page.waitForTimeout(500)
+}
+
+// ADR-831 (D-21 bis) — the person file (ADR-777/820) groups the former employee-file tabs into rubrics ; the
+// legacy /company/workforce/employees/:id redirects to /company/people/employee-:id. The SAME section components
+// (contract, planning, documents…) are reused inside the rubrics, with their data-test ids.
+export const PERSON_RUBRIC_OF = {
+  'Profil': 'Informations & emploi', 'Informations': 'Informations & emploi', 'Emploi': 'Informations & emploi',
+  'Contrat': 'Documents & contrats', 'Documents': 'Documents & contrats', 'Bulletins de paie': 'Documents & contrats', 'Signatures': 'Documents & contrats',
+  'Planning': 'Temps & absences', 'Temps & pointage': 'Temps & absences', 'Congés & absences': 'Temps & absences', 'Congés': 'Temps & absences',
+  'Historique': "Vue d'ensemble", 'Accès': 'Accès & autorisations',
+}
+export async function openPersonRubric(page, name) {
+  await page.getByRole('tab', { name: PERSON_RUBRIC_OF[name] || name }).first().click()
+  await page.waitForTimeout(700)
+}
+export async function personFile(page, ref) {
+  return (await apiRequest(page, { path: `/api/company/people/${ref}` })).json
+}
+export async function setPickerDate(page, testid, iso) {
+  const input = page.locator(`[data-test="${testid}"] input`).first()
+  await input.waitFor({ state: 'attached', timeout: 10000 })
+  await input.evaluate((el, d) => { el._flatpickr.setDate(d, true) }, iso)
 }

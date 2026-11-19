@@ -1,6 +1,12 @@
 // @ts-check
 import { expect, test } from '@playwright/test'
-import { loginCompany, clickAndExpectApi, createEmployeeViaTeam } from './helpers'
+import { apiRequest, loginCompany, clickAndExpectApi, createEmployeeViaTeam, openPersonRubric } from './helpers'
+import { createRun } from './run-ledger.js'
+
+// ADR-831 (D-21 bis) — the employee file lives in Équipe (/company/people/employee-:id, ADR-802/777) : the contract
+// section is reused inside the « Documents & contrats » rubric. The employee is recorded in the run ledger.
+const run = createRun('employee-lifecycle')
+test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
 
 // Full HR lifecycle driven by a manager (owner@leezr.test) on the isolated local base:
 //   create employee → add contract → schedule a shift in planning.
@@ -23,12 +29,12 @@ async function setPickerDate(page, testid, isoDate) {
 }
 
 test('manager: create employee → add contract → schedule shift (persisted)', async ({ page }) => {
-  const stamp = String(Date.now()).slice(-6)
   const firstName = 'E2E'
-  const lastName = `Lifecycle${stamp}`
+  const lastName = run.name('Lifecycle')
   const fullName = `${firstName} ${lastName}`
 
   await loginCompany(page, 'owner@leezr.test')
+  run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
 
   // ─── Step 1: create the employee ──────────────────────────────────────────
   // ADR-802 : tiroir unique d'Équipe (date d'embauche par défaut : aujourd'hui).
@@ -37,12 +43,12 @@ test('manager: create employee → add contract → schedule shift (persisted)',
   const employee = await created.json()
   expect(employee.id, 'created employee id').toBeTruthy()
   const employeeId = employee.id
+  run.track('employee', employeeId)
 
   // ─── Step 2: add a contract to that employee ──────────────────────────────
-  await page.goto(`/company/workforce/employees/${employeeId}`, { waitUntil: 'networkidle' })
+  await page.goto(`/company/people/employee-${employeeId}`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
-  await page.getByRole('tab', { name: 'Contrat' }).click()
-  await page.waitForTimeout(600)
+  await openPersonRubric(page, 'Contrat')
   await page.locator('[data-test="contract-add"]').click()
   await expect(page.getByText('Ajouter un contrat').first()).toBeVisible({ timeout: 10000 })
   // contract_type defaults to 'cdi', work model 'horaire', comp 'monthly' — only start_date is required.
@@ -78,13 +84,27 @@ test('manager: create employee → add contract → schedule shift (persisted)',
   await page.locator('[data-test="shift-start"] input').fill('09:00')
   await page.locator('[data-test="shift-end"] input').fill('17:00')
 
-  const shift = await clickAndExpectApi(page,
-    { urlIncludes: '/workforce/planning/shifts', method: 'POST' },
-    () => page.locator('[data-test="shift-submit"]').click())
-  expect(shift.status(), 'shift created').toBeLessThan(400)
+  // ADR-831 (D-21 bis) — since Lot 4B1 an assignment beyond the coverage need asks for an explicit confirmation
+  // (422 overstaffing_requires_confirmation, no write) ; the cloned data already staffs that day : confirm through
+  // the real dialog, then the shift MUST be created.
+  const isShiftPost = r => /\/workforce\/planning\/shifts$/.test(new URL(r.url()).pathname) && r.request().method() === 'POST'
+  let [shift] = await Promise.all([page.waitForResponse(isShiftPost, { timeout: 20000 }), page.locator('[data-test="shift-submit"]').click()])
+  if (shift.status() === 422 && (await shift.json()).code === 'overstaffing_requires_confirmation') {
+    const confirm = page.locator('[data-test="overstaffing-confirm"]')
+    await expect(confirm).toBeVisible({ timeout: 10000 })
+    ;[shift] = await Promise.all([page.waitForResponse(isShiftPost, { timeout: 20000 }), confirm.click()])
+  }
+  expect(shift.status(), 'shift created').toBe(201)
+  const shiftId = (await shift.json()).id
+  const listed = (await apiRequest(page, { path: `/api/workforce/planning/shifts?from=2026-01-07&to=2026-01-07&employee_id=${employeeId}&per_page=100` })).json
+  const rows = Array.isArray(listed) ? listed : (listed?.data ?? listed?.shifts ?? [])
+  expect(rows.some(x => x.id === shiftId), 'shift persisted').toBe(true)
+  await apiRequest(page, { method: 'DELETE', path: `/api/workforce/planning/shifts/${shiftId}` })
 
   // ─── Persistence: reload employees list → new employee is recorded ────────
   await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1500)
+  // the list is paginated (≈50 people on the cloned data) : look the new employee up through the search box
+  await page.locator('[data-test="fp-search"] input').first().fill(lastName)
   await expect(page.getByText(fullName).first()).toBeVisible({ timeout: 10000 })
 })

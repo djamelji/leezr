@@ -92,8 +92,9 @@ test('M6.C G — mobile : « Préparer ma semaine » accessible et utilisable à
   await loginCompany(page)
   await page.goto('/company/workforce/planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(1000)
-  const prepare = page.locator('[data-test="prepare-week-open"]')
-  await prepare.scrollIntoViewIfNeeded()
+  // ADR-831 (D-21 bis) — on mobile the secondary actions live in the header « Plus » menu (ADR-824, nothing removed).
+  await page.locator('[data-test="planning-more"]').click()
+  const prepare = page.locator('[data-test="prepare-week-open"]:visible').first()
   await expect(prepare).toBeVisible()
   await prepare.click()
   // Les points de départ sont présents et scrollables sur mobile.

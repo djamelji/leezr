@@ -97,6 +97,10 @@ test('édition directe d\'un besoin depuis la grille (inline)', async ({ page })
   // M6.E — cible la LIGNE du besoin créé (libellé unique) puis SON chip → édition déterministe
   // (plus de `.first()` global qui tombait sur un besoin résiduel).
   const covRow = page.locator('tr.coverage-row', { hasText: `Besoin ${stamp}` })
+  // ADR-831 (D-21 bis) — the coverage band of the grid is folded by default (cookie planningCoverageCollapsed) : unfold it.
+  const covToggle = page.locator('[data-test="cov-collapse"]').first()
+  if (await covToggle.locator('.tabler-chevron-right').count())
+    await covToggle.click()
   await expect(covRow).toBeVisible({ timeout: 10000 })
   await covRow.locator('.v-chip').first().click()
   await page.waitForTimeout(400)

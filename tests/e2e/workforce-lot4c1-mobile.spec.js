@@ -46,7 +46,8 @@ async function enterMobile(page) {
 async function navigateToLabel(page, label) {
   for (let i = 0; i < 8; i++) {
     if (await page.getByText(label, { exact: false }).first().isVisible().catch(() => false)) return true
-    await page.getByRole('button').filter({ has: page.locator('.tabler-chevron-right') }).first().click().catch(() => {})
+    // ADR-831 — the mobile day navigator (named button) ; « first chevron-right button » could hit a folded menu group
+    await page.locator('[data-test="mobile-day-next"]').click()
     await page.waitForTimeout(500)
   }
 
@@ -71,7 +72,19 @@ test('A — vue mobile : « Déplacer vers » un brouillon → Annuler → persi
   const shiftRow = page.locator('div.d-flex.align-center.gap-1', { hasText: '02:02' }).first()
 
   // Scroll vertical fonctionnel (pas bloqué par une interaction tactile).
-  const scrollable = await page.evaluate(() => { const el = document.scrollingElement; const before = el.scrollTop; el.scrollTop = 120; const moved = el.scrollTop !== before || el.scrollHeight > el.clientHeight; el.scrollTop = before; return moved })
+  // ADR-831 — the property is « no scroll lock » : html/body not overflow-hidden, and when the page overflows the
+  // viewport the scroll position really moves (a short day fits the screen : nothing to scroll is not a lock).
+  const scrollable = await page.evaluate(() => {
+    const el = document.scrollingElement
+    const locked = [document.documentElement, document.body].some(e => getComputedStyle(e).overflowY === 'hidden')
+    if (el.scrollHeight <= el.clientHeight) return !locked
+    const before = el.scrollTop
+    el.scrollTop = before + 120
+    const moved = el.scrollTop !== before
+    el.scrollTop = before
+
+    return moved && !locked
+  })
   expect(scrollable, 'le défilement vertical reste possible').toBeTruthy()
 
   // Action « Déplacer vers » (alternative tactile explicite au drag) — sur MON shift (02:02).
@@ -104,7 +117,8 @@ test('B — vue mobile : barre d’actions présente (Nouveau, Annuler/Rétablir
   await expect(page.locator('[data-test="mobile-undo"]')).toBeVisible()
   await expect(page.locator('[data-test="mobile-redo"]')).toBeVisible()
   // Navigation entre les jours : le bouton suivant reste accessible (cible tactile).
-  const next = page.getByRole('button').filter({ has: page.locator('.tabler-chevron-right') }).first()
+  // ADR-831 — the named next-day button (accessible name « Suivant »), not the first chevron of the page
+  const next = page.getByRole('button', { name: 'Suivant' }).and(page.locator('[data-test="mobile-day-next"]'))
   await expect(next).toBeVisible()
   await next.click()
   await page.waitForTimeout(400)

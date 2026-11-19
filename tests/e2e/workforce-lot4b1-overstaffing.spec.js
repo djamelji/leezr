@@ -17,6 +17,10 @@ async function gotoGrid(page) {
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1000)
   await expect(page.locator('.planning-grid').first()).toBeVisible()
+  // ADR-831 (D-21 bis) — the template palette is folded by default (ADR-779, remembered preference) : open it.
+  const paletteToggle = page.locator('[data-test="template-palette-toggle"]')
+  if ((await paletteToggle.getAttribute('aria-expanded')) !== 'true')
+    await paletteToggle.click()
 }
 
 async function cells(page) {

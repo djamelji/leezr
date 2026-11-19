@@ -23,7 +23,9 @@ test('drawers : scroll fonctionnel jusqu\'aux actions, multi-résolution', async
     await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
     await page.locator('[data-test="plan-view-planning"]').click()
     await page.waitForTimeout(900)
-    await page.getByRole('button', { name: /Besoins de personnel/i }).click()
+    // ADR-831 (D-21 bis) — ADR-823 : « Besoins de personnel » vit dans le menu « Plus » de la grille.
+    await page.locator('[data-test="grid-more"]').click()
+    await page.locator('[data-test="coverage-manage"]').click()
     await page.waitForTimeout(500)
     const drawer = page.locator('.v-navigation-drawer.wf-scroll-drawer', { has: page.getByRole('heading', { name: 'Besoins de personnel' }) })
     // Le conteneur scrolle réellement (overflow-y auto, restauré malgré le défaut Vuexy).

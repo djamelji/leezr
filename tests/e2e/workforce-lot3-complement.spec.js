@@ -40,7 +40,8 @@ test('A — absence partielle : décompte proportionnel + champs heures rendus',
   await page.waitForTimeout(800)
   await page.getByRole('button', { name: /Nouvelle demande|New request|Demander|Nouvelle/i }).first().click()
   await page.waitForTimeout(500)
-  await page.getByText(/Absence partielle|Partial absence/i).first().click()
+  // ADR-831 (D-21 bis) — the partial-absence switch reads « Quelques heures seulement (sur une journée) » (leaves.fields.partial).
+  await page.getByLabel(/Quelques heures seulement|Absence partielle|Partial absence/i).first().check()
   await expect(page.getByLabel(/Heure de début|Start time/i).first()).toBeVisible()
   await page.screenshot({ path: 'tests/e2e/__screens__/lot3-partial-leave-desktop.png', fullPage: true })
 })

@@ -78,8 +78,13 @@ test('M2 — tâche type : créer, insérer dans un modèle, appliquer, modifier
   // 7) Appliquer au planning (palette armée + cellule libre, probe résiliente).
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(900)
+  // ADR-831 (D-21 bis) — the palette is folded by default (ADR-779) : it was taken for « unavailable » and the
+  // application step was silently skipped. Open it ; the template created above MUST be in it.
+  const paletteToggle = page.locator('[data-test="template-palette-toggle"]')
+  if ((await paletteToggle.getAttribute('aria-expanded')) !== 'true')
+    await paletteToggle.click()
   const card = page.locator(`[data-test="palette-template"][data-template-id="${tpl.id}"]`)
-  test.skip(!(await card.count()), 'Palette indisponible — application non testée.')
+  await expect(card, 'the new template is offered in the palette').toHaveCount(1, { timeout: 10000 })
   await card.click()
   await page.waitForTimeout(300)
   const cells = await page.$$eval('[data-droppable="1"]', els => els.map((e, i) => ({ i, busy: !!e.querySelector('.plan-shift') || !!e.querySelector('.plan-absence') })))

@@ -24,6 +24,9 @@ test('Workforce activity nav renders a single group and routes correctly', async
   await expect(nav.getByText('Ressources humaines', { exact: true })).toHaveCount(0) // ancien groupe retiré
 
   const team = nav.locator('a[href^="/company/people"]').first()
+  // ADR-831 (D-21 bis) — for a Workforce company the entry sits in the collapsible « Équipe » group.
+  if (!(await team.isVisible()))
+    await nav.locator('.nav-group-label', { hasText: 'Équipe' }).first().click()
   await team.scrollIntoViewIfNeeded()
   await team.click()
   await expect(page).toHaveURL(/\/company\/people/, { timeout: 8000 })

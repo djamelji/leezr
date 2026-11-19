@@ -1,7 +1,8 @@
 // @ts-check
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { loginCompany, apiRequest, createEmployeeViaTeam } from './helpers'
+import { loginCompany, apiRequest, createEmployeeViaTeam, openPersonRubric, setPickerDate } from './helpers'
+import { createRun } from './run-ledger.js'
 
 /**
  * W-HR-UX-5 (P2/P6) — parcours RH sur le DEV RÉELLEMENT servi (dev.leezr.com), en VRAIE UI.
@@ -13,8 +14,12 @@ import { loginCompany, apiRequest, createEmployeeViaTeam } from './helpers'
  * contextuelle de planification depuis la fiche (P4). Le parcours salarié complet est prouvé sur le
  * full-stack local servant le MÊME SHA (hrux4-first-day.spec.js).
  *
- * Lancer avec : E2E_BASE_URL=https://dev.leezr.com
+ * ADR-831 (D-21 bis) — s'exécute sur le clone marqué (le DEV réel n'est plus une cible de campagne) ; la fiche
+ * historique /company/workforce/employees/:id redirige vers la fiche Collaborateur (ADR-802/777) : les mêmes
+ * composants (profil, contrat, planning) y vivent dans des rubriques. Registre d'exécution pour le démontage.
  */
+const run = createRun('hrux5')
+test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
 
 const SHOTS = process.env.HRUX5_SHOTS || '/tmp/hrux5-shots'
 fs.mkdirSync(SHOTS, { recursive: true })
@@ -26,26 +31,22 @@ async function step(page, label, fn) {
   try { await fn(); results.push({ label, ok: true, ms: Date.now() - t0 }); console.log(`OK  ${label}`) }
   catch (e) { results.push({ label, ok: false, error: String(e).split('\n')[0] }); console.log(`KO  ${label} — ${String(e).split('\n')[0]}`); await shot(page, `FAIL-${label}`) }
 }
-async function setPickerDate(page, testid, iso) {
-  const input = page.locator(`[data-test="${testid}"] input`).first()
-  await input.waitFor({ state: 'attached', timeout: 10000 })
-  await input.evaluate((el, d) => { el._flatpickr.setDate(d, true) }, iso)
-}
 
 test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → contrat → planning fiche)', async ({ page }) => {
   test.setTimeout(4 * 60 * 1000)
   page.setDefaultTimeout(25000)
   const stamp = String(Date.now()).slice(-6)
   const firstName = 'Lea'
-  const lastName = `Dupont${stamp}`
+  const lastName = run.name('Dupont')
   const fullName = `${firstName} ${lastName}`
-  const email = `lea.dupont.${stamp}@leezr.invalid`
+  const email = run.email('lea')
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
   let employeeId = null
 
   await step(page, 'login-dev', async () => {
     await loginCompany(page, 'owner@leezr.test')
     expect(page.url()).not.toContain('/login')
+    run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
     // Confirme le SHA servi par DEV.
     const origin = new URL(page.url()).origin
     console.log('DEV origin:', origin)
@@ -57,19 +58,15 @@ test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → c
     const resp = await createEmployeeViaTeam(page, { firstName, lastName, email })
     expect(resp.status()).toBe(201)
     employeeId = (await resp.json()).id
+    run.track('employee', employeeId)
   })
 
   await step(page, 'set-poste-manager-ui', async () => {
     // Vraie UI : fiche → Profil → Modifier → sélection poste + manager → Enregistrer.
-    await page.goto(`/company/workforce/employees/${employeeId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/company/people/employee-${employeeId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1200)
-    await page.getByRole('tab', { name: 'Profil' }).click().catch(() => {})
-    await page.waitForTimeout(800)
-    // Le bouton "Modifier" de la CARTE profil (le 1er "Modifier" de l'en-tête ne bascule pas l'édition).
-    // On clique celui situé près de "Informations personnelles".
-    const editBtns = page.getByRole('button', { name: 'Modifier' })
-    const n = await editBtns.count()
-    await editBtns.nth(n > 1 ? 1 : 0).click()
+    // Fiche Collaborateur : l'action principale « Modifier » ouvre l'édition RH (ADR-777).
+    await page.locator('[data-test="person-edit"]').click()
     await page.waitForTimeout(700)
     // Le formulaire d'édition (Poste + Responsable) doit être accessible EN VRAIE UI.
     await expect(page.getByText('Poste', { exact: true }).first()).toBeVisible({ timeout: 8000 })
@@ -94,10 +91,9 @@ test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → c
   })
 
   await step(page, 'contract-create-activate', async () => {
-    await page.goto(`/company/workforce/employees/${employeeId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/company/people/employee-${employeeId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1000)
-    await page.getByRole('tab', { name: 'Contrat' }).click()
-    await page.waitForTimeout(600)
+    await openPersonRubric(page, 'Contrat')
     await page.locator('[data-test="contract-add"]').click()
     await expect(page.getByText('Ajouter un contrat').first()).toBeVisible({ timeout: 10000 })
     await setPickerDate(page, 'contract-start-date', tomorrow)
@@ -118,10 +114,9 @@ test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → c
 
   await step(page, 'schedule-shift-from-fiche-P4', async () => {
     // NOUVEAU (P4) : programmer un créneau DEPUIS la fiche, en vraie UI, sans aller dans la grille planning.
-    await page.goto(`/company/workforce/employees/${employeeId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/company/people/employee-${employeeId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1000)
-    await page.getByRole('tab', { name: 'Planning' }).click()
-    await page.waitForTimeout(800)
+    await openPersonRubric(page, 'Planning')
     await page.locator('[data-test="fiche-shift-add"]').click()
     await setPickerDate(page, 'fiche-shift-date', tomorrow)
     await page.locator('[data-test="fiche-shift-start"] input').fill('09:00')
@@ -137,7 +132,7 @@ test('W-HR-UX-5 — parcours RH sur DEV réel (création → poste/manager → c
   })
 
   await step(page, 'fiche-onboarding-checklist', async () => {
-    await page.goto(`/company/workforce/employees/${employeeId}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/company/people/employee-${employeeId}`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(1500)
     const file = await apiRequest(page, { path: `/api/workforce/employees/${employeeId}/file` })
     expect(file.json?.onboarding, 'onboarding state present').toBeTruthy()

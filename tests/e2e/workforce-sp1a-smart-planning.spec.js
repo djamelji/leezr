@@ -16,7 +16,9 @@ test('coverage : création persistée d\'un besoin de personnel', async ({ page 
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(500)
 
-  await page.getByRole('button', { name: /Besoins de personnel/i }).click()
+  // ADR-831 (D-21 bis) — ADR-823 : « Besoins de personnel » vit dans le menu « Plus » de la grille.
+  await page.locator('[data-test="grid-more"]').click()
+  await page.locator('[data-test="coverage-manage"]').click()
   await page.waitForTimeout(500)
 
   // Scope au drawer « Besoins de personnel » (par son titre) pour éviter les autres drawers.

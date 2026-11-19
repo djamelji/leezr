@@ -62,6 +62,9 @@ test('ADR-748b — resize dynamique : le graphe ne disparaît jamais', async ({ 
   await loginPlatform(page)
   await page.setViewportSize({ width: 1600, height: 1000 })
   await page.goto('/platform/presentation-lab?live=1')
+  await page.waitForTimeout(1500)
+  // ADR-831 (D-21 bis) — the built product redirects lab routes away (ADR-818) : run only against the Vite dev server.
+  test.skip(!page.url().includes('/platform/presentation-lab'), 'ADR-818 — laboratoire dev-only (route `devOnly`) : absent du produit construit, uniquement avec le serveur Vite (pnpm dev)')
   await page.waitForFunction(() => typeof window.__setLive === 'function')
   const box = page.locator('.lab-box[data-live="1"]')
   // Rendu initial grande taille.

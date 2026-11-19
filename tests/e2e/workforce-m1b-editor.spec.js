@@ -92,13 +92,13 @@ test('M1.b — éditeur visuel : création composée, reload, application, modif
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(900)
   // Ouvrir la palette si repliée, puis armer le modèle.
+  // ADR-831 (D-21 bis) — the palette toggle is `template-palette-toggle` (folded by default, ADR-779) : the old
+  // icon-based lookup missed it and the application step was silently skipped. The new template MUST be offered.
   const card = page.locator(`[data-test="palette-template"][data-template-id="${tpl.id}"]`)
-  if (!(await card.count())) {
-    const toggle = page.getByRole('button').filter({ has: page.locator('.tabler-layout-grid, .tabler-template') }).first()
-    await toggle.click().catch(() => {})
-    await page.waitForTimeout(300)
-  }
-  test.skip(!(await card.count()), 'Palette indisponible dans ce contexte — application UI non testée.')
+  const paletteToggle = page.locator('[data-test="template-palette-toggle"]')
+  if ((await paletteToggle.getAttribute('aria-expanded')) !== 'true')
+    await paletteToggle.click()
+  await expect(card, 'the new template is offered in the palette').toHaveCount(1, { timeout: 10000 })
   await card.click()
   await page.waitForTimeout(300)
 

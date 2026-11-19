@@ -24,6 +24,9 @@ test('ui-lab — a11y light & dark', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await loginCompany(page)
   await page.goto('/ui-lab')
+  await page.waitForTimeout(1500)
+  // ADR-831 (D-21 bis) — the built product redirects lab routes away (ADR-818) : run only against the Vite dev server.
+  test.skip(!page.url().includes('/ui-lab'), 'ADR-818 — laboratoire dev-only (route `devOnly`) : absent du produit construit, uniquement avec le serveur Vite (pnpm dev)')
   const l = await scan(page, 'light')
   const d = await scan(page, 'dark')
   expect(l + d, 'serious a11y (ui-lab light+dark)').toBe(0)

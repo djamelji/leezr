@@ -47,8 +47,12 @@ test('entreprise SANS Workforce : self-service Core complet, aucune requête Wor
     await expect(page.locator(`[data-test="my-space-entry-${key}"]`), `rubrique ${key}`).toBeVisible()
   for (const key of ['activity', 'signatures'])
     await expect(page.locator(`[data-test="my-space-entry-${key}"]`), `rubrique ${key} absente`).toHaveCount(0)
+  // ADR-831 (D-21 bis) — since ADR-775 (UX0) a person with management entries reaches her personal entries
+  // through the account (avatar) menu, not the side menu : « Mon espace » is looked up there.
+  await page.getByRole('button', { name: 'Menu du compte' }).first().click()
   await expect(page.getByRole('link', { name: 'Mon espace' }).first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Mon activité' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
 
   // Une rubrique absente reste inaccessible par URL (retour à l'aperçu, sans appel Workforce).
   await page.goto('/company/my-space/signatures', { waitUntil: 'domcontentloaded' })

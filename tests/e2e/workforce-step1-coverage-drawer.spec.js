@@ -9,7 +9,9 @@ async function openDrawer(page) {
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(1000)
-  await page.getByRole('button', { name: /Besoins de personnel/i }).click()
+  // ADR-831 (D-21 bis) — ADR-823 : « Besoins de personnel » vit dans le menu « Plus » de la grille.
+  await page.locator('[data-test="grid-more"]').click()
+  await page.locator('[data-test="coverage-manage"]').click()
   await page.waitForTimeout(600)
 
   return page.locator('.v-navigation-drawer', { has: page.getByRole('heading', { name: 'Besoins de personnel' }) })
@@ -77,7 +79,9 @@ test('drawer besoins : ponctuel + récurrent + catégorie + édition + suppressi
   // 6) FERMETURE / RÉOUVERTURE : la liste persiste.
   await drawer.getByRole('button').filter({ has: page.locator('.tabler-x') }).first().click()
   await page.waitForTimeout(400)
-  await page.getByRole('button', { name: /Besoins de personnel/i }).click()
+  // ADR-831 (D-21 bis) — ADR-823 : « Besoins de personnel » vit dans le menu « Plus » de la grille.
+  await page.locator('[data-test="grid-more"]').click()
+  await page.locator('[data-test="coverage-manage"]').click()
   await page.waitForTimeout(600)
   expect(await page.locator('[data-test="cov-req-item"]').count()).toBeGreaterThanOrEqual(1)
 

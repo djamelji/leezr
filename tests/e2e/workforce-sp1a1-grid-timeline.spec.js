@@ -93,6 +93,8 @@ test('copie de la semaine précédente (brouillons)', async ({ page }) => {
   await page.locator('[data-test="plan-view-planning"]').click()
   await page.waitForTimeout(800)
 
+  // ADR-831 (D-21 bis) — ADR-823 : « Copier la semaine précédente » vit dans le menu « Plus » de la grille.
+  await page.locator('[data-test="grid-more"]').click()
   const [resp] = await Promise.all([
     page.waitForResponse(r => /\/shifts\/copy-week$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20000 }),
     page.locator('[data-test="copy-prev-week"]').click(),

@@ -43,7 +43,8 @@ test('drawer mobile 390 : scroll et action accessibles', async ({ page }) => {
   // MODÈLE, accessible sur mobile via l'onglet Modèles — même classe de correction partagée.
   await page.goto('/company/workforce/time?tab=planning', { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
-  await page.locator('[data-test="planning-more"]').click() // mobile : « Modèles » dans le menu « Plus » de l'en-tête
+  // mobile : « Modèles » dans le menu « Plus » de l'en-tête — le helper ouvre ce menu (une seule fois : un second
+  // clic le refermait pendant que l'entrée était visée, ADR-831)
   await openPlanningTemplates(page, { navigate: false })
   await page.waitForTimeout(600)
   await page.getByRole('button', { name: /Nouveau modèle|New template/i }).first().click()

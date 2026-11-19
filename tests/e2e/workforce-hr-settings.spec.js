@@ -4,7 +4,15 @@
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers'
 
-const SCRATCH = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
+// ADR-831 (D-21 bis) — since L7 (ADR-797/799) the « Temps de travail & pauses » tab is the working-time assistant
+// (convention + organisation, one engine) ; the rule tables with their provenance live in its « Règles avancées »
+// panel, which excludes the keys the assistant sets (the break TARGET among them). Conventions are confirmed in the
+// assistant (no separate « Règles & conventions » tab). Same checks : provenance, a configurable rule edited and
+// persisted, the mandatory legal rule locked.
+const openAdvanced = async page => {
+  await page.locator('[data-test="worktime-advanced"] .v-expansion-panel-title').click()
+  await page.waitForTimeout(800)
+}
 
 test('HR settings hub aggregates sections, shows provenance and edits a rule with persistence', async ({ page }) => {
   const errors = []
@@ -19,23 +27,27 @@ test('HR settings hub aggregates sections, shows provenance and edits a rule wit
   // Hub header + business-term tabs.
   await expect(page.getByText('Paramètres RH').first()).toBeVisible({ timeout: 10000 })
   await expect(page.getByRole('tab', { name: /Temps de travail/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Règles & conventions/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Contrats de travail/ })).toBeVisible()
+  await expect(page.locator('[data-test="wt-convention"]'), 'convention confirmed in the assistant').toBeVisible()
 
   // Provenance: source chips present (e.g. "Loi (pays)" / "Entreprise" / "Défaut").
-  await expect(page.locator('.v-chip').filter({ hasText: /Loi|Entreprise|Défaut|Convention|Secteur/ }).first()).toBeVisible({ timeout: 8000 })
-  await page.screenshot({ path: `${SCRATCH}/hr-settings.png`, fullPage: false })
+  await openAdvanced(page)
+  await expect(page.locator('[data-test="worktime-advanced"]').getByText(/Loi \(pays\)|Entreprise|Défaut|Convention|Secteur/).first()).toBeVisible({ timeout: 8000 })
+  await page.screenshot({ path: test.info().outputPath('hr-settings.png'), fullPage: false })
 
-  // Edit a configurable rule (break target) and save → persists after reload.
-  const row = page.locator('tr', { has: page.getByText('Durée de pause cible', { exact: false }) }).first()
+  // Edit a configurable rule (break maximum) and save → persists after reload.
+  const value = String(80 + (Date.now() % 15))
+  const row = page.locator('tr', { has: page.getByText('Durée de pause maximale', { exact: false }) }).first()
   await expect(row).toBeVisible()
   const input = row.locator('input[type="number"]')
-  await input.fill('27')
+  await input.fill(value)
   await row.getByRole('button', { name: /Enregistrer/ }).click()
   await expect(page.getByText(/Règle enregistrée/)).toBeVisible({ timeout: 8000 })
 
   await page.reload({ waitUntil: 'networkidle' })
-  const row2 = page.locator('tr', { has: page.getByText('Durée de pause cible', { exact: false }) }).first()
-  await expect(row2.locator('input[type="number"]')).toHaveValue('27')
+  await openAdvanced(page)
+  const row2 = page.locator('tr', { has: page.getByText('Durée de pause maximale', { exact: false }) }).first()
+  await expect(row2.locator('input[type="number"]')).toHaveValue(value)
 
   // Mandatory legal rule is locked (not editable) somewhere in the tables.
   await expect(page.locator('.tabler-lock').first()).toBeVisible()

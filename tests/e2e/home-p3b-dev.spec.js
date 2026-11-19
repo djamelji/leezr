@@ -17,20 +17,23 @@ test('P3-B DEV — single canonical home + redirect + one nav entry', async ({ p
   page.setDefaultTimeout(20000)
   await loginCompany(page)
 
+  // ADR-831 (D-21 bis) — since ADR-818 the single canonical home is /home ; /dashboard is a kept alias.
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
+  await expect(page, '/dashboard is an alias of the single home').toHaveURL(/\/home$/)
   // "À traiter" fixed section is present on the single home.
   await expect(page.getByText(/à traiter/i).first()).toBeVisible()
   await shot(page, '01-home-dashboard')
 
-  // Former workforce action home redirects to /dashboard.
+  // Former workforce action home redirects to the single home.
   await page.goto('/company/workforce', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2500)
-  await expect(page).toHaveURL(/\/dashboard/)
+  await expect(page).toHaveURL(/\/home$/)
   console.log('/company/workforce redirected to:', page.url())
 
   // Exactly one "Accueil" nav entry (no competing HR home).
-  const accueil = await page.locator('nav, aside').getByText(/^Accueil$/).count()
+  const accueil = await page.locator('.layout-vertical-nav').getByText(/^Accueil$/).count()
+  expect(accueil, 'one single home entry').toBe(1)
   console.log('Accueil nav entries (expected 1):', accueil)
 
   // Responsive.

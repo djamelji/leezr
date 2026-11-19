@@ -74,7 +74,8 @@ test('UX5 parcours propriétaire (lecture) : hub, rôle, absence, factures, int�
   read = await meter(page)
   net.mark('rôles')
   await page.locator('[data-test="settings-entry-settings-roles"]').click()
-  await page.waitForURL(/\/company\/people\?.*tab=roles/)
+  // ADR-831 (D-21 bis) — tabs are in the path since ADR-820 (« onglets en chemin »).
+  await page.waitForURL(/\/company\/people\/roles(\?|$)/)
   await expect(page.getByRole('tab', { name: /Rôles/ }).first()).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('[data-test="settings-return"]')).toBeVisible()
   m.trouver_role = await read(0)
@@ -87,7 +88,7 @@ test('UX5 parcours propriétaire (lecture) : hub, rôle, absence, factures, int�
   net.mark('absence')
   await page.locator('[data-test="settings-search"] input').fill('absence')
   await page.locator('[data-test="settings-entry-settings-leave-types"]').click()
-  await page.waitForURL(/\/company\/workforce\/leave\?.*tab=config/)
+  await page.waitForURL(/\/company\/workforce\/leave(\/config(\?|$)|\?.*tab=config)/)
   await expect(page.getByRole('tab', { name: /Types de congés/ }).first()).toHaveAttribute('aria-selected', 'true')
   m.parametre_absence = await read(1)
 

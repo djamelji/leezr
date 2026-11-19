@@ -75,7 +75,12 @@ test('drawer mobile : ouverture, fermeture après navigation, Escape + focus', a
   await hamburger.click()
   await page.waitForTimeout(400)
   // ADR-766/802 : l'entrée de menu des personnes est Équipe (/company/people).
-  await page.locator('.layout-vertical-nav a[href*="/company/people"]').first().click()
+  // ADR-831 (D-21 bis) — for a Workforce company it sits in the collapsible « Équipe » group (Équipe, Embauches,
+  // Contrats) : open the group first when the link is not already shown.
+  const peopleLink = page.locator('.layout-vertical-nav a[href*="/company/people"]').first()
+  if (!(await peopleLink.isVisible()))
+    await page.locator('.layout-vertical-nav .nav-group-label', { hasText: 'Équipe' }).first().click()
+  await peopleLink.click()
   await page.waitForTimeout(800)
   await expect(page.locator('.layout-overlay.visible')).toHaveCount(0)
   await expect(page).toHaveURL(/people/)

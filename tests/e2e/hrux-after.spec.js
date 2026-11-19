@@ -1,25 +1,41 @@
 // @ts-check
 // W-HR-UX-1 — Preuve UI "après" : la fiche collaborateur affiche la CHECKLIST d'intégration guidée.
+// ADR-831 (D-21 bis) — la spec dépendait de « Bob Dupont » tel qu'il existait sur le DEV (contrat, intégration
+// incomplète) et de l'ancienne liste /company/workforce/employees (absorbée par Équipe, ADR-802). Elle prépare
+// désormais SON collaborateur fictif (registre d'exécution) : fiche + contrat, intégration incomplète.
 import { test, expect } from '@playwright/test'
-import { loginCompany } from './helpers'
+import { apiRequest, loginCompany } from './helpers'
+import { createRun } from './run-ledger.js'
 
-const S = '/private/tmp/claude-501/-Users-djamel-sites-leezr/b5712db8-7698-4fe2-b06f-1c13ecc2368f/scratchpad'
+const run = createRun('hrux-after')
 
-test('after: employee fiche shows onboarding checklist', async ({ page }) => {
+test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
+
+test('after: employee fiche shows onboarding checklist', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
   await loginCompany(page, 'owner@leezr.test')
-  await page.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
-  await page.waitForTimeout(1500)
+  run.useCompany((await apiRequest(page, { path: '/api/profile/space' })).json.company_id)
 
-  // Ouvrir la fiche de "Bob Dupont" (collaborateur existant avec contrat mais intégration incomplète).
-  await page.getByText('Bob Dupont').first().click()
-  await page.waitForTimeout(2500)
-  await expect(page).toHaveURL(/\/company\/workforce\/employees\/\d+/)
-  await page.screenshot({ path: `${S}/hrux-after-fiche.png`, fullPage: true })
+  // Collaborateur fictif avec contrat, intégration incomplète (pas de signature, pas d'accès).
+  const created = await apiRequest(page, { method: 'POST', path: '/api/workforce/employees', body: { first_name: 'Bob', last_name: run.name('Dupont'), hire_date: new Date().toISOString().slice(0, 10) } })
+  expect(created.status).toBe(201)
+  run.track('employee', created.json.id)
+  const contract = await apiRequest(page, { method: 'POST', path: `/api/workforce/employees/${created.json.id}/contracts`, body: { contract_type: 'cdi', work_model_key: 'horaire', start_date: new Date().toISOString().slice(0, 10), weekly_hours: 35 } })
+  expect(contract.status).toBe(201)
+
+  // Ouvrir la fiche depuis Équipe.
+  await page.goto('/company/people', { waitUntil: 'domcontentloaded' })
+  await page.getByPlaceholder('Rechercher un collaborateur…').fill(run.name('Dupont'))
+  await page.locator('tr', { hasText: run.name('Dupont') }).first().click()
+  await expect(page).toHaveURL(new RegExp(`/company/people/employee-${created.json.id}`), { timeout: 15000 })
+  await page.waitForTimeout(2000)
+  await page.screenshot({ path: testInfo.outputPath('hrux-after-fiche.png'), fullPage: true })
 
   // La checklist d'intégration est présente et guide la RH.
-  await expect(page.getByText(/Intégration du collaborateur/i)).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByText(/Contrat de travail/i).first()).toBeVisible()
-  const steps = await page.locator('text=/Informations du collaborateur|Contrat de travail|Signature du contrat|Accès à l.espace collaborateur/i').count()
+  const checklist = page.locator('[data-test="person-onboarding"]')
+  await expect(checklist.getByText(/Intégration du collaborateur/i)).toBeVisible({ timeout: 10_000 })
+  await expect(checklist.getByText(/Contrat de travail/i).first()).toBeVisible()
+  const steps = await checklist.locator('text=/Informations du collaborateur|Contrat de travail|Signature du contrat|Accès à l.espace collaborateur/i').count()
   console.log('CHECKLIST_STEPS_VISIBLE=' + steps)
+  expect(steps).toBeGreaterThanOrEqual(3)
 })
