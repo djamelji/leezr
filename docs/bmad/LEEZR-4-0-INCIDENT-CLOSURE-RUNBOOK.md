@@ -21,6 +21,16 @@ Date : 2026-11-20 · Complète `LEEZR-4-0-DEPLOYMENT-INCIDENT-FINAL.md`. Tout ce
 
 ### OP-1 (A1) — Supprimer le webhook GitHub `595692752`
 
+> **EXÉCUTÉ le 2026-11-20 (autorisation « GO OP-1 »).** Identité vérifiée (id 595692752, événement `push`, cible
+> `https://leezr.com/webhook.php`, secret HMAC configuré). Preuves exportées hors dépôt dans
+> `~/leezr-backups/webhook-595692752/` (600) : `hook-config.json` (sha256 9ff7ad4f…), `deliveries.json` (0a374b77… —
+> GitHub ne conservait plus qu'une livraison), `delivery-3854960073642082304.json` (3c129647… — le push `dev` 82e35416
+> du 2026-11-19 16:27:50 Z, réponse `deploy_triggered`, c.-à-d. le déclencheur de l'incident). `PATCH active=false`
+> vérifié, puis `DELETE` → 204 ; `GET /hooks` → 0 webhook. Workflows Actions non touchés : seuls `deploy.yml`
+> (push main/dev) et `ssl-ops.yml` (push dev limité à ses propres chemins) se déclenchent sur un push.
+> Résiduel : le `webhook.php` d'origine est toujours servi par la release PROD (répond 403 sans signature valide) ; il
+> devient inerte au prochain déploiement de `main` contenant 66141aef.
+
 Vérifié le 2026-11-20 :
 - c'est le **seul** webhook du dépôt : type `web`, actif, événement `push`, URL `https://leezr.com/webhook.php`,
   secret défini, créé le 2026-02-11 ;
