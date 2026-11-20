@@ -67,6 +67,20 @@ Option recommandée, **par le propriétaire** sans écriture de l'agent en base 
    révoqués), simulation d'abord, avec sauvegarde des deux tables concernées. Le script refuse aujourd'hui `c1leezr` ;
    OP-2bis ajoute un drapeau explicite `--allow-production --confirm-database=c1leezr`, testé sur clone avant usage.
 
+### 3.1 OP-2bis — état au 2026-11-20 ~21:50 UTC (« GO OP-2bis », compte Platform 1 exclu)
+
+- Comptes revérifiés sur `c1leezr` : Platform 2, 3 (`admin`) et utilisateurs 1–5 (@leezr.test) acceptent le mot de
+  passe public ; aucune session authentifiée ni jeton rattaché ; `sessions` PROD **sans** colonne `platform_user_id`
+  (migration 2026_12_02 non appliquée) → sessions identifiées par la clé de connexion du garde dans le contenu.
+- `lock-demo-accounts.php` : liste explicite `--only`, refus d'un compte à mot de passe privé, `--export`,
+  `--allow-production` obligatoire sur `c1leezr`, empreintes hors périmètre (comptes non visés + rôles, adhésions,
+  sociétés). Clone `leezr_clone_op2bis` (schéma PROD, sessions/jetons de test) : 7 essais verts.
+- Sauvegarde PROD : `~/leezr-backups/op2bis-prod-20261120/accounts-backup.json` (600, sha256 b002cdb4…).
+- Simulation PROD : **verte** (7 comptes, 14 empreintes, 0 écart, rollback) — `simulation.txt`.
+- Application : **non exécutée** — la connexion SSH `jliouiprodleezr` a refusé l'ancien mot de passe (rotation faite
+  par le propriétaire entre la simulation et l'application). Exécution par le propriétaire avec
+  `docs/bmad/leezr-4-0/incident-833/prod-lock-bundle.sh` (script identique, embarqué, testé contre le clone).
+
 ## 4. Sécurisation SSH
 
 **4.1 Clé dédiée à l'agent (poste local, par le propriétaire — passphrase gardée dans le trousseau macOS)**
