@@ -21,12 +21,15 @@ class CompaniesModule implements ModuleDefinition
                     // ADR-597 (LOT 3): nav item requires only read access; writes need manage_companies.
                     ['key' => 'platform-companies', 'title' => 'Companies', 'to' => ['name' => 'platform-companies'], 'icon' => 'tabler-building', 'permission' => 'view_companies', 'group' => 'clients', 'sort' => 10],
                 ],
-                routeNames: ['platform-companies', 'platform-companies-id'],
+                routeNames: ['platform-companies', 'platform-companies-id', 'platform-companies-create'],
             ),
             permissions: [
                 ['key' => 'view_companies', 'label' => 'View Companies'],
                 ['key' => 'manage_companies', 'label' => 'Manage Companies'],
                 ['key' => 'view_company_users', 'label' => 'View Company Users'],
+                // ADR-834 : never part of an existing bundle — granted explicitly
+                ['key' => 'create_companies', 'label' => 'Create & onboard companies'],
+                ['key' => 'override_company_commercial_terms', 'label' => 'Grant commercial terms different from the plan (audited)'],
             ],
             bundles: [
                 [
@@ -40,6 +43,18 @@ class CompaniesModule implements ModuleDefinition
                     'label' => 'Company Supervision',
                     'hint' => 'View and manage companies and their users.',
                     'permissions' => ['view_companies', 'manage_companies', 'view_company_users'],
+                ],
+                [
+                    'key' => 'companies.onboarding',
+                    'label' => 'Company Creation & Onboarding',
+                    'hint' => 'Create new companies, invite their administrator and follow their onboarding.',
+                    'permissions' => ['view_companies', 'create_companies', 'view_company_users'],
+                ],
+                [
+                    'key' => 'companies.commercial_override',
+                    'label' => 'Commercial Overrides',
+                    'hint' => 'Grant a trial or free period different from the plan when creating a company (audited).',
+                    'permissions' => ['override_company_commercial_terms'],
                 ],
             ],
             scope: 'admin',

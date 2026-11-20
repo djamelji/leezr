@@ -136,6 +136,16 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::get('/companies/{id}/wallet-history', [CompanyBillingAdminController::class, 'walletHistory']);
             Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
             Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
+            Route::get('/companies/{id}/onboarding', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'onboarding'])->whereNumber('id'); // ADR-834
+        });
+
+        // ADR-834 — creation & onboarding from Platform — `create_companies` (never implied by manage_companies)
+        Route::middleware(['platform.permission:create_companies'])->group(function () {
+            Route::get('/company-creation/options', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'options']);
+            Route::get('/company-creation/preview', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'preview']);
+            Route::get('/company-creation/administrator', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'administrator'])->middleware('throttle:60,1');
+            Route::post('/companies', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'store'])->middleware('throttle:20,1');
+            Route::post('/companies/{id}/onboarding/resend-invitation', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'resendInvitation'])->whereNumber('id')->middleware('throttle:10,1');
         });
 
         // Mutations — `manage_companies`

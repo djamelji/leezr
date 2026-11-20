@@ -12,9 +12,7 @@ use App\Core\Billing\PaymentGatewayManager;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Modules\Core\Billing\Services\CouponService;
-use App\Core\Fields\FieldDefinition;
-use App\Core\Fields\FieldWriteService;
-use App\Core\Jobdomains\JobdomainGate;
+use App\Core\Companies\CompanyProvisioner;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Markets\Market;
 use App\Core\Notifications\NotificationDispatcher;
@@ -22,7 +20,6 @@ use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Plans\Plan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class RegisterCompanyUseCase
 {
@@ -58,81 +55,16 @@ class RegisterCompanyUseCase
                 'password_set_at' => now(),
             ]);
 
-            // ADR-165: resolve market — explicit > default > null
-            $marketKey = $data->marketKey;
-            if (! $marketKey) {
-                $defaultMarket = \App\Core\Markets\Market::where('is_default', true)->first();
-                $marketKey = $defaultMarket?->key;
-            }
-
-            // ADR-167a: jobdomain_key is required — no fallback
-            $company = Company::create([
-                'name' => $data->companyName,
-                'slug' => Str::slug($data->companyName) . '-' . Str::random(4),
-                'plan_key' => $planKey,
-                'market_key' => $marketKey,
-                'jobdomain_key' => $data->jobdomainKey,
-            ]);
+            // ADR-834 : shared creation engine (identity, single activity, initial configuration, fields).
+            $company = CompanyProvisioner::create($data->companyName, CompanyProvisioner::resolveMarketKey($data->marketKey), $data->jobdomainKey, $planKey);
 
             $company->memberships()->create([
                 'user_id' => $user->id,
                 'role' => 'owner',
             ]);
 
-            // ADR-100: Assign jobdomain + activate defaults (modules, fields, roles, dashboard)
-            // ADR-798 : initialisation versionnée derrière drapeau (désactivé). Désactiver le drapeau = retour au
-            // chemin historique pour les créations futures. À l'inscription, seul le rôle « owner » (sensible) est
-            // confirmé explicitement par le créateur ; les autres rôles sensibles restent une décision ultérieure.
-            // ADR-808 : bascule contrôlée (drapeau + liste de métiers + preset RBAC utilisable avec rôle owner).
-            if (\App\Core\Jobdomains\Modernization\VersionedCompanyInitializer::shouldUse($data->jobdomainKey, $company->market_key)) {
-                \App\Core\Jobdomains\Modernization\VersionedCompanyInitializer::initializeNew($company, $data->jobdomainKey, ['rbac' => ['owner']], $user->id);
-            } else {
-                JobdomainGate::assignToCompany($company, $data->jobdomainKey);
-            }
-
-            // ADR-290: Set legal_status_key if provided
-            if ($data->legalStatusKey) {
-                $company->update(['legal_status_key' => $data->legalStatusKey]);
-            }
-
-            // ADR-290: Save dynamic company fields collected at registration
-            if (! empty($data->dynamicFields)) {
-                FieldWriteService::upsert(
-                    $company,
-                    $data->dynamicFields,
-                    FieldDefinition::SCOPE_COMPANY,
-                    $company->id,
-                    $company->market_key,
-                );
-            }
-
-            // ADR-300: Copy company address → billing address if toggle ON
-            if ($data->billingSameAsCompany && ! empty($data->dynamicFields)) {
-                $addressMap = [
-                    'company_address' => 'billing_address',
-                    'company_complement' => 'billing_complement',
-                    'company_city' => 'billing_city',
-                    'company_postal_code' => 'billing_postal_code',
-                    'company_region' => 'billing_region',
-                ];
-
-                $billingOverrides = [];
-                foreach ($addressMap as $src => $dst) {
-                    if (isset($data->dynamicFields[$src])) {
-                        $billingOverrides[$dst] = $data->dynamicFields[$src];
-                    }
-                }
-
-                if (! empty($billingOverrides)) {
-                    FieldWriteService::upsert(
-                        $company,
-                        $billingOverrides,
-                        FieldDefinition::SCOPE_COMPANY,
-                        $company->id,
-                        $company->market_key,
-                    );
-                }
-            }
+            CompanyProvisioner::initializeActivity($company, $data->jobdomainKey, $user->id);
+            CompanyProvisioner::applyIdentity($company, $data->legalStatusKey, $data->dynamicFields, $data->billingSameAsCompany);
 
             // ADR-300: Activate selected addon modules at registration
             foreach ($data->addonKeys as $addonKey) {
