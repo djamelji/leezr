@@ -4,17 +4,15 @@ namespace App\Modules\Workforce\Planning\Http;
 
 use App\Core\Audit\AuditLogger;
 use App\Core\Models\Company;
-use App\Core\Workforce\Employee;
-use App\Core\Workforce\ScheduleTemplate;
 use App\Core\Workforce\Shift;
 use App\Core\Workforce\WeekTemplate;
 use App\Core\Workforce\WeekTemplateLine;
 use App\Http\Controllers\Controller;
 use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ApplyWeekTemplateUseCase;
+use App\Modules\Workforce\UseCases\WeekTemplateEditor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Semaines types (WeekTemplate) — Refonte Smart Planning M3 (ADR-726).
@@ -39,21 +37,11 @@ class WeekTemplateController extends Controller
         if (WeekTemplate::withoutGlobalScopes()->where('company_id', $companyId)->where('name', $data['name'])->exists()) {
             return response()->json(['message' => "A week template named '{$data['name']}' already exists."], 422);
         }
-        if ($err = $this->linesError($companyId, $data['lines'] ?? [])) {
+        if ($err = app(WeekTemplateEditor::class)->linesError($companyId, $data['lines'] ?? [])) {
             return response()->json(['message' => $err], 422);
         }
 
-        $wt = DB::transaction(function () use ($companyId, $data) {
-            $wt = WeekTemplate::create([
-                'company_id' => $companyId, 'name' => $data['name'], 'description' => $data['description'] ?? null,
-                'strategy' => $data['strategy'] ?? 'nominative', 'scope' => $data['scope'] ?? 'company',
-                'department_id' => $data['department_id'] ?? null, 'work_location_id' => $data['work_location_id'] ?? null,
-                'enabled' => $data['enabled'] ?? true,
-            ]);
-            $this->syncLines($wt, $data['lines'] ?? []);
-
-            return $wt;
-        });
+        $wt = app(WeekTemplateEditor::class)->create($companyId, $data); // ADR-848
 
         app(AuditLogger::class)->logCompany($companyId, 'week_template.created', 'week_template', (string) $wt->id, ['metadata' => ['category' => 'workforce.planning', 'name' => $wt->name]]);
 
@@ -70,17 +58,11 @@ class WeekTemplateController extends Controller
             && WeekTemplate::withoutGlobalScopes()->where('company_id', $companyId)->where('name', $data['name'])->where('id', '!=', $wt->id)->exists()) {
             return response()->json(['message' => 'Name already used.'], 422);
         }
-        if (array_key_exists('lines', $data) && ($err = $this->linesError($companyId, $data['lines'] ?? []))) {
+        if (array_key_exists('lines', $data) && ($err = app(WeekTemplateEditor::class)->linesError($companyId, $data['lines'] ?? []))) {
             return response()->json(['message' => $err], 422);
         }
 
-        DB::transaction(function () use ($wt, $data) {
-            $wt->fill(collect($data)->only(['name', 'description', 'strategy', 'scope', 'department_id', 'work_location_id', 'enabled'])->toArray())->save();
-            if (array_key_exists('lines', $data)) {
-                $wt->lines()->delete();
-                $this->syncLines($wt, $data['lines'] ?? []);
-            }
-        });
+        app(WeekTemplateEditor::class)->update($wt, $data); // ADR-848
 
         app(AuditLogger::class)->logCompany($companyId, 'week_template.updated', 'week_template', (string) $wt->id, ['metadata' => ['category' => 'workforce.planning']]);
 
@@ -222,25 +204,7 @@ class WeekTemplateController extends Controller
         }
         $shifts = $q->get();
 
-        $wt = DB::transaction(function () use ($companyId, $validated, $weekStart, $shifts) {
-            $wt = WeekTemplate::create([
-                'company_id' => $companyId, 'name' => $validated['name'], 'strategy' => 'nominative', 'scope' => 'company', 'enabled' => true,
-            ]);
-            $order = 0;
-            foreach ($shifts as $s) {
-                $dayIndex = (int) $weekStart->diffInDays(\Illuminate\Support\Carbon::parse($s->date->toDateString()), false);
-                if ($dayIndex < 0 || $dayIndex > 6) {
-                    continue;
-                }
-                WeekTemplateLine::create([
-                    'company_id' => $companyId, 'week_template_id' => $wt->id, 'day_index' => $dayIndex,
-                    'schedule_template_id' => $s->schedule_template_id, 'kind' => 'nominative', 'employee_id' => $s->employee_id,
-                    'work_location_id' => $s->work_location_id, 'sort_order' => $order++,
-                ]);
-            }
-
-            return $wt;
-        });
+        $wt = app(WeekTemplateEditor::class)->capture($companyId, $validated['name'], $weekStart, $shifts); // ADR-848
 
         return response()->json($wt->load('lines'), 201);
     }
@@ -275,42 +239,5 @@ class WeekTemplateController extends Controller
             'lines.*.coverage_category_id' => 'nullable|integer',
             'lines.*.sort_order' => 'nullable|integer',
         ]);
-    }
-
-    /** Valide l'appartenance company des références + la cohérence kind/salarié/effectif. */
-    private function linesError(int $companyId, array $lines): ?string
-    {
-        foreach ($lines as $ln) {
-            if (! ScheduleTemplate::withoutGlobalScopes()->where('id', $ln['schedule_template_id'])->where('company_id', $companyId)->exists()) {
-                return 'A schedule template in a line does not belong to this company.';
-            }
-            if (($ln['kind'] ?? null) === 'nominative') {
-                if (empty($ln['employee_id'])) {
-                    return 'A nominative line requires an employee.';
-                }
-                if (! Employee::withoutGlobalScopes()->where('id', $ln['employee_id'])->where('company_id', $companyId)->exists()) {
-                    return 'An employee in a line does not belong to this company.';
-                }
-            } elseif (($ln['kind'] ?? null) === 'needs' && empty($ln['headcount'])) {
-                return 'A needs line requires a headcount.';
-            }
-        }
-
-        return null;
-    }
-
-    private function syncLines(WeekTemplate $wt, array $lines): void
-    {
-        $order = 0;
-        foreach ($lines as $ln) {
-            WeekTemplateLine::create([
-                'company_id' => $wt->company_id, 'week_template_id' => $wt->id,
-                'day_index' => (int) $ln['day_index'], 'schedule_template_id' => (int) $ln['schedule_template_id'],
-                'kind' => $ln['kind'], 'employee_id' => $ln['employee_id'] ?? null,
-                'headcount' => $ln['kind'] === 'needs' ? (int) ($ln['headcount'] ?? 1) : null,
-                'work_location_id' => $ln['work_location_id'] ?? null, 'department_id' => $ln['department_id'] ?? null,
-                'coverage_category_id' => $ln['coverage_category_id'] ?? null, 'sort_order' => $ln['sort_order'] ?? $order++,
-            ]);
-        }
     }
 }

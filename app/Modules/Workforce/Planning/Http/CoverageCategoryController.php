@@ -55,7 +55,7 @@ class CoverageCategoryController extends Controller
             return response()->json(['message' => 'Code already used.'], 422);
         }
 
-        $cat->fill($data)->save();
+        $cat->update($data); // fill + save
 
         return response()->json($cat);
     }

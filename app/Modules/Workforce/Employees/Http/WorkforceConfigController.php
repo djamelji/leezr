@@ -38,8 +38,7 @@ class WorkforceConfigController
         $validated = $request->validate(['week_start_day' => ['present', 'nullable', 'integer', 'between:0,6']]);
 
         $company = $this->company($request);
-        $company->week_start_day = $validated['week_start_day'];
-        $company->save();
+        $company->update(['week_start_day' => $validated['week_start_day']]); // fillable (ADR-645)
 
         $canEdit = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.manage') ?? false;
 

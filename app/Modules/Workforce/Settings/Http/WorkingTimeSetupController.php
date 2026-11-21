@@ -24,7 +24,7 @@ class WorkingTimeSetupController extends Controller
     {
         $data = $request->validate(['values' => 'required|array|min:1|max:30']);
 
-        return response()->json($this->service($request)->save($data['values'], $request->user()?->id));
+        return response()->json($this->service($request)->saveValues($data['values'], $request->user()?->id));
     }
 
     public function confirmConvention(Request $request): JsonResponse

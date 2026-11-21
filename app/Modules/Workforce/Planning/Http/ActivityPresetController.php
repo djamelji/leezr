@@ -61,7 +61,7 @@ class ActivityPresetController extends Controller
             return response()->json(['message' => 'Name already used.'], 422);
         }
 
-        $preset->fill($data)->save();
+        $preset->update($data); // fill + save
         app(AuditLogger::class)->logCompany($preset->company_id, 'activity_preset.updated', 'activity_preset', (string) $preset->id, ['metadata' => ['category' => 'workforce.planning']]);
 
         return response()->json($preset);

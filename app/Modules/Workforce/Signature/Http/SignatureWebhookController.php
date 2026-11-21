@@ -9,7 +9,6 @@ use App\Modules\Workforce\Signature\UseCases\ApplyProviderWebhookOutcomeUseCase;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -57,18 +56,7 @@ class SignatureWebhookController extends Controller
 
         // 3. Traitement idempotent ; toujours 200 (les régressions illégales sont rejetées en interne).
         try {
-            DB::transaction(function () use ($adapter, $payload, $request, $webhookEvent, $provider) {
-                $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_PROCESSING]);
-                $outcome = $adapter->handleWebhookEvent($payload, $request->headers->all());
-
-                if (! $outcome->handled) {
-                    $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_IGNORED]);
-
-                    return;
-                }
-                app(ApplyProviderWebhookOutcomeUseCase::class)->execute($provider, $outcome);
-                $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_PROCESSED]);
-            });
+            app(ApplyProviderWebhookOutcomeUseCase::class)->processEvent($adapter, $payload, $request->headers->all(), $webhookEvent, $provider); // ADR-848
         } catch (\Throwable $e) {
             $webhookEvent->update(['status' => SignatureWebhookEvent::STATUS_FAILED]);
             Log::error('Signature webhook processing failed', ['provider' => $provider, 'event_id' => $eventId, 'error' => $e->getMessage()]);

@@ -119,4 +119,25 @@ class ApplyProviderWebhookOutcomeUseCase
 
         return $this->finalize->execute($request);
     }
+
+    /**
+     * ADR-848 (Leezr 4.2 M9) — process one RECORDED webhook event atomically, moved verbatim from
+     * SignatureWebhookController : processing → (ignored | outcome applied → processed). The caller marks the event
+     * failed and logs if this throws (200 to the provider : no retry, internal replay possible).
+     */
+    public function processEvent(object $adapter, array $payload, array $headers, \App\Modules\Workforce\Signature\Models\SignatureWebhookEvent $webhookEvent, string $provider): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($adapter, $payload, $headers, $webhookEvent, $provider) {
+            $webhookEvent->update(['status' => \App\Modules\Workforce\Signature\Models\SignatureWebhookEvent::STATUS_PROCESSING]);
+            $outcome = $adapter->handleWebhookEvent($payload, $headers);
+
+            if (! $outcome->handled) {
+                $webhookEvent->update(['status' => \App\Modules\Workforce\Signature\Models\SignatureWebhookEvent::STATUS_IGNORED]);
+
+                return;
+            }
+            $this->execute($provider, $outcome);
+            $webhookEvent->update(['status' => \App\Modules\Workforce\Signature\Models\SignatureWebhookEvent::STATUS_PROCESSED]);
+        });
+    }
 }

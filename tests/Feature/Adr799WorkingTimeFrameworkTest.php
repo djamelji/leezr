@@ -113,8 +113,8 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
     {
         $a = $this->company('A');
         $b = $this->company('B');
-        $this->wt($a)->save(['work_days_per_week' => 4, 'fixed_work_days' => [1, 2, 3, 4], 'shift_target_hours' => 9], null);
-        $this->wt($b)->save(['work_days_per_week' => 5], null);
+        $this->wt($a)->saveValues(['work_days_per_week' => 4, 'fixed_work_days' => [1, 2, 3, 4], 'shift_target_hours' => 9], null);
+        $this->wt($b)->saveValues(['work_days_per_week' => 5], null);
         $r = app(WorkforceRuleResolver::class);
         $this->assertSame([4, 5], [$r->resolveOrganizationRules($a)['work_days_per_week']['value'], $r->resolveOrganizationRules($b)['work_days_per_week']['value']]);
         $this->assertSame([1, 2, 3, 4], $r->resolveOrganizationRules($a)['fixed_work_days']['value']);
@@ -129,7 +129,7 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
             $this->assertNotContains('jobdomain', array_column($rule['chain'], 'layer'), 'le JobDomain ne fixe aucune règle de travail');
         }
         $this->expectException(ValidationException::class);
-        $this->wt($a)->save(['work_days_per_week' => 9], null);
+        $this->wt($a)->saveValues(['work_days_per_week' => 9], null);
     }
 
     // 2, 3, 4, 5 — même métier sur deux marchés ; deux conventions pertinentes ; suggestion non confirmée sans effet ;
@@ -172,16 +172,16 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
     {
         $c = $this->company('C');
         $s = $this->wt($c);
-        $s->save(['daily_rest_min_hours' => 12], null); // renforcement : accepté
+        $s->saveValues(['daily_rest_min_hours' => 12], null); // renforcement : accepté
         try {
-            $s->save(['daily_rest_min_hours' => 9], null);
+            $s->saveValues(['daily_rest_min_hours' => 9], null);
             $this->fail('moins favorable que le minimum légal vérifié');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('daily_rest_min_hours', $e->errors());
         }
         $this->assertSame(12.0, (float) app(WorkforceRuleResolver::class)->resolveWorkTimeRules($c)['daily_rest_min_hours']['value'], 'refus : rien d’enregistré');
 
-        $s->save(['night_work_start' => '21:00', 'night_work_end' => '06:00', 'max_consecutive_work_days' => 4, 'consecutive_days_behavior' => 'warn'], null);
+        $s->saveValues(['night_work_start' => '21:00', 'night_work_end' => '06:00', 'max_consecutive_work_days' => 4, 'consecutive_days_behavior' => 'warn'], null);
         $e = $this->employee($c);
         // Nuit + minuit : rattaché à sa date de début, compté une fois.
         $night = $this->shift($c, $e, '2026-12-03', '2026-12-03 22:00:00', '2026-12-04 05:00:00');
@@ -200,7 +200,7 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
         $this->assertSame(5, $monday->metadata['rule_warnings'][0]['observed']);
 
         // Comportement « dérogation motivée » : sans motif refusé, avec motif accepté et tracé.
-        $s->save(['consecutive_days_behavior' => 'approve'], null);
+        $s->saveValues(['consecutive_days_behavior' => 'approve'], null);
         try {
             $this->shift($c, $e, '2026-12-08', '2026-12-08 18:00:00', '2026-12-08 22:00:00');
             $this->fail('motif requis');
@@ -209,7 +209,7 @@ class Adr799WorkingTimeFrameworkTest extends TestCase
         $ok = $this->shift($c, $e, '2026-12-08', '2026-12-08 18:00:00', '2026-12-08 22:00:00', 'Inventaire annuel');
         $this->assertSame('Inventaire annuel', $ok->metadata['rule_derogation']['reason']);
         $this->assertTrue(DB::table('company_audit_logs')->where('action', 'planning.rule_derogation')->exists());
-        $s->save(['consecutive_days_behavior' => 'block'], null);
+        $s->saveValues(['consecutive_days_behavior' => 'block'], null);
         $this->expectException(\DomainException::class);
         $this->shift($c, $e, '2026-12-09', '2026-12-09 18:00:00', '2026-12-09 22:00:00', 'motif ignoré : bloquant');
     }

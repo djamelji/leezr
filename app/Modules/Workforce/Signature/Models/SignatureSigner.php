@@ -102,6 +102,18 @@ class SignatureSigner extends Model
         return in_array($this->status, [self::STATUS_SIGNED, self::STATUS_DECLINED], true);
     }
 
+    /** Single-use challenge (anti-replay) bound to this signer, valid 15 minutes. ADR-848 : moved from SignerController. */
+    public function issueChallenge(): string
+    {
+        $challenge = bin2hex(random_bytes(24));
+        $this->challenge = $challenge;
+        $this->challenge_expires_at = now()->addMinutes(15);
+        $this->challenge_used_at = null;
+        $this->save();
+
+        return $challenge;
+    }
+
     public function tokenIsUsable(\DateTimeInterface $now): bool
     {
         if ($this->token_hash === null || $this->token_revoked_at !== null) {

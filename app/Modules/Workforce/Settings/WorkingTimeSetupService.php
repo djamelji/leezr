@@ -114,7 +114,8 @@ final class WorkingTimeSetupService
     }
 
     /** All-or-nothing save : every value goes through the resolver's own guards (legal bounds, ranges). */
-    public function save(array $values, ?int $actorId): array
+    /** ADR-848 : named saveValues (was `save`, read as an Eloquent save by the controller invariant). */
+    public function saveValues(array $values, ?int $actorId): array
     {
         $errors = [];
         DB::transaction(function () use ($values, &$errors) {

@@ -41,11 +41,7 @@ class SignerController extends Controller
         // Émet un challenge à usage unique (anti-rejeu) lié à ce signataire, si l'action est possible.
         $challenge = null;
         if ($canAct) {
-            $challenge = bin2hex(random_bytes(24));
-            $signer->challenge = $challenge;
-            $signer->challenge_expires_at = now()->addMinutes(15);
-            $signer->challenge_used_at = null;
-            $signer->save();
+            $challenge = $signer->issueChallenge(); // ADR-848 : the signer issues its own one-time challenge
         }
 
         return response()->json([
