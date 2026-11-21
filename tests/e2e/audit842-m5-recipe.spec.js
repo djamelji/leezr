@@ -4,6 +4,7 @@
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M5 recipe only (AUDIT_PASSWORD_FILE)')
 const PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : ''
@@ -25,6 +26,9 @@ function watch(page) {
 const open = async (page, path) => { await page.goto(path, { waitUntil: 'networkidle' }); await page.waitForTimeout(900) }
 const groupTitles = page => page.getByTestId('billing-groups').getByRole('tab').allInnerTexts()
 
+
+// ADR-850 (M10) : the recipe prepares itself — no order, no state inherited from another recipe
+test.beforeAll(() => { prepare('profiles', 'm1') }) // ADR-850 : company 106 in a KNOWN plan (Pro annual)
 test.beforeEach(({ page }) => { page.setDefaultTimeout(15000); fs.mkdirSync(OUT, { recursive: true }) })
 
 test('Super-admin — Facturation en 5 groupes, adresses conservées, clavier, mobile', async ({ page }) => {
@@ -99,7 +103,8 @@ test('Super-admin — fiche entreprise sans doublon, changement d’offre avec a
   const card = page.getByTestId('company-plan-change')
   await expect(card).toContainText('aperçu chiffré')
   await card.locator('.v-select').getByRole('combobox').first().click()
-  await page.locator('.v-overlay--active .v-list-item', { hasText: 'Pro' }).first().click()
+  // ADR-850 : the company is prepared in Pro → preview a change towards ANOTHER plan
+  await page.locator('.v-overlay--active .v-list-item', { hasText: 'Business' }).first().click()
   const dialog = page.locator('.v-overlay--active .v-card', { hasText: 'Aperçu du changement de plan' })
   await expect(dialog).toBeVisible()
   await shot(page, 'B3-apercu-changement-offre')

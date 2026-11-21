@@ -20,6 +20,22 @@ class BuildCompanyDataExportJob implements ShouldQueue
 
     public function __construct(public readonly int $exportId) {}
 
+    /**
+     * ADR-850 (M10) — the job dies outside handle() (worker timeout, attempts exceeded after a queue retry) : the
+     * export must not stay « running » for ever (it would block every new request of the company). Marked failed,
+     * audited ; nothing else is touched.
+     */
+    public function failed(?\Throwable $e): void
+    {
+        $export = CompanyDataExport::find($this->exportId);
+        if ($export && in_array($export->status, CompanyDataExport::IN_PROGRESS, true)) {
+            $export->update(['status' => CompanyDataExport::FAILED, 'finished_at' => now(), 'error' => 'job_failed']);
+            app(\App\Core\Audit\AuditLogger::class)->logCompany($export->company_id, \App\Core\Audit\AuditAction::COMPANY_DATA_EXPORT_FAILED, 'company_data_export', (string) $export->id, [
+                'actorType' => 'system', 'actorId' => null, 'severity' => 'warning', 'metadata' => ['result' => 'failed', 'reason' => 'job_failed'],
+            ]);
+        }
+    }
+
     public function handle(CompanyDataExportService $service): void
     {
         $export = CompanyDataExport::with('company.market')->find($this->exportId);

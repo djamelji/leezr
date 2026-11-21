@@ -2,10 +2,10 @@
 // Leezr 4.2 M9 (ADR-848) — non-regression of the refactored areas, browser recipe on the MARKED clone, fictitious
 // company 106 only. Every screen is loaded for real ; every API refusal or JS error is collected ; actions are
 // reversible (a draft shift created then undone, redone, undone again). Invoice PDFs are really downloaded and read.
-import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginCompany, loginPlatform } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M9 recipe only (AUDIT_PASSWORD_FILE)')
 
@@ -42,7 +42,7 @@ const api = (page, url, { method = 'GET', body, platform = false, raw = false } 
 
 test.beforeAll(() => {
   fs.mkdirSync(OUT, { recursive: true })
-  execFileSync('php', ['scripts/audit842-m9-fixture.php'], { env: { ...process.env, DB_DATABASE: process.env.E2E_DB_DATABASE || 'leezr_audit842' } })
+  prepare('profiles', 'm1', 'm7', 'm9') // ADR-850 : viewer842, the M7 employees, then the M9 contract
 })
 
 test('Company : planification (lectures, opérations annulables), signature, documents, collaborateurs, facture PDF', async ({ page }) => {

@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { loginCompany, loginPlatform } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M8 recipe only (AUDIT_PASSWORD_FILE)')
 
@@ -35,7 +36,8 @@ const openClosure = async page => {
   await expect(page.locator('[data-test="company-closure"]')).toBeVisible()
 }
 
-test.beforeAll(() => { fs.mkdirSync(OUT, { recursive: true }); fixture('reset') })
+test.beforeAll(() => { fs.mkdirSync(OUT, { recursive: true }); prepare('profiles', 'm7'); fixture('reset') }) // ADR-850 : chef844 comes from the M7 fixture
+test.afterAll(() => { fixture('reset') })
 
 test('Company : comprendre, exporter (archive vérifiée), expiration, révocation Platform, résiliation et annulation', async ({ page, browser }) => {
   test.setTimeout(6 * 60 * 1000)

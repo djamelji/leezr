@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { loginCompany, loginPlatform } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M8.1 recipe only (AUDIT_PASSWORD_FILE)')
 
@@ -55,9 +56,11 @@ const downloadZip = async (page, id, name) => {
 
 test.beforeAll(() => {
   fs.mkdirSync(OUT, { recursive: true })
+  prepare('profiles', 'm2') // ADR-850 : member842 and the base accounts, without relying on another recipe
   fixture('reset')
   fixture('m81', process.env.AUDIT_PASSWORD_FILE)
 })
+test.afterAll(() => { fixture('reset') }) // ADR-850 : the company is never left suspended, even after a failure
 
 test('Export partiel affiché avant téléchargement, puis export pendant suspension (seul ce parcours est ouvert)', async ({ page, browser }) => {
   test.setTimeout(6 * 60 * 1000)

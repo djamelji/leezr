@@ -4,10 +4,13 @@
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
+import { m4Expected, prepare } from './recipe-fixtures'
 
-test.skip(!process.env.AUDIT_PASSWORD_FILE || !process.env.M4_EXPECTED, 'Leezr 4.2 M4 recipe only')
+test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M4 recipe only')
 const PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : ''
-const EXPECTED = process.env.M4_EXPECTED ? JSON.parse(fs.readFileSync(process.env.M4_EXPECTED, 'utf8')) : {}
+
+// ADR-850 (M10) : expected amounts computed AFTER the recipe's own preparation (raw SQL, independent of the app code)
+let EXPECTED = {}
 const OUT = 'docs/bmad/leezr-4-2-audit/m4'
 const shot = async (page, name) => { await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/apres-${name}.jpg`, type: 'jpeg', quality: 60 }) }
 const cents = text => Number(String(text).replace(/[^\d]/g, '')) // « 362,83 € » → 36283
@@ -26,6 +29,11 @@ function watch(page) {
 const open = async (page, path) => { await page.goto(path, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500) }
 const cardValue = (page, testid) => page.getByTestId(testid).locator('xpath=ancestor::*[contains(@class,"v-card")][1]').locator('h4').first()
 
+
+test.beforeAll(() => {
+  prepare('profiles', 'm1')
+  EXPECTED = m4Expected()
+})
 test.beforeEach(({ page }) => { page.setDefaultTimeout(15000); fs.mkdirSync(OUT, { recursive: true }) })
 
 let activeBilling = 0

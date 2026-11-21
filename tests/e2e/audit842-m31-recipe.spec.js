@@ -6,6 +6,7 @@
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M3.1 recipe only (AUDIT_PASSWORD_FILE)')
 const PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : ''
@@ -34,6 +35,9 @@ const api = (page, method, url, companyId, body = null) => page.evaluate(async (
 
 const open = async (page, path) => { await page.goto(path, { waitUntil: 'networkidle' }); await page.waitForTimeout(800) }
 
+
+// ADR-850 (M10) : the recipe prepares itself — no order, no state inherited from another recipe
+test.beforeAll(() => { prepare('m3', 'm31') })
 test.beforeEach(({ page }) => { page.setDefaultTimeout(15000); fs.mkdirSync(OUT, { recursive: true }) })
 
 test('Chauffeur historique (société 1) — annuaire, réglages, livraisons, isolation', async ({ page }) => {

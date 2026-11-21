@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { loginCompany, loginPlatform } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M8.2 recipe only (AUDIT_PASSWORD_FILE)')
 
@@ -42,6 +43,7 @@ const apiStatus = (page, url, { method = 'GET', company = '106', platform = fals
 
 test.beforeAll(() => {
   fs.mkdirSync(OUT, { recursive: true })
+  prepare('profiles', 'm2') // ADR-850 : member842, viewer842 and the base accounts, without relying on another recipe
   php('scripts/audit842-m8-fixture.php', 'reset')
   php('scripts/audit842-m8-fixture.php', 'm81', process.env.AUDIT_PASSWORD_FILE)
   php('scripts/audit842-m82-fixture.php', process.env.AUDIT_PASSWORD_FILE)

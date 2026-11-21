@@ -25,7 +25,9 @@ class CompanyDataExportService
     {
         $export = DB::transaction(function () use ($company, $user) {
             Company::whereKey($company->id)->lockForUpdate()->first(); // serialises concurrent requests of one company
-            $busy = CompanyDataExport::where('company_id', $company->id)->whereIn('status', CompanyDataExport::IN_PROGRESS)->exists();
+            // ADR-850 : a preparation older than the job's maximum duration is stale (worker lost) — it never blocks
+            $busy = CompanyDataExport::where('company_id', $company->id)->whereIn('status', CompanyDataExport::IN_PROGRESS)
+                ->where('created_at', '>', now()->subSeconds((new BuildCompanyDataExportJob(0))->timeout + 300))->exists();
             if ($busy) {
                 throw ValidationException::withMessages(['export' => __('companyExport.already_running')]);
             }

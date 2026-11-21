@@ -287,4 +287,21 @@ class Adr846CompanyDataRecoveryTest extends TestCase
         $this->actingAs($b, 'platform')->postJson("$base/$id2/reject")->assertOk()->assertJsonPath('export.status', 'rejected');
         $this->actingAs($b, 'platform')->postJson("$base/$id2/approve")->assertUnprocessable();
     }
+
+    // ADR-850 (M10) — a job lost by the worker (timeout / attempts exceeded) : failed, audited, and never blocks
+    public function test_a_lost_export_job_is_failed_and_does_not_block_the_company(): void
+    {
+        \Illuminate\Support\Facades\Bus::fake([\App\Modules\Core\DataExport\Jobs\BuildCompanyDataExportJob::class]);
+        $id = $this->as($this->owner)->postJson('/api/company/data-exports', ['password' => 'password'])->assertStatus(202)->json('export.id');
+        CompanyDataExport::whereKey($id)->update(['status' => 'running']);
+        (new \App\Modules\Core\DataExport\Jobs\BuildCompanyDataExportJob($id))->failed(new \RuntimeException('MaxAttemptsExceeded'));
+        $this->assertSame('failed', CompanyDataExport::find($id)->status);
+        $this->assertTrue(CompanyAuditLog::where('action', 'company_export.failed')->exists());
+
+        // a preparation stuck « running » beyond the job's maximum duration no longer blocks a new request
+        $stuck = CompanyDataExport::create(['company_id' => $this->company->id, 'requested_by_user_id' => $this->owner->id, 'status' => 'running', 'disk' => 'local']);
+        $stuck->forceFill(['created_at' => now()->subHours(2)])->save();
+        Carbon::setTestNow(now()->addMinutes(11));
+        $this->as($this->owner)->postJson('/api/company/data-exports', ['password' => 'password'])->assertStatus(202);
+    }
 }

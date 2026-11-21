@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers'
+import { prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M7 recipe only (AUDIT_PASSWORD_FILE)')
 const PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : ''
@@ -50,6 +51,9 @@ async function downloadCsv(page, dataset) {
 
 const count = async (page, d) => Number((await page.locator(`[data-test="time-export-count-${d}"]`).innerText()).replace(/\D/g, ''))
 
+
+// ADR-850 (M10) : the recipe prepares itself — no order, no state inherited from another recipe
+test.beforeAll(() => { prepare('m7') })
 test.beforeEach(({ page }) => { page.setDefaultTimeout(15000); fs.mkdirSync(OUT, { recursive: true }) })
 
 test('Équipe entière : aperçu, avertissements, 5 fichiers téléchargés et vérifiés', async ({ page }) => {

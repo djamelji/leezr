@@ -12,7 +12,7 @@ $c = 106;
 if (! DB::table('companies')->where('id', $c)->where('name', 'like', 'Audit 842 Services%')->exists()) { fwrite(STDERR, "fictitious company 106 not found\n"); exit(2); }
 $emp = DB::table('workforce_employees')->where('company_id', $c)->where('employee_number', 'M7-A')->value('id');
 if (! $emp) { fwrite(STDERR, "fixture M7-A missing (run audit842-m7-fixture.php)\n"); exit(2); }
-$model = $argv[1] ?? 'horaire'; // the work model key used by existing contracts
+$model = 'horaire'; // the work model key used by existing contracts (argv[1] is the recipe password file, ADR-850)
 DB::table('workforce_employment_contracts')->updateOrInsert(['company_id' => $c, 'employee_id' => $emp, 'is_current' => true],
     ['contract_type' => 'cdi', 'work_model_key' => $model, 'start_date' => '2026-01-01', 'weekly_hours' => 35, 'status' => 'active', 'created_at' => now(), 'updated_at' => now()]);
 echo "M7-A has a current contract\n";
