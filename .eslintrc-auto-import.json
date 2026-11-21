@@ -425,6 +425,12 @@
     "rememberReturnPath": true,
     "ledgerAmountDisplay": true,
     "auditSeverityColor": true,
-    "shipmentStatusColor": true
+    "shipmentStatusColor": true,
+    "FUNNEL_STEPS": true,
+    "FUNNEL_STORAGE_KEY": true,
+    "journeyId": true,
+    "passedSteps": true,
+    "trafficSource": true,
+    "useRegistrationFunnel": true
   }
 }

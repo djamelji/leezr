@@ -11,6 +11,8 @@ declare global {
   const $platformApi: typeof import('./resources/js/utils/platformApi.js')['$platformApi']
   const COOKIE_MAX_AGE_1_YEAR: typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']
   const EffectScope: typeof import('vue')['EffectScope']
+  const FUNNEL_STEPS: typeof import('./resources/js/utils/registrationFunnel.js')['FUNNEL_STEPS']
+  const FUNNEL_STORAGE_KEY: typeof import('./resources/js/utils/registrationFunnel.js')['FUNNEL_STORAGE_KEY']
   const acceptHMRUpdate: typeof import('pinia')['acceptHMRUpdate']
   const alphaDashValidator: typeof import('@core/utils/validators')['alphaDashValidator']
   const alphaValidator: typeof import('@core/utils/validators')['alphaValidator']
@@ -87,6 +89,7 @@ declare global {
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
   const isolateTabParam: typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']
+  const journeyId: typeof import('./resources/js/utils/registrationFunnel.js')['journeyId']
   const kFormatter: typeof import('@core/utils/formatters')['kFormatter']
   const ledgerAmountDisplay: typeof import('./resources/js/utils/ledgerAmount.js')['ledgerAmountDisplay']
   const lengthValidator: typeof import('@core/utils/validators')['lengthValidator']
@@ -123,6 +126,7 @@ declare global {
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const paginationMeta: typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']
   const parseMoneyToCents: typeof import('./resources/js/utils/money.js')['parseMoneyToCents']
+  const passedSteps: typeof import('./resources/js/utils/registrationFunnel.js')['passedSteps']
   const passwordValidator: typeof import('@core/utils/validators')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const prefixWithPlus: typeof import('@core/utils/formatters')['prefixWithPlus']
@@ -177,6 +181,7 @@ declare global {
   const toRef: typeof import('vue')['toRef']
   const toRefs: typeof import('vue')['toRefs']
   const toValue: typeof import('vue')['toValue']
+  const trafficSource: typeof import('./resources/js/utils/registrationFunnel.js')['trafficSource']
   const triggerRef: typeof import('vue')['triggerRef']
   const tryOnBeforeMount: typeof import('@vueuse/core')['tryOnBeforeMount']
   const tryOnBeforeUnmount: typeof import('@vueuse/core')['tryOnBeforeUnmount']
@@ -338,6 +343,7 @@ declare global {
   const usePublicTheme: typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
+  const useRegistrationFunnel: typeof import('./resources/js/composables/useRegistrationFunnel.js')['useRegistrationFunnel']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
   const useResponsiveLeftSidebar: typeof import('@core/composable/useResponsiveSidebar')['useResponsiveLeftSidebar']
   const useReturnNavigation: typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']
@@ -436,6 +442,8 @@ declare module 'vue' {
     readonly $platformApi: UnwrapRef<typeof import('./resources/js/utils/platformApi.js')['$platformApi']>
     readonly COOKIE_MAX_AGE_1_YEAR: UnwrapRef<typeof import('./resources/js/utils/constants.js')['COOKIE_MAX_AGE_1_YEAR']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly FUNNEL_STEPS: UnwrapRef<typeof import('./resources/js/utils/registrationFunnel.js')['FUNNEL_STEPS']>
+    readonly FUNNEL_STORAGE_KEY: UnwrapRef<typeof import('./resources/js/utils/registrationFunnel.js')['FUNNEL_STORAGE_KEY']>
     readonly acceptHMRUpdate: UnwrapRef<typeof import('pinia')['acceptHMRUpdate']>
     readonly alphaDashValidator: UnwrapRef<typeof import('@core/utils/validators')['alphaDashValidator']>
     readonly alphaValidator: UnwrapRef<typeof import('@core/utils/validators')['alphaValidator']>
@@ -512,6 +520,7 @@ declare module 'vue' {
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isolateTabParam: UnwrapRef<typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']>
+    readonly journeyId: UnwrapRef<typeof import('./resources/js/utils/registrationFunnel.js')['journeyId']>
     readonly kFormatter: UnwrapRef<typeof import('@core/utils/formatters')['kFormatter']>
     readonly ledgerAmountDisplay: UnwrapRef<typeof import('./resources/js/utils/ledgerAmount.js')['ledgerAmountDisplay']>
     readonly lengthValidator: UnwrapRef<typeof import('@core/utils/validators')['lengthValidator']>
@@ -548,6 +557,7 @@ declare module 'vue' {
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly paginationMeta: UnwrapRef<typeof import('./resources/js/utils/paginationMeta.js')['paginationMeta']>
     readonly parseMoneyToCents: UnwrapRef<typeof import('./resources/js/utils/money.js')['parseMoneyToCents']>
+    readonly passedSteps: UnwrapRef<typeof import('./resources/js/utils/registrationFunnel.js')['passedSteps']>
     readonly passwordValidator: UnwrapRef<typeof import('@core/utils/validators')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly prefixWithPlus: UnwrapRef<typeof import('@core/utils/formatters')['prefixWithPlus']>
@@ -602,6 +612,7 @@ declare module 'vue' {
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
+    readonly trafficSource: UnwrapRef<typeof import('./resources/js/utils/registrationFunnel.js')['trafficSource']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly tryOnBeforeMount: UnwrapRef<typeof import('@vueuse/core')['tryOnBeforeMount']>
     readonly tryOnBeforeUnmount: UnwrapRef<typeof import('@vueuse/core')['tryOnBeforeUnmount']>
@@ -763,6 +774,7 @@ declare module 'vue' {
     readonly usePublicTheme: UnwrapRef<typeof import('./resources/js/composables/usePublicTheme.js')['usePublicTheme']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
+    readonly useRegistrationFunnel: UnwrapRef<typeof import('./resources/js/composables/useRegistrationFunnel.js')['useRegistrationFunnel']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useResponsiveLeftSidebar: UnwrapRef<typeof import('@core/composable/useResponsiveSidebar')['useResponsiveLeftSidebar']>
     readonly useReturnNavigation: UnwrapRef<typeof import('./resources/js/composables/useReturnNavigation.js')['useReturnNavigation']>

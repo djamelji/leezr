@@ -1,0 +1,173 @@
+[
+ {
+  "who": "membre société 22",
+  "label": "en-tête X-Company-Id = 1 (non membre)",
+  "path": "/api/company",
+  "header": "1",
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "liste des personnes de la société 1",
+  "path": "/api/company/people",
+  "header": "1",
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "salarié 1 (société 1) via sa propre société",
+  "path": "/api/workforce/employees/1/file",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "membre 3 (société 1)",
+  "path": "/api/company/members/3",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "expédition 1 (société 1)",
+  "path": "/api/shipments/1",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "facture 1 (société 1)",
+  "path": "/api/billing/invoices/1",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "ticket 1 (société 1)",
+  "path": "/api/support/tickets/1",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "API Platform avec session Company",
+  "path": "/api/platform/companies",
+  "header": null,
+  "status": 401,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "membre société 22",
+  "label": "gestion des rôles sans droit",
+  "path": "/api/company/roles",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "propriétaire société 3",
+  "label": "salarié 13 (société 5)",
+  "path": "/api/workforce/employees/13/file",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "propriétaire société 3",
+  "label": "membre 3 (société 1)",
+  "path": "/api/company/members/3",
+  "header": null,
+  "status": 404,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "propriétaire société 3",
+  "label": "document membre 1 (société 1)",
+  "path": "/api/company/members/3/documents",
+  "header": null,
+  "status": 404,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "propriétaire société 3",
+  "label": "en-tête X-Company-Id = 5",
+  "path": "/api/company/people",
+  "header": "5",
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "liste des membres",
+  "path": "/api/company/members",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "rôles",
+  "path": "/api/company/roles",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "facturation",
+  "path": "/api/billing/subscription",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "export salariés",
+  "path": "/api/workforce/employees/export",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "journal d'audit",
+  "path": "/api/audit",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ },
+ {
+  "who": "chauffeur société 1",
+  "label": "paie",
+  "path": "/api/workforce/payroll",
+  "header": null,
+  "status": 403,
+  "refused": true,
+  "body": ""
+ }
+]

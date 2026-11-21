@@ -29850,3 +29850,47 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - Les échecs du rejeu enchaîné venaient d'effets d'ordre entre recettes (fixtures, mot de passe de recette) et de deux recettes en retard sur le comportement réel : M3 sur le regroupement des onglets de M5, M2 sur la pagination de Mailpit.
   - Ces deux recettes ont été alignées ; chaque recette passe précédée de sa fixture.
 - Détail complet : `docs/bmad/leezr-4-2-audit/m9/README.md`.
+
+---
+
+## ADR-849 — Leezr 4.2 M10 : entonnoir d'inscription publique mesuré
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local · **Mission** : Leezr 4.2 M10
+
+**Contexte.**
+- L'endpoint `register/funnel-track` existait, mais aucun écran ne l'appelait.
+- Le tableau de bord attendait des étapes qui n'existent plus.
+- Les parcours étaient rattachés par l'identifiant de session, qui est régénéré pendant le parcours.
+- Deux définitions concurrentes de l'abandon coexistaient.
+
+**Décision.**
+- **Parcours** : identifiant aléatoire créé par le navigateur (`sessionStorage`). Une ligne par (parcours, étape), garantie par un index unique (migration additive) ; l'envoi est donc idempotent.
+- **Étapes** : celles de l'écran réel. « Terminée » est écrite par le serveur seulement.
+- **Données** : seul l'**hôte** du site d'origine est conservé ; aucune donnée personnelle.
+- **Mesures** (cohorte des parcours commencés dans la période) : étapes franchies, terminée, activée (abonnement courant actif ou en essai), première connexion (`auth.login` après l'inscription), en cours et abandonnée.
+- **Abandon** : non terminé ET inactif depuis `registration_funnel.abandon_after_hours` (24 h). Même définition pour l'alerte `registration:detect-abandoned`.
+- **Sources** : les créations Platform n'écrivent jamais dans l'entonnoir. Consultation avec `view_usage_monitoring`.
+
+**Conséquences.**
+- Tests : `Adr849RegistrationFunnelTest`, test JS de l'entonnoir, recette M10.
+- Décision D-M10-1 (validation juridique de la mesure sans consentement) ouverte.
+- Détail : `docs/bmad/leezr-4-2-audit/m10/README.md`.
+
+---
+
+## ADR-850 — Leezr 4.2 M10 : recettes E2E reproductibles et état de release
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local
+
+**Décision.**
+- **Préparation autonome** : chaque recette Leezr 4.2 se prépare elle-même via les fixtures existantes, réservées au clone marqué. Aucun ordre imposé, aucune préparation manuelle.
+- **Comptes indépendants** : les recettes qui modifient un mot de passe ou la 2FA utilisent leurs propres comptes. Aucun identifiant n'est codé en dur.
+- **Retour à l'état initial** : rétablissement systématique (`afterAll`) des états sensibles, dont la suspension.
+- **Exports M8** : la tâche d'export a un gestionnaire d'échec, et une préparation figée ne bloque plus une nouvelle demande.
+
+**Conséquences.**
+- **Recettes** : campagnes en ordre inverse (41 sur 41) et mélangé (43 sur 43) vertes.
+- **Contrat des routes M9** : seul `whoami` a été retiré ; noms et middlewares identiques.
+- **Migrations** M8 → M10 vérifiées sur une copie MySQL : aucune ligne modifiée, retour arrière exact.
+- **État de release** et préconditions DEV (P-1 à P-8) : `docs/bmad/leezr-4-2-audit/m10/README.md` §6.
+- **Aucun déploiement.**

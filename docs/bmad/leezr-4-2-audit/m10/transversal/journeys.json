@@ -1,0 +1,207 @@
+[
+ {
+  "journey": "J1",
+  "name": "Opérateur création : connexion",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 2930,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-1.jpg",
+  "url": "/platform/companies"
+ },
+ {
+  "journey": "J1",
+  "name": "Ouvrir « Nouvelle société » depuis la liste",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 92,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-2.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Activité : Beta Services",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 171,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-3.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Société : nom + Suivant",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 1491,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-4.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Modules : passer",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 855,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-5.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Abonnement : Starter",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 84,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-6.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Administrateur",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 1571,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-7.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Étape Initialisation → Récapitulatif",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 867,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-8.jpg",
+  "url": "/platform/companies/create"
+ },
+ {
+  "journey": "J1",
+  "name": "Créer la société",
+  "ok": true,
+  "note": "http://127.0.0.1:8842/platform/companies/107/onboarding",
+  "apiErrors": [],
+  "ms": 1830,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-9.jpg",
+  "url": "/platform/companies/107/onboarding"
+ },
+ {
+  "journey": "J1",
+  "name": "Fiche créée : étape de mise en service visible",
+  "ok": true,
+  "note": "Créée le 22 nov. 2026 par Créa Audit",
+  "apiErrors": [],
+  "ms": 29,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J1-10.jpg",
+  "url": "/platform/companies/107/onboarding"
+ },
+ {
+  "journey": "J2",
+  "name": "E-mail d'activation reçu (Mailpit)",
+  "ok": true,
+  "note": "Votre accès à Audit 842 Services 0zlhr sur Leezr",
+  "apiErrors": [],
+  "ms": 33,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J2-1.jpg",
+  "url": "/platform/companies/107/onboarding"
+ },
+ {
+  "journey": "J2",
+  "name": "Lien d'activation → choisir un mot de passe",
+  "ok": true,
+  "note": "http://127.0.0.1:8842/login",
+  "apiErrors": [],
+  "ms": 3705,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J2-2.jpg",
+  "url": "/login"
+ },
+ {
+  "journey": "J2",
+  "name": "Première connexion du propriétaire",
+  "ok": true,
+  "note": "Bienvenue, Alice Audit 842 Services 0zlhr Bienvenue sur Leezr Quelques étapes pour configurer votre espace de travail. 2/5 Compte créé Compléter le profil d",
+  "apiErrors": [],
+  "ms": 4594,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J2-3.jpg",
+  "url": "/home"
+ },
+ {
+  "journey": "J3",
+  "name": "Modules : la page explique inclus / option / hors plan",
+  "ok": true,
+  "note": {
+   "plan": true,
+   "addon": true,
+   "upgrade": false
+  },
+  "apiErrors": [],
+  "ms": 2350,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J3-1.jpg",
+  "url": "/company/modules"
+ },
+ {
+  "journey": "J3",
+  "name": "Inviter un collaborateur",
+  "ok": false,
+  "note": "locator.fill: Timeout 15000ms exceeded.",
+  "apiErrors": [],
+  "ms": 17086,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J3-2.jpg",
+  "url": "/company/people"
+ },
+ {
+  "journey": "J4",
+  "name": "Salarié : connexion + Mon espace",
+  "ok": true,
+  "note": "Mon espace Vos documents, bulletins, signatures et informations personnelles dans cette entreprise. Aperçu Mes documents Mes bulletins Mes signatures Mes documents Documents demandés, déposés, refus",
+  "apiErrors": [],
+  "ms": 4923,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J4-1.jpg",
+  "url": "/company/my-space/overview"
+ },
+ {
+  "journey": "J4",
+  "name": "Salarié : ouvrir une demande de congé",
+  "ok": true,
+  "note": "Demander un congé Aucun solde de congés n'est encore ouvert pour vous. Il s'ouvre dès que votre contrat est actif et que votre entreprise a configuré les types de congés ; contactez votre responsable ",
+  "apiErrors": [],
+  "ms": 3626,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J4-2.jpg",
+  "url": "/company/workforce/me"
+ },
+ {
+  "journey": "J5",
+  "name": "Propriétaire : créer un ticket",
+  "ok": true,
+  "note": "/company/support/2",
+  "apiErrors": [],
+  "ms": 7296,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J5-1.jpg",
+  "url": "/company/support/2"
+ },
+ {
+  "journey": "J5",
+  "name": "Platform support : le ticket apparaît",
+  "ok": true,
+  "apiErrors": [],
+  "ms": 4973,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J5-2.jpg",
+  "url": "/platform/communications/support"
+ },
+ {
+  "journey": "J3b",
+  "name": "Ajouter une personne (panneau) avec invitation",
+  "ok": false,
+  "note": "locator.click: Timeout 15000ms exceeded.",
+  "apiErrors": [],
+  "ms": 18819,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J3b-1.jpg",
+  "url": "/company/people"
+ },
+ {
+  "journey": "J3b",
+  "name": "Invitation reçue (Mailpit)",
+  "ok": false,
+  "note": "aucun e-mail d'invitation",
+  "apiErrors": [],
+  "ms": 15115,
+  "shot": "docs/bmad/leezr-4-2-audit/data/journeys/J3b-2.jpg",
+  "url": "/company/people"
+ }
+]
