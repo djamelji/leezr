@@ -27,6 +27,11 @@ class CompanyDataExportBuilder
 
     private array $exclusions = [];
 
+    /** ADR-846 : company data that SHOULD be in the archive but is not — makes the export partial */
+    private array $missing = [];
+
+    private int $attempted = 0;
+
     private ZipArchive $zip;
 
     public function __construct(private readonly Company $company) {}
@@ -52,6 +57,16 @@ class CompanyDataExportBuilder
         $this->attempt('audit', fn () => $this->csv('audit/company_audit_log.csv', 'audit', ['date', 'action', 'actor_type', 'actor_id', 'target_type', 'target_id', 'severity'], $this->audit()));
         $this->attempt('documents', fn () => $this->documents());
 
+        // ADR-846 : nothing usable produced → total failure (the caller marks the export failed, keeps every other archive)
+        if (count($this->errors) === $this->attempted) {
+            $this->zip->close();
+            $disk->delete($relative);
+            throw new \RuntimeException('every dataset failed');
+        }
+        foreach ($this->errors as $e) {
+            $this->missing[] = ['part' => $e['part'], 'reason' => $e['reason'], 'count' => null];
+        }
+
         $this->exclusions = array_merge([
             ['what' => 'passwords, two-factor secrets, sessions, API tokens', 'reason' => 'security secrets — never exported'],
             ['what' => 'IP addresses and user agents of the audit log', 'reason' => 'technical connection data of individual users'],
@@ -70,6 +85,8 @@ class CompanyDataExportBuilder
             'files' => $this->files,
             'exclusions' => $this->exclusions,
             'errors' => $this->errors,
+            'outcome' => $this->missing ? 'partial' : 'complete',
+            'missing' => $this->missing,
             'retention_policy' => config('company_lifecycle.retention.markets.'.($this->company->market_key ?? ''), null),
         ];
         $this->zip->addFromString('manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
@@ -82,6 +99,7 @@ class CompanyDataExportBuilder
 
     private function attempt(string $part, callable $fn): void
     {
+        $this->attempted++;
         try {
             $fn();
         } catch (\Throwable $e) {
@@ -237,6 +255,7 @@ class CompanyDataExportBuilder
         ];
         $disk = Storage::disk('local');
         $skipped = 0;
+        $absent = 0;
         foreach ($sources as $table => $src) {
             $q = DB::table($table)->where('company_id', $this->company->id)->whereNotNull('file_path');
             if ($table === 'published_payslips') {
@@ -246,6 +265,7 @@ class CompanyDataExportBuilder
                 $name = $src['name'] ? ($d->{$src['name']} ?: basename($d->file_path)) : basename($d->file_path);
                 $target = $src['dir'].'/'.$d->id.'_'.Str::limit(preg_replace('/[^\w.\- ]+/u', '_', $name), 120, '');
                 if (str_contains($d->file_path, '..') || ! $disk->exists($d->file_path)) {
+                    $absent++;
                     $index[] = ['kind' => $src['kind'], 'id' => $d->id, 'file' => '', 'status' => 'missing_file'];
 
                     continue;
@@ -265,6 +285,10 @@ class CompanyDataExportBuilder
         $this->csv('documents/index.csv', 'documents', ['kind', 'id', 'file', 'status'], $index);
         if ($skipped) {
             $this->exclusions[] = ['what' => "$skipped document file(s)", 'reason' => 'beyond the size budget of one archive — listed in documents/index.csv, ask support for a complement'];
+            $this->missing[] = ['part' => 'documents', 'reason' => 'over_size_budget', 'count' => $skipped];
+        }
+        if ($absent) {
+            $this->missing[] = ['part' => 'documents', 'reason' => 'missing_file', 'count' => $absent];
         }
     }
 }

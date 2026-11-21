@@ -72,6 +72,11 @@ final class AuditAction
     public const COMPANY_DATA_EXPORT_FAILED = 'company_export.failed';
     public const COMPANY_DATA_EXPORT_DOWNLOADED = 'company_export.downloaded';
     public const COMPANY_DATA_EXPORT_REVOKED = 'company_export.revoked';
+    // ADR-846 (M8.1) — exceptional export (owner unavailable), Platform-initiated, double approval
+    public const COMPANY_DATA_EXPORT_EXCEPTIONAL_REQUESTED = 'company_export.exceptional_requested';
+    public const COMPANY_DATA_EXPORT_EXCEPTIONAL_APPROVED = 'company_export.exceptional_approved';
+    public const COMPANY_DATA_EXPORT_EXCEPTIONAL_REJECTED = 'company_export.exceptional_rejected';
+    public const COMPANY_DATA_EXPORT_EXCEPTIONAL_BLOCKED = 'company_export.exceptional_blocked';
     public const CANCEL_UNDONE = 'subscription.cancel_undone';
     public const USER_AVATAR_UPDATED = 'user.avatar_updated';
 

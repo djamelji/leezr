@@ -30,6 +30,9 @@ class CompaniesModule implements ModuleDefinition
                 ['key' => 'view_company_users', 'label' => 'View Company Users'],
                 // ADR-834 : never part of an existing bundle — granted explicitly
                 ['key' => 'create_companies', 'label' => 'Create & onboard companies'],
+                // ADR-846 : exceptional full data export when the owner is unavailable — own bundle only, granted explicitly ;
+                // the request and its approval need this permission held by TWO different operators
+                ['key' => 'exceptional_company_export', 'label' => 'Exceptional company data export (owner unavailable)'],
                 ['key' => 'override_company_commercial_terms', 'label' => 'Grant commercial terms different from the plan (audited)'],
             ],
             bundles: [
@@ -50,6 +53,13 @@ class CompaniesModule implements ModuleDefinition
                     'label' => 'Company Creation & Onboarding',
                     'hint' => 'Create new companies, invite their administrator and follow the start of service of the companies created.',
                     'permissions' => ['create_companies'],
+                ],
+                [
+                    // ADR-846 : a bundle of its own — never granted with supervision or management
+                    'key' => 'companies.exceptional_export',
+                    'label' => 'Exceptional Data Export',
+                    'hint' => 'Request or approve (as a second operator) the export of a company\'s data when its owner is unavailable. The archive is delivered to a company member, never to Platform.',
+                    'permissions' => ['exceptional_company_export'],
                 ],
                 [
                     'key' => 'companies.commercial_override',

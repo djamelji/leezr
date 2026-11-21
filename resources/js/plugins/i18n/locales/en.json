@@ -6065,7 +6065,11 @@
         "ready": "Full data export ready",
         "failed": "Full data export failed",
         "downloaded": "Full data export downloaded",
-        "revoked": "Full data export revoked"
+        "revoked": "Full data export revoked",
+        "exceptional_requested": "Exceptional export requested by Platform",
+        "exceptional_approved": "Exceptional export approved",
+        "exceptional_rejected": "Exceptional export rejected",
+        "exceptional_blocked": "Exceptional export blocked (execution disabled)"
       }
     },
     "actionCode": "Technical code"
@@ -12609,7 +12613,8 @@
       "payroll": "{n} payroll run(s) computed or validated, not exported yet",
       "noPayroll": "No payroll in progress",
       "exportReady": "A full export of your data is available",
-      "exportAdvised": "We advise you to download a full export of your data"
+      "exportAdvised": "We advise you to download a full export of your data",
+      "exportPartial": "The latest export is partial: check the missing data"
     },
     "export": {
       "title": "Full export of your data",
@@ -12623,7 +12628,6 @@
       "download": "Download",
       "none": "No export requested yet.",
       "files": "{n} file(s)",
-      "partial": "Incomplete: {parts}",
       "requested": "Your export is being prepared. You will get an e-mail when it is ready.",
       "expiredLink": "This link expired or was revoked: prepare a new export.",
       "confirmTitle": "Confirm your identity",
@@ -12633,13 +12637,37 @@
       "statuses": {
         "pending": "Pending",
         "running": "Being prepared",
-        "ready": "Ready",
+        "ready": "Complete export",
         "failed": "Failed",
         "expired": "Expired",
-        "revoked": "Revoked"
+        "revoked": "Revoked",
+        "partial": "Partial export",
+        "awaiting_approval": "Awaiting approval",
+        "rejected": "Rejected"
       },
-      "tooMany": "Too many attempts: try again in a few minutes."
-    }
+      "tooMany": "Too many attempts: try again in a few minutes.",
+      "downloadPartial": "Download the partial export",
+      "partialTitle": "This export is incomplete. Missing data:",
+      "partialHint": "The detail is also in manifest.json. You can run a new export later or contact support.",
+      "deliveredTo": "Delivered to {name} (exceptional procedure)",
+      "missing": {
+        "documents": "Documents",
+        "shipments": "Shipments",
+        "company": "Company record",
+        "members": "Users",
+        "employees": "Employees",
+        "contracts": "Contracts",
+        "time": "Time, planning and absences",
+        "billing": "Invoices and subscriptions",
+        "audit": "Activity log"
+      },
+      "reasons": {
+        "generation_failed": "generation failed",
+        "over_size_budget": "beyond the maximum size of one archive",
+        "missing_file": "file not found in storage"
+      }
+    },
+    "suspended": "Your company is suspended: features are closed. Billing and retrieving your data remain available from this page."
   },
   "platformLifecycle": {
     "title": "End of contract & data",
@@ -12656,6 +12684,22 @@
     "obligations": "{n} unpaid invoice(s) ({amount}) · {p} open payroll run(s)",
     "periodEnd": "period ends {date}",
     "downloads": "Downloads",
-    "revoke": "Revoke the link"
+    "revoke": "Revoke the link",
+    "missing": "Missing data: {parts}",
+    "exceptional": {
+      "title": "Exceptional procedure (owner unavailable)",
+      "hint": "Only when the owner can no longer act. Justification and authority check required, approval by a second operator; the archive is delivered to the designated member, who downloads it from their account. Platform can never download it.",
+      "request": "Request an exceptional export",
+      "recipient": "Recipient (company member)",
+      "justification": "Justification",
+      "justificationHint": "At least {n} characters: reason, requester, case reference.",
+      "authority": "Representative authority check",
+      "authorityHint": "Documents checked (mandate, registry extract, court decision, identity…).",
+      "submit": "Record the request",
+      "approve": "Approve",
+      "reject": "Reject",
+      "row": "Exceptional, delivered to {name}",
+      "disabled": "Execution disabled pending validation: checking a representative's authority is not validated yet. Requests are recorded and audited, but no archive is produced."
+    }
   }
 }

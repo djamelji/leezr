@@ -8,6 +8,12 @@ return [
     'cooldown' => 'An export was just requested: you can request a new one in :minutes minutes.',
     'expired' => 'This download link expired or was revoked: request a new export.',
     'no_scheduled_cancellation' => 'No scheduled cancellation to undo.',
+    'exceptional' => [
+        'recipient_invalid' => "The recipient must be an active member of the company.",
+        'not_awaiting' => "This request is no longer awaiting approval.",
+        'same_operator' => "The request must be approved by another operator than the one who created it.",
+        'disabled' => "Exceptional exports cannot be executed until the representative authority check is validated.",
+    ],
     'columns' => [
         'last_name' => 'Last name', 'first_name' => 'First name', 'email' => 'E-mail', 'membership' => 'Membership', 'role' => 'Role', 'access' => 'Access',
         'joined_at' => 'Since', 'employee_number' => 'Employee number', 'phone' => 'Phone', 'status' => 'Status', 'hire_date' => "Hire date",
@@ -29,6 +35,7 @@ return [
         'time_entries' => 'Clock-ins', 'time_breaks' => 'Breaks', 'time_daily' => 'Planned / worked (timesheets)', 'time_planning' => 'Planning', 'time_leaves' => 'Absences and leave',
     ],
     'mail' => [
+        'partial' => "The data export of :company is ready but PARTIAL: some data could not be included. The list and reasons are shown before downloading.",
         'subject' => 'Data export of :company ready', 'greeting' => 'Hello,',
         'ready' => 'The full data export of :company is ready.',
         'expires' => 'It can be downloaded from Leezr until :date; it is then deleted.',

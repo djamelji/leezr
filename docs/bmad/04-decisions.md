@@ -29721,3 +29721,40 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - `Adr845CompanyLifecycleTest` : 8 tests.
 - Recette navigateur M8 : 2 tests, rejouable, l'archive réellement téléchargée est lue.
 - Une société résiliée garde la lecture et l'export.
+
+---
+
+## ADR-846 — Leezr 4.2 M8.1 : récupération fiable des données (suspension, export partiel, procédure exceptionnelle)
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local · **Mission** : Leezr 4.2 M8.1 (suite d'ADR-845)
+
+**Contexte.** Après M8, trois limites demeuraient :
+- une société suspendue ne pouvait pas récupérer ses données ;
+- une archive incomplète était déclarée « prête » ;
+- aucune procédure n'existait si le propriétaire est indisponible.
+
+**Décision.**
+1. **Suspension** : `SetCompanyContext::SUSPENDED_BYPASS_PREFIXES` (mécanisme existant) ouvre exactement `api/company/lifecycle` et `api/company/data-exports`. Les contrôles restent ceux d'ADR-845 : session, `billing.manage`, propriétaire et mot de passe. Aucune réactivation d'abonnement ou de module ; toutes les autres routes restent en 403.
+2. **Statuts distincts** :
+   - `ready` = export complet ;
+   - `partial` = archive produite mais `manifest.missing` non vide (`generation_failed`, `over_size_budget`, `missing_file`), téléchargeable, et la liste est affichée avant le téléchargement ;
+   - `failed` = rien d'exploitable : la nouvelle archive est supprimée, les précédentes et les données sont intactes.
+
+   Les exclusions de principe ne rendent pas un export partiel. Le constructeur d'archive est résolu par le conteneur, ce qui permet de tester les échecs.
+3. **Procédure exceptionnelle** :
+   - colonnes `origin`, `recipient_user_id`, `requested_by_platform_user_id`, `approved_by_platform_user_id`, `approved_at`, `justification`, `authority_check` ;
+   - statuts `awaiting_approval` et `rejected` ;
+   - permission Platform dédiée `exceptional_company_export`, hors de tout groupe de permissions ;
+   - justification et vérification de l'autorité obligatoires ; destinataire = membre actif ;
+   - validation par un second opérateur, journal critique des deux côtés ;
+   - remise au membre désigné uniquement via Company (`CompanyDataExport::isDeliveredTo`) ; aucune route de téléchargement Platform ;
+   - **exécution désactivée** par `company_lifecycle.exceptional_export.enabled = false` : la validation répond 409, en attendant que la méthode de vérification de l'autorité soit validée (D-M81-1).
+4. **Interface** :
+   - Company : bandeau de suspension, statuts complet / partiel, liste des données absentes, bouton « Télécharger l'export partiel », mention « remis à » ;
+   - Platform : statuts, données absentes, section « Procédure exceptionnelle » (formulaire, valider / refuser, rappel d'exécution désactivée), segment « Fin de contrat » étendu aux statuts `partial` et `awaiting_approval`.
+
+**Conséquences.**
+- `Adr846CompanyDataRecoveryTest` : 6 tests.
+- `Adr845CompanyLifecycleTest` adapté : une archive avec un module en erreur est désormais `partial`.
+- Recettes M8 et M8.1 : 4 réussites sur 4, rejouables.
+- Risques résiduels R-M81-1 à 3 et décisions D-M81-1 et 2 listés dans `docs/bmad/leezr-4-2-audit/m8/README.md`.

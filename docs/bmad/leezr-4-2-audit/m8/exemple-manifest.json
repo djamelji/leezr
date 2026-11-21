@@ -4,7 +4,7 @@
     "id": 106,
     "name": "Audit 842 Services at4f8"
   },
-  "generated_at": "2026-11-21T18:57:38+00:00",
+  "generated_at": "2026-11-21T19:41:53+00:00",
   "requested_by_user_id": 183,
   "timezone": "Europe/Paris",
   "encoding": "CSV UTF-8 with BOM, separator « ; », durations in minutes, amounts in the invoice currency",
@@ -104,7 +104,7 @@
     {
       "path": "audit/company_audit_log.csv",
       "format": "csv",
-      "rows": 125,
+      "rows": 239,
       "description": "Journal d'audit de l'entreprise"
     },
     {
@@ -137,5 +137,7 @@
     }
   ],
   "errors": [],
+  "outcome": "complete",
+  "missing": [],
   "retention_policy": null
 }

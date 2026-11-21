@@ -62,7 +62,7 @@ test('Company : comprendre, exporter (archive vérifiée), expiration, révocati
 
   const row = page.locator('[data-test^="closure-export-status-"]').first()
 
-  await expect(row).toHaveText('Prêt')
+  await expect(row).toHaveText('Export complet')
 
   const exportId = (await row.getAttribute('data-test')).replace('closure-export-status-', '')
 
@@ -118,7 +118,7 @@ test('Company : comprendre, exporter (archive vérifiée), expiration, révocati
   await page.locator('[data-test="closure-export-request"]').click()
   await page.locator('[data-test="closure-export-password"] input').fill(PASSWORD)
   await page.locator('[data-test="closure-export-confirm"]').click()
-  await expect(page.locator('[data-test^="closure-export-status-"]').first()).toHaveText('Prêt')
+  await expect(page.locator('[data-test^="closure-export-status-"]').first()).toHaveText('Export complet')
 
   const second = (await page.locator('[data-test^="closure-export-status-"]').first().getAttribute('data-test')).replace('closure-export-status-', '')
 

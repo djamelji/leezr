@@ -6066,7 +6066,11 @@
         "ready": "Export complet des données prêt",
         "failed": "Échec de l'export complet des données",
         "downloaded": "Export complet des données téléchargé",
-        "revoked": "Export complet des données révoqué"
+        "revoked": "Export complet des données révoqué",
+        "exceptional_requested": "Export exceptionnel demandé par Platform",
+        "exceptional_approved": "Export exceptionnel approuvé",
+        "exceptional_rejected": "Export exceptionnel refusé",
+        "exceptional_blocked": "Export exceptionnel bloqué (exécution désactivée)"
       }
     },
     "actionCode": "Code technique"
@@ -12627,7 +12631,8 @@
       "payroll": "{n} paie(s) calculée(s) ou validée(s) non encore exportée(s)",
       "noPayroll": "Aucune paie en cours",
       "exportReady": "Un export complet de vos données est disponible",
-      "exportAdvised": "Nous vous conseillons de télécharger un export complet de vos données"
+      "exportAdvised": "Nous vous conseillons de télécharger un export complet de vos données",
+      "exportPartial": "Le dernier export est partiel : consultez les données absentes"
     },
     "export": {
       "title": "Export complet de vos données",
@@ -12641,7 +12646,6 @@
       "download": "Télécharger",
       "none": "Aucun export demandé pour le moment.",
       "files": "{n} fichier(s)",
-      "partial": "Incomplet : {parts}",
       "requested": "Votre export est en préparation. Vous recevrez un e-mail quand il sera prêt.",
       "expiredLink": "Ce lien a expiré ou a été révoqué : préparez un nouvel export.",
       "confirmTitle": "Confirmer votre identité",
@@ -12651,13 +12655,37 @@
       "statuses": {
         "pending": "En attente",
         "running": "En préparation",
-        "ready": "Prêt",
+        "ready": "Export complet",
         "failed": "Échec",
         "expired": "Expiré",
-        "revoked": "Révoqué"
+        "revoked": "Révoqué",
+        "partial": "Export partiel",
+        "awaiting_approval": "En attente de validation",
+        "rejected": "Refusé"
       },
-      "tooMany": "Trop de tentatives : réessayez dans quelques minutes."
-    }
+      "tooMany": "Trop de tentatives : réessayez dans quelques minutes.",
+      "downloadPartial": "Télécharger l'export partiel",
+      "partialTitle": "Cet export est incomplet. Données absentes :",
+      "partialHint": "Le détail figure aussi dans manifest.json. Vous pouvez relancer un export plus tard ou contacter le support.",
+      "deliveredTo": "Remis à {name} (procédure exceptionnelle)",
+      "missing": {
+        "documents": "Documents",
+        "shipments": "Expéditions",
+        "company": "Fiche entreprise",
+        "members": "Utilisateurs",
+        "employees": "Collaborateurs",
+        "contracts": "Contrats",
+        "time": "Temps, planning et absences",
+        "billing": "Factures et abonnements",
+        "audit": "Journal d'activité"
+      },
+      "reasons": {
+        "generation_failed": "la génération a échoué",
+        "over_size_budget": "au-delà de la taille maximale d'une archive",
+        "missing_file": "fichier introuvable dans le stockage"
+      }
+    },
+    "suspended": "Votre entreprise est suspendue : les fonctionnalités sont fermées. La facturation et la récupération de vos données restent accessibles depuis cette page."
   },
   "platformLifecycle": {
     "title": "Fin de contrat et données",
@@ -12674,6 +12702,22 @@
     "obligations": "{n} facture(s) impayée(s) ({amount}) · {p} paie(s) ouverte(s)",
     "periodEnd": "fin de période {date}",
     "downloads": "Téléchargements",
-    "revoke": "Révoquer le lien"
+    "revoke": "Révoquer le lien",
+    "missing": "Données absentes : {parts}",
+    "exceptional": {
+      "title": "Procédure exceptionnelle (propriétaire indisponible)",
+      "hint": "À utiliser seulement si le propriétaire ne peut plus agir. Justification et vérification de l'autorité obligatoires, validation par un second opérateur ; l'archive est remise au membre désigné, qui la télécharge depuis son espace. Platform ne peut jamais la télécharger.",
+      "request": "Demander un export exceptionnel",
+      "recipient": "Destinataire (membre de l'entreprise)",
+      "justification": "Justification",
+      "justificationHint": "Au moins {n} caractères : motif, demandeur, référence du dossier.",
+      "authority": "Vérification de l'autorité du représentant",
+      "authorityHint": "Pièces vérifiées (mandat, extrait Kbis, jugement, identité…).",
+      "submit": "Enregistrer la demande",
+      "approve": "Valider",
+      "reject": "Refuser",
+      "row": "Exceptionnel, remis à {name}",
+      "disabled": "Exécution désactivée en attente de validation : la vérification de l'autorité d'un représentant n'est pas encore validée. Les demandes sont enregistrées et journalisées, mais aucune archive n'est produite."
+    }
   }
 }

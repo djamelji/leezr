@@ -95,7 +95,7 @@ Documents au-delà du budget de taille (500 Mo par défaut) : listés en `over_s
 | D-M8-3 | Statut « archivée » | non supporté par le modèle ; non créé (pas de besoin démontré) |
 | D-M8-4 | Qui peut exporter : propriétaire seul, ou un droit délégable | propriétaire seul |
 | D-M8-5 | Durée de disponibilité de l'archive | 7 jours, réglable |
-| D-M8-6 | Export pendant une suspension | impossible aujourd'hui (la suspension bloque tout) ; le support doit intervenir |
+| D-M8-6 | Export pendant une suspension | **résolu M8.1 (ADR-846)** : seul le parcours d'export s'ouvre |
 | D-M8-7 | Budget de taille d'une archive et procédure de complément | 500 Mo, complément sur demande au support |
 | D-M8-8 | Accès après fin d'abonnement | lecture et export maintenus, sans limite de durée tant que D-M8-1 n'est pas tranchée |
 
@@ -111,3 +111,77 @@ Documents au-delà du budget de taille (500 Mo par défaut) : listés en `over_s
   - résiliation immédiate : accès, export et factures conservés ;
   - export volumineux (budget de documents).
 - **Recette navigateur** : `tests/e2e/audit842-m8-recipe.spec.js`, 2 tests, rejouable (fixture `scripts/audit842-m8-fixture.php`). L'archive réellement téléchargée est ouverte (`unzip`) et lue. Captures `apres-*.jpg`.
+
+---
+
+# M8.1 — Récupération fiable des données (ADR-846)
+
+## 1. Export pendant une suspension
+
+- **Mécanisme réutilisé** : la liste d'adresses ouvertes aux sociétés suspendues (`SetCompanyContext::SUSPENDED_BYPASS_PREFIXES`, qui contenait déjà la facturation et le support). On y ajoute deux chemins exacts : `api/company/lifecycle` et `api/company/data-exports`.
+- **Contrôles inchangés** :
+  - session valide ;
+  - groupe Facturation (`billing.manage`) ;
+  - propriétaire et ressaisie du mot de passe pour demander ;
+  - propriétaire ou destinataire désigné pour télécharger.
+- **Rien n'est réactivé** : la société reste suspendue et l'abonnement inchangé. C'est vérifié par les tests et par la recette.
+- **Toujours fermés pendant la suspension**, vérifiés par l'API en recette :
+  - Expéditions, Membres, Services Workforce, Modules : 403 ;
+  - une écriture métier : 403.
+- **Sans session** : 401, l'archive ne sort pas.
+- **Interface** : un bandeau sur la page « Données et fin de contrat » indique la suspension et ce qui reste accessible.
+
+## 2. Export complet, partiel ou échoué
+
+| Statut | Signification | Téléchargeable |
+|---|---|---|
+| `ready` (« Export complet ») | aucune donnée manquante | oui |
+| `partial` (« Export partiel ») | archive produite, mais `manifest.outcome = partial` et `manifest.missing` non vide | oui, bouton « Télécharger l'export partiel » |
+| `failed` (« Échec ») | aucune archive exploitable (stockage indisponible, toutes les parties en échec) | non (410) |
+
+**Motifs de données manquantes**, chacun avec la partie concernée et un nombre :
+- `generation_failed` : un module en erreur ;
+- `over_size_budget` : document au-delà du budget de taille ;
+- `missing_file` : fichier absent du stockage.
+
+**Affichage** : la liste figure dans la page **avant** le bouton de téléchargement. Elle est reprise dans `manifest.json`, dans l'e-mail (texte « PARTIEL ») et dans le journal (`result = partial`, `missing`).
+
+**Exclusions de principe** (secrets, adresses IP, versions antérieures, DSN, quarantaine) : elles restent documentées dans `manifest.exclusions` et ne rendent pas un export partiel, car elles ne sont pas des données manquantes.
+
+**En cas d'échec** : la nouvelle archive incomplète est supprimée. Les archives précédentes et les données restent intactes, ce qui est testé.
+
+Exemple réel : `m81/exemple-export-partiel.zip` et `m81/exemple-manifest-partiel.json`.
+
+## 3. Procédure exceptionnelle (propriétaire indisponible)
+
+Le propriétaire reste le **seul demandeur ordinaire**. La procédure Platform se déroule ainsi :
+
+1. Permission dédiée `exceptional_company_export`. Elle ne fait partie d'aucun groupe de permissions et doit être attribuée explicitement.
+2. Demande : destinataire choisi parmi les membres actifs de la société, justification d'au moins 30 caractères, description de la vérification de l'autorité du représentant. Le statut devient `awaiting_approval`. Une seule demande à la fois.
+3. Validation par un **second** opérateur titulaire de la même permission. Le demandeur ne peut pas valider sa propre demande : le bouton est désactivé et l'API répond 422. Le second opérateur peut aussi refuser (`rejected`).
+4. Journal : `company_export.exceptional_requested`, `_approved`, `_rejected`, `_blocked`, gravité critique, côté Platform **et** côté société.
+5. Remise : l'archive est produite pour le membre désigné, qui reçoit un e-mail et la télécharge depuis son espace Company, connecté. **Aucune route de téléchargement Platform** n'existe (404/405, vérifié).
+6. **Exécution désactivée** (`COMPANY_EXCEPTIONAL_EXPORT_ENABLED=false`). L'autorité d'un représentant (identité et mandat) ne peut pas être vérifiée de façon fiable par le produit aujourd'hui. Les demandes sont donc enregistrées et journalisées, mais une validation répond 409 et aucune archive n'est produite. Le chemin complet, avec exécution activée, est couvert par les tests PHP.
+
+## 4. Tests M8.1
+
+**Backend** — `tests/Feature/Adr846CompanyDataRecoveryTest.php`, 6 tests :
+- société suspendue et propriétaire ;
+- société suspendue et membre non autorisé ;
+- export complet, partiel par budget de taille et partiel par module en échec et fichier absent ;
+- échec total ;
+- lien révoqué, absence de session et autre société ;
+- procédure exceptionnelle : permission, justification, destinataire, auto-validation refusée, 409 tant que l'exécution est désactivée, puis exécution, remise au destinataire désigné, absence de route Platform, refus.
+
+**Recette navigateur** — `tests/e2e/audit842-m81-recipe.spec.js`, 2 tests, rejouée avec la recette M8 : 4 réussites sur 4, deux fois. Les archives réellement téléchargées sont ouvertes et lues. Captures dans `m81/apres-*.jpg`.
+
+## 5. Risques résiduels et décisions
+
+**Risques résiduels :**
+- **R-M81-1** : société suspendue, l'interface affiche une notification brute en anglais (« This company is currently suspended. ») issue des autres appels de l'application. Ce comportement est antérieur à M8.1 et la page de récupération reste utilisable. Correction à décider : une gestion globale du 403 de suspension.
+- **R-M81-2** (défaut latent découvert pendant la recette) : le journal Platform copie la clé du rôle dans `platform_audit_logs.actor_type`, limitée à 20 caractères. Un rôle Platform dont la clé dépasse 20 caractères empêche donc la connexion de ses titulaires (500). Ce défaut est hors périmètre et n'est pas corrigé ; la recette utilise une clé courte.
+- **R-M81-3** : une société suspendue peut lancer des exports dans la limite de 5 par 10 minutes, avec 10 minutes entre deux demandes. La charge est donc bornée, mais pas nulle.
+
+**Décisions à valider :**
+- **D-M81-1** : quels justificatifs d'autorité accepter (mandat, extrait Kbis, jugement, pièce d'identité) et qui les contrôle, avant d'activer l'exécution des exports exceptionnels.
+- **D-M81-2** : le destinataire d'un export exceptionnel doit-il pouvoir être une personne extérieure (liquidateur, héritier) ? Aujourd'hui c'est impossible par conception : seul un membre de la société peut le recevoir, ce qui évite tout lien public.

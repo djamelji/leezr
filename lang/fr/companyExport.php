@@ -8,6 +8,12 @@ return [
     'cooldown' => 'Un export vient d’être demandé : vous pourrez en demander un nouveau dans :minutes minutes.',
     'expired' => 'Ce lien de téléchargement a expiré ou a été révoqué : demandez un nouvel export.',
     'no_scheduled_cancellation' => 'Aucune résiliation programmée à annuler.',
+    'exceptional' => [
+        'recipient_invalid' => "Le destinataire doit être un membre actif de l'entreprise.",
+        'not_awaiting' => "Cette demande n'est plus en attente de validation.",
+        'same_operator' => "La demande doit être validée par un autre opérateur que celui qui l'a créée.",
+        'disabled' => "L'exécution des exports exceptionnels est désactivée tant que la vérification de l'autorité du représentant n'est pas validée.",
+    ],
     'columns' => [
         'last_name' => 'Nom', 'first_name' => 'Prénom', 'email' => 'E-mail', 'membership' => 'Rattachement', 'role' => 'Rôle', 'access' => 'Accès',
         'joined_at' => 'Depuis le', 'employee_number' => 'Matricule', 'phone' => 'Téléphone', 'status' => 'Statut', 'hire_date' => "Date d'entrée",
@@ -29,6 +35,7 @@ return [
         'time_entries' => 'Pointages', 'time_breaks' => 'Pauses', 'time_daily' => 'Prévu / réalisé (feuilles de temps)', 'time_planning' => 'Planning', 'time_leaves' => 'Absences et congés',
     ],
     'mail' => [
+        'partial' => "L'export des données de :company est prêt, mais il est PARTIEL : certaines données n'ont pas pu être incluses. La liste et les motifs sont affichés avant le téléchargement.",
         'subject' => 'Export des données de :company prêt', 'greeting' => 'Bonjour,',
         'ready' => "L'export complet des données de :company est prêt.",
         'expires' => 'Il peut être téléchargé depuis Leezr jusqu’au :date ; il sera ensuite supprimé.',

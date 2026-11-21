@@ -220,7 +220,7 @@ class Adr845CompanyLifecycleTest extends TestCase
     {
         Schema::drop('shipments');
         $export = $this->readyExport()->fresh();
-        $this->assertSame('ready', $export->status);
+        $this->assertSame('partial', $export->status); // ADR-846 : an archive with missing data is never declared complete
         $manifest = json_decode($this->zipEntries($export)['manifest.json'], true);
         $this->assertSame([['part' => 'shipments', 'reason' => 'generation_failed']], $manifest['errors']);
         $this->assertArrayHasKey('workforce/employees.csv', $this->zipEntries($export));

@@ -15,6 +15,13 @@ return [
         'max_document_bytes' => (int) env('COMPANY_EXPORT_MAX_DOCUMENT_BYTES', 500 * 1024 * 1024), // documents beyond → listed as excluded
         'cooldown_minutes' => (int) env('COMPANY_EXPORT_COOLDOWN_MINUTES', 10), // one new request per company per window
     ],
+    // ADR-846 (M8.1) — exceptional export started from Platform when the owner is unavailable. The request / double
+    // approval / audit path exists, but EXECUTION stays OFF until the way a representative's authority is verified
+    // (identity + mandate) is validated : approving then answers 409 and nothing is built.
+    'exceptional_export' => [
+        'enabled' => (bool) env('COMPANY_EXCEPTIONAL_EXPORT_ENABLED', false),
+        'min_justification_chars' => 30,
+    ],
     'retention' => [
         'markets' => [],
     ],

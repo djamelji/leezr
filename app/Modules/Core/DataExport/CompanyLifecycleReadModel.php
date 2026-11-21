@@ -64,4 +64,13 @@ class CompanyLifecycleReadModel
             'closing' => in_array($commercial, ['cancellation_scheduled', 'ended'], true),
         ];
     }
+
+    /** ADR-846 — who may receive an exceptional export : active members of the company (owner first) */
+    public static function exceptionalRecipients(Company $company): array
+    {
+        return DB::table('memberships')->join('users', 'users.id', '=', 'memberships.user_id')->where('memberships.company_id', $company->id)
+            ->whereNull('memberships.suspended_at')->orderByRaw("memberships.role = 'owner' desc")->orderBy('users.last_name')
+            ->get(['users.id', 'users.first_name', 'users.last_name', 'users.email', 'memberships.role'])
+            ->map(fn ($m) => ['id' => $m->id, 'name' => trim("$m->first_name $m->last_name"), 'email' => $m->email, 'owner' => $m->role === 'owner'])->all();
+    }
 }

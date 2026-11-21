@@ -28,7 +28,9 @@ const date = d => (d ? new Date(d).toLocaleDateString(locale.value, { day: 'nume
 const dateTime = d => (d ? new Date(d).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : '—')
 const size = b => (b ? (b > 1048576 ? `${(b / 1048576).toFixed(1)} Mo` : `${Math.max(1, Math.round(b / 1024))} Ko`) : '')
 const STATE_COLOR = { active: 'success', trial: 'info', 'pending_payment': 'warning', 'payment_overdue': 'error', 'cancellation_scheduled': 'warning', ended: 'secondary', none: 'secondary' }
-const EXPORT_COLOR = { pending: 'info', running: 'info', ready: 'success', failed: 'error', expired: 'secondary', revoked: 'secondary' }
+const EXPORT_COLOR = { 'pending': 'info', 'running': 'info', 'ready': 'success', 'partial': 'warning', 'failed': 'error', 'expired': 'secondary', 'revoked': 'secondary', 'awaiting_approval': 'info', 'rejected': 'secondary' }
+const AVAILABLE = ['ready', 'partial'] // ADR-846 : complete or partial archive, both downloadable
+const missingLabel = m => t(`companyClosure.export.missing.${m.part}`) + (m.count ? ` (${m.count})` : '') + ' — ' + t(`companyClosure.export.reasons.${m.reason}`)
 
 const load = async () => {
   try {
@@ -139,6 +141,16 @@ const undoCancel = async () => {
         {{ message.text }}
       </VAlert>
 
+      <VAlert
+        v-if="life.operational.state === 'suspended'"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+        data-test="closure-suspended"
+      >
+        {{ t('companyClosure.suspended') }}
+      </VAlert>
+
       <VRow>
         <!-- 1–2 : subscription, effects and dates -->
         <VCol
@@ -239,7 +251,7 @@ const undoCancel = async () => {
                 <VListItem
                   prepend-icon="tabler-file-zip"
                   :base-color="life.data.latest_export?.status === 'ready' ? 'success' : 'warning'"
-                  :title="life.data.latest_export?.status === 'ready' ? t('companyClosure.obligations.exportReady') : t('companyClosure.obligations.exportAdvised')"
+                  :title="life.data.latest_export?.status === 'ready' ? t('companyClosure.obligations.exportReady') : life.data.latest_export?.status === 'partial' ? t('companyClosure.obligations.exportPartial') : t('companyClosure.obligations.exportAdvised')"
                 />
               </VList>
             </VCardText>
@@ -278,8 +290,9 @@ const undoCancel = async () => {
                 {{ t('companyClosure.export.ownerOnly') }}
               </VAlert>
               <VTable
-                v-else-if="life.exports.length"
+                v-if="life.exports.length"
                 density="comfortable"
+                :class="{ 'mt-4': !life.can_export }"
               >
                 <thead>
                   <tr>
@@ -291,52 +304,79 @@ const undoCancel = async () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
+                  <template
                     v-for="e in life.exports"
                     :key="e.id"
-                    :data-test="`closure-export-${e.id}`"
                   >
-                    <td>
-                      {{ dateTime(e.requested_at) }}<div class="text-caption text-medium-emphasis">
-                        {{ e.requested_by }}
-                      </div>
-                    </td>
-                    <td>
-                      <VChip
-                        size="small"
-                        :color="EXPORT_COLOR[e.status]"
-                        :data-test="`closure-export-status-${e.id}`"
-                      >
-                        {{ t(`companyClosure.export.statuses.${e.status}`) }}
-                      </VChip>
-                      <div
-                        v-if="e.errors?.length"
-                        class="text-caption text-warning"
-                      >
-                        {{ t('companyClosure.export.partial', { parts: e.errors.map(x => x.part).join(', ') }) }}
-                      </div>
-                    </td>
-                    <td class="text-body-2">
-                      {{ e.files.length ? t('companyClosure.export.files', { n: e.files.length }) : '—' }} <span class="text-medium-emphasis">{{ size(e.size_bytes) }}</span>
-                    </td>
-                    <td>{{ e.status === 'ready' ? dateTime(e.expires_at) : '—' }}</td>
-                    <td class="text-end">
-                      <VBtn
-                        v-if="e.status === 'ready'"
-                        size="small"
-                        color="primary"
-                        prepend-icon="tabler-download"
-                        :data-test="`closure-export-download-${e.id}`"
-                        @click="download(e)"
-                      >
-                        {{ t('companyClosure.export.download') }}
-                      </VBtn>
-                    </td>
-                  </tr>
+                    <tr :data-test="`closure-export-${e.id}`">
+                      <td>
+                        {{ dateTime(e.requested_at) }}<div class="text-caption text-medium-emphasis">
+                          {{ e.requested_by }}
+                        </div>
+                      </td>
+                      <td>
+                        <VChip
+                          size="small"
+                          :color="EXPORT_COLOR[e.status]"
+                          :data-test="`closure-export-status-${e.id}`"
+                        >
+                          {{ t(`companyClosure.export.statuses.${e.status}`) }}
+                        </VChip>
+                        <div
+                          v-if="e.recipient"
+                          class="text-caption text-medium-emphasis"
+                        >
+                          {{ t('companyClosure.export.deliveredTo', { name: e.recipient }) }}
+                        </div>
+                      </td>
+                      <td class="text-body-2">
+                        {{ e.files.length ? t('companyClosure.export.files', { n: e.files.length }) : '—' }} <span class="text-medium-emphasis">{{ size(e.size_bytes) }}</span>
+                      </td>
+                      <td>{{ AVAILABLE.includes(e.status) ? dateTime(e.expires_at) : '—' }}</td>
+                      <td class="text-end">
+                        <VBtn
+                          v-if="AVAILABLE.includes(e.status)"
+                          size="small"
+                          :color="e.status === 'partial' ? 'warning' : 'primary'"
+                          prepend-icon="tabler-download"
+                          :data-test="`closure-export-download-${e.id}`"
+                          @click="download(e)"
+                        >
+                          {{ e.status === 'partial' ? t('companyClosure.export.downloadPartial') : t('companyClosure.export.download') }}
+                        </VBtn>
+                      </td>
+                    </tr>
+                    <!-- ADR-846 : what is missing and why, BEFORE any download -->
+                    <tr v-if="e.missing?.length && e.status !== 'expired'">
+                      <td colspan="5">
+                        <VAlert
+                          type="warning"
+                          variant="tonal"
+                          density="compact"
+                          :data-test="`closure-export-missing-${e.id}`"
+                        >
+                          <div class="font-weight-medium">
+                            {{ t('companyClosure.export.partialTitle') }}
+                          </div>
+                          <ul class="ps-5">
+                            <li
+                              v-for="(m, i) in e.missing"
+                              :key="i"
+                            >
+                              {{ missingLabel(m) }}
+                            </li>
+                          </ul>
+                          <div class="text-caption mt-1">
+                            {{ t('companyClosure.export.partialHint') }}
+                          </div>
+                        </VAlert>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </VTable>
               <div
-                v-else
+                v-else-if="life.can_export"
                 class="text-body-2 text-medium-emphasis"
               >
                 {{ t('companyClosure.export.none') }}

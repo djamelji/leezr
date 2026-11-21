@@ -96,6 +96,8 @@ class SetCompanyContext
      *   - api/billing/      : see what is owed, pay, add a card, change plan (regularization)
      *   - api/company/plan  : upgrade/downgrade to a payable plan to regularize
      *   - api/support/      : contact support about the suspension
+     *   - api/company/lifecycle, api/company/data-exports : ADR-846 — read where the company stands and RETRIEVE its
+     *     data (owner + password, or the designated recipient) ; exact paths, no business route behind them
      *
      * Administrative reactivation runs on the Platform guard (routes/platform.php),
      * not this company stack. Everything else stays 403 while suspended.
@@ -107,6 +109,8 @@ class SetCompanyContext
         'api/billing/',
         'api/company/plan',
         'api/support/',
+        'api/company/lifecycle',      // ADR-846 (exact path — see isSuspendedBypass)
+        'api/company/data-exports',   // ADR-846 : POST request, GET {id}/download
     ];
 
     private static function isSuspendedBypass(Request $request): bool

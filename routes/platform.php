@@ -126,6 +126,13 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     // Companies (ADR-597 LOT 3 — read/write split for granular RBAC)
     Route::middleware(['module.active:platform.companies'])->group(function () {
         // Read-only supervision — `view_companies` (manage_companies holders keep it via migration)
+        // ADR-846 (M8.1) — exceptional export (owner unavailable) : dedicated permission, double approval, no download route
+        Route::middleware(['platform.permission:exceptional_company_export', 'throttle:20,1'])->group(function () {
+            Route::post('/companies/{id}/data-exports/exceptional', [\App\Modules\Core\DataExport\Http\PlatformExceptionalExportController::class, 'store'])->whereNumber('id');
+            Route::post('/companies/{id}/data-exports/{exportId}/approve', [\App\Modules\Core\DataExport\Http\PlatformExceptionalExportController::class, 'approve'])->whereNumber(['id', 'exportId']);
+            Route::post('/companies/{id}/data-exports/{exportId}/reject', [\App\Modules\Core\DataExport\Http\PlatformExceptionalExportController::class, 'reject'])->whereNumber(['id', 'exportId']);
+        });
+
         Route::middleware(['platform.permission:view_companies'])->group(function () {
             Route::get('/companies', [CompanyController::class, 'index']);
             Route::get('/companies/{id}/billing', [CompanyController::class, 'billing']);

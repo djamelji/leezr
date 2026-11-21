@@ -51,15 +51,16 @@ class CompanyDataExportService
     {
         $export->update(['status' => CompanyDataExport::RUNNING, 'started_at' => now()]);
         try {
-            $result = (new CompanyDataExportBuilder($export->company))->build($export);
-            $export->update(['status' => CompanyDataExport::READY, 'path' => $result['path'], 'size_bytes' => $result['size'], 'manifest' => $result['manifest'],
+            $result = app()->make(CompanyDataExportBuilder::class, ['company' => $export->company])->build($export);
+            $status = ($result['manifest']['outcome'] ?? 'complete') === 'complete' ? CompanyDataExport::READY : CompanyDataExport::PARTIAL;
+            $export->update(['status' => $status, 'path' => $result['path'], 'size_bytes' => $result['size'], 'manifest' => $result['manifest'],
                 'finished_at' => now(), 'expires_at' => now()->addDays((int) config('company_lifecycle.export.ttl_days'))]);
             app(AuditLogger::class)->logCompany($export->company_id, AuditAction::COMPANY_DATA_EXPORT_READY, 'company_data_export', (string) $export->id, [
                 'actorType' => 'system', 'actorId' => null,
-                'metadata' => ['result' => 'ready', 'files' => count($result['manifest']['files']), 'errors' => count($result['manifest']['errors']), 'size_bytes' => $result['size']],
+                'metadata' => ['result' => $status, 'missing' => $result['manifest']['missing'], 'files' => count($result['manifest']['files']), 'errors' => count($result['manifest']['errors']), 'size_bytes' => $result['size']],
             ]);
             try {
-                $export->requester?->notify(new CompanyDataExportReadyNotification($export->company->name, $export->expires_at));
+                ($export->recipient ?? $export->requester)?->notify(new CompanyDataExportReadyNotification($export->company->name, $export->expires_at, $status === CompanyDataExport::PARTIAL));
             } catch (\Throwable $e) {
                 Log::warning('[company-export] ready notice not sent', ['export' => $export->id, 'error' => $e->getMessage()]);
             }
@@ -76,7 +77,7 @@ class CompanyDataExportService
     public function pruneExpired(): int
     {
         $removed = 0;
-        CompanyDataExport::where('status', CompanyDataExport::READY)->where('expires_at', '<=', now())->each(function (CompanyDataExport $e) use (&$removed) {
+        CompanyDataExport::whereIn('status', CompanyDataExport::AVAILABLE)->where('expires_at', '<=', now())->each(function (CompanyDataExport $e) use (&$removed) {
             $this->dropFile($e);
             $e->update(['status' => CompanyDataExport::EXPIRED, 'path' => null]);
             $removed++;
@@ -89,6 +90,62 @@ class CompanyDataExportService
     {
         $this->dropFile($export);
         $export->update(['status' => CompanyDataExport::REVOKED, 'path' => null, 'expires_at' => now()]);
+    }
+
+    /**
+     * ADR-846 — exceptional export, step 1 : an operator records WHY, HOW the representative's authority was checked,
+     * and WHICH company member receives the archive (an active member, never the operator). Nothing is built yet.
+     */
+    public function requestExceptional(Company $company, int $operatorId, int $recipientUserId, string $justification, string $authorityCheck): CompanyDataExport
+    {
+        $recipient = User::find($recipientUserId);
+        $membership = $recipient?->membershipFor($company);
+        if (! $membership || $membership->isSuspended()) {
+            throw ValidationException::withMessages(['recipient_user_id' => __('companyExport.exceptional.recipient_invalid')]);
+        }
+
+        return DB::transaction(function () use ($company, $operatorId, $recipientUserId, $justification, $authorityCheck) {
+            Company::whereKey($company->id)->lockForUpdate()->first();
+            if (CompanyDataExport::where('company_id', $company->id)->whereIn('status', [CompanyDataExport::AWAITING_APPROVAL, ...CompanyDataExport::IN_PROGRESS])->exists()) {
+                throw ValidationException::withMessages(['export' => __('companyExport.already_running')]);
+            }
+
+            return CompanyDataExport::create(['company_id' => $company->id, 'status' => CompanyDataExport::AWAITING_APPROVAL, 'disk' => 'local',
+                'origin' => CompanyDataExport::ORIGIN_EXCEPTIONAL, 'recipient_user_id' => $recipientUserId, 'requested_by_platform_user_id' => $operatorId,
+                'justification' => $justification, 'authority_check' => $authorityCheck]);
+        });
+    }
+
+    /**
+     * ADR-846 — step 2 : a SECOND operator approves. Refused to the requester himself, and refused while execution is
+     * disabled (config company_lifecycle.exceptional_export.enabled — OFF until the authority check is validated).
+     * Returns null when execution is disabled (nothing changes).
+     */
+    public function approveExceptional(CompanyDataExport $export, int $operatorId): ?CompanyDataExport
+    {
+        if ($export->status !== CompanyDataExport::AWAITING_APPROVAL) {
+            throw ValidationException::withMessages(['export' => __('companyExport.exceptional.not_awaiting')]);
+        }
+        if ($export->requested_by_platform_user_id === $operatorId) {
+            throw ValidationException::withMessages(['export' => __('companyExport.exceptional.same_operator')]);
+        }
+        if (! config('company_lifecycle.exceptional_export.enabled')) {
+            return null;
+        }
+        $export->update(['status' => CompanyDataExport::PENDING, 'approved_by_platform_user_id' => $operatorId, 'approved_at' => now()]);
+        BuildCompanyDataExportJob::dispatch($export->id);
+
+        return $export->fresh();
+    }
+
+    public function rejectExceptional(CompanyDataExport $export, int $operatorId): CompanyDataExport
+    {
+        if ($export->status !== CompanyDataExport::AWAITING_APPROVAL) {
+            throw ValidationException::withMessages(['export' => __('companyExport.exceptional.not_awaiting')]);
+        }
+        $export->update(['status' => CompanyDataExport::REJECTED, 'approved_by_platform_user_id' => $operatorId, 'approved_at' => now()]);
+
+        return $export->fresh();
     }
 
     private function dropFile(CompanyDataExport $e): void
