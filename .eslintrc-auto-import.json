@@ -422,6 +422,7 @@
     "useCatalogText": true,
     "displayLocale": true,
     "isolateTabParam": true,
-    "rememberReturnPath": true
+    "rememberReturnPath": true,
+    "ledgerAmountDisplay": true
   }
 }

@@ -70,9 +70,7 @@ class CompanyController
 
         $companies = $query->paginate(20);
         $calculator = new CompanyHealthScoreCalculator;
-        // ADR-841 : the companies list uses THE Billing MRR definition (was : public monthly price of the plan of every
-        // active company — trials, companies without subscription and yearly plans included, add-ons and contracts ignored).
-        // Financial figures only for operators allowed to read Billing (same right as /billing/metrics) — ADR-841.
+        // ADR-841 : THE Billing MRR definition (was : public plan price of every active company) ; financial fields only with view_billing.
         $finance = (bool) $request->user('platform')?->hasPermission('view_billing');
         $portfolio = $finance ? app(\App\Core\Billing\BillingMetricsCalculationService::class)->recurringPortfolio() : null;
         $items = collect($companies->items())->map(function ($company) use ($calculator, $portfolio) {

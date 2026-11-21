@@ -87,6 +87,7 @@ declare global {
   const isRef: typeof import('vue')['isRef']
   const isolateTabParam: typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']
   const kFormatter: typeof import('@core/utils/formatters')['kFormatter']
+  const ledgerAmountDisplay: typeof import('./resources/js/utils/ledgerAmount.js')['ledgerAmountDisplay']
   const lengthValidator: typeof import('@core/utils/validators')['lengthValidator']
   const logicAnd: typeof import('@vueuse/math')['logicAnd']
   const logicNot: typeof import('@vueuse/math')['logicNot']
@@ -509,6 +510,7 @@ declare module 'vue' {
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isolateTabParam: UnwrapRef<typeof import('./resources/js/composables/useCompanyNav.js')['isolateTabParam']>
     readonly kFormatter: UnwrapRef<typeof import('@core/utils/formatters')['kFormatter']>
+    readonly ledgerAmountDisplay: UnwrapRef<typeof import('./resources/js/utils/ledgerAmount.js')['ledgerAmountDisplay']>
     readonly lengthValidator: UnwrapRef<typeof import('@core/utils/validators')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>
