@@ -7717,19 +7717,26 @@
   "onboardingFunnel": {
     "title": "Parcours d'inscription",
     "subtitle": "Suivi des conversions et abandons du parcours d'inscription",
-    "stepStarted": "Démarré",
-    "stepCompanyInfo": "Info entreprise",
-    "stepAdminUser": "Utilisateur admin",
-    "stepPlanSelected": "Plan sélectionné",
-    "stepPaymentInfo": "Info paiement",
-    "stepCompleted": "Complété",
     "started": "Démarrés",
     "completed": "Complétés",
     "conversionRate": "Taux de conversion",
     "abandoned": "Abandonnés",
     "funnelTitle": "Entonnoir de conversion",
     "abandonmentTitle": "Analyse des abandons par étape",
-    "dailyTrend": "Tendance quotidienne (7 derniers jours)"
+    "dailyTrend": "Tendance quotidienne (7 derniers jours)",
+    "steps": {
+      "started": "Démarré",
+      "industry": "Métier choisi",
+      "plan": "Offre choisie",
+      "addons": "Options",
+      "company": "Entreprise",
+      "account": "Compte",
+      "completed": "Inscription terminée"
+    },
+    "inProgress": "en cours",
+    "activated": "activées (abonnement actif ou en essai)",
+    "firstLogin": "première connexion après l'inscription",
+    "definitions": "Parcours démarrés sur les {days} derniers jours, un par visiteur (identifiant aléatoire, aucune donnée personnelle). Abandonné = non terminé et sans aucune activité depuis {hours} h ; avant, il est « en cours ». Les entreprises créées par Platform ne sont pas comptées."
   },
   "usageMonitoring": {
     "title": "Monitoring d'utilisation",

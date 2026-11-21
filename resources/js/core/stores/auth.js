@@ -83,12 +83,12 @@ export const useAuthStore = defineStore('auth', {
       return !this.hasPermission(key) && this.pendingPermissions.includes(key)
     },
 
-    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company }) {
+    async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company }, funnelId = null) {
       await refreshCsrf()
 
       const data = await $api('/register', {
         method: 'POST',
-        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company },
+        body: { first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company, 'funnel_id': funnelId ?? undefined }, // ADR-849 : journey id
       })
 
       this._persistUser(data.user)

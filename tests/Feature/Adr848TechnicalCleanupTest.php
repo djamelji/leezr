@@ -23,10 +23,11 @@ class Adr848TechnicalCleanupTest extends TestCase
 
     public function test_public_funnel_tracking_accepts_bounded_metadata_only(): void
     {
-        $this->postJson('/api/register/funnel-track', ['step' => 'started', 'metadata' => ['source' => 'landing', 'n' => 2]])->assertOk();
-        $this->postJson('/api/register/funnel-track', ['step' => 'started', 'metadata' => array_fill_keys(range(1, 21), 'x')])->assertUnprocessable();
-        $this->postJson('/api/register/funnel-track', ['step' => 'started', 'metadata' => ['nested' => ['a' => 1]]])->assertUnprocessable();
-        $this->postJson('/api/register/funnel-track', ['step' => 'started', 'metadata' => ['long' => str_repeat('x', 256)]])->assertUnprocessable();
+        // ADR-849 (M10) superseded the M9 bound : a journey id is required and only the traffic origin is kept
+        $id = (string) \Illuminate\Support\Str::uuid();
+        $this->postJson('/api/register/funnel-track', ['funnel_id' => $id, 'step' => 'started', 'source' => 'landing.example'])->assertOk();
+        $this->postJson('/api/register/funnel-track', ['step' => 'started'])->assertUnprocessable();
+        $this->postJson('/api/register/funnel-track', ['funnel_id' => $id, 'step' => 'started', 'source' => str_repeat('x', 101)])->assertUnprocessable();
     }
 
     public function test_consolidations_have_a_single_implementation(): void

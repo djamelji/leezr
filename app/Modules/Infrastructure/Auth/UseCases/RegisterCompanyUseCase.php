@@ -224,11 +224,13 @@ class RegisterCompanyUseCase
 
         // Track funnel completion (P3-1: Onboarding Funnel)
         try {
-            RegistrationFunnelEvent::create([
-                'session_id' => session()->getId(),
-                'company_id' => $result->company->id,
-                'step' => 'completed',
-            ]);
+            // ADR-849 : keyed by the journey id when the screen sent one (one `completed` per journey) ;
+            // a registration without journey id (API) still counts as completed, keyed by its session.
+            $journey = $data->funnelId ?? session()->getId();
+            RegistrationFunnelEvent::firstOrCreate(
+                ['funnel_id' => $data->funnelId, 'step' => RegistrationFunnelEvent::COMPLETED, 'session_id' => $journey],
+                ['company_id' => $result->company->id],
+            );
         } catch (\Throwable) {
             // Non-critical — never block registration
         }

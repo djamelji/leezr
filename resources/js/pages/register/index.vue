@@ -12,6 +12,7 @@ import { usePublicMarkets } from '@/composables/usePublicMarkets'
 import { usePublicAddons } from '@/composables/usePublicAddons'
 import { useAppName } from '@/composables/useAppName'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useRegistrationFunnel } from '@/composables/useRegistrationFunnel'
 import { useTunnelPersistence } from '@/composables/useTunnelPersistence'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import authV2RegisterIllustrationBorderedDark from '@images/pages/auth-v2-register-illustration-bordered-dark.png'
@@ -45,6 +46,7 @@ const auth = useAuthStore()
 const runtime = useRuntimeStore()
 const router = useRouter()
 const { track } = useAnalytics()
+const funnel = useRegistrationFunnel() // ADR-849 : measured public registration funnel
 const persistence = useTunnelPersistence()
 
 // ─── Wizard state ──────────────────────────────────────────
@@ -101,6 +103,7 @@ onMounted(() => {
   fetchMarkets().catch(() => toast(t('register.loadError'), 'error'))
 
   track('registration_started', { source: document.referrer || 'direct' })
+  funnel.started()
 
   const saved = persistence.load()
   if (saved) {
@@ -162,6 +165,7 @@ watch(currentStep, (newStep, oldStep) => {
 
   if (oldStep != null)
     track('registration_step_completed', { step: oldStep, step_name: stepNames[oldStep], duration_ms: durationMs })
+  funnel.moved(oldStep, newStep) // forward moves only
   track('registration_step_viewed', { step: newStep, step_name: stepNames[newStep] })
   stepEnteredAt = Date.now()
 })
@@ -384,7 +388,9 @@ const handleRegister = async () => {
       addon_keys: selectedAddons.value.length > 0 ? selectedAddons.value : undefined,
       billing_same_as_company: billingIsSameAsCompany.value,
       coupon_code: summaryRef.value?.couponCode || undefined,
-    })
+    }, funnel.journeyId()) // ADR-849 : journey id of the measured funnel
+
+    funnel.finished()
 
     if (data.checkout?.mode === 'embedded' && data.checkout?.client_secret) {
       pendingCheckout.value = {

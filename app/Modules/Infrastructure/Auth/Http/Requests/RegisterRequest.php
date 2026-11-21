@@ -47,6 +47,7 @@ class RegisterRequest extends FormRequest
             'addon_keys.*' => ['string', 'max:100'],
             'billing_same_as_company' => ['sometimes', 'boolean'],
             'coupon_code' => ['nullable', 'string', 'max:50'],
+            'funnel_id' => ['nullable', 'uuid'], // ADR-849 : journey id of the public registration funnel
         ];
     }
 

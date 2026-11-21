@@ -13,6 +13,6 @@ class OnboardingFunnelController extends Controller
     {
         $days = (int) $request->query('days', 30);
 
-        return response()->json($service->analytics(min($days, 90)));
+        return response()->json($service->analytics(min(max($days, 1), 90)));
     }
 }

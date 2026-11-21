@@ -9,16 +9,10 @@ const isLoading = ref(true)
 const data = ref(null)
 const days = ref(30)
 
-const steps = ['started', 'company_info', 'admin_user', 'plan_selected', 'payment_info', 'completed']
+// ADR-849 (M10) : the steps the public registration screen really goes through, then the server-side completion
+const steps = ['started', 'industry', 'plan', 'addons', 'company', 'account', 'completed']
 
-const stepLabels = computed(() => ({
-  started: t('onboardingFunnel.stepStarted'),
-  company_info: t('onboardingFunnel.stepCompanyInfo'),
-  admin_user: t('onboardingFunnel.stepAdminUser'),
-  plan_selected: t('onboardingFunnel.stepPlanSelected'),
-  payment_info: t('onboardingFunnel.stepPaymentInfo'),
-  completed: t('onboardingFunnel.stepCompleted'),
-}))
+const stepLabels = computed(() => Object.fromEntries(steps.map(s => [s, t(`onboardingFunnel.steps.${s}`)])))
 
 const funnelBarData = computed(() => {
   if (!data.value) return []
@@ -151,6 +145,26 @@ onMounted(load)
           </VCard>
         </VCol>
       </VRow>
+
+      <!-- ADR-849 : after the registration, and the explicit definitions -->
+      <VCard
+        class="mb-6"
+        data-testid="funnel-outcomes"
+      >
+        <VCardText>
+          <div class="d-flex flex-wrap gap-6 mb-3">
+            <div><span class="text-h6">{{ data.in_progress || 0 }}</span> <span class="text-body-2 text-medium-emphasis">{{ t('onboardingFunnel.inProgress') }}</span></div>
+            <div><span class="text-h6">{{ data.activated || 0 }}</span> <span class="text-body-2 text-medium-emphasis">{{ t('onboardingFunnel.activated') }}</span></div>
+            <div><span class="text-h6">{{ data.first_login || 0 }}</span> <span class="text-body-2 text-medium-emphasis">{{ t('onboardingFunnel.firstLogin') }}</span></div>
+          </div>
+          <div
+            class="text-caption text-medium-emphasis"
+            data-testid="funnel-definitions"
+          >
+            {{ t('onboardingFunnel.definitions', { hours: data.abandon_after_hours, days: data.period_days }) }}
+          </div>
+        </VCardText>
+      </VCard>
 
       <!-- Funnel visualization -->
       <VCard class="mb-6">

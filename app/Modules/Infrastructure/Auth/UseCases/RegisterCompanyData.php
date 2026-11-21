@@ -19,6 +19,7 @@ final class RegisterCompanyData
         public readonly array $addonKeys = [],
         public readonly bool $billingSameAsCompany = true,
         public readonly ?string $couponCode = null,
+        public readonly ?string $funnelId = null, // ADR-849 : public registration journey id (random, no personal data)
     ) {}
 
     public static function fromValidated(array $data): self
@@ -38,6 +39,7 @@ final class RegisterCompanyData
             addonKeys: $data['addon_keys'] ?? [],
             billingSameAsCompany: $data['billing_same_as_company'] ?? true,
             couponCode: $data['coupon_code'] ?? null,
+            funnelId: $data['funnel_id'] ?? null,
         );
     }
 }

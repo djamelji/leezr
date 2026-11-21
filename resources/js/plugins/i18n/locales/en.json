@@ -7675,19 +7675,26 @@
   "onboardingFunnel": {
     "title": "Registration Funnel",
     "subtitle": "Track conversion rates and abandonment in the registration flow",
-    "stepStarted": "Started",
-    "stepCompanyInfo": "Company Info",
-    "stepAdminUser": "Admin User",
-    "stepPlanSelected": "Plan Selected",
-    "stepPaymentInfo": "Payment Info",
-    "stepCompleted": "Completed",
     "started": "Started",
     "completed": "Completed",
     "conversionRate": "Conversion Rate",
     "abandoned": "Abandoned",
     "funnelTitle": "Conversion Funnel",
     "abandonmentTitle": "Abandonment Analysis by Step",
-    "dailyTrend": "Daily Trend (Last 7 Days)"
+    "dailyTrend": "Daily Trend (Last 7 Days)",
+    "steps": {
+      "started": "Started",
+      "industry": "Industry chosen",
+      "plan": "Plan chosen",
+      "addons": "Options",
+      "company": "Company",
+      "account": "Account",
+      "completed": "Registration completed"
+    },
+    "inProgress": "in progress",
+    "activated": "activated (active or trial subscription)",
+    "firstLogin": "first sign-in after registration",
+    "definitions": "Journeys started over the last {days} days, one per visitor (random id, no personal data). Abandoned = not completed and no activity for {hours} h; before that it is « in progress ». Companies created by Platform are not counted."
   },
   "usageMonitoring": {
     "title": "Usage Monitoring",
