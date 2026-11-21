@@ -8,8 +8,6 @@ use App\Modules\Workforce\Signature\Models\SignatureRequest;
 use App\Modules\Workforce\Signature\Models\SignatureSigner;
 use App\Modules\Workforce\Signature\Services\SignatureEventRecorder;
 use App\Modules\Workforce\Signature\Services\SignatureNotifier;
-use App\Modules\Workforce\Signature\Services\SignatureTokenService;
-use App\Notifications\Signature\SignatureInvitationNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -38,19 +36,7 @@ class RemindSignatureRequestUseCase
             $invited = $request->signers()->where('status', SignatureSigner::STATUS_INVITED)->get();
             $count = 0;
             foreach ($invited as $signer) {
-                $token = SignatureTokenService::generate();
-                $signer->token_hash = $token['hash'];
-                $signer->token_expires_at = $request->expires_at;
-                $signer->token_revoked_at = null;
-                $signer->save();
-
-                $this->notifier->sendInvitation($signer->email, new SignatureInvitationNotification(
-                    signerName: $signer->name,
-                    documentLabel: $request->document?->template?->name ?? 'Document RH',
-                    signUrl: SignatureTokenService::signerUrl($token['raw']),
-                    companyName: $company?->name,
-                    expiresAt: $request->expires_at?->format('d/m/Y'),
-                ));
+                app(\App\Modules\Workforce\Signature\Services\SignerInvitationIssuer::class)->reissue($request, $signer, $company); // ADR-848
                 $count++;
             }
 

@@ -288,4 +288,19 @@ class SignerEnrollmentService
             default => 'External Signer',
         };
     }
+
+    /**
+     * ADR-848 — admin reset of a signer's key, then a NEW invitation (fresh single-use link) if the request is still
+     * active and the signer has not acted. The issuer never signs for the signer. Moved from SignatureController.
+     */
+    public function adminResetKeyAndReinvite(\App\Modules\Workforce\Signature\Models\SignatureRequest $req, \App\Modules\Workforce\Signature\Models\SignatureSigner $signer, int $actorId): void
+    {
+        $this->adminResetKey($req, $signer, $actorId);
+
+        if ($req->isActive() && ! $signer->isActed()) {
+            $signer->status = \App\Modules\Workforce\Signature\Models\SignatureSigner::STATUS_INVITED;
+            $signer->invited_at = now();
+            app(SignerInvitationIssuer::class)->reissue($req, $signer, \App\Core\Models\Company::withoutGlobalScopes()->find($req->company_id));
+        }
+    }
 }

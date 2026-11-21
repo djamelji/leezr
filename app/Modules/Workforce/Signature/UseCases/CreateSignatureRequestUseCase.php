@@ -166,4 +166,38 @@ class CreateSignatureRequestUseCase
             return $request->fresh('signers');
         });
     }
+
+    /** ADR-848 — validation of a new request (route POST signatures), moved verbatim from SignatureController::store. */
+    public static function rules(): array
+    {
+        return [
+            'generated_document_id' => 'required|integer',
+            'signers' => 'required|array|min:1',
+            'signers.*.role' => 'required|in:' . implode(',', \App\Modules\Workforce\Signature\Models\SignatureRequest::ORDERS) . ',company_representative,employee,external',
+            'signers.*.name' => 'required|string|max:255',
+            'signers.*.email' => 'required|email|max:255',
+            'signers.*.order' => 'nullable|integer|min:1',
+            'signers.*.party_type' => 'nullable|in:user,employee',
+            'signers.*.party_id' => 'nullable|integer',
+            'signature_level' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Models\SignatureRequest::LEVELS),
+            'signing_order' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Models\SignatureRequest::ORDERS),
+            'provider' => 'nullable|string|max:50',
+            'format' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::MODES),
+        ];
+    }
+
+    /** ADR-848 — from the data validated by rules() (same mapping as SignatureController::store had). */
+    public function executeValidated(int $companyId, int $actorId, array $data): SignatureRequest
+    {
+        return $this->execute(
+            companyId: $companyId,
+            actorId: $actorId,
+            generatedDocumentId: (int) $data['generated_document_id'],
+            signers: $data['signers'],
+            level: $data['signature_level'] ?? null,
+            signingOrder: $data['signing_order'] ?? null,
+            provider: $data['provider'] ?? null,
+            format: $data['format'] ?? null,
+        );
+    }
 }

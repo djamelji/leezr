@@ -80,4 +80,50 @@ class SignatureSettingsService
 
         return $this->resolve($companyId);
     }
+
+    /** ADR-848 — what the request form may offer (provider, levels, orders, formats, defaults) ; moved from SignatureController::options. */
+    public function options(int $companyId, ?\App\Core\Models\Company $company = null): array
+    {
+        $cfg = $this->resolve($companyId);
+        $company = $company ?? \App\Core\Models\Company::withoutGlobalScopes()->find($companyId);
+        $market = $company?->market_key ?? 'FR';
+        $providerKey = $cfg['provider'];
+        $adapter = SignatureProviderManager::adapterFor($providerKey);
+
+        return [
+            'provider' => $adapter?->key(),
+            'provider_certified' => $adapter?->isCertified() ?? false,
+            'provider_dev_only' => $adapter?->isDevOnly() ?? false,
+            'levels' => SignatureLevelCatalog::describe($market, $providerKey),
+            'orders' => SignatureRequest::ORDERS,
+            'default_level' => $cfg['default_level'],
+            'default_order' => $cfg['default_order'],
+            // W-SIGNATURE-8 — modes de signature (vocabulaire métier) réellement disponibles.
+            'formats' => $company ? \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::describe($company) : [],
+            'default_format' => $cfg['default_format'],
+        ];
+    }
+
+    /** ADR-848 — settings + available formats (with unavailability reason) for HR settings › Signature ; moved from SignatureController::getSettings. */
+    public function withFormats(int $companyId, ?\App\Core\Models\Company $company = null): array
+    {
+        $company ??= \App\Core\Models\Company::withoutGlobalScopes()->find($companyId);
+
+        return array_merge($this->resolve($companyId), ['available_formats' => $company ? SignatureFormatCatalog::describe($company) : []]);
+    }
+
+    /** ADR-848 — validation of the settings update, moved verbatim from SignatureController::updateSettings. */
+    public static function rules(): array
+    {
+        return [
+            'provider' => 'nullable|string|max:50',
+            'default_level' => 'nullable|in:' . implode(',', SignatureRequest::LEVELS),
+            'default_format' => 'nullable|in:' . implode(',', \App\Modules\Workforce\Signature\Services\SignatureFormatCatalog::MODES),
+            'validity_days' => 'nullable|integer|min:1|max:365',
+            'reminder_days' => 'nullable|integer|min:1|max:365',
+            'default_order' => 'nullable|in:' . implode(',', SignatureRequest::ORDERS),
+            'notify_enabled' => 'nullable|boolean',
+            'send_signed_copy_to_employee' => 'nullable|boolean',
+        ];
+    }
 }
