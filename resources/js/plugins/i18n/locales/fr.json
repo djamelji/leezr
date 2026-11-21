@@ -4754,7 +4754,8 @@
       "deliveryQueued": "E-mail d'invitation en cours d'envoi.",
       "invitationQueued": "Invitation en cours d'envoi.",
       "linkValidUntil": "Lien de définition du mot de passe valable jusqu'au {date}.",
-      "linkExpired": "Le lien de définition du mot de passe a expiré : relancez l'invitation (la personne peut aussi utiliser « mot de passe oublié »)."
+      "linkExpired": "Le lien de définition du mot de passe a expiré : relancez l'invitation (la personne peut aussi utiliser « mot de passe oublié »).",
+      "setPasswordNotice": "Le lien de réinitialisation est recommandé : vous n'avez aucun mot de passe à communiquer. Si vous définissez le mot de passe, toutes les sessions du membre seront fermées et il sera prévenu par e-mail."
     },
     "fields": {
       "name": "Nom",
@@ -5114,11 +5115,16 @@
     "verificationCode": "Code de vérification",
     "verify": "Vérifier",
     "disableTitle": "Désactiver la 2FA",
-    "disableWarning": "Êtes-vous sûr de vouloir désactiver l'authentification à deux facteurs ? Votre compte sera moins sécurisé.",
+    "disableWarning": "Votre compte sera moins protégé. Pour confirmer, saisissez votre mot de passe et un code de vérification (ou un code de secours).",
     "regenerateBackupCodes": "Régénérer les codes de secours",
     "backupCodesTitle": "Codes de secours",
     "backupCodesDesc": "Conservez ces codes dans un endroit sûr. Chaque code ne peut être utilisé qu'une seule fois.",
-    "backupCodesWarning": "Ces codes ne seront plus affichés. Enregistrez-les maintenant."
+    "backupCodesWarning": "Ces codes ne seront plus affichés. Enregistrez-les maintenant.",
+    "factorCode": "Code de vérification ou code de secours",
+    "factorCodeHint": "Code à 6 chiffres affiché par votre application, ou un code de secours non utilisé.",
+    "regenerateTitle": "Régénérer les codes de secours",
+    "regenerateWarning": "Les codes actuels cesseront de fonctionner dès que les nouveaux seront générés. Confirmez avec votre code de vérification.",
+    "regenerateConfirm": "Générer de nouveaux codes"
   },
   "register": {
     "sepaFieldsRequired": "Veuillez renseigner tous les champs SEPA.",
@@ -5819,7 +5825,9 @@
         "reactivated": "Membre réactivé",
         "removed": "Membre retiré",
         "role_changed": "Rôle du membre modifié",
-        "suspended": "Membre suspendu"
+        "suspended": "Membre suspendu",
+        "password_set": "Mot de passe du membre défini par un administrateur",
+        "password_reset_sent": "Lien de réinitialisation envoyé au membre"
       },
       "module": {
         "access_configured": "Accès du module configurés",
@@ -5877,7 +5885,9 @@
         "created": "Utilisateur Platform créé",
         "deleted": "Utilisateur Platform supprimé",
         "password_set": "Mot de passe Platform défini",
-        "updated": "Utilisateur Platform modifié"
+        "updated": "Utilisateur Platform modifié",
+        "password_reset_sent": "Lien de réinitialisation Platform envoyé",
+        "password_changed": "Mot de passe Platform modifié"
       },
       "realtime": {
         "channels_flushed": "Canaux temps réel vidés",
@@ -5989,6 +5999,13 @@
         "updated": "Exigences d’un poste modifiées",
         "applied_to_position": "Exigences appliquées aux personnes du poste",
         "authority_switched": "Mode de calcul des exigences changé"
+      },
+      "two_factor": {
+        "enabled": "Double authentification activée",
+        "disabled": "Double authentification désactivée",
+        "disable_refused": "Désactivation de la double authentification refusée",
+        "backup_codes_regenerated": "Codes de secours régénérés",
+        "backup_codes_refused": "Régénération des codes de secours refusée"
       }
     },
     "actionCode": "Code technique"

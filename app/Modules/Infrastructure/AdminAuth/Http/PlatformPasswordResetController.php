@@ -2,6 +2,9 @@
 
 namespace App\Modules\Infrastructure\AdminAuth\Http;
 
+use App\Core\Audit\AuditAction;
+use App\Core\Audit\AuditLogger;
+use App\Core\Auth\AccountSecurity;
 use App\Core\Auth\PasswordPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,6 +42,7 @@ class PlatformPasswordResetController
                 $user->forceFill([
                     'password' => $password,
                 ])->save();
+                AccountSecurity::revokeSessions($user); // ADR-838 — a reset ends every open session
             },
         );
 
@@ -71,6 +75,10 @@ class PlatformPasswordResetController
 
         $token = Password::broker('platform_users')->createToken($user);
         $user->sendPasswordResetNotification($token);
+
+        app(AuditLogger::class)->logPlatform(AuditAction::PLATFORM_USER_PASSWORD_RESET_SENT, 'platform_user', (string) $user->id, [
+            'metadata' => ['result' => 'success'],
+        ]);
 
         return response()->json([
             'message' => 'Password reset link sent to ' . $user->email,

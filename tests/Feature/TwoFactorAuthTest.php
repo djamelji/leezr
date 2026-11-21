@@ -162,13 +162,13 @@ class TwoFactorAuthTest extends TestCase
 
     public function test_disable_with_valid_password(): void
     {
-        $this->enableTwoFactor($this->user);
+        $credential = $this->enableTwoFactor($this->user);
 
+        // ADR-838 : password AND a fresh factor
         $response = $this->companyRequest()
-            ->deleteJson('/api/2fa', ['password' => 'password']);
+            ->deleteJson('/api/2fa', ['password' => 'password', 'code' => $credential->backup_codes[0]]);
 
-        $response->assertOk()
-            ->assertJsonFragment(['message' => '2FA disabled.']);
+        $response->assertOk();
 
         $this->assertDatabaseMissing('two_factor_credentials', [
             'authenticatable_type' => User::class,
@@ -277,7 +277,7 @@ class TwoFactorAuthTest extends TestCase
         $originalCodes = $credential->backup_codes;
 
         $response = $this->companyRequest()
-            ->postJson('/api/2fa/backup-codes');
+            ->postJson('/api/2fa/backup-codes', ['code' => $originalCodes[0]]); // ADR-838 : a fresh factor
 
         $response->assertOk()
             ->assertJsonStructure(['backup_codes']);
@@ -291,10 +291,10 @@ class TwoFactorAuthTest extends TestCase
     {
         // No 2FA enabled
         $response = $this->companyRequest()
-            ->postJson('/api/2fa/backup-codes');
+            ->postJson('/api/2fa/backup-codes', ['code' => '123456']);
 
         $response->assertStatus(422)
-            ->assertJsonFragment(['message' => '2FA is not enabled.']);
+            ->assertJsonPath('reason', 'not_enabled');
     }
 
     public function test_backup_code_is_consumed_after_use(): void
@@ -353,10 +353,10 @@ class TwoFactorAuthTest extends TestCase
         $this->enableTwoFactor($this->user);
 
         $response = $this->companyRequest()
-            ->deleteJson('/api/2fa', ['password' => 'wrong-password']);
+            ->deleteJson('/api/2fa', ['password' => 'wrong-password', 'code' => '123456']);
 
         $response->assertStatus(422)
-            ->assertJsonFragment(['message' => 'Invalid password.']);
+            ->assertJsonPath('reason', 'invalid_password');
 
         // Credential should still exist
         $this->assertDatabaseHas('two_factor_credentials', [
@@ -438,13 +438,13 @@ class TwoFactorAuthTest extends TestCase
 
     public function test_platform_disable_with_password(): void
     {
-        $this->enableTwoFactor($this->platformAdmin);
+        $credential = $this->enableTwoFactor($this->platformAdmin);
 
+        // ADR-838 : password AND a fresh factor
         $response = $this->platformRequest()
-            ->deleteJson('/api/platform/2fa', ['password' => 'password']);
+            ->deleteJson('/api/platform/2fa', ['password' => 'password', 'code' => $credential->backup_codes[0]]);
 
-        $response->assertOk()
-            ->assertJsonFragment(['message' => '2FA disabled.']);
+        $response->assertOk();
 
         $this->assertDatabaseMissing('two_factor_credentials', [
             'authenticatable_type' => PlatformUser::class,

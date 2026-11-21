@@ -4,6 +4,7 @@ namespace App\Modules\Platform\Users\Http;
 
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
+use App\Core\Auth\AccountSecurity;
 use App\Core\Auth\PasswordPolicy;
 use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldValidationService;
@@ -163,9 +164,13 @@ class UserController
             'password' => $request->input('password'),
         ])->save();
 
+        // ADR-838 — sessions of the target ended, target told, result audited (never the value)
+        $ended = AccountSecurity::revokeSessions($user);
         app(AuditLogger::class)->logPlatform(
             AuditAction::PLATFORM_USER_PASSWORD_SET, 'platform_user', (string) $user->id,
+            ['severity' => 'warning', 'metadata' => ['result' => 'success', 'sessions_ended' => $ended]],
         );
+        AccountSecurity::notify($user, 'password_set_by_admin', 'Leezr Platform');
 
         return response()->json([
             'message' => 'Password set for ' . $user->display_name . '.',

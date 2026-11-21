@@ -2,6 +2,7 @@
 
 namespace App\Modules\Infrastructure\Auth\Http;
 
+use App\Core\Auth\AccountSecurity;
 use App\Core\Auth\PasswordPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +48,7 @@ class PasswordResetController extends Controller
                     'password' => $password,
                     'password_set_at' => now(),
                 ])->save();
+                AccountSecurity::revokeSessions($user); // ADR-838 — a reset ends every open session
             },
         );
 

@@ -51,6 +51,17 @@ final class AuditAction
     // ─── User profile (self-service) ─────────────────────
     public const USER_PROFILE_UPDATED = 'user.profile_updated';
     public const USER_PASSWORD_CHANGED = 'user.password_changed';
+
+    // ADR-838 (Leezr 4.2 M2) — account security (never a secret in the metadata)
+    public const TWO_FACTOR_ENABLED = 'two_factor.enabled';
+    public const TWO_FACTOR_DISABLED = 'two_factor.disabled';
+    public const TWO_FACTOR_DISABLE_REFUSED = 'two_factor.disable_refused';
+    public const TWO_FACTOR_BACKUP_CODES_REGENERATED = 'two_factor.backup_codes_regenerated';
+    public const TWO_FACTOR_BACKUP_CODES_REFUSED = 'two_factor.backup_codes_refused';
+    public const MEMBER_PASSWORD_SET = 'member.password_set';
+    public const MEMBER_PASSWORD_RESET_SENT = 'member.password_reset_sent';
+    public const PLATFORM_USER_PASSWORD_RESET_SENT = 'platform_user.password_reset_sent';
+    public const PLATFORM_USER_PASSWORD_CHANGED = 'platform_user.password_changed';
     public const USER_AVATAR_UPDATED = 'user.avatar_updated';
 
     // ─── Platform users ──────────────────────────────────

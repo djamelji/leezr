@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class PlatformAccountController extends Controller
 {
@@ -34,7 +33,7 @@ class PlatformAccountController extends Controller
 
         $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', Password::min(8), 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', \App\Core\Auth\PasswordPolicy::rules()], // ADR-838 : the single policy
         ]);
 
         if (!Hash::check($request->current_password, $user->password)) {
@@ -46,6 +45,13 @@ class PlatformAccountController extends Controller
         $user->update([
             'password' => Hash::make($request->password),
         ]);
+
+        // ADR-838 — the other sessions of this account end ; this one stays open
+        $ended = \App\Core\Auth\AccountSecurity::revokeSessions($user, $request->hasSession() ? $request->session()->getId() : null);
+        app(\App\Core\Audit\AuditLogger::class)->logPlatform(\App\Core\Audit\AuditAction::PLATFORM_USER_PASSWORD_CHANGED, 'platform_user', (string) $user->id, [
+            'metadata' => ['result' => 'success', 'sessions_ended' => $ended],
+        ]);
+        \App\Core\Auth\AccountSecurity::notify($user, 'password_changed');
 
         return response()->json(['message' => 'Password updated.']);
     }

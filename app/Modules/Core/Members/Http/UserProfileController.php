@@ -91,9 +91,13 @@ class UserProfileController extends Controller
             'password' => $request->validated('password'),
         ]);
 
+        // ADR-838 — the other sessions of this account end ; this one stays open
+        $ended = \App\Core\Auth\AccountSecurity::revokeSessions($request->user(), $request->hasSession() ? $request->session()->getId() : null);
         app(AuditLogger::class)->logCompany(
             $company->id, AuditAction::USER_PASSWORD_CHANGED, 'user', (string) $request->user()->id,
+            ['metadata' => ['result' => 'success', 'sessions_ended' => $ended]],
         );
+        \App\Core\Auth\AccountSecurity::notify($request->user(), 'password_changed');
 
         return response()->json([
             'message' => 'Password updated.',

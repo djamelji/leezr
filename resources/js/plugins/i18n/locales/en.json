@@ -4754,7 +4754,8 @@
       "deliveryQueued": "Invitation e-mail is being sent.",
       "invitationQueued": "Invitation is being sent.",
       "linkValidUntil": "Password setup link valid until {date}.",
-      "linkExpired": "The password setup link has expired: resend the invitation (the person can also use \"forgot password\")."
+      "linkExpired": "The password setup link has expired: resend the invitation (the person can also use \"forgot password\").",
+      "setPasswordNotice": "The reset link is recommended: you have no password to share. If you set the password, all the member's sessions are closed and the member is notified by e-mail."
     },
     "fields": {
       "name": "Name",
@@ -5114,11 +5115,16 @@
     "verificationCode": "Verification Code",
     "verify": "Verify",
     "disableTitle": "Disable 2FA",
-    "disableWarning": "Are you sure you want to disable two-factor authentication? Your account will be less secure.",
+    "disableWarning": "Your account will be less protected. To confirm, enter your password and a verification code (or a backup code).",
     "regenerateBackupCodes": "Regenerate Backup Codes",
     "backupCodesTitle": "Backup Codes",
     "backupCodesDesc": "Store these codes in a safe place. Each code can only be used once.",
-    "backupCodesWarning": "These codes will not be shown again. Save them now."
+    "backupCodesWarning": "These codes will not be shown again. Save them now.",
+    "factorCode": "Verification code or backup code",
+    "factorCodeHint": "6-digit code shown by your app, or an unused backup code.",
+    "regenerateTitle": "Regenerate backup codes",
+    "regenerateWarning": "Your current codes stop working as soon as the new ones are generated. Confirm with your verification code.",
+    "regenerateConfirm": "Generate new codes"
   },
   "register": {
     "sepaFieldsRequired": "Please fill in all SEPA fields.",
@@ -5819,7 +5825,9 @@
         "reactivated": "Member reactivated",
         "removed": "Member removed",
         "role_changed": "Member role changed",
-        "suspended": "Member suspended"
+        "suspended": "Member suspended",
+        "password_set": "Member password set by an administrator",
+        "password_reset_sent": "Reset link sent to the member"
       },
       "module": {
         "access_configured": "Module access configured",
@@ -5877,7 +5885,9 @@
         "created": "Platform user created",
         "deleted": "Platform user deleted",
         "password_set": "Platform password set",
-        "updated": "Platform user updated"
+        "updated": "Platform user updated",
+        "password_reset_sent": "Platform reset link sent",
+        "password_changed": "Platform password changed"
       },
       "realtime": {
         "channels_flushed": "Realtime channels flushed",
@@ -5989,6 +5999,13 @@
         "updated": "Position requirements changed",
         "applied_to_position": "Requirements applied to the position's people",
         "authority_switched": "Requirement calculation mode changed"
+      },
+      "two_factor": {
+        "enabled": "Two-factor authentication enabled",
+        "disabled": "Two-factor authentication disabled",
+        "disable_refused": "Two-factor deactivation refused",
+        "backup_codes_regenerated": "Backup codes regenerated",
+        "backup_codes_refused": "Backup code regeneration refused"
       }
     },
     "actionCode": "Technical code"

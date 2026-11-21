@@ -50,12 +50,16 @@ const run = async (key, fn, successKey, after = 'changed') => {
 
     toast(res?.message && key === 'reset' ? res.message : t(successKey), 'success')
     emit(after)
+
+    return true
   }
   catch (e) {
     const errors = e?.data?.errors
     const first = errors ? Object.values(errors)[0]?.[0] : null
 
     toast(first || e?.data?.message || t('common.error'), 'error')
+
+    return false
   }
   finally { busy.value = null }
 }
@@ -138,7 +142,8 @@ const sendReset = async () => {
 const showPassword = ref(false)
 const passwordForm = ref({ password: '', password_confirmation: '' })
 const savePassword = async () => {
-  await run('password', () => store.setPassword(passwordForm.value), 'people.access.passwordSet')
+  // ADR-838 — a refused password keeps the form open (the error is shown, the admin corrects it)
+  if (!await run('password', () => store.setPassword(passwordForm.value), 'people.access.passwordSet')) return
   showPassword.value = false
   passwordForm.value = { password: '', password_confirmation: '' }
 }
@@ -369,6 +374,17 @@ const savePassword = async () => {
         v-if="showPassword"
         class="mb-2"
       >
+        <!-- ADR-838 (Leezr 4.2 M2) — the reset link stays the recommended path -->
+        <VCol cols="12">
+          <VAlert
+            type="info"
+            variant="tonal"
+            density="compact"
+            data-test="person-set-password-notice"
+          >
+            {{ t('people.access.setPasswordNotice') }}
+          </VAlert>
+        </VCol>
         <VCol
           cols="12"
           md="6"

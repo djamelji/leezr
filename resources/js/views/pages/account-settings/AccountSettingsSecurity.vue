@@ -59,8 +59,22 @@ const setupData = ref({ secret: '', qr_url: '', backup_codes: [] })
 const setupCode = ref('')
 const setupError = ref('')
 const disablePassword = ref('')
+const disableCode = ref('')
 const disableError = ref('')
 const backupCodes = ref([])
+
+// ADR-838 (Leezr 4.2 M2) — regenerating backup codes requires a fresh factor
+const showRegenerateDialog = ref(false)
+const regenerateCode = ref('')
+const regenerateError = ref('')
+
+// Server messages are already localized; a 429 carries the wait time
+const securityError = e => e?.data?.errors?.code?.[0] || e?.data?.errors?.password?.[0] || e?.data?.message || t('common.error')
+
+const closeBackupCodes = () => {
+  showBackupCodesDialog.value = false
+  backupCodes.value = [] // shown once: never kept in memory after closing
+}
 
 onMounted(async () => {
   try {
@@ -103,6 +117,13 @@ const confirmSetup = async () => {
     twoFactorEnabled.value = true
     showSetupDialog.value = false
     successMessage.value = t('twoFactor.enabledSuccess')
+
+    // ADR-838 — the initial backup codes are shown once, right after activation
+    backupCodes.value = setupData.value.backup_codes || []
+    setupData.value.secret = ''
+    setupData.value.backup_codes = [] // eslint-disable-line camelcase -- API field name
+
+    if (backupCodes.value.length) showBackupCodesDialog.value = true
   }
   catch (e) {
     setupError.value = e?.data?.message || t('auth.invalidCode')
@@ -119,32 +140,45 @@ const disableTwoFactor = async () => {
   try {
     await $api('/2fa', {
       method: 'DELETE',
-      body: { password: disablePassword.value },
+      body: { password: disablePassword.value, code: disableCode.value.trim() },
     })
 
     twoFactorEnabled.value = false
     showDisableDialog.value = false
     disablePassword.value = ''
+    disableCode.value = ''
     successMessage.value = t('twoFactor.disabledSuccess')
   }
   catch (e) {
-    disableError.value = e?.data?.message || t('common.error')
+    disableError.value = securityError(e)
+    disableCode.value = ''
   }
   finally {
     twoFactorLoading.value = false
   }
 }
 
+const openRegenerate = () => {
+  regenerateCode.value = ''
+  regenerateError.value = ''
+  showRegenerateDialog.value = true
+}
+
 const regenerateBackupCodes = async () => {
   twoFactorLoading.value = true
+  regenerateError.value = ''
 
   try {
-    const data = await $api('/2fa/backup-codes', { method: 'POST' })
+    const data = await $api('/2fa/backup-codes', { method: 'POST', body: { code: regenerateCode.value.trim() } })
+    showRegenerateDialog.value = false
+    regenerateCode.value = ''
+
     backupCodes.value = data.backup_codes
     showBackupCodesDialog.value = true
   }
   catch (e) {
-    errorMessage.value = e?.data?.message || t('common.error')
+    regenerateError.value = securityError(e)
+    regenerateCode.value = ''
   }
   finally {
     twoFactorLoading.value = false
@@ -232,8 +266,21 @@ const regenerateBackupCodes = async () => {
                   {{ t('accountSettings.passwordRequirements') }}
                 </p>
                 <ul class="ps-6 mb-6">
+                  <!-- ADR-838 : the single password policy (PasswordPolicy) now applies here too -->
                   <li class="text-body-2 mb-1">
                     {{ t('accountSettings.minCharsLong') }}
+                  </li>
+                  <li class="text-body-2 mb-1">
+                    {{ t('accountSettings.requireUppercase') }}
+                  </li>
+                  <li class="text-body-2 mb-1">
+                    {{ t('accountSettings.requireLowercase') }}
+                  </li>
+                  <li class="text-body-2 mb-1">
+                    {{ t('accountSettings.requireNumber') }}
+                  </li>
+                  <li class="text-body-2 mb-1">
+                    {{ t('accountSettings.requireSymbol') }}
                   </li>
                 </ul>
 
@@ -281,13 +328,15 @@ const regenerateBackupCodes = async () => {
               <VBtn
                 variant="outlined"
                 :loading="twoFactorLoading"
-                @click="regenerateBackupCodes"
+                data-testid="two-factor-regenerate"
+                @click="openRegenerate"
               >
                 {{ t('twoFactor.regenerateBackupCodes') }}
               </VBtn>
               <VBtn
                 color="error"
                 variant="outlined"
+                data-testid="two-factor-disable"
                 @click="showDisableDialog = true"
               >
                 {{ t('twoFactor.disable') }}
@@ -394,6 +443,7 @@ const regenerateBackupCodes = async () => {
           v-if="disableError"
           type="error"
           class="mb-4"
+          data-testid="two-factor-disable-error"
         >
           {{ disableError }}
         </VAlert>
@@ -404,19 +454,33 @@ const regenerateBackupCodes = async () => {
           placeholder="············"
           type="password"
           autocomplete="current-password"
+          class="mb-4"
+          data-testid="two-factor-disable-password"
+        />
+
+        <AppTextField
+          v-model="disableCode"
+          :label="t('twoFactor.factorCode')"
+          :hint="t('twoFactor.factorCodeHint')"
+          persistent-hint
+          autocomplete="one-time-code"
+          maxlength="32"
+          data-testid="two-factor-disable-code"
         />
       </VCardText>
       <VCardActions>
         <VSpacer />
         <VBtn
           variant="outlined"
-          @click="showDisableDialog = false; disablePassword = ''; disableError = ''"
+          @click="showDisableDialog = false; disablePassword = ''; disableCode = ''; disableError = ''"
         >
           {{ t('common.cancel') }}
         </VBtn>
         <VBtn
           color="error"
           :loading="twoFactorLoading"
+          :disabled="!disablePassword || !disableCode.trim()"
+          data-testid="two-factor-disable-confirm"
           @click="disableTwoFactor"
         >
           {{ t('twoFactor.disable') }}
@@ -425,10 +489,62 @@ const regenerateBackupCodes = async () => {
     </VCard>
   </VDialog>
 
-  <!-- Backup Codes Dialog -->
+  <!-- ADR-838 — Regenerate backup codes: confirm with the active factor -->
+  <VDialog
+    v-model="showRegenerateDialog"
+    max-width="450"
+  >
+    <VCard :title="t('twoFactor.regenerateTitle')">
+      <VCardText>
+        <p class="text-body-1 mb-4">
+          {{ t('twoFactor.regenerateWarning') }}
+        </p>
+
+        <VAlert
+          v-if="regenerateError"
+          type="error"
+          class="mb-4"
+          data-testid="two-factor-regenerate-error"
+        >
+          {{ regenerateError }}
+        </VAlert>
+
+        <AppTextField
+          v-model="regenerateCode"
+          :label="t('twoFactor.factorCode')"
+          :hint="t('twoFactor.factorCodeHint')"
+          persistent-hint
+          autocomplete="one-time-code"
+          maxlength="32"
+          data-testid="two-factor-regenerate-code"
+        />
+      </VCardText>
+      <VCardActions>
+        <VSpacer />
+        <VBtn
+          variant="outlined"
+          @click="showRegenerateDialog = false; regenerateCode = ''; regenerateError = ''"
+        >
+          {{ t('common.cancel') }}
+        </VBtn>
+        <VBtn
+          color="primary"
+          :loading="twoFactorLoading"
+          :disabled="!regenerateCode.trim()"
+          data-testid="two-factor-regenerate-confirm"
+          @click="regenerateBackupCodes"
+        >
+          {{ t('twoFactor.regenerateConfirm') }}
+        </VBtn>
+      </VCardActions>
+    </VCard>
+  </VDialog>
+
+  <!-- Backup Codes Dialog (shown once, ADR-838) -->
   <VDialog
     v-model="showBackupCodesDialog"
     max-width="450"
+    persistent
   >
     <VCard :title="t('twoFactor.backupCodesTitle')">
       <VCardText>
@@ -441,6 +557,7 @@ const regenerateBackupCodes = async () => {
             v-for="code in backupCodes"
             :key="code"
             variant="outlined"
+            data-testid="two-factor-backup-code"
             class="font-weight-bold"
           >
             {{ code }}
@@ -458,7 +575,8 @@ const regenerateBackupCodes = async () => {
         <VSpacer />
         <VBtn
           color="primary"
-          @click="showBackupCodesDialog = false"
+          data-testid="two-factor-codes-close"
+          @click="closeBackupCodes"
         >
           {{ t('common.close') }}
         </VBtn>
