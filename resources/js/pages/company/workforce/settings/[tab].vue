@@ -19,6 +19,10 @@ const router = useRouter()
 const { toast } = useAppToast()
 const { can } = useCan()
 
+// ADR-840 (M3.1, UXC-07) — the page opens with workforce.view ; without workforce.manage it is a READING page :
+// explicit banner, fields locked, no write command. Permissions of the role are not changed.
+const canManage = computed(() => can('workforce.manage'))
+
 const data = ref(null)
 const loading = ref(true)
 
@@ -114,7 +118,18 @@ onMounted(() => { load(); loadWeekStart() })
       type="card"
     />
 
-    <VCard v-else-if="data">
+    <VAlert
+      v-if="!loading && data && !canManage"
+      type="info"
+      variant="tonal"
+      icon="tabler-eye"
+      class="mb-4"
+      data-test="workforce-settings-readonly"
+    >
+      {{ t('hrSettings.readOnlyNotice') }}
+    </VAlert>
+
+    <VCard v-if="!loading && data">
       <VTabs
         v-model="currentTab"
         class="border-b"
@@ -176,10 +191,10 @@ onMounted(() => { load(); loadWeekStart() })
                 data-test="week-start-select"
               />
               <VBtn
+                v-if="canManage"
                 color="primary"
                 size="small"
                 :loading="weekStartSaving"
-                :disabled="!can('workforce.manage')"
                 @click="saveWeekStart"
               >
                 {{ t('common.save') }}
@@ -187,6 +202,7 @@ onMounted(() => { load(); loadWeekStart() })
             </div>
 
             <VBtn
+              v-if="canManage"
               variant="tonal"
               prepend-icon="tabler-wand"
               @click="go('/company/workforce/onboarding')"
@@ -199,7 +215,10 @@ onMounted(() => { load(); loadWeekStart() })
           <VWindowItem value="worktime">
             <!-- ADR-802 : UN seul formulaire — le même composant que l'étape « Temps de travail » de l'assistant ;
                  le détail ne montre que les règles que ce formulaire ne gère pas (pas de doublon). -->
-            <WorkingTimeSetup @loaded="keys => (setupKeys = keys)" />
+            <WorkingTimeSetup
+              :read-only="!canManage"
+              @loaded="keys => (setupKeys = keys)"
+            />
             <VExpansionPanels
               v-if="setupKeys"
               class="mt-6"
@@ -213,11 +232,19 @@ onMounted(() => { load(); loadWeekStart() })
                   <h6 class="text-h6 mt-4 mb-2">
                     {{ t('hrSettings.sections.worktime') }}
                   </h6>
-                  <WorkforceRulesSection domain="work-time" :exclude="setupKeys" />
+                  <WorkforceRulesSection
+                    domain="work-time"
+                    :exclude="setupKeys"
+                    :read-only="!canManage"
+                  />
                   <h6 class="text-h6 mt-6 mb-2">
                     {{ t('hrSettings.breaks') }}
                   </h6>
-                  <WorkforceRulesSection domain="breaks" :exclude="setupKeys" />
+                  <WorkforceRulesSection
+                    domain="breaks"
+                    :exclude="setupKeys"
+                    :read-only="!canManage"
+                  />
                 </VExpansionPanelText>
               </VExpansionPanel>
             </VExpansionPanels>

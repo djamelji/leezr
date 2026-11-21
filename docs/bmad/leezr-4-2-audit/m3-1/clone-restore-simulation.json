@@ -1,0 +1,83 @@
+{
+    "database": "leezr_audit842",
+    "mode": "restore-simulation",
+    "batch": "drv-20261121160604-acy9r9",
+    "summary": {
+        "would_restore": 8
+    },
+    "roles": [
+        {
+            "company_id": 1,
+            "role_id": 7,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 2,
+            "role_id": 2,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 3,
+            "role_id": 12,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 31,
+            "role_id": 29,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 32,
+            "role_id": 34,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 33,
+            "role_id": 39,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 34,
+            "role_id": 44,
+            "restore": [
+                "members.view",
+                "settings.view"
+            ],
+            "status": "would_restore"
+        },
+        {
+            "company_id": 101,
+            "role_id": 171,
+            "restore": [
+                "members.view",
+                "settings.view",
+                "documents.view"
+            ],
+            "status": "would_restore"
+        }
+    ]
+}

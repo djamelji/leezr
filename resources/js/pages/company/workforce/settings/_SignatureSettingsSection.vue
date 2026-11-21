@@ -161,9 +161,9 @@ const save = async () => {
       </AppFormSection>
       <div class="d-flex justify-end pt-2">
       <VBtn
+        v-if="can('workforce_signature.admin')"
         color="primary"
         :loading="saving"
-        :disabled="!can('workforce_signature.admin')"
         @click="save"
       >
         {{ t('common.save') }}

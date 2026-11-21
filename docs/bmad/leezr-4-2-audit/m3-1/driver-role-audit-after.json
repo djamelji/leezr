@@ -1,0 +1,184 @@
+{
+    "generated_at": "2026-11-21T16:06:12+00:00",
+    "read_only": true,
+    "applied": false,
+    "summary": {
+        "driver_roles": 9,
+        "with_reviewed_rights": 0,
+        "members_concerned": 0,
+        "by_right": []
+    },
+    "roles": [
+        {
+            "company_id": 1,
+            "company": "Leezr Logistics",
+            "role_id": 7,
+            "members": 12,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 2,
+            "company": "Trial Logistics",
+            "role_id": 2,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 3,
+            "company": "Pending Approval Co",
+            "role_id": 12,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-10-17)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 31,
+            "company": "[M6E LOAD] 5 collaborateurs",
+            "role_id": 29,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 32,
+            "company": "[M6E LOAD] 25 collaborateurs",
+            "role_id": 34,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 33,
+            "company": "[M6E LOAD] 50 collaborateurs",
+            "role_id": 39,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 34,
+            "company": "[M6E LOAD] 100 collaborateurs",
+            "role_id": 44,
+            "members": 0,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-11-07)",
+            "explicit_customisations": 5,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 101,
+            "company": "E2E Recette 8091 433828",
+            "role_id": 171,
+            "members": 1,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "default role of the jobdomain registry at company creation (2026-11-16)",
+            "explicit_customisations": 3,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        },
+        {
+            "company_id": 105,
+            "company": "Recette 834 Transports Fictifs",
+            "role_id": 191,
+            "members": 1,
+            "administrative": false,
+            "needed_for_delivery": [
+                "shipments.view_own",
+                "shipments.manage_status",
+                "theme.view",
+                "theme.manage"
+            ],
+            "reviewed_rights": [],
+            "origin": "preset logistique_rbac_v4 v4 applied 2026-11-21",
+            "explicit_customisations": 0,
+            "consequences": [],
+            "delivery_impact_of_removal": "none — delivery rights stay",
+            "remediation_preview": null
+        }
+    ]
+}

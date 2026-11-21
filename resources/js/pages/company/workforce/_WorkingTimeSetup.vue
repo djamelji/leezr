@@ -7,6 +7,9 @@
 import { $api } from '@/utils/api'
 import { useAppToast } from '@/composables/useAppToast'
 
+// ADR-840 (M3.1, UXC-07) — readOnly : consultation (workforce.view without workforce.manage) — values shown,
+// fields locked, no write command (the server refuses them anyway).
+const props = defineProps({ readOnly: { type: Boolean, default: false } })
 const emit = defineEmits(['saved', 'loaded'])
 const { t } = useI18n()
 const { toast } = useAppToast()
@@ -66,9 +69,11 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
 </script>
 
 <template>
-  <div
+  <VForm
     v-if="data"
+    :readonly="props.readOnly"
     data-test="working-time-setup"
+    @submit.prevent
   >
     <VTabs
       v-model="section"
@@ -115,6 +120,7 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
       </p>
       <div class="d-flex flex-wrap gap-2 mt-3 align-center">
         <VBtn
+          v-if="!props.readOnly"
           color="primary"
           :disabled="!convention"
           :loading="busy"
@@ -124,6 +130,7 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
           {{ t('workingTime.confirmConvention') }}
         </VBtn>
         <VBtn
+          v-if="!props.readOnly"
           variant="text"
           :loading="busy"
           @click="confirmConvention(true)"
@@ -156,6 +163,7 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
       </div>
       <VBtnToggle
         v-model="form.work_days_per_week"
+        :disabled="props.readOnly"
         density="comfortable"
         variant="outlined"
         divided
@@ -326,7 +334,7 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
 
     <div class="d-flex justify-end mt-6">
       <VBtn
-        v-if="section !== 'framework'"
+        v-if="section !== 'framework' && !props.readOnly"
         color="primary"
         :loading="busy"
         data-test="wt-save"
@@ -335,7 +343,7 @@ const SECTIONS = ['framework', 'rhythm', 'rest', 'hours', 'behavior']
         {{ t('workingTime.save') }}
       </VBtn>
     </div>
-  </div>
+  </VForm>
   <div
     v-else
     class="d-flex justify-center pa-6"

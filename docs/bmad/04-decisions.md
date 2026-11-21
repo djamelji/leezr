@@ -29625,3 +29625,14 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 **Tests.** `Adr839PermissionsAndUnavailableFeaturesTest` (7 : contrat onglet ↔ route, routeur sans renvoi silencieux, refus Finance / création seule / chauffeur / manager / inter-société, module hors offre verrouillé et jamais activé) ; `tests/js/module-availability.test.mjs` (6) ; recette navigateur 7/7 (super-admin, Finance, création seule, propriétaire, manager, chauffeur, responsable paie ; module inactif, hors offre, dépendance manquante ; URL interdite ; API directe ; inter-société ; erreurs JS et refus API inattendus collectés : aucun).
 
 **Risques résiduels.** Droits « en attente de confirmation » (ADR-808) présentés comme une permission manquante ; pas de déclaration générique widget ↔ permission ; UXC-07 non traité ; application de la remédiation chauffeur en attente d'autorisation.
+
+## ADR-840 — Leezr 4.2 M3.1 : rôles Chauffeur historiques (préparés, clone), droits en attente expliqués, Réglages Workforce en lecture seule
+
+**Date** : 2026-11-21 — **Statut** : livré local (commit non poussé) ; correction des rôles **appliquée sur clone uniquement** — **Origine** : SEC-04 / FUN-04, ADR-808, UXC-07. Rapport : `docs/bmad/leezr-4-2-audit/m3-1/README.md`.
+
+**Décision.**
+1. **Chauffeur au moindre privilège** : retrait de `members.view`, `settings.view` et, là où il existe (société 101), `documents.view` (coffre de l'entreprise ; les documents personnels restent accessibles par « Mon espace » sans permission). Droits de livraison et de pointage conservés. Outil : `rbac:driver-role-remediate` existant (ADR-825) ; diff exact produit par `scripts/audit842-driver-role-diff.php` (lecture seule). Sur le clone : application, restauration par lot vérifiée identique à l'état initial, réapplication. **DEV / PROD : nouveau GO explicite, base par base, simulation d'abord.**
+2. **Droit en attente ≠ droit absent** : `/my-companies` expose `pending_permissions` (droits stockés ∩ en attente, source `PendingModuleAccess`) — explication uniquement, jamais lu par `hasPermission`, l'API refuse toujours. Le routeur envoie vers `/company/403?reason=pending` (« Accès en attente de validation ») ; cette page relit les droits (invalidation du cache client par le chemin temps réel existant) et rouvre la page dès la confirmation.
+3. **UXC-07** : Réglages Workforce sans `workforce.manage` = page de lecture (bandeau, champs verrouillés via `VForm readonly` et le mode lecture existant des tables de règles, aucune commande d'écriture ; Contrats / Signature : commandes masquées sans leur droit). Aucune permission de rôle modifiée.
+
+**Tests.** `Adr840PendingAccessAndReadOnlySettingsTest` (5) ; `Adr825DriverRoleRemediationTest` (existant : simulation, application, personnalisation, restauration, droits de livraison jamais retirés) ; recette navigateur avant 2/2, après 4/4.

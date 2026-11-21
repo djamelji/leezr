@@ -124,9 +124,8 @@ const go = p => router.push(p)
           variant="tonal"
           size="small"
           prepend-icon="tabler-pencil"
-          v-if="can('settings.view')"
+          v-if="can('settings.manage')"
           class="mt-4"
-          :disabled="!can('settings.manage')"
           @click="go('/company/profile/overview')"
         >
           {{ t('contractSettings.identity.edit') }}
@@ -198,6 +197,7 @@ const go = p => router.push(p)
           </VList>
         </template>
         <VBtn
+          v-if="can('workforce_contract.view')"
           variant="tonal"
           size="small"
           prepend-icon="tabler-files"

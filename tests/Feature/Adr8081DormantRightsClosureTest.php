@@ -104,8 +104,11 @@ class Adr8081DormantRightsClosureTest extends TestCase
         $this->as($u, $c)->getJson('/api/workforce/leaves/types')->assertForbidden();
         $this->as($u, $c)->getJson('/api/workforce/leaves')->assertForbidden();
         // Client permission list and menus : nothing from the pending module.
-        $perms = collect($this->as($u, $c)->getJson('/api/my-companies')->assertOk()->json())->flatten()->all();
-        $this->assertNotContains('workforce.leave_approve', $perms);
+        // ADR-840 : the effective list never carries it ; it may only appear in the explanatory `pending_permissions`
+        // list (never read to grant anything — the API refusals above prove it).
+        $role = collect($this->as($u, $c)->getJson('/api/my-companies')->assertOk()->json('companies'))->firstWhere('id', $c->id)['company_role'];
+        $this->assertNotContains('workforce.leave_approve', $role['permissions']);
+        $this->assertContains('workforce.leave_approve', $role['pending_permissions']);
         $this->assertSame($navBefore, $this->navKeys($u, $c), 'no menu opened by a pending right');
         // Delegation : a pending right is not held — cannot be granted to another role.
         $fp = $this->as($u, $c)->postJson('/api/company/role-capabilities/workforce_leave/preview', ['changes' => [['role_id' => $other->id, 'capability' => 'workforce.leave_management', 'grant' => true]]])->assertOk();

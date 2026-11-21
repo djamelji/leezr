@@ -92,9 +92,10 @@ class Adr802OneFunctionOnePathTest extends TestCase
     public function test_one_working_time_form(): void
     {
         $settings = $this->page('company/workforce/settings/[tab].vue');
-        $this->assertStringContainsString('<WorkingTimeSetup @loaded=', $settings);
-        $this->assertStringContainsString('<WorkforceRulesSection domain="work-time" :exclude="setupKeys" />', $settings);
-        $this->assertStringContainsString('<WorkforceRulesSection domain="breaks" :exclude="setupKeys" />', $settings);
+        // ADR-840 : same single form ; extra attributes (read-only mode) allowed
+        $this->assertMatchesRegularExpression('/<WorkingTimeSetup\b[^>]*@loaded=/', $settings);
+        $this->assertMatchesRegularExpression('/<WorkforceRulesSection\s+domain="work-time"\s+:exclude="setupKeys"[^>]*\/>/', $settings);
+        $this->assertMatchesRegularExpression('/<WorkforceRulesSection\s+domain="breaks"\s+:exclude="setupKeys"[^>]*\/>/', $settings);
         $this->assertStringContainsString('!props.exclude.includes(x.key)', $this->page('company/workforce/settings/_WorkforceRulesSection.vue'));
         $this->assertStringContainsString("emit('loaded'", $this->page('company/workforce/_WorkingTimeSetup.vue'));
     }

@@ -1612,7 +1612,8 @@
       "splittable": "Splittable break"
     },
     "advancedRules": "Detailed settings (breaks, maxima, overtime)",
-    "advancedRulesIntro": "Additional rules not covered by the form above, with their origin (law, agreement, company). Settings of the form are not repeated here."
+    "advancedRulesIntro": "Additional rules not covered by the form above, with their origin (law, agreement, company). Settings of the form are not repeated here.",
+    "readOnlyNotice": "Read only: you are viewing these settings. Changing them is reserved for the people who manage the company's human resources."
   },
   "contractSettings": {
     "intro": "Configure your company's documentary identity and default contract templates. This information appears in the header and footer of your contracts.",
@@ -4596,7 +4597,10 @@
     "redirecting": "Redirecting in {seconds}s...",
     "goBack": "Go back",
     "goToDashboard": "Go to my home",
-    "hint": "If you need it for your work, ask an administrator of your company to give you access."
+    "hint": "If you need it for your work, ask an administrator of your company to give you access.",
+    "pendingTitle": "Access awaiting validation",
+    "pendingMessage": "Your access to this feature is waiting for an administrator of your company to validate it.",
+    "pendingHint": "As soon as it is confirmed, this page will open normally. You have nothing else to do."
   },
   "platformDashboard": {
     "title": "Cockpit",

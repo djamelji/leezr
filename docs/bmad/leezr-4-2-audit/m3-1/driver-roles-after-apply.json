@@ -1,0 +1,198 @@
+{
+    "database": "leezr_audit842",
+    "roles": [
+        {
+            "company_id": 1,
+            "company": "Leezr Logistics",
+            "role_id": 7,
+            "role_name": "Driver",
+            "members": 12,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 2,
+            "company": "Trial Logistics",
+            "role_id": 2,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 3,
+            "company": "Pending Approval Co",
+            "role_id": 12,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 31,
+            "company": "[M6E LOAD] 5 collaborateurs",
+            "role_id": 29,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 32,
+            "company": "[M6E LOAD] 25 collaborateurs",
+            "role_id": 34,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 33,
+            "company": "[M6E LOAD] 50 collaborateurs",
+            "role_id": 39,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 34,
+            "company": "[M6E LOAD] 100 collaborateurs",
+            "role_id": 44,
+            "role_name": "Driver",
+            "members": 0,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        },
+        {
+            "company_id": 101,
+            "company": "E2E Recette 8091 433828",
+            "role_id": 171,
+            "role_name": "Driver",
+            "members": 1,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view",
+                "workforce.timesheet_submit",
+                "workforce.timesheet_view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view",
+                "workforce.timesheet_submit",
+                "workforce.timesheet_view"
+            ]
+        },
+        {
+            "company_id": 105,
+            "company": "Recette 834 Transports Fictifs",
+            "role_id": 191,
+            "role_name": "Chauffeur-livreur",
+            "members": 1,
+            "customisations": 0,
+            "before": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ],
+            "remove": [],
+            "after": [
+                "shipments.manage_status",
+                "shipments.view_own",
+                "theme.manage",
+                "theme.view"
+            ]
+        }
+    ]
+}

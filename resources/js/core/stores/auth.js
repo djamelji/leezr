@@ -38,6 +38,13 @@ export const useAuthStore = defineStore('auth', {
 
       return company?.company_role?.permissions || []
     },
+    // ADR-840 (M3.1) — rights stored on the role but awaiting an administrator's confirmation (ADR-808).
+    // Explanation only : hasPermission() never reads this list.
+    pendingPermissions: state => {
+      const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
+
+      return company?.company_role?.pending_permissions || []
+    },
     roleLevel: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
 
@@ -66,6 +73,11 @@ export const useAuthStore = defineStore('auth', {
       if (this.isOwner) return true
 
       return Array.isArray(this.permissions) && this.permissions.includes(key)
+    },
+
+    /** ADR-840 — true when the right exists on the role but waits for confirmation (never grants it). */
+    isPermissionPending(key) {
+      return !this.hasPermission(key) && this.pendingPermissions.includes(key)
     },
 
     async register({ first_name, last_name, email, password, password_confirmation, company_name, jobdomain_key, plan_key, billing_interval, market_key, legal_status_key, dynamic_fields, addon_keys, billing_same_as_company }) {

@@ -139,14 +139,15 @@ export const setupGuards = router => {
     }
 
     // Permission guard — ADR-418: router = autorité centrale RBAC
+    // ADR-840 (M3.1) : a right awaiting an administrator's confirmation gets its own explanation (still refused).
     if (to.meta.permission && !auth.hasPermission(to.meta.permission)) {
-      return { name: 'company403' }
+      return auth.isPermissionPending(to.meta.permission) ? { name: 'company403', query: { reason: 'pending', from: to.fullPath } } : { name: 'company403' }
     }
     // E2 (ADR-690): anyPermission — accessible if the user holds AT LEAST ONE key.
     // Lets an activity space open for any of its capabilities (e.g. Temps de travail
     // for planning_view OR timesheet_view). Tabs inside self-gate per fine permission.
     if (Array.isArray(to.meta.anyPermission) && !to.meta.anyPermission.some(p => auth.hasPermission(p))) {
-      return { name: 'company403' }
+      return to.meta.anyPermission.some(p => auth.isPermissionPending(p)) ? { name: 'company403', query: { reason: 'pending', from: to.fullPath } } : { name: 'company403' }
     }
   })
 

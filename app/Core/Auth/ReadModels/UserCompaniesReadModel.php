@@ -57,6 +57,12 @@ class UserCompaniesReadModel
                     'is_administrative' => (bool) $membership->companyRole->is_administrative,
                     'archetype' => $archetype,
                     'permissions' => $membership->companyRole->effectivePermissionKeys(), // ADR-808 : pending excluded
+                    // ADR-840 (M3.1) — stored rights still waiting for an administrator's confirmation : used ONLY to
+                    // explain a refusal (« awaiting validation »), never to grant anything.
+                    'pending_permissions' => array_values(array_intersect(
+                        \App\Core\Modules\Setup\PendingModuleAccess::suspendedFor($membership->companyRole),
+                        $membership->companyRole->permissions->pluck('key')->all(),
+                    )),
                 ];
                 $data['workspace'] = WorkspaceResolver::resolve($archetype);
             } else {
