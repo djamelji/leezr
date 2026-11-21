@@ -12247,6 +12247,18 @@
       "createdAt": "Créée le",
       "open": "Ouvrir",
       "empty": "Vous n'avez pas encore créé de société."
+    },
+    "issues": {
+      "title": "Pour continuer :",
+      "companyName": "Indiquez le nom commercial de la société.",
+      "market": "Choisissez le pays.",
+      "activity": "Choisissez l'activité de la société.",
+      "modulesLoading": "Les modules de l'activité sont en cours de chargement.",
+      "plan": "Choisissez un plan.",
+      "adminFirstName": "Indiquez le prénom de l'administrateur.",
+      "adminLastName": "Indiquez le nom de l'administrateur.",
+      "adminEmail": "Indiquez une adresse e-mail valide pour l'administrateur.",
+      "adminChecking": "Vérification de l'adresse en cours, réessayez dans un instant."
     }
   },
   "catalogTexts": {

@@ -12247,6 +12247,18 @@
       "createdAt": "Created on",
       "open": "Open",
       "empty": "You have not created any company yet."
+    },
+    "issues": {
+      "title": "To continue:",
+      "companyName": "Enter the company's trading name.",
+      "market": "Choose the country.",
+      "activity": "Choose the company's activity.",
+      "modulesLoading": "The activity's modules are loading.",
+      "plan": "Choose a plan.",
+      "adminFirstName": "Enter the administrator's first name.",
+      "adminLastName": "Enter the administrator's last name.",
+      "adminEmail": "Enter a valid e-mail address for the administrator.",
+      "adminChecking": "The address is being checked, try again in a moment."
     }
   }
 }

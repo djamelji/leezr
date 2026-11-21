@@ -220,9 +220,53 @@ const goTo = step => {
   currentStep.value = step
 }
 
-const next = () => {
-  if (canAdvance.value && currentStep.value < STEP_KEYS.length - 1)
+// « Next » is never a silent dead end : it stays clickable ; on an incomplete step it says what is missing,
+// marks the step and brings the operator to the explanation (business rules unchanged).
+const attemptedSteps = ref([])
+const stepAttempted = computed(() => attemptedSteps.value.includes(currentStep.value))
+const issuesAlert = ref(null)
+
+const stepIssues = computed(() => {
+  const k = key => t(`platformCompanyCreation.issues.${key}`)
+  const a = form.administrator
+
+  return [
+    [
+      !form.company.name.trim() && k('companyName'),
+      !form.company.market_key && k('market'),
+      form.jobdomain_key && missingRequiredFields.value.length && t('platformCompanyCreation.company.requiredMissing', { fields: missingRequiredFields.value.join(', ') }),
+    ],
+    [!form.jobdomain_key && k('activity')],
+    [previewLoading.value && k('modulesLoading')],
+    [
+      !form.subscription.plan_key && k('plan'),
+      overrideFieldErrors.value.reason && t('platformCompanyCreation.subscription.override.errors.reason'),
+      overrideFieldErrors.value.duration && t('platformCompanyCreation.subscription.override.errors.duration', overrideFieldErrors.value.duration),
+    ],
+    [
+      !a.first_name.trim() && k('adminFirstName'),
+      !a.last_name.trim() && k('adminLastName'),
+      !emailValid.value && k('adminEmail'),
+      emailValid.value && lookupLoading.value && k('adminChecking'),
+    ],
+    [],
+  ].map(list => list.filter(Boolean))
+})
+
+const currentIssues = computed(() => stepIssues.value[currentStep.value] || [])
+
+const next = async () => {
+  if (currentStep.value >= STEP_KEYS.length - 1)
+    return
+  if (canAdvance.value) {
     currentStep.value++
+
+    return
+  }
+  if (!attemptedSteps.value.includes(currentStep.value))
+    attemptedSteps.value = [...attemptedSteps.value, currentStep.value]
+  await nextTick()
+  issuesAlert.value?.$el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
 }
 
 // ── Submit (idempotent) ─────────────────────────────────────────────────
@@ -301,7 +345,7 @@ const submit = async () => {
               :items="stepItems"
               icon-size="22"
               class="stepper-icon-step-bg"
-              :is-active-step-valid="canAdvance"
+              :is-active-step-valid="canAdvance || !stepAttempted"
             />
           </VCardText>
         </VCol>
@@ -395,7 +439,7 @@ const submit = async () => {
                   :plans="options.plans"
                   :outcome="subscriptionOutcome"
                   :can-override="options.can_override"
-                  :override-errors="overrideFieldErrors"
+                  :override-errors="attemptedSteps.includes(3) ? overrideFieldErrors : {}"
                   :paid-blocked="paidBlocked"
                 />
               </VWindowItem>
@@ -442,6 +486,26 @@ const submit = async () => {
               </VWindowItem>
             </VWindow>
 
+            <VAlert
+              v-if="!optionsLoading && stepAttempted && currentIssues.length"
+              ref="issuesAlert"
+              type="warning"
+              variant="tonal"
+              class="mt-6"
+              role="alert"
+              :title="t('platformCompanyCreation.issues.title')"
+              data-testid="step-issues"
+            >
+              <ul class="ps-4 mb-0">
+                <li
+                  v-for="(issue, i) in currentIssues"
+                  :key="i"
+                >
+                  {{ issue }}
+                </li>
+              </ul>
+            </VAlert>
+
             <div
               v-if="!optionsLoading"
               class="d-flex flex-wrap gap-4 justify-space-between mt-8"
@@ -476,7 +540,7 @@ const submit = async () => {
               </VBtn>
               <VBtn
                 v-else
-                :disabled="!canAdvance"
+                data-testid="wizard-next"
                 @click="next"
               >
                 {{ t('platformCompanyCreation.nav.next') }}
