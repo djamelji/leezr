@@ -173,8 +173,8 @@
     },
     "company": {
       "dashboard": "Accueil",
-      "people": "Équipe",
-      "workforce-people": "Équipe",
+      "people": "Personnes",
+      "workforce-people": "Personnes",
       "members": "Membres",
       "settings": "Paramètres",
       "company-roles": "Rôles",
@@ -1060,7 +1060,8 @@
       "retryPayment": "Relancer le paiement",
       "forceDunning": "Forcer la transition…",
       "creditNote": "Émettre un avoir…",
-      "writeOff": "Passer en perte"
+      "writeOff": "Passer en perte",
+      "contactSupportToPay": "Le paiement en ligne n'est pas disponible pour votre compte : contactez le support pour régler cette facture."
     },
     "dialogs": {
       "refund": {
@@ -4746,12 +4747,12 @@
       "payslips": "Bulletins de paie"
     },
     "account": {
-      "pending_acceptance": "En attente d'acceptation",
-      "connected": "Compte connecté",
-      "active": "Compte activé",
-      "invited": "Invitation en attente",
+      "pending_acceptance": "Invitation à accepter",
+      "connected": "Accès actif",
+      "active": "Accès prêt, jamais utilisé",
+      "invited": "Invitation envoyée",
       "suspended": "Accès suspendu",
-      "none": "Aucun compte",
+      "none": "Aucun accès à Leezr",
       "invitation_expired": "Invitation expirée",
       "linked": "Compte lié"
     },
@@ -4879,7 +4880,11 @@
       "submitInvite": "Ajouter et inviter",
       "created": "Personne ajoutée.",
       "createdInvited": "Personne ajoutée, invitation préparée.",
-      "createdAccessFailed": "Personne ajoutée, mais l'accès n'a pas pu être préparé. {reason}"
+      "createdAccessFailed": "Personne ajoutée, mais l'accès n'a pas pu être préparé. {reason}",
+      "choiceHire": "Embauche complète",
+      "choiceHireHint": "Poste, contrat et dossier d'intégration, étape par étape.",
+      "choiceQuick": "Ajout rapide",
+      "choiceQuickHint": "Fiche de la personne et, si besoin, invitation à se connecter. Sans contrat."
     },
     "history": {
       "auth__login": "Connexion",
@@ -4978,7 +4983,8 @@
     "hideIncomplete": "Masquer",
     "manager": "Responsable",
     "contract": "Contrat",
-    "managerShort": "resp. {name}"
+    "managerShort": "resp. {name}",
+    "nameMissing": "Nom non renseigné"
   },
   "home": {
     "title": "Accueil",
@@ -9990,13 +9996,13 @@
     "statesNote": "Trois états distincts : invité (e-mail envoyé) · activé (mot de passe défini) · connecté (après sa 1re connexion).",
     "connected": "Compte activé et connecté : le collaborateur utilise son espace.",
     "states": {
-      "none": "Aucun accès",
+      "none": "Aucun accès à Leezr",
       "invited": "Invitation envoyée",
-      "active": "Compte activé",
-      "connected": "Connecté",
-      "account_without_membership": "Compte à ré-associer",
+      "active": "Accès prêt, jamais utilisé",
+      "connected": "Accès actif",
+      "account_without_membership": "Compte à rattacher",
       "suspended": "Accès suspendu",
-      "pending_acceptance": "En attente d'acceptation",
+      "pending_acceptance": "Invitation à accepter",
       "invitation_expired": "Invitation expirée"
     },
     "card": {
@@ -10638,7 +10644,10 @@
       "scan_failed": "Le fichier n’a pas pu être analysé : déposez-le de nouveau"
     },
     "verificationLocked": "Trop de codes incorrects : la vérification est bloquée. Contactez l’entreprise pour recevoir un nouveau lien.",
-    "verifyBeforeSubmit": "Confirmez d’abord votre identité avec le code reçu par e-mail pour pouvoir envoyer votre dossier."
+    "verifyBeforeSubmit": "Confirmez d’abord votre identité avec le code reçu par e-mail pour pouvoir envoyer votre dossier.",
+    "reservedTitle": "Lien réservé à la personne invitée",
+    "reservedText": "Ce dossier d'intégration ne peut être ouvert que par la personne qui a reçu l'invitation, depuis le lien de son e-mail.",
+    "reservedBack": "Retour à mon espace"
   },
   "onboardingFile": {
     "panelTitle": "Intégrations en cours",
@@ -12452,5 +12461,8 @@
     "invoiced": "Total HT des factures émises sur la période (grand livre). Une facture impayée y figure ; ce n'est pas l'encaissé.",
     "collected": "Paiements effectivement reçus (TTC).",
     "outstanding": "Factures émises non encore payées, toutes périodes confondues (TTC)."
+  },
+  "onboardingWidget": {
+    "dismissAria": "Masquer le guide de démarrage"
   }
 }

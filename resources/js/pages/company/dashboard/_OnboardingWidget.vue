@@ -133,6 +133,7 @@ const reopen = async () => {
       size="x-small"
       :loading="dismissing"
       class="dismiss-btn"
+      :aria-label="t('onboardingWidget.dismissAria')"
       @click="dismiss"
     >
       <VIcon

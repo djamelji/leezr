@@ -29663,3 +29663,15 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 3. **Finitions** : dates relatives dans la langue de l'interface ; boutons-icônes nommés (aria-label + infobulle) et menus « ⋮ » redondants retirés sur les listes Entreprises et Utilisateurs Platform, actions de gestion affichées seulement avec leur droit ; personnalisateur de thème réservé à `manage_theme_settings` ; sujets d'e-mails historiques en clé résolus à l'affichage ; onglets vides de la fiche module masqués.
 
 **Tests.** `Adr842PlatformErgonomicsTest` (4, invariants de structure : chaque page dans un seul groupe et adresse conservée, une information par emplacement, boutons nommés, outils de démonstration masqués) ; recette navigateur 5/5 (5 profils, clavier, mobile, adresses directes, retour arrière) ; recette M1 rejouée 4/4 (sélecteurs mis à jour).
+
+## ADR-843 — Leezr 4.2 M6 : espace Company (Équipe, vocabulaire d'accès, terrain)
+
+**Date** : 2026-11-21 — **Statut** : livré local (commit non poussé) — **Origine** : UXC-04, UXC-06, UXC-08, UXC-09 + recette logistique. Rapport : `docs/bmad/leezr-4-2-audit/m6/README.md`.
+
+**Décision.**
+1. **Équipe** : l'entrée de menu « Équipe » (dans le groupe « Équipe ») s'appelle « Personnes » (libellé, manifeste inchangé). Une seule action principale « Ajouter une personne » ; quand l'embauche complète est permise, elle propose le choix « Embauche complète » (assistant existant) / « Ajout rapide » (tiroir existant), chacun expliqué. Aucun nouvel endpoint.
+2. **Vocabulaire d'accès unique** (liste et fiche, `people.account` = `employeeAccess.states`) : Aucun accès à Leezr · Invitation envoyée · Invitation à accepter · Accès prêt, jamais utilisé · Accès actif · Accès suspendu. Une personne sans nom est affichée « Nom non renseigné ».
+3. **Terrain** : après « Démarrer », « Mes livraisons » suit la livraison dans « En cours » (le geste suivant reste visible). Lien d'intégration ouvert par un membre connecté : « Lien réservé à la personne invitée ».
+4. **Langue / accessibilité** : toute clé anglaise doit exister en français (test) ; bouton de fermeture du guide de démarrage nommé. Le bouton de fermeture du composant `@core` `AppDrawerHeaderSection` reste sans nom (modification de `@core` non décidée).
+
+**Tests.** `Adr843CompanyWorkspaceTest` (4) ; recette navigateur 4/4 (8 profils, 2 métiers, desktop + mobile, parcours dispatcher → chauffeur de bout en bout).

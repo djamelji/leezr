@@ -43,7 +43,14 @@ const advance = async d => {
   try {
     await deliveryStore.updateStatus(d.id, next.status)
     message.value = { type: 'success', text: t('deliveries.statusChangedTo', { status: statusLabel(next.status) }) }
-    await loadDeliveries(deliveryStore.pagination.current_page)
+
+    // ADR-843 (M6) — follow the delivery : once started it moves to « En cours », where its next step
+    // (« Livrée ») is one tap away, instead of vanishing from « À faire » (the driver had to change filter).
+    const follow = next.status === 'in_transit' && statusFilter.value === 'todo' ? 'in_transit' : null
+    if (follow)
+      statusFilter.value = follow // the watcher reloads
+    else
+      await loadDeliveries(deliveryStore.pagination.current_page)
   }
   catch (e) { message.value = { type: 'error', text: e?.data?.message || t('deliveries.failedToChangeStatus') } }
   finally { busy.value = null }

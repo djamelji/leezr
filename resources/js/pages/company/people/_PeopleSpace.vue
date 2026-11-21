@@ -38,6 +38,7 @@ const { toast } = useAppToast()
 const addOpen = ref(false)
 const addPreset = ref(null)
 const canAdd = computed(() => can('members.invite') || can('workforce.manage'))
+const canHire = computed(() => canModule('workforce') && can('workforce.manage'))
 const openAdd = (preset = null) => { addPreset.value = preset; addOpen.value = true }
 const onPersonAdded = ({ personRef, tab }) => {
   if (personRef) router.push({ path: tab ? `/company/people/${personRef}/${tab}` : `/company/people/${personRef}` })
@@ -157,24 +158,41 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
           />
         </VList>
       </VMenu>
-      <VBtn
-        v-if="(tab === 'people' || tab === 'hr') && canModule('workforce') && can('workforce.manage')"
-        color="primary"
-        prepend-icon="tabler-user-check"
-        to="/company/workforce/hiring?new=1"
-        data-test="people-hire"
-      >
-        {{ t('hiring.hire') }}
-      </VBtn>
+      <!-- ADR-843 (M6, UXC-04) : ONE primary « Add a person » action ; full hiring vs quick add asked in its menu -->
       <VBtn
         v-if="(tab === 'people' || tab === 'hr') && canAdd"
-        :color="canModule('workforce') && can('workforce.manage') ? 'secondary' : 'primary'"
-        :variant="canModule('workforce') && can('workforce.manage') ? 'tonal' : 'flat'"
+        color="primary"
         prepend-icon="tabler-user-plus"
+        :append-icon="canHire ? 'tabler-chevron-down' : undefined"
         data-test="people-add"
-        @click="openAdd()"
+        @click="canHire ? null : openAdd()"
       >
         {{ t('people.add.title') }}
+        <VMenu
+          v-if="canHire"
+          activator="parent"
+          location="bottom end"
+        >
+          <VList
+            max-width="360"
+            lines="two"
+          >
+            <VListItem
+              prepend-icon="tabler-user-check"
+              :title="t('people.add.choiceHire')"
+              :subtitle="t('people.add.choiceHireHint')"
+              to="/company/workforce/hiring?new=1"
+              data-test="people-hire"
+            />
+            <VListItem
+              prepend-icon="tabler-user-plus"
+              :title="t('people.add.choiceQuick')"
+              :subtitle="t('people.add.choiceQuickHint')"
+              data-test="people-add-quick"
+              @click="openAdd()"
+            />
+          </VList>
+        </VMenu>
       </VBtn>
     </div>
 
@@ -220,7 +238,20 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
                   <span v-else class="text-caption">{{ initials(item.name) }}</span>
                 </VAvatar>
                 <div>
-                  <div class="font-weight-medium text-high-emphasis">{{ item.name }}</div>
+                  <!-- ADR-843 (UXC-04) : no name → said so, the e-mail is not shown twice -->
+                  <div
+                    v-if="item.name && item.name !== item.email"
+                    class="font-weight-medium text-high-emphasis"
+                  >
+                    {{ item.name }}
+                  </div>
+                  <div
+                    v-else
+                    class="font-weight-medium text-medium-emphasis font-italic"
+                    data-test="person-name-missing"
+                  >
+                    {{ t('peopleList.nameMissing') }}
+                  </div>
                   <div v-if="item.email" class="text-caption text-medium-emphasis">{{ item.email }}</div>
                 </div>
               </div>

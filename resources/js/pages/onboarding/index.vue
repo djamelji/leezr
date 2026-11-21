@@ -60,7 +60,9 @@ onMounted(async () => {
       apply(await api(''))
     }
   }
-  catch { state.value = 'invalid' }
+
+  // ADR-843 (M6, UXC-08) — a signed-in member following an old link gets the real reason, not « invalid link »
+  catch { state.value = !token && useCookie('userData').value ? 'reserved' : 'invalid' }
 })
 
 const editableFields = computed(() => (file.value?.fields || []).filter(f => !f.locked).map(f => ({ ...f, required: f.required && file.value.writable })))
@@ -123,6 +125,32 @@ const submit = async () => {
     >
       <VProgressCircular indeterminate />
     </div>
+
+    <VCard
+      v-else-if="state === 'reserved'"
+      class="onb__card"
+      data-test="onboarding-reserved"
+    >
+      <VCardText class="text-center py-10">
+        <VIcon
+          icon="tabler-user-shield"
+          size="40"
+          class="mb-4 text-medium-emphasis"
+        />
+        <h1 class="text-h5 mb-2">
+          {{ t('onboardingPortal.reservedTitle') }}
+        </h1>
+        <p class="text-body-1 text-medium-emphasis mb-4">
+          {{ t('onboardingPortal.reservedText') }}
+        </p>
+        <VBtn
+          to="/home"
+          color="primary"
+        >
+          {{ t('onboardingPortal.reservedBack') }}
+        </VBtn>
+      </VCardText>
+    </VCard>
 
     <VCard
       v-else-if="state === 'invalid'"

@@ -173,8 +173,8 @@
     },
     "company": {
       "dashboard": "Home",
-      "people": "Team",
-      "workforce-people": "Team",
+      "people": "People",
+      "workforce-people": "People",
       "members": "Members",
       "settings": "Settings",
       "company-roles": "Roles",
@@ -4746,14 +4746,14 @@
       "payslips": "Payslips"
     },
     "account": {
-      "pending_acceptance": "Pending acceptance",
-      "connected": "Account connected",
-      "active": "Account activated",
-      "invited": "Invitation pending",
+      "pending_acceptance": "Invitation to accept",
+      "connected": "Access in use",
+      "active": "Access ready, never used",
+      "invited": "Invitation sent",
       "suspended": "Access suspended",
-      "none": "No account",
+      "none": "No Leezr access",
       "invitation_expired": "Invitation expired",
-      "linked": "Account linked"
+      "linked": "Linked account"
     },
     "access": {
       "title": "App access",
@@ -4879,7 +4879,11 @@
       "submitInvite": "Add and invite",
       "created": "Person added.",
       "createdInvited": "Person added, invitation prepared.",
-      "createdAccessFailed": "Person added, but access could not be prepared. {reason}"
+      "createdAccessFailed": "Person added, but access could not be prepared. {reason}",
+      "choiceHire": "Full hiring",
+      "choiceHireHint": "Position, contract and onboarding file, step by step.",
+      "choiceQuick": "Quick add",
+      "choiceQuickHint": "The person's record and, if needed, an invitation to sign in. No contract."
     },
     "history": {
       "auth__login": "Sign-in",
@@ -4978,7 +4982,8 @@
     "hideIncomplete": "Hide",
     "manager": "Manager",
     "contract": "Contract",
-    "managerShort": "mgr. {name}"
+    "managerShort": "mgr. {name}",
+    "nameMissing": "Name not provided"
   },
   "home": {
     "title": "Home",
@@ -9990,13 +9995,13 @@
     "statesNote": "Three distinct states: invited (email sent) · active (password set) · connected (after first login).",
     "connected": "Account active and connected: the employee is using their space.",
     "states": {
-      "none": "No access",
+      "none": "No Leezr access",
       "invited": "Invitation sent",
-      "active": "Account activated",
-      "connected": "Connected",
-      "account_without_membership": "Account to re-link",
+      "active": "Access ready, never used",
+      "connected": "Access in use",
+      "account_without_membership": "Account to reattach",
       "suspended": "Access suspended",
-      "pending_acceptance": "Pending acceptance",
+      "pending_acceptance": "Invitation to accept",
       "invitation_expired": "Invitation expired"
     },
     "card": {
@@ -10638,7 +10643,10 @@
       "scan_failed": "The file could not be analysed: upload it again"
     },
     "verificationLocked": "Too many wrong codes: verification is locked. Contact the company to receive a new link.",
-    "verifyBeforeSubmit": "First confirm your identity with the code received by e-mail to send your file."
+    "verifyBeforeSubmit": "First confirm your identity with the code received by e-mail to send your file.",
+    "reservedTitle": "Link reserved for the invited person",
+    "reservedText": "This onboarding file can only be opened by the person who received the invitation, from the link in their e-mail.",
+    "reservedBack": "Back to my space"
   },
   "onboardingFile": {
     "panelTitle": "Onboarding in progress",
@@ -12435,5 +12443,8 @@
     "invoiced": "Total excl. tax of the invoices issued over the period (ledger). An unpaid invoice is included; this is not collected revenue.",
     "collected": "Payments actually received (incl. tax).",
     "outstanding": "Issued invoices not yet paid, all periods (incl. tax)."
+  },
+  "onboardingWidget": {
+    "dismissAria": "Hide the getting-started guide"
   }
 }
