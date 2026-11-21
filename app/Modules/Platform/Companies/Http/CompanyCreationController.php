@@ -9,7 +9,9 @@ use App\Core\Models\Membership;
 use App\Core\Models\Company;
 use App\Core\Models\User;
 use App\Core\Plans\PlanRegistry;
+use App\Core\Companies\CompanyOnboardingChecklist;
 use App\Modules\Platform\Companies\Creation\CreatePlatformCompanyUseCase;
+use App\Modules\Platform\Companies\Creation\PlatformCompanyCreation;
 use App\Modules\Platform\Companies\Creation\PlatformCompanyCreationCatalog;
 use App\Modules\Platform\Companies\Http\Requests\CreatePlatformCompanyRequest;
 use Illuminate\Http\JsonResponse;
@@ -91,5 +93,23 @@ class CompanyCreationController extends Controller
         $audit->logPlatform('company.administrator_invitation_resent', 'company', (string) $company->id, ['metadata' => ['membership_id' => $owner->id]]);
 
         return response()->json(['invitation' => $summary, 'onboarding' => CreatePlatformCompanyUseCase::onboarding($company)]);
+    }
+
+    /** GET /platform/company-creation/companies — the companies created by this operator (their start-of-service state) */
+    public function myCompanies(Request $request): JsonResponse
+    {
+        $creations = PlatformCompanyCreation::where('platform_user_id', $request->user('platform')->id)->whereNotNull('company_id')
+            ->with('company:id,name,slug,status,plan_key,jobdomain_key')->latest('id')->limit(100)->get();
+
+        return response()->json(['companies' => $creations->filter(fn ($c) => $c->company)->map(function ($c) {
+            $onboarding = CompanyOnboardingChecklist::forPlatform($c->company, $c->initialization);
+
+            return [
+                'id' => $c->company->id, 'name' => $c->company->name, 'slug' => $c->company->slug, 'status' => $c->company->status,
+                'plan_key' => $c->company->plan_key, 'created_at' => $c->created_at?->toIso8601String(),
+                'in_service' => $onboarding['in_service'],
+                'stage' => CompanyOnboardingChecklist::stage($onboarding),
+            ];
+        })->values()]);
     }
 }

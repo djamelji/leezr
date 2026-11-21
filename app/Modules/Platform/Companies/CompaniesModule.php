@@ -19,7 +19,8 @@ class CompaniesModule implements ModuleDefinition
             capabilities: new Capabilities(
                 navItems: [
                     // ADR-597 (LOT 3): nav item requires only read access; writes need manage_companies.
-                    ['key' => 'platform-companies', 'title' => 'Companies', 'to' => ['name' => 'platform-companies'], 'icon' => 'tabler-building', 'permission' => 'view_companies', 'group' => 'clients', 'sort' => 10],
+                    // ADR-834 : also the entry point of creation operators (they see only the companies they created).
+                    ['key' => 'platform-companies', 'title' => 'Companies', 'to' => ['name' => 'platform-companies'], 'icon' => 'tabler-building', 'anyPermission' => ['view_companies', 'create_companies'], 'group' => 'clients', 'sort' => 10],
                 ],
                 routeNames: ['platform-companies', 'platform-companies-id', 'platform-companies-create'],
             ),
@@ -47,8 +48,8 @@ class CompaniesModule implements ModuleDefinition
                 [
                     'key' => 'companies.onboarding',
                     'label' => 'Company Creation & Onboarding',
-                    'hint' => 'Create new companies, invite their administrator and follow their onboarding.',
-                    'permissions' => ['view_companies', 'create_companies', 'view_company_users'],
+                    'hint' => 'Create new companies, invite their administrator and follow the start of service of the companies created.',
+                    'permissions' => ['create_companies'],
                 ],
                 [
                     'key' => 'companies.commercial_override',

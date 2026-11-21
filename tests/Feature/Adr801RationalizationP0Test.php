@@ -108,7 +108,8 @@ class Adr801RationalizationP0Test extends TestCase
         $unknown = [];
         $metas = $this->pageMetas('resources/js/pages/platform');
         $this->assertGreaterThanOrEqual(25, count($metas), 'the scan must actually see the Platform pages');
-        $this->assertStringContainsString("permission: 'view_companies'", $metas['companies/index.vue']);
+        // ADR-834 : the companies hub is also the entry point of creation operators (their own companies only)
+        $this->assertStringContainsString("anyPermission: ['view_companies', 'create_companies']", $metas['companies/index.vue']);
         foreach ($metas as $page => $meta) {
             if (str_contains($meta, 'public: true') || in_array($page, self::PLATFORM_PAGES_WITHOUT_PERMISSION, true)) {
                 continue;

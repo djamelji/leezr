@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'module.active' => \App\Http\Middleware\EnsureModuleActive::class,
 
             'platform.permission' => \App\Platform\Http\Middleware\EnsurePlatformPermission::class,
+            'platform.company.scope' => \App\Modules\Platform\Companies\Http\Middleware\EnsureCompanyVisibleToOperator::class, // ADR-834
             'platform.2fa' => \App\Http\Middleware\RequirePlatform2FA::class,
 
             'session.governance' => \App\Http\Middleware\SessionGovernance::class,

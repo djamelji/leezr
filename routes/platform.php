@@ -128,7 +128,6 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         // Read-only supervision — `view_companies` (manage_companies holders keep it via migration)
         Route::middleware(['platform.permission:view_companies'])->group(function () {
             Route::get('/companies', [CompanyController::class, 'index']);
-            Route::get('/companies/{id}', [CompanyController::class, 'show']);
             Route::get('/companies/{id}/billing', [CompanyController::class, 'billing']);
             Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
             Route::get('/companies/{id}/activity', [CompanyController::class, 'activity']);
@@ -136,16 +135,20 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::get('/companies/{id}/wallet-history', [CompanyBillingAdminController::class, 'walletHistory']);
             Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
             Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
-            Route::get('/companies/{id}/onboarding', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'onboarding'])->whereNumber('id'); // ADR-834
         });
 
-        // ADR-834 — creation & onboarding from Platform — `create_companies` (never implied by manage_companies)
+        // ADR-834 — record + start of service : global right, or `create_companies` on the companies the operator created
+        Route::get('/companies/{id}', [CompanyController::class, 'show'])->whereNumber('id')->middleware('platform.company.scope:view_companies');
+        Route::get('/companies/{id}/onboarding', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'onboarding'])->whereNumber('id')->middleware('platform.company.scope:view_companies');
+        Route::post('/companies/{id}/onboarding/resend-invitation', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'resendInvitation'])->whereNumber('id')->middleware(['platform.company.scope:manage_companies', 'throttle:10,1']);
+
+        // ADR-834 — creation from Platform — `create_companies` (never implies view_companies / manage_companies)
         Route::middleware(['platform.permission:create_companies'])->group(function () {
             Route::get('/company-creation/options', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'options']);
             Route::get('/company-creation/preview', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'preview']);
             Route::get('/company-creation/administrator', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'administrator'])->middleware('throttle:60,1');
             Route::post('/companies', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'store'])->middleware('throttle:20,1');
-            Route::post('/companies/{id}/onboarding/resend-invitation', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'resendInvitation'])->whereNumber('id')->middleware('throttle:10,1');
+            Route::get('/company-creation/companies', [\App\Modules\Platform\Companies\Http\CompanyCreationController::class, 'myCompanies']);
         });
 
         // Mutations — `manage_companies`

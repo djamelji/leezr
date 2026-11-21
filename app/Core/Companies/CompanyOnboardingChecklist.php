@@ -62,13 +62,37 @@ final class CompanyOnboardingChecklist
 
         $blocking = array_filter($items, fn ($i) => in_array($i['key'], ['administrator', 'required_fields', 'subscription'], true) && $i['status'] !== 'done');
 
-        return [
+        $result = [
             'in_service' => $blocking === [],
             'items' => $items,
             'owner_steps' => self::ownerSteps($company),
             'completed_count' => count(array_filter($items, fn ($i) => $i['status'] === 'done')),
             'total_count' => count($items),
         ];
+
+        return $result + ['stage' => self::stage($result)];
+    }
+
+    /**
+     * The single start-of-service stage shown to Platform, from the checklist :
+     * created → administrator_invited → awaiting_payment → operational. Never « operational » while the
+     * administrator has not activated, a required field is missing or the subscription is not usable.
+     */
+    public static function stage(array $onboarding): string
+    {
+        if ($onboarding['in_service']) {
+            return 'operational';
+        }
+        $items = collect($onboarding['items'])->keyBy('key');
+        $admin = $items->get('administrator');
+        if ($admin && $admin['status'] !== 'done') {
+            return in_array($admin['detail']['state'] ?? null, ['awaiting_activation', 'awaiting_acceptance'], true) ? 'administrator_invited' : 'created';
+        }
+        if (($items->get('subscription')['detail']['status'] ?? null) === 'pending_payment') {
+            return 'awaiting_payment';
+        }
+
+        return 'created';
     }
 
     private static function administratorItem(Company $company): array
