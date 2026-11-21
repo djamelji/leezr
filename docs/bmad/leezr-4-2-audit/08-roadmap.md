@@ -30,7 +30,7 @@
 | M1 (ADR-837) | `b6b38959` | UXC-01, UXP-01, UXP-07 | — |
 | M2 (ADR-838) | `fb0fe811` | SEC-05, SEC-06, SEC-07 (+ PasswordPolicy en libre-service, fermeture des sessions) | SEC-09, SEC-10, SEC-12 hors périmètre validé : **restent ouverts** |
 | M3 (ADR-839) | `0a1f8fcb` | UXC-02 (page « module indisponible »), UXP-04 (page 403 Platform), UXC-03 (libellé « Configuré »), UXP-03 / SEC-08 pour les refus relevés par l'audit (onglets Activité, Funnel, Coupons, Revue tarifaire ; sélecteurs du formulaire Coupons), fiche société refusée sans données, 403 Company sans redirection automatique | **SEC-04 / FUN-04** : voir M3.1 ; UXC-05 / FUN-03 : la page indique l'offre requise et mène aux offres, mais l'aperçu de prix « depuis la fonction » n'est pas ajouté (l'onglet Offre existant le fait) ; UXC-07 → M3.1 ; widgets du tableau de bord : seuls ceux relevés par l'audit sont couverts, pas de déclaration générique widget ↔ permission |
-| M3.1 (ADR-840) | voir `git log` (ADR-840) | **UXC-07** (Réglages Workforce en lecture seule) ; droits « en attente de validation » distincts du refus (ADR-808) ; **SEC-04 / FUN-04 préparé** : diff exact des 8 rôles, appliqué + restauré + réappliqué **sur le clone** | **SEC-04 / FUN-04 : application DEV puis PROD = nouveau GO** (`m3-1/README.md`) |
+| M3.1 (ADR-840) | `33bfe9a2` | **UXC-07** (Réglages Workforce en lecture seule) ; droits « en attente de validation » distincts du refus (ADR-808) ; **SEC-04 / FUN-04 préparé** : diff exact des 8 rôles, appliqué + restauré + réappliqué **sur le clone** | **SEC-04 / FUN-04 : application DEV puis PROD = nouveau GO** (`m3-1/README.md`) |
 | M0 | — | — | **Incident SEC-01/02/03 toujours ouvert (propriétaire)** |
 
 ## Regroupements obligatoires (à faire ensemble)
