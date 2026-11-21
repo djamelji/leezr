@@ -1,5 +1,4 @@
 <script setup>
-import StatusChip from '@/core/components/StatusChip.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'

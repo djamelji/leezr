@@ -1,4 +1,4 @@
-import { defineAsyncComponent, shallowRef } from 'vue'
+import { defineAsyncComponent } from 'vue'
 
 /**
  * Widget component registry — maps component keys (from WidgetManifest::component())

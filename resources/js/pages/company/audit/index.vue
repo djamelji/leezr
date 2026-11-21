@@ -1,4 +1,5 @@
 <script setup>
+import { auditSeverityColor } from '@/utils/auditSeverity'
 import { useCompanyAuditStore } from '@/modules/company/audit/audit.store'
 import { formatDateTime } from '@/utils/datetime'
 
@@ -23,12 +24,6 @@ const severityOptions = [
   { title: t('audit.critical'), value: 'critical' },
 ]
 
-const resolveSeverityColor = severity => {
-  if (severity === 'critical') return 'error'
-  if (severity === 'warning') return 'warning'
-
-  return 'info'
-}
 
 const headers = computed(() => [
   { title: t('audit.timestamp'), key: 'created_at', width: '180px' },
@@ -128,7 +123,7 @@ onMounted(() => loadData())
           <VChip
             size="small"
             variant="tonal"
-            :color="resolveSeverityColor(item.severity)"
+            :color="auditSeverityColor(item.severity)"
           >
             {{ item.severity }}
           </VChip>

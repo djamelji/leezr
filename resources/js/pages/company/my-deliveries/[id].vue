@@ -1,4 +1,5 @@
 <script setup>
+import { shipmentStatusColor } from '@/utils/shipments'
 import { formatDate } from '@/utils/datetime'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
 
@@ -35,17 +36,6 @@ const availableTransitions = computed(() => {
   return transitions.value[delivery.value.status] || []
 })
 
-const statusColor = status => {
-  const colors = {
-    draft: 'secondary',
-    planned: 'info',
-    in_transit: 'warning',
-    delivered: 'success',
-    canceled: 'error',
-  }
-
-  return colors[status] || 'secondary'
-}
 
 const statusLabel = status => {
   const labels = {
@@ -106,7 +96,7 @@ onMounted(async () => {
       </h4>
       <VChip
         v-if="delivery"
-        :color="statusColor(delivery.status)"
+        :color="shipmentStatusColor(delivery.status)"
         size="small"
         label
       >

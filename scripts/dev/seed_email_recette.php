@@ -10,6 +10,16 @@ use App\Core\Email\EmailAttachment;
 use App\Core\Email\EmailLog;
 use App\Core\Email\EmailThread;
 
+// ADR-848 (M9) — this script DELETES threads by subject prefix : marked recipe clone only (ADR-827/831 rule,
+// same guard as scripts/audit842-*-fixture.php). Never on DEV or PROD.
+$db = Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+if (! str_starts_with($db, 'leezr_audit') || ! Illuminate\Support\Facades\Schema::hasTable('_recipe_clone_identity')
+    || Illuminate\Support\Facades\DB::table('_recipe_clone_identity')->value('database_name') !== $db) {
+    fwrite(STDERR, "refused: $db is not a marked recipe clone\n");
+
+    return;
+}
+
 $owned = EmailThread::where('subject', 'like', '[E2E]%')->pluck('id');
 EmailAttachment::whereIn('email_log_id', EmailLog::whereIn('thread_id', $owned)->pluck('id'))->delete();
 EmailLog::whereIn('thread_id', $owned)->delete();

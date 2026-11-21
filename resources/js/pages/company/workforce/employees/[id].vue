@@ -21,7 +21,7 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import { $api } from '@/utils/api'
-import { formatDate, formatDateTime } from '@/utils/datetime'
+import { formatDate } from '@/utils/datetime'
 
 definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })
 

@@ -13,7 +13,10 @@ import vuetify from 'vite-plugin-vuetify'
 import svgLoader from 'vite-svg-loader'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+// ADR-848 (M9, TEC-02) — design laboratories (dev only, `meta.devOnly`) are not compiled into the production build.
+const DEV_ONLY_PAGES = ['**/ui-lab.vue', '**/company/dev-lab.vue', '**/platform/presentation-lab.vue']
+
+export default defineConfig(({ command }) => ({
   plugins: [// Docs: https://github.com/posva/unplugin-vue-router
   // ℹ️ This plugin should be placed before vue plugin
     VueRouter({
@@ -28,7 +31,7 @@ export default defineConfig({
 
       // ADR-801 (P0-1) — `_*.vue` are page-local sub-components (imported by relative path), never
       // standalone routes. Without this exclusion each one became an unguarded route (no definePage).
-      exclude: ['**/_*.vue'],
+      exclude: ['**/_*.vue', ...(command === 'build' ? DEV_ONLY_PAGES : [])],
     }),
     vue({
       template: {
@@ -131,4 +134,4 @@ export default defineConfig({
       './resources/js/**/*.vue',
     ],
   },
-})
+}))

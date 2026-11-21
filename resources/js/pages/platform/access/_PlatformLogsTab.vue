@@ -1,4 +1,5 @@
 <script setup>
+import { auditSeverityColor } from '@/utils/auditSeverity'
 /**
  * Platform Logs Tab — Extracted from audit/index.vue (platform tab)
  * Pattern: VDataTable with show-expand
@@ -22,12 +23,6 @@ const severityOptions = [
   { title: t('audit.critical'), value: 'critical' },
 ]
 
-const resolveSeverityColor = severity => {
-  if (severity === 'critical') return 'error'
-  if (severity === 'warning') return 'warning'
-
-  return 'info'
-}
 
 const headers = computed(() => [
   { title: t('audit.timestamp'), key: 'created_at', width: '180px' },
@@ -129,7 +124,7 @@ const actionOptions = computed(() => [
           <VChip
             size="small"
             variant="tonal"
-            :color="resolveSeverityColor(item.severity)"
+            :color="auditSeverityColor(item.severity)"
           >
             {{ item.severity }}
           </VChip>

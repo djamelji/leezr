@@ -6,7 +6,6 @@ import { useDocumentHelpers } from '@/composables/useDocumentHelpers'
 import { useRealtimeSubscription } from '@/core/realtime/useRealtimeSubscription'
 import DocumentMandatoryChip from '@/views/shared/documents/DocumentMandatoryChip.vue'
 import DocumentStateChip from '@/views/shared/documents/DocumentStateChip.vue'
-import DocumentAiChip from '@/views/shared/documents/DocumentAiChip.vue'
 import DocumentConstraintsInline from '@/views/shared/documents/DocumentConstraintsInline.vue'
 import DocumentViewerDialog from '@/views/shared/documents/DocumentViewerDialog.vue'
 

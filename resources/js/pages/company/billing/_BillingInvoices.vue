@@ -2,7 +2,6 @@
 import { formatDate } from '@/utils/datetime'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import { $api } from '@/utils/api'
-import { invoiceStatusColor } from '@/utils/billing'
 import { formatMoney } from '@/utils/money'
 import EmptyState from '@/core/components/EmptyState.vue'
 import StatusChip from '@/core/components/StatusChip.vue'

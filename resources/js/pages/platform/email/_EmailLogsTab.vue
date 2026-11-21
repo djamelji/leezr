@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
 

@@ -1,4 +1,5 @@
 <script setup>
+import { shipmentStatusColor } from '@/utils/shipments'
 import { formatDate } from '@/utils/datetime'
 import { $api } from '@/utils/api'
 import { useAuthStore } from '@/core/stores/auth'
@@ -65,17 +66,6 @@ const availableTransitions = computed(() => {
   return transitions.value[shipment.value.status] || []
 })
 
-const statusColor = status => {
-  const colors = {
-    draft: 'secondary',
-    planned: 'info',
-    in_transit: 'warning',
-    delivered: 'success',
-    canceled: 'error',
-  }
-
-  return colors[status] || 'secondary'
-}
 
 const statusLabel = status => {
   const labels = {
@@ -180,7 +170,7 @@ const savePlan = async () => {
       </h4>
       <VChip
         v-if="shipment"
-        :color="statusColor(shipment.status)"
+        :color="shipmentStatusColor(shipment.status)"
         size="small"
       >
         {{ statusLabel(shipment.status) }}
@@ -297,7 +287,7 @@ const savePlan = async () => {
               <div class="d-flex align-center gap-2">
                 <VAvatar
                   size="34"
-                  :color="i <= stepIndex ? statusColor(st) : 'secondary'"
+                  :color="i <= stepIndex ? shipmentStatusColor(st) : 'secondary'"
                   :variant="i === stepIndex ? 'elevated' : 'tonal'"
                 >
                   <VIcon

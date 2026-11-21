@@ -13,7 +13,13 @@ class FunnelTrackController extends Controller
     {
         $request->validate([
             'step' => 'required|string|in:started,company_info,admin_user,plan_selected,payment_info',
-            'metadata' => 'nullable|array',
+            // ADR-848 (M9) : public, unauthenticated endpoint → bounded metadata (was any array of any size)
+            'metadata' => 'nullable|array|max:20',
+            'metadata.*' => ['nullable', function (string $attr, mixed $v, \Closure $fail) {
+                if (! is_scalar($v) || mb_strlen((string) $v) > 255) {
+                    $fail("$attr must be a scalar of at most 255 characters.");
+                }
+            }],
         ]);
 
         RegistrationFunnelEvent::create([

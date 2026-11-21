@@ -5,7 +5,6 @@ import AppMetricHelp from '@/components/app/AppMetricHelp.vue'
 // réelle (largeur ET hauteur) via le Presentation Engine partagé (resolvePresentationMode).
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useTheme } from 'vuetify'
-import { hexToRgb } from '@layouts/utils'
 import LzrApexChart from '@/core/components/LzrApexChart.vue'
 import { $platformApi } from '@/utils/platformApi'
 import { resolvePresentationMode } from '@/core/surface-engine/presentationMode'

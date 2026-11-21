@@ -1,4 +1,5 @@
 <script setup>
+import { shipmentStatusColor } from '@/utils/shipments'
 import { formatDate } from '@/utils/datetime'
 import { useAuthStore } from '@/core/stores/auth'
 import { useShipmentStore } from '@/modules/logistics-shipments/stores/shipment.store'
@@ -34,17 +35,6 @@ const statusOptions = computed(() => [
   { title: t('shipments.statusCanceled'), value: 'canceled' },
 ])
 
-const statusColor = status => {
-  const colors = {
-    draft: 'secondary',
-    planned: 'info',
-    in_transit: 'warning',
-    delivered: 'success',
-    canceled: 'error',
-  }
-
-  return colors[status] || 'secondary'
-}
 
 const statusLabel = status => {
   const labels = {
@@ -174,7 +164,7 @@ const onPageChange = page => {
 
         <template #item.status="{ item }">
           <VChip
-            :color="statusColor(item.status)"
+            :color="shipmentStatusColor(item.status)"
             size="small"
             label
           >
