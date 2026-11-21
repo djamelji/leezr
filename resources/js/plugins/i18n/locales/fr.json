@@ -4592,10 +4592,11 @@
   },
   "forbidden": {
     "title": "Accès refusé",
-    "message": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
+    "message": "Votre rôle dans l'entreprise ne donne pas accès à cette page.",
     "redirecting": "Redirection dans {seconds}s...",
     "goBack": "Retour",
-    "goToDashboard": "Aller au tableau de bord"
+    "goToDashboard": "Aller à mon accueil",
+    "hint": "Si vous en avez besoin pour votre travail, demandez à un administrateur de votre entreprise de vous donner l'accès."
   },
   "platformDashboard": {
     "title": "Cockpit",
@@ -11199,7 +11200,7 @@
       "in_progress": "Configuration en cours",
       "ready": "Prêt",
       "suspended": "Suspendu",
-      "legacy": "Configuration historique",
+      "legacy": "Configuré",
       "needs_review": "À revoir"
     },
     "steps": {
@@ -12344,5 +12345,59 @@
     "Dedicated support": "Support dédié",
     "Advanced analytics": "Analyses avancées",
     "Transport, fleet management, dispatch": "Transport, gestion de flotte, répartition"
+  },
+  "accessState": {
+    "back": "Retour",
+    "home": "Retour à l'accueil"
+  },
+  "platformForbidden": {
+    "title": "Accès réservé",
+    "message": "Votre profil Platform ne donne pas accès à cette page.",
+    "hint": "Si vous en avez besoin, demandez à un administrateur de la plateforme d'ajuster votre profil.",
+    "home": "Aller à mon espace",
+    "moduleTitle": "Espace désactivé",
+    "moduleMessage": "Cette partie de la plateforme est actuellement désactivée.",
+    "tabTitle": "Onglet réservé",
+    "firstTab": "Revenir au premier onglet",
+    "recordTitle": "Fiche non accessible",
+    "recordMessage": "Votre profil ne permet pas d'ouvrir la fiche de cette entreprise."
+  },
+  "moduleUnavailable": {
+    "thisFeature": "Cette fonctionnalité",
+    "askAdmin": "Pour en bénéficier, demandez à un administrateur de votre entreprise.",
+    "plans": {
+      "starter": "Starter",
+      "pro": "Pro",
+      "business": "Business"
+    },
+    "inactive": {
+      "title": "Le module « {name} » n'est pas activé",
+      "message": "Ce module est disponible pour votre entreprise mais il n'a pas encore été activé.",
+      "requires": "Il s'appuie sur :",
+      "adminHint": "Vous pouvez l'activer depuis la page Modules. Ses éventuels prérequis sont activés avec lui.",
+      "action": "Activer dans Modules"
+    },
+    "plan": {
+      "title": "Le module « {name} » n'est pas inclus dans votre offre",
+      "message": "Cette fonctionnalité est disponible à partir de l'offre {plan}.",
+      "messageGeneric": "Cette fonctionnalité nécessite une autre offre.",
+      "adminHint": "Vous pouvez comparer les offres et voir le prix avant toute confirmation.",
+      "action": "Voir les offres"
+    },
+    "option": {
+      "title": "Le module « {name} » est une option",
+      "message": "Cette fonctionnalité s'ajoute en option à votre abonnement.",
+      "contactSales": "Cette fonctionnalité est proposée sur demande : contactez notre équipe commerciale depuis la page Modules.",
+      "action": "Voir l'option"
+    },
+    "active": {
+      "title": "Le module « {name} » est disponible",
+      "message": "Ce module est actif pour votre entreprise.",
+      "action": "Ouvrir la page"
+    },
+    "unavailable": {
+      "title": "Fonctionnalité non disponible",
+      "message": "Cette fonctionnalité n'est pas proposée pour votre entreprise."
+    }
   }
 }

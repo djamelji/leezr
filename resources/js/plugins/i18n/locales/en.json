@@ -4592,10 +4592,11 @@
   },
   "forbidden": {
     "title": "Access denied",
-    "message": "You do not have the required permissions to access this page.",
+    "message": "Your role in the company does not give access to this page.",
     "redirecting": "Redirecting in {seconds}s...",
     "goBack": "Go back",
-    "goToDashboard": "Go to dashboard"
+    "goToDashboard": "Go to my home",
+    "hint": "If you need it for your work, ask an administrator of your company to give you access."
   },
   "platformDashboard": {
     "title": "Cockpit",
@@ -11199,7 +11200,7 @@
       "in_progress": "Configuration in progress",
       "ready": "Ready",
       "suspended": "Suspended",
-      "legacy": "Historical configuration",
+      "legacy": "Configured",
       "needs_review": "Needs review"
     },
     "steps": {
@@ -12326,6 +12327,60 @@
       "adminLastName": "Enter the administrator's last name.",
       "adminEmail": "Enter a valid e-mail address for the administrator.",
       "adminChecking": "The address is being checked, try again in a moment."
+    }
+  },
+  "accessState": {
+    "back": "Back",
+    "home": "Back to home"
+  },
+  "platformForbidden": {
+    "title": "Restricted access",
+    "message": "Your Platform profile does not give access to this page.",
+    "hint": "If you need it, ask a platform administrator to adjust your profile.",
+    "home": "Go to my space",
+    "moduleTitle": "Area switched off",
+    "moduleMessage": "This part of the platform is currently switched off.",
+    "tabTitle": "Restricted tab",
+    "firstTab": "Back to the first tab",
+    "recordTitle": "Record not accessible",
+    "recordMessage": "Your profile does not allow opening this company's record."
+  },
+  "moduleUnavailable": {
+    "thisFeature": "This feature",
+    "askAdmin": "To use it, ask an administrator of your company.",
+    "plans": {
+      "starter": "Starter",
+      "pro": "Pro",
+      "business": "Business"
+    },
+    "inactive": {
+      "title": "The « {name} » module is not activated",
+      "message": "This module is available to your company but has not been activated yet.",
+      "requires": "It relies on:",
+      "adminHint": "You can activate it from the Modules page. Its prerequisites are activated with it.",
+      "action": "Activate in Modules"
+    },
+    "plan": {
+      "title": "The « {name} » module is not included in your plan",
+      "message": "This feature is available from the {plan} plan.",
+      "messageGeneric": "This feature requires another plan.",
+      "adminHint": "You can compare the plans and see the price before confirming anything.",
+      "action": "See the plans"
+    },
+    "option": {
+      "title": "The « {name} » module is an add-on",
+      "message": "This feature is added to your subscription as an option.",
+      "contactSales": "This feature is offered on request: contact our sales team from the Modules page.",
+      "action": "See the add-on"
+    },
+    "active": {
+      "title": "The « {name} » module is available",
+      "message": "This module is active for your company.",
+      "action": "Open the page"
+    },
+    "unavailable": {
+      "title": "Feature not available",
+      "message": "This feature is not offered for your company."
     }
   }
 }

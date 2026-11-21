@@ -13,6 +13,7 @@ const auth = useAuthStore()
 const moduleStore = useModuleStore()
 const { toast } = useAppToast()
 const router = useRouter()
+const focusModuleKey = useRoute().query.module // ADR-839 : read in setup (inject is unavailable after an await)
 
 const isLoading = ref(true)
 const togglingKey = ref(null)
@@ -139,6 +140,10 @@ const previewStatusChip = computed(() => {
 onMounted(async () => {
   try {
     await moduleStore.fetchModules()
+
+    // ADR-839 (M3) — arriving from « module not activated / not in your plan » : open that module's details
+    const focus = moduleStore.modules.find(m => m.key === focusModuleKey)
+    if (focus) openPreviewDrawer(focus)
   }
   finally {
     isLoading.value = false

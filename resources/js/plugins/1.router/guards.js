@@ -4,7 +4,6 @@ import { useAuthStore } from '@/core/stores/auth'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
 import { useWorldStore } from '@/core/stores/world'
-import { useAppToast } from '@/composables/useAppToast'
 
 export const setupGuards = router => {
   router.beforeEach(async to => {
@@ -72,26 +71,17 @@ export const setupGuards = router => {
 
       // Module guard — block if module is disabled globally
       // ADR-801 : `/platform` is the dispatcher (fallback of every refusal) — never bounce it onto itself.
-      if (to.meta.module && to.path !== '/platform' && platformAuth.isModuleInactive(to.meta.module)) {
-        const { toast } = useAppToast()
-
-        toast('This module is currently disabled.', 'warning')
-
-        return '/platform'
-      }
+      // ADR-839 (M3, UXP-04) : an explicit page, never a silent bounce.
+      if (to.meta.module && to.path !== '/platform' && platformAuth.isModuleInactive(to.meta.module))
+        return { name: 'platform403', query: { reason: 'module', from: to.fullPath } }
 
       // ADR-801 (P0-2) — tabbed hubs declare `anyPermission` (union of their tabs' permissions), same
       // contract as the company branch. A forbidden page sends back to `/platform`, which dispatches to
       // the first accessible entry (never assumed super-admin).
       const deniedPermission = to.meta.permission && !platformAuth.hasPermission(to.meta.permission)
       const deniedAny = Array.isArray(to.meta.anyPermission) && !to.meta.anyPermission.some(p => platformAuth.hasPermission(p))
-      if (deniedPermission || deniedAny) {
-        const { toast } = useAppToast()
-
-        toast('You do not have permission to access this page.', 'error')
-
-        return to.path === '/platform' ? false : '/platform'
-      }
+      if (deniedPermission || deniedAny)
+        return to.path === '/platform' ? false : { name: 'platform403', query: { from: to.fullPath } }
 
       return
     }
@@ -142,13 +132,10 @@ export const setupGuards = router => {
     if (to.meta.module) {
       const moduleStore = useModuleStore()
 
-      if (!moduleStore.isActive(to.meta.module)) {
-        const { toast } = useAppToast()
-
-        toast('Module not available for your company.', 'warning')
-
-        return '/dashboard'
-      }
+      // ADR-839 (Leezr 4.2 M3, UXC-02) — never a silent redirect : an explicit page says whether the module is
+      // not activated, not in the plan or not available, and offers only the actions the user may take.
+      if (!moduleStore.isActive(to.meta.module))
+        return { name: 'company-module-unavailable', query: { module: to.meta.module, from: to.fullPath } }
     }
 
     // Permission guard — ADR-418: router = autorité centrale RBAC

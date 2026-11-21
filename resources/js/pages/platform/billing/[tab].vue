@@ -14,6 +14,8 @@ import BillingLedgerTab from './_BillingLedgerTab.vue'
 import BillingRecovery from './_BillingRecovery.vue'
 import BillingReconciliationTab from './_BillingReconciliationTab.vue'
 import BillingTariffReviewTab from './_BillingTariffReviewTab.vue'
+import AppAccessState from '@/components/app/AppAccessState.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 definePage({
   meta: {
@@ -34,6 +36,9 @@ const activeTab = computed({
   set: val => router.replace({ name: 'platform-billing-tab', params: { tab: val } }),
 })
 
+// ADR-839 (M3, UXP-03 / SEC-08) — a tab is shown only with the permission its API requires (no avoidable 403)
+const platformAuth = usePlatformAuthStore()
+
 const tabs = computed(() => [
   { title: t('platformBilling.tabs.dashboard'), icon: 'tabler-layout-dashboard', tab: 'overview' },
   { title: t('platformBilling.tabs.subscriptions'), icon: 'tabler-receipt', tab: 'subscriptions' },
@@ -42,15 +47,17 @@ const tabs = computed(() => [
   { title: t('platformBilling.tabs.dunning'), icon: 'tabler-alert-triangle', tab: 'dunning' },
   { title: t('platformBilling.tabs.scheduledDebits'), icon: 'tabler-calendar-event', tab: 'scheduled-debits' },
   { title: t('platformBilling.tabs.creditNotes'), icon: 'tabler-receipt-refund', tab: 'credit-notes' },
-  { title: t('platformBilling.tabs.coupons'), icon: 'tabler-ticket', tab: 'coupons' },
+  { title: t('platformBilling.tabs.coupons'), icon: 'tabler-ticket', tab: 'coupons', permission: 'manage_billing' },
   { title: t('platformBilling.tabs.wallets'), icon: 'tabler-wallet', tab: 'wallets' },
   { title: t('platformBilling.tabs.forensics'), icon: 'tabler-history', tab: 'forensics' },
   { title: t('platformBilling.tabs.governance'), icon: 'tabler-shield-check', tab: 'governance' },
   { title: t('platformBilling.tabs.ledger'), icon: 'tabler-book', tab: 'ledger' },
   { title: t('platformBilling.tabs.recovery'), icon: 'tabler-first-aid-kit', tab: 'recovery' },
   { title: t('platformBilling.tabs.reconciliation'), icon: 'tabler-scale', tab: 'reconciliation' },
-  { title: t('platformBilling.tabs.tariffReview'), icon: 'tabler-shield-dollar', tab: 'tariff-review' },
-])
+  { title: t('platformBilling.tabs.tariffReview'), icon: 'tabler-shield-dollar', tab: 'tariff-review', permission: 'manage_billing' },
+].filter(item => !item.permission || platformAuth.hasPermission(item.permission)))
+
+const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab.value))
 </script>
 
 <template>
@@ -77,6 +84,7 @@ const tabs = computed(() => [
     <VTabs
       v-model="activeTab"
       class="v-tabs-pill"
+      :mandatory="false"
     >
       <VTab
         v-for="item in tabs"
@@ -93,7 +101,19 @@ const tabs = computed(() => [
       </VTab>
     </VTabs>
 
+    <AppAccessState
+      v-if="!tabAllowed"
+      compact
+      :title="t('platformForbidden.tabTitle')"
+      :message="t('platformForbidden.message')"
+      :hint="t('platformForbidden.hint')"
+      :show-back="false"
+      :actions="[{ label: t('platformForbidden.firstTab'), to: { name: 'platform-billing-tab', params: { tab: 'overview' } }, testid: 'access-state-first-tab' }]"
+      testid="platform-tab-forbidden"
+    />
+
     <VWindow
+      v-else
       v-model="activeTab"
       class="mt-6 disable-tab-transition"
       :touch="false"
@@ -157,7 +177,6 @@ const tabs = computed(() => [
       <VWindowItem value="tariff-review">
         <BillingTariffReviewTab />
       </VWindowItem>
-
     </VWindow>
   </div>
 </template>

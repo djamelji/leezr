@@ -26,6 +26,7 @@ class Adr801RationalizationP0Test extends TestCase
     private const PLATFORM_PAGES_WITHOUT_PERMISSION = [
         'index.vue',            // dispatcher : fallback of refused pages, routes to the first accessible entry
         'account/[tab].vue',    // personal account (me/*) : no permission on the API either
+        '403.vue',              // ADR-839 : the explanation shown for every refused page (no data, no API call)
         'presentation-lab.vue', // DEV harness (ADR-748), backlog P3-1
     ];
 

@@ -1,4 +1,5 @@
 <script setup>
+import AppAccessState from '@/components/app/AppAccessState.vue'
 /**
  * ADR-268: Company 360° Admin View
  *
@@ -36,6 +37,7 @@ const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
 
 const isLoading = ref(true)
+const accessDenied = ref(false) // ADR-839 (M3) — record outside the operator's rights : explicit state, no data
 const actionLoading = ref(false)
 const platformAuth = usePlatformAuthStore()
 // ADR-834 : each tab / action only for the permission its API requires (create_companies alone = overview + start of service)
@@ -134,7 +136,13 @@ onMounted(async () => {
     if (activeTab.value === 'billing')
       loadBilling()
   }
-  catch {
+  catch (err) {
+    const status = err?.status ?? err?.response?.status
+    if (status === 403 || status === 404) {
+      accessDenied.value = true
+
+      return
+    }
     toast(t('platformCompanyDetail.failedToLoad'), 'error')
     router.push('/platform/companies')
   }
@@ -466,6 +474,15 @@ const tabs = computed(() => [
     <VCard v-if="isLoading" class="pa-8 text-center">
       <VProgressCircular indeterminate />
     </VCard>
+
+    <AppAccessState
+      v-else-if="accessDenied"
+      :title="t('platformForbidden.recordTitle')"
+      :message="t('platformForbidden.recordMessage')"
+      :hint="t('platformForbidden.hint')"
+      :actions="[{ label: t('platformForbidden.home'), to: '/platform', testid: 'access-state-home' }]"
+      testid="platform-record-forbidden"
+    />
 
     <template v-else-if="company">
       <!-- Back button -->

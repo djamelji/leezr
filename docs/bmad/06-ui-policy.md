@@ -107,3 +107,8 @@ resources/ui/presets/
 | VCard | seulement quand la carte a un sens propre (indicateur, objet manipulable) ; jamais une carte par réglage ou par groupe de champs |
 | Filtres | ligne alignée à gauche, largeurs bornées |
 | Libellés | jamais de code brut (`FR`, `logistique`, `completed`) ni de jargon (« shift ») à l'écran |
+
+## ADR-839 — `AppAccessState` (état « vous ne pouvez pas utiliser ceci ici »)
+
+`resources/js/components/app/AppAccessState.vue` — **composition** de primitives Vuetify existantes (VCard, VAvatar, VIcon, VChip, VBtn), identique dans sa forme à l'ancienne carte `/company/403` ; aucun composant inventé, aucun preset modifié. Utilisé pour : permission manquante (Company `/company/403`, Platform `/platform/403`, onglet réservé, fiche refusée) et module indisponible (`/company/module-unavailable` : non activé, hors offre, option, non disponible). Règles : jamais de donnée de la ressource refusée, jamais une clé de permission comme explication, seules les actions que l'utilisateur peut réellement faire, retour à la page précédente toujours proposé.
+

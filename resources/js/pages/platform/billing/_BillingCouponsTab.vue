@@ -1,5 +1,6 @@
 <script setup>
 import EmptyState from '@/core/components/EmptyState.vue'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { usePlatformPlansStore } from '@/modules/platform-admin/plans/plans.store'
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { formatMoney } from '@/utils/money'
@@ -247,11 +248,14 @@ const deleteCoupon = async () => {
   }
 }
 
+// ADR-839 (M3) — the plan / module pickers are loaded only with the rights their APIs require (no avoidable 403)
+const platformAuth = usePlatformAuthStore()
+
 onMounted(async () => {
   await Promise.all([
     fetchCoupons(),
-    plansStore.fetchPlans(),
-    settingsStore.fetchModules(),
+    platformAuth.hasPermission('manage_plans') ? plansStore.fetchPlans().catch(() => null) : null,
+    platformAuth.hasPermission('manage_modules') ? settingsStore.fetchModules().catch(() => null) : null,
   ])
 })
 </script>

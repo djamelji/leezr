@@ -1,91 +1,32 @@
 <script setup>
-definePage({})
-
+import AppAccessState from '@/components/app/AppAccessState.vue'
 import { useAuthStore } from '@/core/stores/auth'
 import { useCompanyNav } from '@/composables/useCompanyNav'
 
+/**
+ * ADR-839 (Leezr 4.2 M3) — permission missing (situation A) : explicit, no data, no automatic redirect
+ * (the former 5-second countdown sent the user elsewhere before reading). Back + the user's own home.
+ */
+
+definePage({})
+
 const { t } = useI18n()
-const router = useRouter()
 const auth = useAuthStore()
 const { firstAccessibleRoute } = useCompanyNav()
 
-// ADR-357: Fallback uses workspace-appropriate landing
-const fallbackRoute = computed(() =>
+const home = computed(() =>
   firstAccessibleRoute.value !== '/'
     ? firstAccessibleRoute.value
     : auth.workspace === 'home' ? '/home' : '/dashboard',
 )
-
-const countdown = ref(5)
-let timer = null
-
-onMounted(() => {
-  timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      clearInterval(timer)
-      router.replace(fallbackRoute.value)
-    }
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
 </script>
 
 <template>
-  <VRow
-    class="fill-height"
-    align="center"
-    justify="center"
-  >
-    <VCol
-      cols="12"
-      md="6"
-      lg="4"
-    >
-      <VCard class="text-center pa-6">
-        <VIcon
-          icon="tabler-lock"
-          size="64"
-          color="warning"
-          class="mb-4"
-        />
-
-        <VCardTitle class="text-h5 mb-2">
-          {{ t('forbidden.title') }}
-        </VCardTitle>
-
-        <VCardText class="text-body-1 mb-4">
-          {{ t('forbidden.message') }}
-        </VCardText>
-
-        <VCardText class="text-body-2 text-disabled">
-          <VProgressCircular
-            :size="20"
-            :width="2"
-            indeterminate
-            class="me-2"
-          />
-          {{ t('forbidden.redirecting', { seconds: countdown }) }}
-        </VCardText>
-
-        <VCardActions class="justify-center gap-2">
-          <VBtn
-            variant="tonal"
-            @click="router.back()"
-          >
-            {{ t('forbidden.goBack') }}
-          </VBtn>
-          <VBtn
-            color="primary"
-            :to="fallbackRoute"
-          >
-            {{ t('forbidden.goToDashboard') }}
-          </VBtn>
-        </VCardActions>
-      </VCard>
-    </VCol>
-  </VRow>
+  <AppAccessState
+    :title="t('forbidden.title')"
+    :message="t('forbidden.message')"
+    :hint="t('forbidden.hint')"
+    :actions="[{ label: t('forbidden.goToDashboard'), to: home, testid: 'access-state-home' }]"
+    testid="company-forbidden"
+  />
 </template>
