@@ -5,9 +5,8 @@ namespace App\Modules\Workforce\Contract\Http;
 use App\Core\Documents\DocumentTemplate;
 use App\Core\Documents\Services\DocumentVariableResolver;
 use App\Core\Models\Company;
-use App\Core\Workforce\Employee;
-use App\Core\Workforce\EmploymentContract;
 use App\Http\Controllers\Controller;
+use App\Modules\Workforce\Contract\Services\ContractPreviewService;
 use App\Modules\Workforce\Contract\Services\ContractTemplateService;
 use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\GenerateDocumentUseCase;
@@ -52,7 +51,7 @@ class ContractController extends Controller
         $schema = DocumentVariableResolver::availableVariables(ContractTemplateService::SUBJECT);
         // Masque les variables de rémunération sans workforce.compensation_read.
         if (! WorkforceAccess::canReadCompensation($request)) {
-            $schema = array_values(array_filter($schema, fn ($v) => ! self::isCompensationVar($v['key'] ?? '')));
+            $schema = array_values(array_filter($schema, fn ($v) => ! ContractPreviewService::isCompensationVar($v['key'] ?? '')));
         }
 
         return response()->json(['data' => $schema]);
@@ -129,27 +128,18 @@ class ContractController extends Controller
 
         abort_unless(WorkforceAccess::canViewEmployeeData($request, (int) $validated['employee_id'], 'employee'), 403);
 
-        $resolved = $this->resolveContractSubject($companyId, (int) $validated['employee_id']);
+        $resolved = ContractPreviewService::resolveContractSubject($companyId, (int) $validated['employee_id']);
         if ($resolved['error']) {
             return response()->json(['message' => $resolved['error']], 422);
         }
-        $template = DocumentTemplate::where('subject_type', ContractTemplateService::SUBJECT)
-            ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId))
-            ->findOrFail($validated['template_id']);
+        $template = ContractPreviewService::template($companyId, (int) $validated['template_id']);
 
-        $variables = DocumentVariableResolver::resolve('contract', $resolved['contract'], $this->company($request));
         // Prévisualisation : masque le salaire si l'utilisateur n'a pas la permission.
-        if (! WorkforceAccess::canReadCompensation($request)) {
-            foreach (array_keys($variables) as $k) {
-                if (self::isCompensationVar($k)) {
-                    $variables[$k] = '•••';
-                }
-            }
-        }
+        $variables = ContractPreviewService::variables($request, $resolved['contract'], $this->company($request));
 
         $used = $template->extractUsedVariables();
         $missing = array_values(array_diff($used, array_keys($variables)));
-        $html = self::render(($template->header_html ?? '').$template->body_html.($template->footer_html ?? ''), $variables);
+        $html = ContractPreviewService::render(($template->header_html ?? '').$template->body_html.($template->footer_html ?? ''), $variables);
 
         return response()->json([
             'preview' => true,                      // JAMAIS un document émis ni signé
@@ -177,9 +167,7 @@ class ContractController extends Controller
         ]);
         $companyId = $request->attributes->get('company_id');
 
-        $template = DocumentTemplate::where('subject_type', ContractTemplateService::SUBJECT)
-            ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId))
-            ->findOrFail($validated['template_id']);
+        $template = ContractPreviewService::template($companyId, (int) $validated['template_id']);
 
         // Contenu non enregistré : on applique la sanitation SERVEUR et on travaille sur une copie
         // EN MÉMOIRE (jamais sauvegardée). L'édition d'un contenu non enregistré ne contourne donc
@@ -199,18 +187,11 @@ class ContractController extends Controller
 
         if ($request->filled('employee_id')) {
             abort_unless(WorkforceAccess::canViewEmployeeData($request, (int) $validated['employee_id'], 'employee'), 403);
-            $resolved = $this->resolveContractSubject($companyId, (int) $validated['employee_id']);
+            $resolved = ContractPreviewService::resolveContractSubject($companyId, (int) $validated['employee_id']);
             if ($resolved['error']) {
                 return response()->json(['message' => $resolved['error']], 422);
             }
-            $variables = DocumentVariableResolver::resolve('contract', $resolved['contract'], $this->company($request));
-            if (! WorkforceAccess::canReadCompensation($request)) {
-                foreach (array_keys($variables) as $k) {
-                    if (self::isCompensationVar($k)) {
-                        $variables[$k] = '•••';
-                    }
-                }
-            }
+            $variables = ContractPreviewService::variables($request, $resolved['contract'], $this->company($request));
         } else {
             // Contexte Platform / échantillon : chaque variable rendue par son libellé entre crochets.
             $variables = collect(DocumentVariableResolver::availableVariables('contract'))
@@ -237,7 +218,7 @@ class ContractController extends Controller
 
         abort_unless(WorkforceAccess::canViewEmployeeData($request, (int) $validated['employee_id'], 'employee'), 403);
 
-        $resolved = $this->resolveContractSubject($companyId, (int) $validated['employee_id']);
+        $resolved = ContractPreviewService::resolveContractSubject($companyId, (int) $validated['employee_id']);
         if ($resolved['error']) {
             return response()->json(['message' => $resolved['error']], 422);
         }
@@ -258,37 +239,5 @@ class ContractController extends Controller
         }
 
         return response()->json(\App\Modules\Workforce\Security\WorkforceAccess::canReadCompensation($request) ? $doc : $doc->makeHidden('generation_snapshot'), 201); // ADR-771 : l'instantané porte la rémunération
-    }
-
-    /** Résout le contrat métier COURANT du collaborateur (jamais créé automatiquement). */
-    private function resolveContractSubject(int $companyId, int $employeeId): array
-    {
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->find($employeeId);
-        if (! $employee) {
-            return ['error' => 'Collaborateur introuvable.', 'contract' => null];
-        }
-        $contract = EmploymentContract::withoutGlobalScopes()->where('company_id', $companyId)
-            ->where('employee_id', $employeeId)->where('is_current', true)->first()
-            ?? EmploymentContract::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employeeId)->latest('start_date')->first();
-        if (! $contract) {
-            return ['error' => 'Aucun contrat de travail pour ce collaborateur. Créez-le d\'abord dans sa fiche.', 'contract' => null];
-        }
-
-        return ['error' => null, 'contract' => $contract];
-    }
-
-    /** Substitution STRICTE {{ var }} — aucune exécution de code (pas de Blade/PHP/JS). */
-    private static function render(string $html, array $variables): string
-    {
-        return preg_replace_callback('/\{\{\s*([\w.]+)\s*\}\}/', function ($m) use ($variables) {
-            $v = $variables[$m[1]] ?? '';
-
-            return htmlspecialchars(is_scalar($v) ? (string) $v : '', ENT_QUOTES);
-        }, $html);
-    }
-
-    private static function isCompensationVar(string $key): bool
-    {
-        return (bool) preg_match('/salary|compensation|rate|remuneration|salaire/i', $key);
     }
 }

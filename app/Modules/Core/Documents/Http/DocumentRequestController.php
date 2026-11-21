@@ -5,16 +5,14 @@ namespace App\Modules\Core\Documents\Http;
 use App\Company\RBAC\CompanyRole;
 use App\Core\Documents\DocumentRequest;
 use App\Core\Documents\DocumentSubject;
-use App\Core\Documents\DocumentType;
 use App\Core\Documents\ReadModels\DocumentRequestQueueReadModel;
 use App\Core\Documents\Services\PersonSubjectResolver;
 use App\Core\Models\Membership;
-use App\Core\Models\User;
 use App\Modules\Core\People\PersonRef;
-use App\Core\Notifications\NotificationDispatcher;
 use App\Core\Realtime\PublishesRealtimeEvents;
 use App\Modules\Core\Members\UseCases\BatchRequestByRoleUseCase;
 use App\Modules\Core\Members\UseCases\CancelDocumentRequestUseCase;
+use App\Modules\Core\Members\UseCases\RemindDocumentRequestUseCase;
 use App\Modules\Core\Members\UseCases\RequestDocumentUseCase;
 use App\Modules\Core\Members\UseCases\ReviewMemberDocumentData;
 use App\Modules\Core\Members\UseCases\ReviewMemberDocumentUseCase;
@@ -184,48 +182,14 @@ class DocumentRequestController
         return response()->json(['roles' => $roles]);
     }
 
-    public function remind(Request $request, int $requestId): JsonResponse
+    public function remind(Request $request, int $requestId, RemindDocumentRequestUseCase $useCase): JsonResponse
     {
-        $company = $request->attributes->get('company');
-
-        $docRequest = DocumentRequest::where('company_id', $company->id)
-            ->where('id', $requestId)
-            ->firstOrFail();
-
-        if ($docRequest->status !== DocumentRequest::STATUS_REQUESTED) {
-            abort(422, 'Only requests in "requested" status can be reminded.');
-        }
-
-        // ADR-770 : une relance manuelle est TRACÉE (événement `reminded`, `last_reminded_at`) et ne réécrit
-        // plus `requested_at` — la date de la demande est un fait d'audit, et le cycle des relances
-        // automatiques est calculé à partir d'elle.
-        $docRequest->update(['last_reminded_at' => now()]);
-        \App\Core\Documents\DocumentRequestEvent::create([
-            'company_id' => $company->id, 'document_request_id' => $docRequest->id,
-            'event' => \App\Core\Documents\DocumentRequestEvent::E_REMINDED, 'actor_id' => $request->user()->id,
-            'created_at' => now(), 'metadata' => ['tier' => 'manual'],
-        ]);
-
-        $recipient = User::find($docRequest->user_id);
-        if ($recipient) {
-            $docType = DocumentType::find($docRequest->document_type_id);
-            NotificationDispatcher::send(
-                topicKey: 'documents.request_new',
-                recipients: [$recipient],
-                payload: [
-                    'document_type' => $docType?->label,
-                    'document_code' => $docType?->code,
-                    'link' => '/account-settings/documents',
-                ],
-                company: $company,
-                entityKey: "document_request:{$recipient->id}:{$docType?->code}",
-            );
-        }
+        $notified = $useCase->execute($request->attributes->get('company'), $requestId, $request->user()); // ADR-848
 
         // Jamais de fausse confirmation : un collaborateur sans compte ne reçoit aucune notification.
         return response()->json([
-            'message' => $recipient ? 'Reminder sent.' : 'Reminder recorded — this person has no account to notify.',
-            'notified' => (bool) $recipient,
+            'message' => $notified ? 'Reminder sent.' : 'Reminder recorded — this person has no account to notify.',
+            'notified' => $notified,
         ]);
     }
 

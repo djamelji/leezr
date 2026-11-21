@@ -51,9 +51,7 @@ class BillingPdfPerfTest extends TestCase
     {
         // ADR-627: the premium platform font (Poppins) is embedded from the REPO-BUNDLED TTFs,
         // never fetched from Google at render time.
-        $m = new \ReflectionMethod(\App\Modules\Core\Billing\Http\CompanyBillingController::class, 'localFontFaceCss');
-        $m->setAccessible(true);
-        $css = $m->invoke(null, 'Poppins');
+        $css = \App\Core\Billing\Documents\InvoicePdfRenderer::localFontFaceCss('Poppins'); // ADR-848 : moved out of the controller
 
         $this->assertNotNull($css, 'Poppins must resolve to a local @font-face');
         $this->assertStringContainsString('resources/fonts/poppins', $css, 'font loaded from the bundled repo fonts');

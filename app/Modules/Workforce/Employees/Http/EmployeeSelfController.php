@@ -2,11 +2,11 @@
 
 namespace App\Modules\Workforce\Employees\Http;
 
-use App\Core\Models\Company;
 use App\Core\Workforce\Employee;
 use App\Core\Workforce\Services\WorkforceRuleResolver;
 use App\Core\Workforce\TimeEntry;
 use App\Modules\Workforce\ReadModels\EmployeeReadModel;
+use App\Modules\Workforce\Services\BreakResumeGuard;
 use App\Modules\Workforce\ReadModels\GeneratedDocumentReadModel;
 use App\Modules\Workforce\ReadModels\LeaveBalanceReadModel;
 use App\Modules\Workforce\ReadModels\LeaveRequestReadModel;
@@ -51,16 +51,8 @@ class EmployeeSelfController
             'leave_balances' => LeaveBalanceReadModel::forEmployee($companyId, $employee->id),
             // Resolved break rules (WorkforceRuleResolver §2): the UI countdown/policy come from
             // the server + rules engine, never from Vue constants. Flattened for the client.
-            'break_rules' => $this->breakRulesPayload($companyId),
+            'break_rules' => BreakResumeGuard::rules($companyId),
         ]);
-    }
-
-    /** Resolved break rules, flattened by the rules engine (never Vue constants). */
-    private function breakRulesPayload(int $companyId): array
-    {
-        $company = Company::withoutGlobalScopes()->find($companyId);
-
-        return $company ? app(WorkforceRuleResolver::class)->breakRulesForClient($company) : [];
     }
 
     /** GET /workforce/me/today */
@@ -85,13 +77,7 @@ class EmployeeSelfController
         $employee = $this->resolveEmployee($request);
         $validated = $request->validate(['source' => 'nullable|string|in:manual,mobile,kiosk']);
 
-        try {
-            $entry = app(ClockInUseCase::class)->execute($employee, $validated['source'] ?? 'manual');
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($entry, 201);
+        return $this->domain(fn () => app(ClockInUseCase::class)->execute($employee, $validated['source'] ?? 'manual'), 201);
     }
 
     /** POST /workforce/me/clock-out */
@@ -102,13 +88,7 @@ class EmployeeSelfController
 
         $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id);
 
-        try {
-            $entry = app(ClockOutUseCase::class)->execute($entry);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($entry);
+        return $this->domain(fn () => app(ClockOutUseCase::class)->execute($entry));
     }
 
     /** POST /workforce/me/break/start */
@@ -120,13 +100,7 @@ class EmployeeSelfController
 
         $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id, TimeEntry::STATUS_WORKING);
 
-        try {
-            $break = app(StartBreakUseCase::class)->execute($entry, $validated['type'] ?? 'rest');
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($break, 201);
+        return $this->domain(fn () => app(StartBreakUseCase::class)->execute($entry, $validated['type'] ?? 'rest'), 201);
     }
 
     /** POST /workforce/me/break/end */
@@ -137,35 +111,12 @@ class EmployeeSelfController
 
         $entry = TimeEntryReadModel::latestActiveOrFail($companyId, $employee->id, TimeEntry::STATUS_ON_BREAK);
 
-        // Early-resume policy (server-enforced, driven by the rules engine — never a Vue constant).
-        $rules = $this->breakRulesPayload($companyId);
-        $minMinutes = $rules['min_duration_minutes'] ?? null;
-        $policy = $rules['early_resume_policy'] ?? 'warn';
-        $openBreak = $entry->breaks()->whereNull('end_at')->latest('start_at')->first();
-        $elapsedMin = $openBreak?->start_at ? $openBreak->start_at->diffInMinutes(now()) : null;
-
-        if ($minMinutes !== null && $elapsedMin !== null && $elapsedMin < $minMinutes) {
-            // 'block' always refuses; 'approve' refuses for self-service (needs a manager with
-            // workforce.time_manage). 'warn'/'allow' proceed (the UI shows the warning).
-            $canApprove = $request->user()?->hasCompanyPermission($request->attributes->get('company'), 'workforce.time_manage') ?? false;
-            if ($policy === 'block' || ($policy === 'approve' && ! $canApprove)) {
-                return response()->json([
-                    'message' => "Minimum break not reached ({$elapsedMin}/{$minMinutes} min).",
-                    'code' => $policy === 'approve' ? 'break_needs_approval' : 'break_min_not_reached',
-                    'elapsed_minutes' => $elapsedMin,
-                    'min_minutes' => $minMinutes,
-                    'policy' => $policy,
-                ], 422);
-            }
+        // Early-resume policy (server-enforced, driven by the rules engine — ADR-848 : BreakResumeGuard)
+        if ($refusal = BreakResumeGuard::refusal($request, $entry, $companyId)) {
+            return response()->json($refusal, 422);
         }
 
-        try {
-            $break = app(EndBreakUseCase::class)->execute($entry);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($break);
+        return $this->domain(fn () => app(EndBreakUseCase::class)->execute($entry));
     }
 
     /**
@@ -219,20 +170,14 @@ class EmployeeSelfController
             'reason' => 'nullable|string|max:500',
         ]);
 
-        try {
-            $leaveRequest = app(RequestLeaveUseCase::class)->execute(
+        return $this->domain(fn () => app(RequestLeaveUseCase::class)->execute(
                 employee: $employee,
                 leaveTypeId: $validated['leave_type_id'],
                 dateFrom: $validated['date_from'],
                 dateTo: $validated['date_to'],
                 daysCountHundredths: $validated['days_count_hundredths'],
                 reason: $validated['reason'] ?? null,
-            );
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($leaveRequest, 201);
+            ), 201);
     }
 
     /**
@@ -283,5 +228,15 @@ class EmployeeSelfController
         return response()->json([
             'documents' => GeneratedDocumentReadModel::forEmployee($employee->id, $companyId),
         ]);
+    }
+
+    /** ADR-848 : run a use case ; a business refusal (DomainException) answers 422 with its message. */
+    private function domain(callable $fn, int $status = 200): JsonResponse
+    {
+        try {
+            return response()->json($fn(), $status);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 }

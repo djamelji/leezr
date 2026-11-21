@@ -5,23 +5,17 @@ namespace App\Modules\Core\Documents\Http;
 use App\Core\Audit\AuditLogger;
 use App\Core\Documents\DocumentConfidentiality;
 use App\Core\Documents\DocumentProcessingPipeline;
-use App\Core\Documents\DocumentRequest;
-use App\Core\Documents\DocumentResolverService;
 use App\Core\Documents\DocumentSubject;
 use App\Core\Documents\DocumentType;
 use App\Core\Documents\DocumentTypeActivation;
 use App\Core\Documents\DocumentVersion;
 use App\Core\Documents\MemberDocument;
 use App\Core\Documents\Services\DocumentAccessPolicy;
-use App\Core\Documents\Services\DocumentComplianceStateService;
-use App\Core\Documents\Services\DocumentIntegrityService;
 use App\Core\Documents\Services\DocumentVersioningService;
 use App\Core\Documents\RetryDocumentAiService;
 use App\Core\Realtime\PublishesRealtimeEvents;
-use App\Jobs\Documents\ProcessDocumentAiJob;
 use App\Core\Documents\ReadModels\MemberDocumentWorkflowReadModel;
 use App\Core\Models\User;
-use App\Core\Storage\StorageQuotaService;
 use App\Modules\Core\Members\UseCases\DeleteMemberDocumentData;
 use App\Modules\Core\Members\UseCases\DeleteMemberDocumentUseCase;
 use App\Modules\Core\Members\UseCases\ReviewMemberDocumentData;
@@ -80,94 +74,8 @@ class MemberDocumentController extends Controller
             'expires_at' => $expiresAtRule,
         ]);
 
-        // ADR-169 Phase 4: Storage quota guard
-        $quota = StorageQuotaService::usage($company);
-        if ($quota['blocked']) {
-            return response()->json([
-                'message' => 'Storage quota exceeded. Upgrade your plan to upload more documents.',
-                'storage' => $quota,
-            ], 422);
-        }
-
-        $uploadedFiles = $request->hasFile('files')
-            ? $request->file('files')
-            : [$request->file('file')];
-
-        $processed = $pipeline->process($uploadedFiles, $documentCode);
-
-        try {
-            if ($processed->passthrough) {
-                $file = $uploadedFiles[0];
-                $path = $file->store("documents/{$company->id}/{$user->id}", 'local');
-                $fileName = $file->getClientOriginalName();
-                $fileSize = $file->getSize();
-                $mimeType = $file->getMimeType();
-                $ocrText = null;
-            } else {
-                // ADR-770 : chemin UNIQUE (putFile → nom aléatoire), jamais `putFileAs($processed->fileName)` :
-                // le nom produit par le pipeline est déterministe (`{code}.pdf`) → un remplacement
-                // ÉCRASAIT le fichier précédent, que la version archivée continuait de référencer.
-                $path = Storage::disk('local')->putFile(
-                    "documents/{$company->id}/{$user->id}",
-                    new \Illuminate\Http\File($processed->pdfPath),
-                );
-                $fileName = $processed->fileName;
-                $fileSize = $processed->fileSize;
-                $mimeType = $processed->mimeType;
-                $ocrText = $processed->ocrText;
-            }
-        } finally {
-            $pipeline->cleanup();
-        }
-
-        // ADR-756 (DMS M0): intégrité + remplacement NON destructif + idempotence.
-        $integrity = app(DocumentIntegrityService::class);
-        $versioning = app(DocumentVersioningService::class);
-        $newHash = $integrity->storedHash($path); // ADR-810.1 : échec de stockage → rien n'est écrit
-
-        $keys = [
-            'company_id' => $company->id,
-            'user_id' => $user->id,
-            'document_type_id' => $type->id,
-        ];
-        $existing = MemberDocument::where($keys)->first();
-
-        if ($existing && $versioning->isDuplicate($existing, $newHash)) {
-            // Contenu identique → remplacement inutile : on jette le fichier fraîchement stocké,
-            // on conserve le fichier courant et l'historique (idempotent).
-            Storage::disk('local')->delete($path);
-            $document = $existing;
-        } else {
-            // Archive la version précédente AVANT de pointer vers le nouveau fichier (non destructif :
-            // le store() génère un nouveau chemin, l'ancien fichier reste référencé par la version).
-            if ($existing && ! empty($existing->file_path)) {
-                $versioning->snapshotCurrent($existing, DocumentVersion::SOURCE_UPLOAD, $request->user()->id);
-            }
-
-            $document = MemberDocument::updateOrCreate($keys, [
-                'file_path' => $path,
-                'file_name' => $fileName,
-                'file_size_bytes' => $fileSize,
-                'mime_type' => $mimeType,
-                'uploaded_by' => $request->user()->id,
-                'expires_at' => $request->input('expires_at'),
-                'ocr_text' => $ocrText,
-                'ai_status' => 'pending',
-                'file_sha256' => $newHash,
-                'published_state' => DocumentComplianceStateService::P_PUBLISHED,
-                'document_subject_type' => DocumentSubject::TYPE_USER,
-                'document_subject_id' => $user->id,
-            ]);
-
-            // ADR-413: Dispatch AI analysis job (seulement si le contenu a changé)
-            ProcessDocumentAiJob::dispatch(MemberDocument::class, $document->id, $type->id);
-        }
-
-        // ADR-176 / ADR-759 (M2): soumission via le moteur de demandes (sujet-keyed + événement).
-        app(\App\Core\Documents\Services\DocumentRequestService::class)
-            ->markSubmitted($company->id, DocumentSubject::user($user->id), $type, $request->user());
-
-        $this->publishDomainEvent('document.updated', $company->id, ['id' => $document->id, 'type' => 'uploaded', 'entity' => 'MemberDocument', 'member_id' => $user->id, 'document_type' => $type->code, 'ai_status' => 'pending']);
+        $document = app(\App\Modules\Core\Members\UseCases\UploadMemberDocumentUseCase::class)
+            ->execute($request, $company, $user, $type, $documentCode, $pipeline); // ADR-848
 
         return response()->json([
             'message' => 'Document uploaded.',
@@ -183,18 +91,7 @@ class MemberDocumentController extends Controller
 
     public function download(Request $request, int $membershipId, string $documentCode, DocumentAccessPolicy $policy)
     {
-        $company = $request->attributes->get('company');
-        $membership = $company->memberships()->findOrFail($membershipId);
-        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
-
-        $type = DocumentType::where('code', $documentCode)->firstOrFail();
-
-        $document = MemberDocument::where('company_id', $company->id)
-            ->where('user_id', $membership->user_id)
-            ->where('document_type_id', $type->id)
-            ->firstOrFail();
-
-        $subject = DocumentSubject::fromMemberDocument($document);
+        [$company, $type, $document, $subject] = $this->currentDocument($request, $membershipId, $documentCode); // ADR-848
         if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_DOWNLOAD)) {
             abort(403, 'You are not authorized to download this document.');
         }
@@ -209,17 +106,7 @@ class MemberDocumentController extends Controller
      */
     public function versions(Request $request, int $membershipId, string $documentCode, DocumentAccessPolicy $policy, DocumentVersioningService $versioning): JsonResponse
     {
-        $company = $request->attributes->get('company');
-        $membership = $company->memberships()->findOrFail($membershipId);
-        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
-        $type = DocumentType::where('code', $documentCode)->firstOrFail();
-
-        $document = MemberDocument::where('company_id', $company->id)
-            ->where('user_id', $membership->user_id)
-            ->where('document_type_id', $type->id)
-            ->firstOrFail();
-
-        $subject = DocumentSubject::fromMemberDocument($document);
+        [$company, $type, $document, $subject] = $this->currentDocument($request, $membershipId, $documentCode); // ADR-848
         if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_VERSIONS)) {
             abort(403, 'You are not authorized to view this document history.');
         }
@@ -242,17 +129,7 @@ class MemberDocumentController extends Controller
      */
     public function downloadVersion(Request $request, int $membershipId, string $documentCode, int $versionId, DocumentAccessPolicy $policy)
     {
-        $company = $request->attributes->get('company');
-        $membership = $company->memberships()->findOrFail($membershipId);
-        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
-        $type = DocumentType::where('code', $documentCode)->firstOrFail();
-
-        $document = MemberDocument::where('company_id', $company->id)
-            ->where('user_id', $membership->user_id)
-            ->where('document_type_id', $type->id)
-            ->firstOrFail();
-
-        $subject = DocumentSubject::fromMemberDocument($document);
+        [$company, $type, $document, $subject] = $this->currentDocument($request, $membershipId, $documentCode); // ADR-848
         if (! $policy->canAccess($request->user(), $company, $subject, $type->code, DocumentAccessPolicy::OP_DOWNLOAD)) {
             abort(403, 'You are not authorized to download this document version.');
         }
@@ -265,6 +142,21 @@ class MemberDocumentController extends Controller
         $this->auditSensitiveAccess($request, $company->id, $type->code, 'document_version', (int) $version->id, (string) $subject);
 
         return Storage::disk('local')->download($version->file_path, $version->file_name);
+    }
+
+    /** ADR-848 : the member's CURRENT document of a type (subject settled first, ADR-770) — shared by download / versions. */
+    private function currentDocument(Request $request, int $membershipId, string $documentCode): array
+    {
+        $company = $request->attributes->get('company');
+        $membership = $company->memberships()->findOrFail($membershipId);
+        \App\Core\Documents\Services\PersonDocumentContinuity::settleSubject($company->id, DocumentSubject::user((int) $membership->user_id)); // ADR-770
+        $type = DocumentType::where('code', $documentCode)->firstOrFail();
+        $document = MemberDocument::where('company_id', $company->id)
+            ->where('user_id', $membership->user_id)
+            ->where('document_type_id', $type->id)
+            ->firstOrFail();
+
+        return [$company, $type, $document, DocumentSubject::fromMemberDocument($document)];
     }
 
     /** Journalise l'accès aux pièces HAUTEMENT confidentielles (bulletins, ID, bancaire, casier). */

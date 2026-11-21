@@ -158,21 +158,10 @@ class PlatformBillingController
             abort(404, 'Invoice not found.');
         }
 
-        $snap = $invoice->billing_snapshot ?? [];
-        $locale = $snap['market_locale'] ?? 'fr-FR';
-        $payments = \App\Core\Billing\Payment::where('invoice_id', $invoice->id)->get();
+        // ADR-848 : the same document as the company downloads (was a degraded copy of the rendering)
+        $filename = \App\Core\Billing\Documents\InvoicePdfRenderer::filename($invoice);
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('billing.invoice-pdf', [
-            'invoice' => $invoice,
-            'company' => $invoice->company,
-            'snap' => $snap,
-            'locale' => $locale,
-            'payments' => $payments,
-        ]);
-
-        $filename = ($invoice->number ?: "invoice-{$invoice->id}") . '.pdf';
-
-        return response($pdf->output(), 200, [
+        return response(\App\Core\Billing\Documents\InvoicePdfRenderer::render($invoice), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);

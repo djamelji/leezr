@@ -5,6 +5,7 @@ namespace App\Modules\Platform\Email\Http;
 use App\Core\Email\EmailAttachmentService;
 use App\Core\Email\EmailBulkActionService;
 use App\Core\Email\EmailComposeService;
+use App\Core\Email\EmailInboxReadModel;
 use App\Core\Email\EmailLog;
 use App\Core\Email\EmailThread;
 use App\Core\Email\ImapFetcher;
@@ -15,64 +16,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class EmailInboxController
 {
     public function index(Request $request): JsonResponse
     {
-        $folder = $request->query('folder', 'inbox');
-        $starred = $request->boolean('starred');
-        $label = $request->query('label');
-
-        $query = EmailThread::with(['company:id,name']);
-
-        // ADR-607 (LOT 5): server-side sort — newest (default), oldest, or unread first.
-        match ($request->query('sort', 'date_desc')) {
-            'date_asc' => $query->orderBy('last_message_at'),
-            'unread_first' => $query->orderByDesc('unread_count')->orderByDesc('last_message_at'),
-            default => $query->orderByDesc('last_message_at'),
-        };
-
-        if ($starred) {
-            $query->starred();
-        } elseif ($folder === 'sent') {
-            $sentIds = EmailLog::where('direction', 'sent')->whereNotNull('thread_id')->distinct()->pluck('thread_id');
-            $query->whereIn('id', $sentIds);
-        } else {
-            $query->folder($folder);
-        }
-
-        if ($label) {
-            $query->withLabel($label);
-        }
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-        if ($request->query('unread')) {
-            $query->withUnread();
-        }
-        if ($companyId = $request->query('company_id')) {
-            $query->where('company_id', $companyId);
-        }
-        if ($search = $request->query('search')) {
-            $query->search($search);
-        }
-
-        $threads = $query->paginate(20);
-
-        return response()->json([
-            'data' => $this->enrichThreads($threads),
-            'current_page' => $threads->currentPage(),
-            'last_page' => $threads->lastPage(),
-            'total' => $threads->total(),
-            'folder_counts' => $this->folderCounts(),
-            'stats' => [
-                'total_unread' => EmailThread::where('unread_count', '>', 0)->count(),
-                'open' => EmailThread::open()->count(),
-                'closed' => EmailThread::closed()->count(),
-            ],
-        ]);
+        return response()->json(EmailInboxReadModel::list($request)); // ADR-848
     }
 
     public function show(int $id): JsonResponse
@@ -212,19 +161,10 @@ class EmailInboxController
         return response()->json(['message' => 'Thread marked as read.']);
     }
 
-    /**
-     * ADR-610 (LOT 1): authoritative unread MESSAGE count for the nav badge.
-     * Counts real received messages that are unread AND belong to an inbox-folder thread —
-     * i.e. excludes sent messages, Spam and Trash. This is a message count, not a thread count.
-     */
+    /** ADR-610 (LOT 1): authoritative unread MESSAGE count for the nav badge (see EmailInboxReadModel). */
     public function unreadCount(): JsonResponse
     {
-        $count = EmailLog::where('direction', 'received')
-            ->where('is_read', false)
-            ->whereHas('thread', fn ($q) => $q->where('folder', 'inbox'))
-            ->count();
-
-        return response()->json(['count' => $count]);
+        return response()->json(['count' => EmailInboxReadModel::unreadMessages()]);
     }
 
     public function updateStatus(Request $request, int $id): JsonResponse
@@ -276,39 +216,6 @@ class EmailInboxController
 
             return response()->json(['message' => 'Sync failed: '.$e->getMessage(), 'count' => 0], 500);
         }
-    }
-
-    private function enrichThreads($paginator): array
-    {
-        $threadIds = collect($paginator->items())->pluck('id');
-        $lastMessages = EmailLog::whereIn('thread_id', $threadIds)
-            ->orderByDesc('created_at')->get()->groupBy('thread_id')
-            ->map(fn ($msgs) => $msgs->first());
-
-        return collect($paginator->items())->map(function ($thread) use ($lastMessages) {
-            $t = $thread->toArray();
-            $last = $lastMessages->get($thread->id);
-            $t['last_message'] = $last ? [
-                'subject' => $last->subject,
-                'body_text' => Str::limit($last->body_text ?? strip_tags($last->body_html ?? ''), 120),
-                'direction' => $last->direction,
-                'created_at' => $last->created_at?->toISOString(),
-            ] : null;
-
-            return $t;
-        })->all();
-    }
-
-    private function folderCounts(): array
-    {
-        return [
-            'inbox' => EmailThread::folder('inbox')->withUnread()->count(),
-            'sent' => EmailLog::where('direction', 'sent')->whereNotNull('thread_id')->distinct('thread_id')->count('thread_id'),
-            'draft' => EmailThread::folder('draft')->count(),
-            'starred' => EmailThread::starred()->count(),
-            'spam' => EmailThread::folder('spam')->count(),
-            'trash' => EmailThread::folder('trash')->count(),
-        ];
     }
 
     private function publishEmailEvent(string $action, ?int $threadId): void
