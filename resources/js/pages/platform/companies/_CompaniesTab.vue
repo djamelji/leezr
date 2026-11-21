@@ -7,6 +7,7 @@
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 
@@ -15,6 +16,8 @@ const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
+const platformAuth = usePlatformAuthStore()
+const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
@@ -397,6 +400,16 @@ const segmentChips = computed(() => [
             clear-icon="tabler-x"
             style="inline-size: 10rem;"
           />
+
+          <!-- ADR-834 : creation wizard, only for operators allowed to create -->
+          <VBtn
+            v-if="canCreateCompany"
+            prepend-icon="tabler-plus"
+            :to="{ name: 'platform-companies-create' }"
+            data-testid="new-company"
+          >
+            {{ t('platformCompanyCreation.newCompany') }}
+          </VBtn>
         </div>
       </VCardText>
 

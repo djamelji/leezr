@@ -37,11 +37,8 @@ final class PlatformCompanyCreationCatalog
                     'offered_for_signup' => (bool) $jd->signup_available,
                 ])->values()->all(),
             'plans' => array_map(fn ($p) => [
-                'key' => $p['key'],
+                ...$p,
                 'name' => $p['name'] ?? $p['key'],
-                'level' => $p['level'] ?? 0,
-                'price_monthly' => $p['price_monthly'] ?? 0,
-                'price_yearly' => $p['price_yearly'] ?? 0,
                 'trial_days' => (int) ($p['trial_days'] ?? 0),
                 'is_free' => ($p['price_monthly'] ?? 0) <= 0 && ($p['price_yearly'] ?? 0) <= 0,
             ], PlanRegistry::publicCatalog()),

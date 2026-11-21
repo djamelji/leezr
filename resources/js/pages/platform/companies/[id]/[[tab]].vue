@@ -13,6 +13,7 @@ import CompanyBioPanel from '../_CompanyBioPanel.vue'
 import CompanyBillingTab from '../_CompanyBillingTab.vue'
 import CompanyMembersTab from '../_CompanyMembersTab.vue'
 import CompanyActivityTab from '../_CompanyActivityTab.vue'
+import CompanyOnboardingTab from '../_CompanyOnboardingTab.vue'
 
 definePage({
   name: 'platform-companies-id', // ADR-820 : onglet dans le chemin (/platform/companies/{id}/{billing|modules|members|activity})
@@ -21,7 +22,8 @@ definePage({
     platform: true,
     module: 'platform.companies',
     navActiveKey: 'platform-companies',
-    permission: 'manage_companies',
+    // ADR-834 : the creation operator (create_companies) follows the start of service of the companies it creates
+    anyPermission: ['manage_companies', 'create_companies'],
   },
 })
 
@@ -33,7 +35,7 @@ const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const actionLoading = ref(false)
-const COMPANY_TABS = ['overview', 'configuration', 'billing', 'modules', 'members', 'activity'] // ADR-821 : configuration séparée de la synthèse
+const COMPANY_TABS = ['overview', 'onboarding', 'configuration', 'billing', 'modules', 'members', 'activity'] // ADR-821 : configuration séparée de la synthèse
 // ADR-820 : l'onglet vient du chemin ; les anciens liens `?tab=billing` (jusqu'ici ignorés) sont compris puis réécrits.
 const askedTab = route.params.tab || route.query.tab
 const activeTab = ref(COMPANY_TABS.includes(askedTab) ? askedTab : 'overview')
@@ -437,6 +439,7 @@ const summaryStats = computed(() => [
 // ─── Tabs definition ────────────────────────────────
 const tabs = computed(() => [
   { value: 'overview', icon: 'tabler-layout-dashboard', title: t('platformCompanyDetail.overview') },
+  { value: 'onboarding', icon: 'tabler-rocket', title: t('platformCompanyCreation.onboarding.title') }, // ADR-834
   { value: 'configuration', icon: 'tabler-settings', title: t('platformCompanySummary.configuration') },
   { value: 'billing', icon: 'tabler-receipt', title: t('platformCompanyDetail.billing.tab') },
   { value: 'modules', icon: 'tabler-puzzle', title: t('platformCompanyDetail.modules') },
@@ -998,6 +1001,15 @@ const tabs = computed(() => [
                 :members="membersData"
                 :loading="membersLoading"
                 @refresh="refreshMembers"
+              />
+            </VWindowItem>
+
+            <!-- ─── Start of service (ADR-834) ────── -->
+            <VWindowItem value="onboarding">
+              <CompanyOnboardingTab
+                v-if="activeTab === 'onboarding'"
+                :company-id="route.params.id"
+                @go-tab="tab => activeTab = tab"
               />
             </VWindowItem>
 

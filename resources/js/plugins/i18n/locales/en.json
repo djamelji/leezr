@@ -12010,5 +12010,201 @@
   "appSectionNav": {
     "more": "More sections",
     "moreShort": "More"
+  },
+  "platformCompanyCreation": {
+    "title": "New company",
+    "subtitle": "Create a company and prepare its start of service, step by step.",
+    "newCompany": "New company",
+    "backToList": "Back to companies",
+    "steps": {
+      "company": {
+        "title": "Company",
+        "subtitle": "Identity and contact"
+      },
+      "activity": {
+        "title": "Activity",
+        "subtitle": "The company's business"
+      },
+      "modules": {
+        "title": "Modules",
+        "subtitle": "Enabled features"
+      },
+      "subscription": {
+        "title": "Subscription",
+        "subtitle": "Plan and trial"
+      },
+      "administrator": {
+        "title": "Administrator",
+        "subtitle": "Account owner"
+      },
+      "initialization": {
+        "title": "Initialisation",
+        "subtitle": "Starting configuration"
+      },
+      "summary": {
+        "title": "Summary",
+        "subtitle": "Review and create"
+      }
+    },
+    "nav": {
+      "previous": "Previous",
+      "next": "Next",
+      "create": "Create the company",
+      "creating": "Creating…"
+    },
+    "company": {
+      "intro": "Enter the company's legal identity. Required information depends on the selected country.",
+      "chooseActivityFirst": "Choose the activity in the next step: business-specific information will then appear here.",
+      "requiredMissing": "Required information missing: {fields}"
+    },
+    "activity": {
+      "heading": "What is this company's activity?",
+      "description": "A company has a single activity. It determines the included modules, the roles and the starting configuration. A group with different activities creates one company per activity.",
+      "notOfferedForSignup": "Not offered in online sign-up",
+      "includedWithActivity": "Included with this activity",
+      "noActivities": "No activity is available.",
+      "changeWarning": "Changing the activity resets the selected modules."
+    },
+    "modules": {
+      "heading": "Which modules should be enabled?",
+      "description": "Modules included with the activity are enabled automatically. Choose the optional modules: their dependencies are added for you. Plan rights apply strictly.",
+      "base": "Included with the activity",
+      "baseHint": "Enabled automatically, at no extra cost.",
+      "optional": "Optional modules",
+      "unavailableSection": "Not available for this company",
+      "classes": {
+        "included": "Included in the plan",
+        "option": "Paid option",
+        "with_dependency": "Needs a paid option",
+        "plan_required": "{plan} plan required",
+        "unavailable": "Not for sale"
+      },
+      "requires": "Requires: {modules}",
+      "autoAdded": "Added automatically: needed by {modules}",
+      "pricePerMonth": "{price} / month",
+      "planHint": "Plan taken into account: {plan}. You can change it in the next step.",
+      "none": "No optional module for this activity.",
+      "paidNeedsTrial": "Paid options can only be enabled at creation during a trial. They are billed at the end of the trial.",
+      "removedAfterPlanChange": "Modules removed because unavailable with this plan: {modules}",
+      "priceBySize": "Price depends on the company's headcount"
+    },
+    "subscription": {
+      "noPayment": "Creating the company never triggers a payment.",
+      "free": "Free plan: the subscription is active from creation.",
+      "trial": "{days}-day trial, no payment. The company will set up its payment during the trial.",
+      "trialUsed": "This administrator already had a trial: the subscription will await payment.",
+      "pendingPayment": "This plan has no trial: the subscription will await payment until the company settles it.",
+      "override": {
+        "title": "Special commercial terms",
+        "enable": "Grant terms different from the plan",
+        "audited": "Restricted to authorised people, recorded in the audit log with its reason.",
+        "typeTrial": "Trial of a specific length",
+        "typeComplimentary": "Free period",
+        "trialDays": "Trial length (days)",
+        "months": "Free period (months)",
+        "reason": "Reason",
+        "reasonHint": "At least 10 characters: commercial agreement, partner, pilot…"
+      },
+      "complimentary": "Free period of {months} months: the subscription is active without payment during this period."
+    },
+    "administrator": {
+      "heading": "Who will administer the company?",
+      "description": "This person receives the Owner role and defines their own password: no password is entered here.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "E-mail address",
+      "role": "Role granted: Owner (company administrator)",
+      "checking": "Checking the address…",
+      "newAccount": "An account will be created. An activation e-mail will let them define their password.",
+      "existingActive": "An account already exists for this address ({name}). They will have to accept the invitation to access the company. Their identity is not changed.",
+      "existingInactive": "A non-activated account already exists for this address. An invitation to accept will be sent.",
+      "trialUsed": "This person already had a trial on another company."
+    },
+    "initialization": {
+      "heading": "Starting configuration",
+      "description": "What the activity brings to the company at creation. A library makes items available without making them required: obligations are decided by the company.",
+      "versioned": "Published configuration of the activity",
+      "historical": "Standard configuration of the activity",
+      "version": "Version {version}",
+      "kinds": {
+        "catalog": "Starting library",
+        "rbac": "Roles",
+        "requirements": "Requirements",
+        "organization": "Organisation",
+        "planning": "Planning"
+      },
+      "catalogSummary": "{fields} fields and {documents} document types available. None is made required.",
+      "roleAuto": "Created automatically",
+      "roleOwner": "Granted to the administrator",
+      "roleToConfirm": "Sensitive access: to be confirmed by the company",
+      "requirementsHint": "{count} requirements proposed. They remain the company's decision.",
+      "applyNow": "Apply at creation",
+      "leaveToCompany": "Let the company decide",
+      "elements": "{count} items",
+      "historicalSummary": "{roles} roles, {fields} fields and {documents} documents configured by default."
+    },
+    "summary": {
+      "heading": "Review before creating",
+      "description": "Creation is immediate. The company is in service once the administrator has activated their account.",
+      "edit": "Edit",
+      "company": "Company",
+      "activity": "Activity",
+      "modules": "Modules",
+      "baseModules": "{count} module included with the activity | {count} modules included with the activity",
+      "selectedModules": "Optional modules",
+      "noSelectedModules": "No optional module",
+      "subscription": "Subscription",
+      "administrator": "Administrator",
+      "initialization": "Initialisation",
+      "warnings": "Points of attention",
+      "toComplete": "To complete after creation",
+      "override": "Override: {reason}",
+      "applied": "Applied: {items}",
+      "leftToCompany": "Left to the company: {items}"
+    },
+    "statuses": {
+      "trialing": "Trial",
+      "active": "Active",
+      "pending_payment": "Awaiting payment",
+      "none": "No subscription"
+    },
+    "result": {
+      "created": "The company {name} has been created.",
+      "replayed": "This company had already been created: you are redirected to its record."
+    },
+    "errors": {
+      "generic": "Creation failed. Nothing was saved.",
+      "loadOptions": "Unable to load the creation options.",
+      "loadPreview": "Unable to load the modules of this activity."
+    },
+    "onboarding": {
+      "title": "Start of service",
+      "inService": "In service",
+      "notInService": "Start of service in progress",
+      "createdBy": "Created on {date} by {name}",
+      "progress": "{done} of {total} steps",
+      "items": {
+        "administrator": "Administrator activation",
+        "required_fields": "Required information",
+        "subscription": "Subscription",
+        "initial_decisions": "Configuration decisions"
+      },
+      "adminStates": {
+        "active": "Account activated",
+        "awaiting_activation": "Waiting for account activation",
+        "awaiting_acceptance": "Waiting for the invitation to be accepted",
+        "expired": "Invitation expired",
+        "delivery_failed": "The invitation e-mail could not be sent",
+        "missing": "No administrator"
+      },
+      "resend": "Resend the invitation",
+      "resent": "Invitation resent.",
+      "missingFields": "To complete: {fields}",
+      "fieldsComplete": "All required information is filled in.",
+      "editProfile": "Complete the profile",
+      "pendingDecisions": "Left to the company: {items}",
+      "decisionsDone": "No pending decision.",
+      "ownerSteps": "Company's first steps"
+    }
   }
 }

@@ -184,6 +184,32 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
       })
     },
 
+    // ─── Creation & onboarding (ADR-834) ───────────
+
+    async fetchCreationOptions() {
+      return await $platformApi('/company-creation/options')
+    },
+
+    async fetchCreationPreview(jobdomain, plan, market) {
+      return await $platformApi('/company-creation/preview', { query: { jobdomain, plan, market } })
+    },
+
+    async lookupAdministrator(email) {
+      return await $platformApi('/company-creation/administrator', { query: { email } })
+    },
+
+    async createCompany(payload) {
+      return await $platformApi('/companies', { method: 'POST', body: payload })
+    },
+
+    async fetchCompanyOnboarding(id) {
+      return await $platformApi(`/companies/${id}/onboarding`)
+    },
+
+    async resendAdministratorInvitation(id) {
+      return await $platformApi(`/companies/${id}/onboarding/resend-invitation`, { method: 'POST' })
+    },
+
     _updateCompanyInList(company) {
       const idx = this._companies.findIndex(c => c.id === company.id)
       if (idx !== -1)

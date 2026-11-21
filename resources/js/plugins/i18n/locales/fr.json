@@ -12010,5 +12010,201 @@
   "appSectionNav": {
     "more": "Plus de sections",
     "moreShort": "Plus"
+  },
+  "platformCompanyCreation": {
+    "title": "Nouvelle société",
+    "subtitle": "Créez une société et préparez sa mise en service, étape par étape.",
+    "newCompany": "Nouvelle société",
+    "backToList": "Retour aux sociétés",
+    "steps": {
+      "company": {
+        "title": "Société",
+        "subtitle": "Identité et coordonnées"
+      },
+      "activity": {
+        "title": "Activité",
+        "subtitle": "Le métier de la société"
+      },
+      "modules": {
+        "title": "Modules",
+        "subtitle": "Fonctionnalités activées"
+      },
+      "subscription": {
+        "title": "Abonnement",
+        "subtitle": "Plan et essai"
+      },
+      "administrator": {
+        "title": "Administrateur",
+        "subtitle": "Responsable du compte"
+      },
+      "initialization": {
+        "title": "Initialisation",
+        "subtitle": "Configuration de départ"
+      },
+      "summary": {
+        "title": "Récapitulatif",
+        "subtitle": "Vérifier et créer"
+      }
+    },
+    "nav": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "create": "Créer la société",
+      "creating": "Création en cours…"
+    },
+    "company": {
+      "intro": "Saisissez l'identité légale de la société. Les informations obligatoires dépendent du pays choisi.",
+      "chooseActivityFirst": "Choisissez d'abord l'activité à l'étape suivante : certaines informations propres au métier apparaîtront alors ici.",
+      "requiredMissing": "Informations obligatoires à compléter : {fields}"
+    },
+    "activity": {
+      "heading": "Quelle est l'activité de cette société ?",
+      "description": "Une société exerce une seule activité. Elle détermine les modules inclus, les rôles et la configuration de départ. Un groupe aux activités différentes crée une société par activité.",
+      "notOfferedForSignup": "Non proposée à l'inscription en ligne",
+      "includedWithActivity": "Inclus avec cette activité",
+      "noActivities": "Aucune activité n'est disponible.",
+      "changeWarning": "Changer d'activité réinitialise les modules choisis."
+    },
+    "modules": {
+      "heading": "Quels modules activer ?",
+      "description": "Les modules inclus avec l'activité sont activés automatiquement. Choisissez les modules facultatifs : leurs dépendances sont ajoutées pour vous. Les droits du plan s'appliquent strictement.",
+      "base": "Inclus avec l'activité",
+      "baseHint": "Activés automatiquement, sans surcoût.",
+      "optional": "Modules facultatifs",
+      "unavailableSection": "Non disponibles pour cette société",
+      "classes": {
+        "included": "Inclus dans le plan",
+        "option": "Option payante",
+        "with_dependency": "Nécessite une option payante",
+        "plan_required": "Plan {plan} requis",
+        "unavailable": "Non commercialisé"
+      },
+      "requires": "Nécessite : {modules}",
+      "autoAdded": "Ajouté automatiquement : nécessaire à {modules}",
+      "pricePerMonth": "{price} / mois",
+      "planHint": "Plan pris en compte : {plan}. Vous pourrez le changer à l'étape suivante.",
+      "none": "Aucun module facultatif pour cette activité.",
+      "paidNeedsTrial": "Les options payantes ne peuvent être activées à la création que pendant un essai. Elles seront facturées à la fin de l'essai.",
+      "removedAfterPlanChange": "Modules retirés car indisponibles avec ce plan : {modules}",
+      "priceBySize": "Tarif selon l'effectif de la société"
+    },
+    "subscription": {
+      "noPayment": "Aucun paiement n'est déclenché par la création de la société.",
+      "free": "Plan gratuit : l'abonnement est actif dès la création.",
+      "trial": "Essai de {days} jours, sans paiement. La société mettra en place son paiement pendant l'essai.",
+      "trialUsed": "Cet administrateur a déjà bénéficié d'un essai : l'abonnement sera en attente de paiement.",
+      "pendingPayment": "Ce plan n'a pas d'essai : l'abonnement sera en attente de paiement jusqu'à ce que la société le règle.",
+      "override": {
+        "title": "Conditions commerciales particulières",
+        "enable": "Accorder des conditions différentes du plan",
+        "audited": "Dérogation réservée aux personnes habilitées, enregistrée dans le journal d'audit avec son motif.",
+        "typeTrial": "Essai d'une durée particulière",
+        "typeComplimentary": "Période offerte",
+        "trialDays": "Durée de l'essai (jours)",
+        "months": "Durée offerte (mois)",
+        "reason": "Motif",
+        "reasonHint": "Au moins 10 caractères : accord commercial, partenaire, pilote…"
+      },
+      "complimentary": "Période offerte de {months} mois : l'abonnement est actif sans paiement pendant cette période."
+    },
+    "administrator": {
+      "heading": "Qui administrera la société ?",
+      "description": "Cette personne recevra le rôle Propriétaire. Elle définira elle-même son mot de passe : aucun mot de passe n'est saisi ici.",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse e-mail",
+      "role": "Rôle attribué : Propriétaire (administrateur de la société)",
+      "checking": "Vérification de l'adresse…",
+      "newAccount": "Un compte sera créé. Un e-mail d'activation lui permettra de définir son mot de passe.",
+      "existingActive": "Un compte existe déjà pour cette adresse ({name}). La personne devra accepter l'invitation pour accéder à la société. Son identité n'est pas modifiée.",
+      "existingInactive": "Un compte non activé existe déjà pour cette adresse. Une invitation à accepter lui sera envoyée.",
+      "trialUsed": "Cette personne a déjà bénéficié d'un essai sur une autre société."
+    },
+    "initialization": {
+      "heading": "Configuration de départ",
+      "description": "Ce que l'activité apporte à la société dès sa création. Une bibliothèque met des éléments à disposition sans les rendre obligatoires : les obligations sont décidées par la société.",
+      "versioned": "Configuration publiée de l'activité",
+      "historical": "Configuration standard de l'activité",
+      "version": "Version {version}",
+      "kinds": {
+        "catalog": "Bibliothèque de départ",
+        "rbac": "Rôles",
+        "requirements": "Exigences",
+        "organization": "Organisation",
+        "planning": "Planning"
+      },
+      "catalogSummary": "{fields} champs et {documents} types de documents disponibles. Aucun n'est rendu obligatoire.",
+      "roleAuto": "Créé automatiquement",
+      "roleOwner": "Attribué à l'administrateur",
+      "roleToConfirm": "Accès sensible : à confirmer par la société",
+      "requirementsHint": "{count} exigences proposées. Elles restent une décision de la société.",
+      "applyNow": "Appliquer dès la création",
+      "leaveToCompany": "Laisser la société décider",
+      "elements": "{count} éléments",
+      "historicalSummary": "{roles} rôles, {fields} champs et {documents} documents configurés par défaut."
+    },
+    "summary": {
+      "heading": "Vérifiez avant de créer",
+      "description": "La création est immédiate. La mise en service sera effective quand l'administrateur aura activé son compte.",
+      "edit": "Modifier",
+      "company": "Société",
+      "activity": "Activité",
+      "modules": "Modules",
+      "baseModules": "{count} module inclus avec l'activité | {count} modules inclus avec l'activité",
+      "selectedModules": "Modules facultatifs",
+      "noSelectedModules": "Aucun module facultatif",
+      "subscription": "Abonnement",
+      "administrator": "Administrateur",
+      "initialization": "Initialisation",
+      "warnings": "Points d'attention",
+      "toComplete": "À compléter après la création",
+      "override": "Dérogation : {reason}",
+      "applied": "Appliqué : {items}",
+      "leftToCompany": "Laissé à la société : {items}"
+    },
+    "statuses": {
+      "trialing": "Essai",
+      "active": "Actif",
+      "pending_payment": "En attente de paiement",
+      "none": "Aucun abonnement"
+    },
+    "result": {
+      "created": "La société {name} a été créée.",
+      "replayed": "Cette société avait déjà été créée : vous êtes redirigé vers sa fiche."
+    },
+    "errors": {
+      "generic": "La création a échoué. Rien n'a été enregistré.",
+      "loadOptions": "Impossible de charger les options de création.",
+      "loadPreview": "Impossible de charger les modules de cette activité."
+    },
+    "onboarding": {
+      "title": "Mise en service",
+      "inService": "En service",
+      "notInService": "Mise en service en cours",
+      "createdBy": "Créée le {date} par {name}",
+      "progress": "{done} sur {total} étapes",
+      "items": {
+        "administrator": "Activation de l'administrateur",
+        "required_fields": "Informations obligatoires",
+        "subscription": "Abonnement",
+        "initial_decisions": "Décisions de configuration"
+      },
+      "adminStates": {
+        "active": "Compte activé",
+        "awaiting_activation": "En attente d'activation du compte",
+        "awaiting_acceptance": "En attente d'acceptation de l'invitation",
+        "expired": "Invitation expirée",
+        "delivery_failed": "L'e-mail d'invitation n'a pas pu être envoyé",
+        "missing": "Aucun administrateur"
+      },
+      "resend": "Renvoyer l'invitation",
+      "resent": "Invitation renvoyée.",
+      "missingFields": "À compléter : {fields}",
+      "fieldsComplete": "Toutes les informations obligatoires sont renseignées.",
+      "editProfile": "Compléter le profil",
+      "pendingDecisions": "Laissé à la société : {items}",
+      "decisionsDone": "Aucune décision en attente.",
+      "ownerSteps": "Premiers pas de la société"
+    }
   }
 }
