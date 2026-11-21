@@ -1,0 +1,60 @@
+{
+ "groups": [
+  {
+   "key": "governance",
+   "titleKey": "nav.groups.governance",
+   "items": [
+    {
+     "key": "catalog",
+     "title": "Catalog",
+     "to": {
+      "name": "platform-catalog-tab",
+      "params": {
+       "tab": "modules"
+      }
+     },
+     "icon": "tabler-package",
+     "permission": "manage_modules",
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "platform-access",
+     "title": "Access Management",
+     "to": {
+      "name": "platform-access-tab",
+      "params": {
+       "tab": "users"
+      }
+     },
+     "icon": "tabler-user-shield",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "contract-templates",
+     "title": "Contract Templates",
+     "to": {
+      "name": "platform-contract-templates"
+     },
+     "icon": "tabler-file-text",
+     "permission": "manage_jobdomains",
+     "tags": [],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

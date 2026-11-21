@@ -1,0 +1,3909 @@
+{
+ "scope": "company",
+ "user": "ownerb@leezr.test",
+ "tag": "c5-beta",
+ "landing": "/home",
+ "navEntries": 26,
+ "pages": [
+  {
+   "path": "/home",
+   "source": "landing",
+   "group": null,
+   "title": "Leezr",
+   "pattern": "/home",
+   "ms": 909,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-progressbar-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "aria-required-children",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 4
+    },
+    {
+     "id": "image-alt",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/people",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "people",
+   "pattern": "/company/people",
+   "ms": 915,
+   "finalPath": "/company/people",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Embaucher",
+    "Ajouter une personne",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Annuler",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 12,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 592,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/hiring",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "workforce-hiring",
+   "pattern": "/company/workforce/hiring",
+   "ms": 907,
+   "finalPath": "/company/workforce/hiring",
+   "headings": [
+    "H1:Embauches"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Embaucher"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 336,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/contracts",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "workforce-contracts",
+   "pattern": "/company/workforce/contracts",
+   "ms": 917,
+   "finalPath": "/company/workforce/contracts",
+   "headings": [
+    "H4:Contrats de travail"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Modèles de contrat"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 398,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/planning",
+   "source": "menu",
+   "group": "time",
+   "title": "Leezr",
+   "key": "workforce-planning",
+   "pattern": "/company/workforce/planning",
+   "ms": 905,
+   "finalPath": "/company/workforce/planning",
+   "headings": [
+    "H4:Planning & temps",
+    "H5:16 nov. – 22 nov. 2026",
+    "H5:Nouveau créneau",
+    "H5:Création en lot",
+    "H5:Nouveau modèle",
+    "H5:Tâches types",
+    "H5:Semaines types",
+    "H5:Copier la semaine"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité"
+   ],
+   "buttons": [
+    "Préférences",
+    "Nouveau créneau",
+    "Préparer ma semaine",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Semaine",
+    "Jour",
+    "Postes",
+    "Mois",
+    "Aujourd'hui",
+    "Par salariés",
+    "Par postes",
+    "Filtres",
+    "Plus d'options (modèle, note)",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer",
+    "Composition — activités & pauses",
+    "Annuler",
+    "Créer",
+    "Ajouter",
+    "Nouvelle semaine type",
+    "Capturer la semaine",
+    "Prévisualiser",
+    "Annuler",
+    "Créer le remplacement",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 9,
+   "inputs": 56,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 0,
+   "alerts": [
+    "Sélectionnez un modèle, une période et les employés concernés pour générer plusieurs créneaux en une fois.",
+    "Créneau non assuré à couvrir :",
+    "Aucun collaborateur disponible dans votre périmètre sur ce créneau."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2223,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/time",
+   "source": "menu",
+   "group": "time",
+   "title": "Leezr",
+   "key": "workforce-time",
+   "pattern": "/company/workforce/time",
+   "ms": 931,
+   "finalPath": "/company/workforce/time",
+   "headings": [
+    "H4:Planning & temps",
+    "H5:Corriger le pointage",
+    "H5:Ajouter un pointage",
+    "H5:Générer une feuille de temps"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps"
+   ],
+   "buttons": [
+    "Préférences",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Générer"
+   ],
+   "iconButtonsWithoutLabel": 3,
+   "inputs": 13,
+   "tables": 1,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 566,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/leave",
+   "source": "menu",
+   "group": "time",
+   "title": "Leezr",
+   "key": "workforce-leave",
+   "pattern": "/company/workforce/leave",
+   "ms": 941,
+   "finalPath": "/company/workforce/leave",
+   "headings": [
+    "H4:Planning & temps",
+    "H5:Nouvelle demande",
+    "H5:Nouveau type de congé"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés"
+   ],
+   "buttons": [
+    "Préférences",
+    "Nouvelle demande",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés",
+    "0En attente",
+    "0Approuvées · 2026",
+    "0Refusées · 2026",
+    "Nouvelle demande",
+    "Annuler",
+    "Envoyer la demande",
+    "Plus d'options",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 21,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 877,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/documents/todo",
+   "source": "menu",
+   "group": "documents",
+   "title": "Leezr",
+   "key": "documents",
+   "pattern": "/company/documents/todo",
+   "ms": 909,
+   "finalPath": "/company/documents/todo",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 522,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/todo",
+     "textLength": 522,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 658,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/payroll",
+   "source": "menu",
+   "group": "payroll",
+   "title": "Leezr",
+   "key": "workforce-payroll",
+   "pattern": "/company/workforce/payroll",
+   "ms": 906,
+   "finalPath": "/company/workforce/payroll",
+   "headings": [
+    "H4:Paie & déclarations",
+    "H5:Nouvelle période"
+   ],
+   "tabs": [
+    "Périodes",
+    "Déclarations (DSN)"
+   ],
+   "buttons": [
+    "Nouvelle période",
+    "Périodes",
+    "Déclarations (DSN)",
+    "Nouvelle période",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 8,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "Espace de préparation de la paie — Les montants sont des estimations indicatives (barèmes non exhaustifs), à faire valider par un expert-com"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 671,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Périodes",
+     "path": "/company/workforce/payroll",
+     "textLength": 671,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Déclarations (DSN)",
+     "path": "/company/workforce/payroll/declarations",
+     "textLength": 967,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "aria-input-field-name",
+     "impact": "serious",
+     "nodes": 2
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/modules",
+   "source": "menu",
+   "group": "modules",
+   "title": "Leezr",
+   "key": "modules",
+   "pattern": "/company/modules",
+   "ms": 904,
+   "finalPath": "/company/modules",
+   "headings": [
+    "H4:Modules"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Détails",
+    "Configurer",
+    "Désactiver",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 3330,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 15
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/settings",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "space-settings",
+   "pattern": "/company/settings",
+   "ms": 921,
+   "finalPath": "/company/settings",
+   "headings": [
+    "H4:Réglages"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1413,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-required-children",
+     "impact": "critical",
+     "nodes": 7
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 3
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/profile/overview",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "company-profile",
+   "pattern": "/company/profile/overview",
+   "ms": 906,
+   "finalPath": "/company/profile/overview",
+   "headings": [
+    "H1:Profil de l'entreprise",
+    "H3:Paramètres de l'entreprise",
+    "H3:Informations administratives"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 324,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/catalogs/fields",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "company-catalogs",
+   "pattern": "/company/catalogs/fields",
+   "ms": 905,
+   "finalPath": "/company/catalogs/fields",
+   "headings": [
+    "H1:Catalogues"
+   ],
+   "tabs": [
+    "Champs (27)",
+    "Types de documents (9)"
+   ],
+   "buttons": [
+    "Champs (27)",
+    "Types de documents (9)"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 7,
+   "tables": 1,
+   "rows": 25,
+   "pagination": 2,
+   "alerts": [
+    "Disponible ne veut pas dire obligatoire : un élément actif est proposé dans les formulaires. Pour le rendre obligatoire, exigez-le pour un p"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1855,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs (27)",
+     "path": "/company/catalogs/fields",
+     "textLength": 1855,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Types de documents (9)",
+     "path": "/company/catalogs/documents",
+     "textLength": 1247,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/organization/departments",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workforce-organization",
+   "pattern": "/company/workforce/organization/departments",
+   "ms": 931,
+   "finalPath": "/company/workforce/organization/departments",
+   "headings": [
+    "H1:Organisation",
+    "H5:Ajouter un département",
+    "H5:Ajouter un poste"
+   ],
+   "tabs": [
+    "Départements",
+    "Postes",
+    "Lieux"
+   ],
+   "buttons": [
+    "Assistant de configuration",
+    "Enregistrer le profil",
+    "Prévisualiser le modèle",
+    "Départements",
+    "Postes",
+    "Lieux",
+    "Ajouter un département",
+    "Ajouter un département",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 15,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 843,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Départements",
+     "path": "/company/workforce/organization/departments",
+     "textLength": 843,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Postes",
+     "path": "/company/workforce/organization/roles",
+     "textLength": 882,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Lieux",
+     "path": "/company/workforce/organization/locations",
+     "textLength": 931,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 3
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/requirements",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workforce-requirements",
+   "pattern": "/company/workforce/requirements",
+   "ms": 905,
+   "finalPath": "/company/workforce/requirements",
+   "headings": [
+    "H1:Informations & documents demandés",
+    "H2:Mode de calcul des exigences",
+    "H2:Informations",
+    "H2:Documents",
+    "H2:Proposé par le module Workforce",
+    "H2:Proposé par le module Workforce Payroll",
+    "H2:Reprise de l'existant"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir l'effet du passage au calcul par po",
+    "Ajouter",
+    "Ajouter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter",
+    "Adopter",
+    "Écarter"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2564,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/settings/general",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workforce-settings",
+   "pattern": "/company/workforce/settings/general",
+   "ms": 904,
+   "finalPath": "/company/workforce/settings/general",
+   "headings": [
+    "H1:Paramètres RH"
+   ],
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses"
+   ],
+   "buttons": [
+    "Général",
+    "Temps de travail & pauses",
+    "Enregistrer",
+    "Assistant de configuration"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 488,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Général",
+     "path": "/company/workforce/settings/general",
+     "textLength": 488,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Temps de travail & pauses",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 837,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/people/roles",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "settings-roles",
+   "pattern": "/company/people/roles",
+   "ms": 919,
+   "finalPath": "/company/people/roles",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Par capacité",
+    "Par rôle (avancé)"
+   ],
+   "buttons": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Par capacité",
+    "Par rôle (avancé)",
+    "Annuler",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 8,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 769,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Par capacité",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Par rôle (avancé)",
+     "path": "/company/people/roles",
+     "textLength": 1234,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 3
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workflows",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workflows",
+   "pattern": "/company/workflows",
+   "ms": 913,
+   "finalPath": "/company/workflows",
+   "headings": [
+    "H5:Aucune règle d'automatisation"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau workflow",
+    "Nouveau workflow"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 344,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/leave/config",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "settings-leave-types",
+   "pattern": "/company/workforce/leave/config",
+   "ms": 944,
+   "finalPath": "/company/workforce/leave/config",
+   "headings": [
+    "H4:Planning & temps",
+    "H5:Nouvelle demande",
+    "H5:Nouveau type de congé"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés"
+   ],
+   "buttons": [
+    "Préférences",
+    "Nouveau type de congé",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Demandes",
+    "Calendrier",
+    "Soldes",
+    "Types de congés",
+    "Nouveau type de congé",
+    "Annuler",
+    "Envoyer la demande",
+    "Plus d'options",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 18,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 904,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/documents/settings",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "settings-documents",
+   "pattern": "/company/documents/settings",
+   "ms": 919,
+   "finalPath": "/company/documents/settings",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "Documents",
+    "Ajouter un type personnalisé",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 43,
+   "tables": 2,
+   "rows": 14,
+   "pagination": 0,
+   "alerts": [
+    "Attention : l'auto-rejet peut rejeter des documents légitimes si l'IA se trompe. Utilisez avec un seuil de confiance élevé.",
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2755,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-input-field-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "aria-progressbar-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 8
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 36
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/billing/overview",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "billing",
+   "pattern": "/company/billing/overview",
+   "ms": 919,
+   "finalPath": "/company/billing/overview",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H4:—",
+    "H4:0,00 €"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Changer de plan",
+    "Gérer",
+    "Voir les factures",
+    "Voir les factures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Problème de paiementVous avez 2 facture(s) en retard. Veuillez mettre à jour votre moyen de paiement ou réessayer.Le paiement en ligne n'est"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 706,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": [],
+   "errors": [
+    {
+     "page": "/company/billing/overview [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/audit",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "audit",
+   "pattern": "/company/audit",
+   "ms": 913,
+   "finalPath": "/company/audit",
+   "headings": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 25,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 25,
+   "pagination": 1,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1878,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 25
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/overview",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "my-space",
+   "pattern": "/company/my-space/overview",
+   "ms": 906,
+   "finalPath": "/company/my-space/overview",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 414,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 414,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 233,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/me",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "workforce-me",
+   "pattern": "/company/workforce/me",
+   "ms": 919,
+   "finalPath": "/company/workforce/me",
+   "headings": [
+    "H4:Mon activité",
+    "H5:Demander un congé"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité"
+   ],
+   "buttons": [
+    "Préférences",
+    "Commencer la journée",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Voir la paie",
+    "Tout voir",
+    "Demander un congé",
+    "Annuler",
+    "Envoyer la demande"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 6,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Aucun solde de congés n'est encore ouvert pour vous. Il s'ouvre dès que votre contrat est actif et que votre entreprise a configuré les type"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1361,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/account-settings/account",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "account-settings",
+   "pattern": "/account-settings/account",
+   "ms": 914,
+   "finalPath": "/account-settings/account",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 3,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Votre contrat est établi : votre identité et votre dossier RH ne se modifient plus ici. Vous pouvez toujours mettre à jour vos coordonnées ("
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 506,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 506,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/support",
+   "source": "menu",
+   "group": "footer",
+   "title": "Leezr",
+   "key": "footer-support",
+   "pattern": "/company/support",
+   "ms": 913,
+   "finalPath": "/company/support",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Nouveau ticket",
+    "Nouveau ticket"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 166,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/plan",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/plan",
+   "ms": 921,
+   "finalPath": "/company/billing/plan",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H3:Votre abonnement actuel est Pro",
+    "H3:29,00 € HT / mensuel",
+    "H3:Profil actuel : Beta Services",
+    "H4:Starter",
+    "H4:Pro",
+    "H4:Business"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Rétrograder",
+    "Passer en annuel",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Votre profil sectoriel est verrouillé et ne peut pas être modifié. Contactez le support ou créez une nouvelle entreprise si vous avez besoin"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1111,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/plan [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing",
+   "ms": 907,
+   "finalPath": "/company/billing/overview",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H4:—",
+    "H4:0,00 €"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Changer de plan",
+    "Gérer",
+    "Voir les factures",
+    "Voir les factures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Problème de paiementVous avez 2 facture(s) en retard. Veuillez mettre à jour votre moyen de paiement ou réessayer.Le paiement en ligne n'est"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 706,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/billing [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/members",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/members",
+   "ms": 907,
+   "finalPath": "/company/people",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Embaucher",
+    "Ajouter une personne",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Annuler",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 12,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 592,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/people/hr",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/people/hr",
+   "ms": 951,
+   "finalPath": "/company/people/hr",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Importer des collaborateurs",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Embaucher",
+    "Ajouter une personne",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Filtres",
+    "Télécharger le modèle",
+    "Suivant",
+    "Annuler",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 5,
+   "inputs": 11,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; aucun contrat, compte ou rémunéra"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 978,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce",
+   "ms": 909,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/configuration",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/configuration",
+   "ms": 912,
+   "finalPath": "/company/workforce/settings/worktime",
+   "headings": [
+    "H1:Paramètres RH"
+   ],
+   "tabs": [
+    "Général",
+    "Temps de travail & pauses",
+    "A. Cadre applicable",
+    "B. Rythme",
+    "C. Repos",
+    "D. Horaires",
+    "E. Comportement"
+   ],
+   "buttons": [
+    "Général",
+    "Temps de travail & pauses",
+    "A. Cadre applicable",
+    "B. Rythme",
+    "C. Repos",
+    "D. Horaires",
+    "E. Comportement",
+    "Confirmer cette convention",
+    "Aucune convention ne s’applique"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Règles légales du marché FR vérifiées et utilisées pour les contrôles (8 règles référencées)."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 837,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Général",
+     "path": "/company/workforce/settings/general",
+     "textLength": 488,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Temps de travail & pauses",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 837,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "A. Cadre applicable",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 837,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "B. Rythme",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 698,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "C. Repos",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 845,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "D. Horaires",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 724,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "E. Comportement",
+     "path": "/company/workforce/settings/worktime",
+     "textLength": 625,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/contract/templates",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/contract/templates",
+   "ms": 946,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/signature",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/signature",
+   "ms": 906,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/documents",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/documents",
+   "ms": 907,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/employees",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/employees",
+   "ms": 909,
+   "finalPath": "/company/people/hr",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Importer des collaborateurs",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Embaucher",
+    "Ajouter une personne",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "Personnes",
+    "Gestion RH",
+    "Rôles & autorisations",
+    "Filtres",
+    "Télécharger le modèle",
+    "Suivant",
+    "Annuler",
+    "Ajouter"
+   ],
+   "iconButtonsWithoutLabel": 5,
+   "inputs": 11,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; aucun contrat, compte ou rémunéra"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 978,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 592,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 978,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 769,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/notifications",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/notifications",
+   "ms": 929,
+   "finalPath": "/company/notifications",
+   "headings": [],
+   "tabs": [
+    "Notifications",
+    "Préférences"
+   ],
+   "buttons": [
+    "Notifications",
+    "Préférences"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 218,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Notifications",
+     "path": "/company/notifications",
+     "textLength": 218,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Préférences",
+     "path": "/company/notifications",
+     "textLength": 734,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/onboarding",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/onboarding",
+   "ms": 910,
+   "finalPath": "/onboarding",
+   "headings": [
+    "H1:Lien indisponible"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 119,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/onboarding",
+     "kind": "api",
+     "status": 401,
+     "method": "GET",
+     "url": "/api/public/onboarding"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing/pay",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/pay",
+   "ms": 1170,
+   "finalPath": "/company/billing/pay",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Contacter le support",
+    "Retour à la facturation"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 3,
+   "tables": 1,
+   "rows": 2,
+   "pagination": 0,
+   "alerts": [
+    "L'enregistrement d'une carte bancaire n'est pas disponible actuellement pour votre entreprise. Pour toute question concernant vos factures o"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 547,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/consolidated-preview",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/consolidated-preview",
+   "ms": 906,
+   "finalPath": "/company/billing/consolidated-preview",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Factures officielles V1"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 2,
+   "rows": 6,
+   "pagination": 0,
+   "alerts": [
+    "Simulation visuelle — ne constitue pas une facture— Aucune facture n'est créée, fusionnée ni modifiée. Les documents comptables officiels re"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 700,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/dev-lab",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/dev-lab",
+   "ms": 911,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/overview",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/overview",
+   "ms": 1092,
+   "finalPath": "/company/documents/todo",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 522,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/todo",
+     "textLength": 522,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 658,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/documents",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/my-space/documents",
+   "ms": 922,
+   "finalPath": "/company/my-space/documents",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 233,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 414,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 233,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/people?new=request",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/people",
+   "ms": 931,
+   "finalPath": "/company/documents/people",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Demander un document",
+    "Télécharger",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 10,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 672,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/company?new=deposit",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/company",
+   "ms": 947,
+   "finalPath": "/company/documents/company",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Créer un type",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Aucun document entreprise disponible. Utilisez « Gérer les types » pour activer des types de documents.",
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 658,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/company",
+     "textLength": 658,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 658,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/company",
+     "textLength": 658,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/templates",
+   "source": "link:/company/workforce/contracts",
+   "title": "Leezr",
+   "pattern": "/company/documents/templates",
+   "ms": 926,
+   "finalPath": "/company/documents/todo",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 522,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/todo",
+     "textLength": 522,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/todo",
+     "textLength": 522,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/todo",
+     "textLength": 522,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/modules/workforce_leave",
+   "source": "link:/company/modules",
+   "title": "Leezr",
+   "pattern": "/company/modules/:key",
+   "ms": 909,
+   "finalPath": "/company/modules/workforce_leave",
+   "headings": [
+    "H5:Absences et congés",
+    "H5:1",
+    "H5:2",
+    "H5:3"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Conserver les accès actuels"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 803,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/onboarding",
+   "source": "link:/company/workforce/organization/departments",
+   "title": "Leezr",
+   "pattern": "/company/workforce/onboarding",
+   "ms": 971,
+   "finalPath": "/company/workforce/onboarding",
+   "headings": [
+    "H4:Assistant de configuration RH"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Enregistrer le profil",
+    "Précédent",
+    "Continuer"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 481,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/time/config",
+   "source": "link:/company/workforce/leave/config",
+   "title": "Leezr",
+   "pattern": "/company/workforce/time/config",
+   "ms": 955,
+   "finalPath": "/company/workforce/time/config",
+   "headings": [
+    "H4:Planning & temps",
+    "H5:Corriger le pointage",
+    "H5:Ajouter un pointage",
+    "H5:Générer une feuille de temps"
+   ],
+   "tabs": [
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps"
+   ],
+   "buttons": [
+    "Préférences",
+    "Planning",
+    "Temps & pointages",
+    "Absences",
+    "Mon activité",
+    "Aujourd'hui",
+    "Présences",
+    "Feuilles de temps",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Générer"
+   ],
+   "iconButtonsWithoutLabel": 3,
+   "inputs": 13,
+   "tables": 1,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 566,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Planning",
+     "path": "/company/workforce/planning",
+     "textLength": 2223,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Temps & pointages",
+     "path": "/company/workforce/time",
+     "textLength": 566,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Absences",
+     "path": "/company/workforce/leave",
+     "textLength": 877,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mon activité",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "",
+     "path": "/company/workforce/me",
+     "textLength": 1361,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/plan",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/plan",
+   "ms": 936,
+   "finalPath": "/company/billing/plan",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H3:Votre abonnement actuel est Pro",
+    "H3:29,00 € HT / mensuel",
+    "H3:Profil actuel : Beta Services",
+    "H4:Starter",
+    "H4:Pro",
+    "H4:Business"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Rétrograder",
+    "Passer en annuel",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Votre profil sectoriel est verrouillé et ne peut pas être modifié. Contactez le support ou créez une nouvelle entreprise si vous avez besoin"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1111,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/billing/plan [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing/invoices",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/invoices",
+   "ms": 914,
+   "finalPath": "/company/billing/invoices",
+   "headings": [
+    "H1:Abonnement & factures"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Aperçu consolidé V2"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 2,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 485,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/payment-methods",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/payment-methods",
+   "ms": 921,
+   "finalPath": "/company/billing/payment-methods",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H5:Paiement en ligne indisponible"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Contacter le support"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 377,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/activity",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/activity",
+   "ms": 909,
+   "finalPath": "/company/billing/activity",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H5:Aucune activité"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 208,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1111,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 706,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 485,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/invoices/5",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/invoices/:id",
+   "ms": 970,
+   "finalPath": "/company/billing/invoices/5",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Payer la facture",
+    "Retour à la facturation",
+    "Télécharger",
+    "Imprimer"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 4,
+   "rows": 7,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 498,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/payslips",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/payslips",
+   "ms": 919,
+   "finalPath": "/company/my-space/payslips",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 215,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 414,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 233,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/account-settings/security",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/account-settings/security",
+   "ms": 926,
+   "finalPath": "/account-settings/security",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Enregistrer les modifications",
+    "Activer la 2FA"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 3,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 353,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 506,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/",
+   "ms": 15913,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/dashboard",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/dashboard",
+   "ms": 1076,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Bienvenue sur Leezr",
+    "H5:Moi",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Voir mon planning",
+    "Pointer l'arrivée",
+    "Ajouter une personne",
+    "Préparer le planning",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Planifier",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1621,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/register",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/register",
+   "ms": 931,
+   "finalPath": "/register",
+   "headings": [
+    "H4:Manage your business in one place",
+    "H4:What's your industry?",
+    "H5:Logistique"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Previous",
+    "Next"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Save"
+   ],
+   "textLength": 482,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  }
+ ],
+ "mobile": [
+  {
+   "path": "/home",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/people",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/hiring",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/contracts",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/planning",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/time",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/leave",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/documents/todo",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/payroll",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/modules",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/settings",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/profile/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/catalogs/fields",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/organization/departments",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/requirements",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/settings/general",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/people/roles",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workflows",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/leave/config",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/documents/settings",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/billing/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/audit",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/my-space/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/me",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/account-settings/account",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/support",
+   "overflowX": false,
+   "scrollWidth": 390
+  }
+ ],
+ "queueLeft": 0
+}

@@ -1,0 +1,113 @@
+{
+ "groups": [
+  {
+   "key": "home",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "home"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "activity",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "my-deliveries",
+     "title": "My Deliveries",
+     "to": {
+      "name": "company-my-deliveries"
+     },
+     "icon": "tabler-truck-delivery",
+     "permission": "shipments.view_own",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "personal",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "personal_menu",
+   "titleKey": "",
+   "placement": "menu",
+   "items": [
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [
+      "avatar"
+     ],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ],
+ "actions": []
+}

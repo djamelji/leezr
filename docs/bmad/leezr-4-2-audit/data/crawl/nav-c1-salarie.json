@@ -1,0 +1,107 @@
+{
+ "groups": [
+  {
+   "key": "home",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "home"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "time",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "workforce-time",
+     "title": "Time Tracking",
+     "to": {
+      "name": "company-workforce-time"
+     },
+     "icon": "tabler-clock",
+     "permission": "workforce.timesheet_view",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "personal",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "personal_menu",
+   "titleKey": "",
+   "placement": "menu",
+   "items": [
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [
+      "avatar"
+     ],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ],
+ "actions": []
+}

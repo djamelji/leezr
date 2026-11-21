@@ -1,0 +1,2789 @@
+{
+ "scope": "company",
+ "user": "pending@leezr.test",
+ "tag": "c3-pending-starter",
+ "landing": "/home",
+ "navEntries": 16,
+ "pages": [
+  {
+   "path": "/home",
+   "source": "landing",
+   "group": null,
+   "title": "Leezr",
+   "pattern": "/home",
+   "ms": 912,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-progressbar-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "aria-required-children",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "image-alt",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/people",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "people",
+   "pattern": "/company/people",
+   "ms": 920,
+   "finalPath": "/company/people",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Ajouter une personne",
+    "Afficher",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations",
+    "Annuler",
+    "Ajouter et inviter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 13,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "1 membre(s) avec un profil incompletAfficher"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 691,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "personnalisé 0",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/documents/todo",
+   "source": "menu",
+   "group": "documents",
+   "title": "Leezr",
+   "key": "documents",
+   "pattern": "/company/documents/todo",
+   "ms": 911,
+   "finalPath": "/company/documents/todo",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 490,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/todo",
+     "textLength": 490,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 762,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/shipments",
+   "source": "menu",
+   "group": "activity",
+   "title": "Leezr",
+   "key": "shipments",
+   "pattern": "/company/shipments",
+   "ms": 915,
+   "finalPath": "/company/shipments",
+   "headings": [
+    "H4:Expéditions"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Mes livraisons",
+    "Nouvelle expédition"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 249,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/modules",
+   "source": "menu",
+   "group": "modules",
+   "title": "Leezr",
+   "key": "modules",
+   "pattern": "/company/modules",
+   "ms": 906,
+   "finalPath": "/company/modules",
+   "headings": [
+    "H4:Modules"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer",
+    "Détails",
+    "Configurer"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 3307,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 12
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/settings",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "space-settings",
+   "pattern": "/company/settings",
+   "ms": 904,
+   "finalPath": "/company/settings",
+   "headings": [
+    "H4:Réglages"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1044,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-required-children",
+     "impact": "critical",
+     "nodes": 6
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/profile/overview",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "company-profile",
+   "pattern": "/company/profile/overview",
+   "ms": 924,
+   "finalPath": "/company/profile/overview",
+   "headings": [
+    "H1:Profil de l'entreprise",
+    "H3:Paramètres de l'entreprise",
+    "H3:Adresse de l'entreprise",
+    "H3:Adresse de facturation",
+    "H3:Informations administratives"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 14,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "En fonction du secteur d'activité de votre entreprise, les informations suivantes doivent être renseignées pour chaque membre de l'équipe. L"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 965,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/catalogs/fields",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "company-catalogs",
+   "pattern": "/company/catalogs/fields",
+   "ms": 907,
+   "finalPath": "/company/catalogs/fields",
+   "headings": [
+    "H1:Catalogues"
+   ],
+   "tabs": [
+    "Champs (28)",
+    "Types de documents (9)"
+   ],
+   "buttons": [
+    "Créer un champ",
+    "Champs (28)",
+    "Types de documents (9)"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 7,
+   "tables": 1,
+   "rows": 25,
+   "pagination": 2,
+   "alerts": [
+    "Disponible ne veut pas dire obligatoire : un élément actif est proposé dans les formulaires. Pour le rendre obligatoire, exigez-le pour un p"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2034,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs (28)",
+     "path": "/company/catalogs/fields",
+     "textLength": 2034,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Types de documents (9)",
+     "path": "/company/catalogs/documents",
+     "textLength": 1280,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/people/roles",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "settings-roles",
+   "pattern": "/company/people/roles",
+   "ms": 921,
+   "finalPath": "/company/people/roles",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations",
+    "Par capacité",
+    "Par rôle (avancé)"
+   ],
+   "buttons": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations",
+    "Par capacité",
+    "Par rôle (avancé)",
+    "Annuler",
+    "Ajouter et inviter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 9,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1003,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "personnalisé 0",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Par capacité",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Par rôle (avancé)",
+     "path": "/company/people/roles",
+     "textLength": 1483,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 13
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workflows",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workflows",
+   "pattern": "/company/workflows",
+   "ms": 905,
+   "finalPath": "/company/workflows",
+   "headings": [
+    "H5:Aucune règle d'automatisation"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau workflow",
+    "Nouveau workflow"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 344,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/documents/settings",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "settings-documents",
+   "pattern": "/company/documents/settings",
+   "ms": 915,
+   "finalPath": "/company/documents/settings",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "Documents",
+    "Ajouter un type personnalisé",
+    "Enregistrer",
+    "Enregistrer",
+    "Enregistrer",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 43,
+   "tables": 2,
+   "rows": 14,
+   "pagination": 0,
+   "alerts": [
+    "Attention : l'auto-rejet peut rejeter des documents légitimes si l'IA se trompe. Utilisez avec un seuil de confiance élevé.",
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2755,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-input-field-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "aria-progressbar-name",
+     "impact": "serious",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "nodes": 8
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 36
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/billing/overview",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "billing",
+   "pattern": "/company/billing/overview",
+   "ms": 906,
+   "finalPath": "/company/billing/overview",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H4:—",
+    "H4:0,00 €"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Changer de plan",
+    "Gérer",
+    "Voir les factures",
+    "Voir les factures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "En attente d'approbationVotre demande de mise à niveau vers l'abonnement business a été soumise et est en attente d'approbation par un admin"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 552,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": [],
+   "errors": [
+    {
+     "page": "/company/billing/overview [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/audit",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "audit",
+   "pattern": "/company/audit",
+   "ms": 905,
+   "finalPath": "/company/audit",
+   "headings": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 3,
+   "inputs": 2,
+   "tables": 1,
+   "rows": 3,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 380,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 3
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/overview",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "my-space",
+   "pattern": "/company/my-space/overview",
+   "ms": 907,
+   "finalPath": "/company/my-space/overview",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 499,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 499,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/account-settings/account",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "account-settings",
+   "pattern": "/account-settings/account",
+   "ms": 905,
+   "finalPath": "/account-settings/account",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 17,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "0 sur 4 champs obligatoires renseignés"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 472,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 472,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/support",
+   "source": "menu",
+   "group": "footer",
+   "title": "Leezr",
+   "key": "footer-support",
+   "pattern": "/company/support",
+   "ms": 905,
+   "finalPath": "/company/support",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Nouveau ticket",
+    "Nouveau ticket"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 166,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/plan",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/plan",
+   "ms": 904,
+   "finalPath": "/company/billing/plan",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H3:Votre abonnement actuel est Starter",
+    "H3:0,00 € HT / mensuel",
+    "H3:Profil actuel : Logistique",
+    "H4:Starter",
+    "H4:Pro",
+    "H4:Business"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Passer en annuel",
+    "Passer au supérieur",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "En attente d'approbationVotre demande de mise à niveau vers l'abonnement business a été soumise et est en attente d'approbation par un admin",
+    "Votre profil sectoriel est verrouillé et ne peut pas être modifié. Contactez le support ou créez une nouvelle entreprise si vous avez besoin"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1270,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/plan [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing",
+   "ms": 908,
+   "finalPath": "/company/billing/overview",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H4:—",
+    "H4:0,00 €"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Changer de plan",
+    "Gérer",
+    "Voir les factures",
+    "Voir les factures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "En attente d'approbationVotre demande de mise à niveau vers l'abonnement business a été soumise et est en attente d'approbation par un admin"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 552,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/billing [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/members",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/members",
+   "ms": 917,
+   "finalPath": "/company/people",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Ajouter une personne",
+    "Afficher",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations",
+    "Annuler",
+    "Ajouter et inviter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 13,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "1 membre(s) avec un profil incompletAfficher"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 691,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "personnalisé 0",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/people/hr",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/people/hr",
+   "ms": 907,
+   "finalPath": "/company/people/hr",
+   "headings": [
+    "H4:Équipe",
+    "H5:Champs membre",
+    "H5:Ajouter une personne"
+   ],
+   "tabs": [
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations"
+   ],
+   "buttons": [
+    "Outils",
+    "Ajouter une personne",
+    "Afficher",
+    "Champs actifs 0",
+    "Champs disponibles",
+    "personnalisé 0",
+    "Personnes",
+    "Rôles & autorisations",
+    "Annuler",
+    "Ajouter et inviter"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 13,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "1 membre(s) avec un profil incompletAfficher"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 691,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Champs actifs 0",
+     "path": "/company/people/hr",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Champs disponibles",
+     "path": "/company/people/hr",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "personnalisé 0",
+     "path": "/company/people/hr",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes",
+     "path": "/company/people/hr",
+     "textLength": 691,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Rôles & autorisations",
+     "path": "/company/people/roles",
+     "textLength": 1003,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce",
+   "ms": 947,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/configuration",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/configuration",
+   "ms": 905,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/contract/templates",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/contract/templates",
+   "ms": 905,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/signature",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/signature",
+   "ms": 904,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/requirements",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/requirements",
+   "ms": 906,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/documents",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/documents",
+   "ms": 909,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/employees",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/employees",
+   "ms": 907,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/notifications",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/notifications",
+   "ms": 908,
+   "finalPath": "/company/notifications",
+   "headings": [],
+   "tabs": [
+    "Notifications",
+    "Préférences"
+   ],
+   "buttons": [
+    "Notifications",
+    "Préférences"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 218,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Notifications",
+     "path": "/company/notifications",
+     "textLength": 218,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Préférences",
+     "path": "/company/notifications",
+     "textLength": 734,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/onboarding",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/onboarding",
+   "ms": 912,
+   "finalPath": "/onboarding",
+   "headings": [
+    "H1:Lien indisponible"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 119,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/onboarding",
+     "kind": "api",
+     "status": 401,
+     "method": "GET",
+     "url": "/api/public/onboarding"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing/pay",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/pay",
+   "ms": 1186,
+   "finalPath": "/company/billing/pay",
+   "headings": [
+    "H5:Aucune facture impayée."
+   ],
+   "tabs": [],
+   "buttons": [
+    "Retour à la facturation"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 47,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/consolidated-preview",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/consolidated-preview",
+   "ms": 911,
+   "finalPath": "/company/billing/consolidated-preview",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Factures officielles V1"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 1,
+   "rows": 4,
+   "pagination": 0,
+   "alerts": [
+    "Simulation visuelle — ne constitue pas une facture— Aucune facture n'est créée, fusionnée ni modifiée. Les documents comptables officiels re"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 466,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/dev-lab",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/dev-lab",
+   "ms": 914,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/overview",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/overview",
+   "ms": 1063,
+   "finalPath": "/company/documents/todo",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 490,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/todo",
+     "textLength": 490,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 762,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/people?new=request",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/people",
+   "ms": 924,
+   "finalPath": "/company/documents/people",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Demander un document",
+    "Télécharger",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 10,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 672,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/people",
+     "textLength": 672,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/company?new=deposit",
+   "source": "link:/home",
+   "title": "Leezr",
+   "pattern": "/company/documents/company",
+   "ms": 952,
+   "finalPath": "/company/documents/company",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs"
+   ],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "À traiter",
+    "Entreprise",
+    "Collaborateurs",
+    "Créer un type",
+    "Téléverser",
+    "Téléverser",
+    "Télécharger",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 5,
+   "tables": 1,
+   "rows": 2,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 762,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "À traiter",
+     "path": "/company/documents/company",
+     "textLength": 762,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Entreprise",
+     "path": "/company/documents/company",
+     "textLength": 762,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Collaborateurs",
+     "path": "/company/documents/company",
+     "textLength": 762,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/compliance?status=missing",
+   "source": "link:/company/documents/todo",
+   "title": "Leezr",
+   "pattern": "/company/documents/compliance",
+   "ms": 937,
+   "finalPath": "/company/documents/compliance?status=missing",
+   "headings": [
+    "H4:Documents",
+    "H5:Créer un type de document"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Nouveau",
+    "Outils",
+    "Documents",
+    "Exporter CSV",
+    "Paramètres avancés",
+    "Créer",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 7,
+   "tables": 1,
+   "rows": 3,
+   "pagination": 0,
+   "alerts": [
+    "Créez un type de document personnalisé. Les membres ou l'entreprise devront fournir ce document selon la portée choisie."
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 822,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-deliveries",
+   "source": "link:/company/shipments",
+   "title": "Leezr",
+   "pattern": "/company/my-deliveries",
+   "ms": 907,
+   "finalPath": "/company/my-deliveries",
+   "headings": [
+    "H4:Mes livraisons"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 211,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/shipments/create",
+   "source": "link:/company/shipments",
+   "title": "Leezr",
+   "pattern": "/company/shipments/create",
+   "ms": 908,
+   "finalPath": "/company/shipments/create",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Créer une expédition",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 90,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/modules/core.billing",
+   "source": "link:/company/modules",
+   "title": "Leezr",
+   "pattern": "/company/modules/:key",
+   "ms": 911,
+   "finalPath": "/company/modules/core.billing",
+   "headings": [
+    "H5:Abonnement"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 133,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/plan",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/plan",
+   "ms": 923,
+   "finalPath": "/company/billing/plan",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H3:Votre abonnement actuel est Starter",
+    "H3:0,00 € HT / mensuel",
+    "H3:Profil actuel : Logistique",
+    "H4:Starter",
+    "H4:Pro",
+    "H4:Business"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Passer en annuel",
+    "Passer au supérieur",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "En attente d'approbationVotre demande de mise à niveau vers l'abonnement business a été soumise et est en attente d'approbation par un admin",
+    "Votre profil sectoriel est verrouillé et ne peut pas être modifié. Contactez le support ou créez une nouvelle entreprise si vous avez besoin"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1270,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/company/billing/plan [tab:Activité]",
+     "kind": "api",
+     "status": 404,
+     "method": "GET",
+     "url": "/api/company/billing/timeline"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing/invoices",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/invoices",
+   "ms": 921,
+   "finalPath": "/company/billing/invoices",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H5:Aucune facture pour le moment."
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Aperçu consolidé V2"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 2,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 274,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/payment-methods",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/payment-methods",
+   "ms": 923,
+   "finalPath": "/company/billing/payment-methods",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H5:Paiement en ligne indisponible"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité",
+    "Contacter le support"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 377,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/activity",
+   "source": "link:/company/billing/overview",
+   "title": "Leezr",
+   "pattern": "/company/billing/activity",
+   "ms": 908,
+   "finalPath": "/company/billing/activity",
+   "headings": [
+    "H1:Abonnement & factures",
+    "H5:Aucune activité"
+   ],
+   "tabs": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "buttons": [
+    "Abonnement",
+    "Vue d'ensemble",
+    "Factures",
+    "Moyens de paiement",
+    "Activité"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 208,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Abonnement",
+     "path": "/company/billing/plan",
+     "textLength": 1270,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Vue d'ensemble",
+     "path": "/company/billing/overview",
+     "textLength": 552,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/company/billing/invoices",
+     "textLength": 274,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Moyens de paiement",
+     "path": "/company/billing/payment-methods",
+     "textLength": 377,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/company/billing/activity",
+     "textLength": 208,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/documents",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/documents",
+   "ms": 920,
+   "finalPath": "/company/my-space/documents",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Téléverser",
+    "Télécharger"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 340,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 499,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/payslips",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/payslips",
+   "ms": 907,
+   "finalPath": "/company/my-space/payslips",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 215,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 499,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 215,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/account-settings/security",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/account-settings/security",
+   "ms": 926,
+   "finalPath": "/account-settings/security",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Enregistrer les modifications",
+    "Activer la 2FA"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 3,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 353,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 472,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/",
+   "ms": 15911,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/dashboard",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/dashboard",
+   "ms": 1055,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue, Marie",
+    "H5:Bienvenue sur Leezr",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Ajouter une personne",
+    "Demander un document",
+    "Déposer un document",
+    "Personnaliser",
+    "Passer au supérieur"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 1450,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/register",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/register",
+   "ms": 908,
+   "finalPath": "/register",
+   "headings": [
+    "H4:Manage your business in one place",
+    "H4:What's your industry?",
+    "H5:Logistique"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Previous",
+    "Next"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Save"
+   ],
+   "textLength": 482,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  }
+ ],
+ "mobile": [
+  {
+   "path": "/home",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/people",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/documents/todo",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/shipments",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/modules",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/settings",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/profile/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/catalogs/fields",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/people/roles",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workflows",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/documents/settings",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/billing/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/audit",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/my-space/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/account-settings/account",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/support",
+   "overflowX": false,
+   "scrollWidth": 390
+  }
+ ],
+ "queueLeft": 0
+}

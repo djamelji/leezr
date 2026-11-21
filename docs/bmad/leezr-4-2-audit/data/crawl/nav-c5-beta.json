@@ -1,0 +1,526 @@
+{
+ "groups": [
+  {
+   "key": "home",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "home"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "team",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-team",
+     "title": "team",
+     "labelKey": "nav.groups.team",
+     "to": [],
+     "icon": "tabler-users",
+     "permission": null,
+     "tags": [],
+     "children": [
+      {
+       "key": "people",
+       "title": "Collaborators",
+       "to": {
+        "name": "company-people"
+       },
+       "icon": "tabler-users",
+       "permission": null,
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-hiring",
+       "title": "Hiring",
+       "to": {
+        "name": "company-workforce-hiring"
+       },
+       "icon": "tabler-user-check",
+       "permission": "workforce.manage",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-contracts",
+       "title": "Employment contracts",
+       "to": {
+        "name": "company-workforce-contracts"
+       },
+       "icon": "tabler-file-text",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "time",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-time",
+     "title": "time",
+     "labelKey": "nav.groups.time",
+     "to": [],
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": [
+      {
+       "key": "workforce-planning",
+       "title": "Planning",
+       "to": {
+        "name": "company-workforce-planning"
+       },
+       "icon": "tabler-calendar-week",
+       "permission": "workforce.planning_view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-time",
+       "title": "Time Tracking",
+       "to": {
+        "name": "company-workforce-time"
+       },
+       "icon": "tabler-clock",
+       "permission": "workforce.timesheet_view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-leave",
+       "title": "Leave",
+       "to": {
+        "name": "company-workforce-leave"
+       },
+       "icon": "tabler-beach",
+       "permission": "workforce.leave_request",
+       "tags": [],
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "documents",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "documents",
+     "title": "Documents",
+     "to": {
+      "name": "company-documents-tab",
+      "params": {
+       "tab": "todo"
+      }
+     },
+     "icon": "tabler-file-text",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "payroll",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "workforce-payroll",
+     "title": "Payroll",
+     "to": {
+      "name": "company-workforce-payroll"
+     },
+     "icon": "tabler-receipt",
+     "permission": "workforce.payroll_prepare",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "modules",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "modules",
+     "title": "Modules",
+     "to": {
+      "name": "company-modules"
+     },
+     "icon": "tabler-puzzle",
+     "permission": "modules.manage",
+     "tags": [],
+     "children": [],
+     "labelKey": "nav.groups.modules"
+    }
+   ]
+  },
+  {
+   "key": "settings",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-settings",
+     "title": "settings",
+     "labelKey": "nav.groups.settings",
+     "to": {
+      "name": "company-settings"
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [],
+     "hub": true,
+     "children": [
+      {
+       "key": "company-profile",
+       "title": "Company Profile",
+       "to": {
+        "name": "company-profile-tab",
+        "params": {
+         "tab": "overview"
+        }
+       },
+       "icon": "tabler-building-community",
+       "permission": "settings.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "company",
+        "level": "essential",
+        "status": "company_profile"
+       }
+      },
+      {
+       "key": "company-catalogs",
+       "title": "Catalogues",
+       "to": {
+        "name": "company-catalogs-tab",
+        "params": {
+         "tab": "fields"
+        }
+       },
+       "icon": "tabler-books",
+       "permission": null,
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "organization",
+        "level": "essential"
+       }
+      },
+      {
+       "key": "workforce-organization",
+       "title": "Organization",
+       "to": {
+        "name": "company-workforce-organization-tab",
+        "params": {
+         "tab": "departments"
+        }
+       },
+       "icon": "tabler-hierarchy-2",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "organization",
+        "level": "essential"
+       }
+      },
+      {
+       "key": "workforce-requirements",
+       "title": "Requested information & documents",
+       "to": {
+        "name": "company-workforce-requirements"
+       },
+       "icon": "tabler-checklist",
+       "permission": null,
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "work",
+        "level": "essential"
+       }
+      },
+      {
+       "key": "workforce-settings",
+       "title": "HR Settings",
+       "to": {
+        "name": "company-workforce-settings-tab",
+        "params": {
+         "tab": "general"
+        }
+       },
+       "icon": "tabler-adjustments-cog",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "work",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "settings-roles",
+       "title": "Roles & permissions",
+       "to": {
+        "name": "company-people-roles"
+       },
+       "icon": "tabler-shield-lock",
+       "permission": "roles.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "access",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "workflows",
+       "title": "Workflows",
+       "to": {
+        "name": "company-workflows"
+       },
+       "icon": "tabler-automation",
+       "permission": "automations.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "automation",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "settings-leave-types",
+       "title": "Absence types",
+       "to": {
+        "name": "company-workforce-leave",
+        "params": {
+         "tab": "config"
+        }
+       },
+       "icon": "tabler-beach",
+       "permission": "workforce.leave_request",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "work",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "settings-documents",
+       "title": "Document types & rules",
+       "to": {
+        "name": "company-documents-tab",
+        "params": {
+         "tab": "settings"
+        }
+       },
+       "icon": "tabler-file-settings",
+       "permission": "documents.configure",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "documents",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "billing",
+       "title": "Billing",
+       "to": {
+        "name": "company-billing-tab",
+        "params": {
+         "tab": "overview"
+        }
+       },
+       "icon": "tabler-receipt",
+       "permission": "billing.manage",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "billing",
+        "level": "regular"
+       }
+      },
+      {
+       "key": "audit",
+       "title": "Audit Log",
+       "to": {
+        "name": "company-audit"
+       },
+       "icon": "tabler-file-search",
+       "permission": "audit.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "access",
+        "level": "advanced"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "personal_menu",
+   "titleKey": "",
+   "placement": "menu",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "workforce-me",
+     "title": "My Work",
+     "to": {
+      "name": "company-workforce-me"
+     },
+     "icon": "tabler-calendar-time",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [
+      "avatar"
+     ],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-support",
+   "label": "footer.support",
+   "to": {
+    "name": "company-support"
+   },
+   "href": null,
+   "icon": "tabler-message-circle-cog",
+   "sortOrder": 10
+  },
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ],
+ "actions": [
+  {
+   "key": "team.add-person",
+   "space": "team",
+   "icon": "tabler-user-plus",
+   "to": {
+    "name": "company-people",
+    "query": {
+     "action": "invite"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "time.plan",
+   "space": "time",
+   "icon": "tabler-calendar-plus",
+   "to": {
+    "name": "company-workforce-planning"
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "documents.request",
+   "space": "documents",
+   "icon": "tabler-file-import",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "people"
+    },
+    "query": {
+     "new": "request"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": true
+  },
+  {
+   "key": "documents.deposit",
+   "space": "documents",
+   "icon": "tabler-file-upload",
+   "to": {
+    "name": "company-documents-tab",
+    "params": {
+     "tab": "company"
+    },
+    "query": {
+     "new": "deposit"
+    }
+   },
+   "context": "space",
+   "home": true,
+   "primary": false
+  }
+ ]
+}

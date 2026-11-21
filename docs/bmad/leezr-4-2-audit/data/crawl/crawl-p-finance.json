@@ -1,0 +1,3166 @@
+{
+ "scope": "platform",
+ "user": "finance-reader@leezr.com",
+ "tag": "p-finance",
+ "landing": "/platform/dashboard/overview",
+ "navEntries": 2,
+ "pages": [
+  {
+   "path": "/platform/dashboard/overview",
+   "source": "landing",
+   "group": null,
+   "title": "Leezr",
+   "pattern": "/platform/dashboard/overview",
+   "ms": 915,
+   "finalPath": "/platform/dashboard/overview",
+   "headings": [
+    "H4:Cockpit",
+    "H5:Widgets du tableau de bord"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Ajouter un widget",
+    "Semaine",
+    "Mois",
+    "Année",
+    "Actuel",
+    "Comparer N-1"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 723,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 4
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 1
+    }
+   ],
+   "axe": [
+    {
+     "id": "aria-allowed-attr",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 4
+    },
+    {
+     "id": "list",
+     "impact": "serious",
+     "nodes": 1
+    }
+   ],
+   "errors": [
+    {
+     "page": "/platform/dashboard/overview [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity?page=1&per_page=30"
+    },
+    {
+     "page": "/platform/dashboard/overview [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity/types"
+    },
+    {
+     "page": "/platform/dashboard/overview [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity?page=1&per_page=30\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/dashboard/overview [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity/types\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/dashboard/overview [tab:Funnel inscription]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/onboarding/funnel?days=30"
+    }
+   ]
+  },
+  {
+   "path": "/platform/billing/overview",
+   "source": "menu",
+   "group": "finance",
+   "title": "Leezr",
+   "key": "platform-billing",
+   "pattern": "/platform/billing/overview",
+   "ms": 932,
+   "finalPath": "/platform/billing/overview",
+   "headings": [
+    "H4:Aperçu facturation",
+    "H4:174,00 €",
+    "H4:6 672,00 €",
+    "H4:8",
+    "H4:2",
+    "H4:382,00 €",
+    "H4:4",
+    "H4:0.0%"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Voir les demandes",
+    "3M",
+    "6M",
+    "12M"
+   ],
+   "iconButtonsWithoutLabel": 5,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Vue d'ensemble facturation Indicateurs financiers clés, santé du système et alertes en temps réel. Ce tableau de bord montre le MRR, ARR, ta",
+    "1 abonnement(s) en souffrance",
+    "1 abonnement(s) en attente d'approbation Voir les demandes"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1340,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 4
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "aria-allowed-attr",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 4
+    },
+    {
+     "id": "list",
+     "impact": "serious",
+     "nodes": 1
+    }
+   ],
+   "errors": [
+    {
+     "page": "/platform/billing/overview [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/billing/coupons"
+    },
+    {
+     "page": "/platform/billing/overview [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/plans"
+    },
+    {
+     "page": "/platform/billing/overview [tab:Coupons]",
+     "kind": "console",
+     "text": "FetchError: [GET] \"/api/platform/plans\": 403 Forbidden\n    at async r (http://127.0.0.1:8842/build/assets/main-CLQVixb0.js:52:74336)\n    at async Proxy.fetchPlans (http://127.0.0.1:8842/build/assets/plans.store-Dv7ltA9M."
+    },
+    {
+     "page": "/platform/billing/overview [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/modules"
+    }
+   ]
+  },
+  {
+   "path": "/platform/companies",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/platform/companies",
+   "ms": 931,
+   "finalPath": "/platform/dashboard/overview",
+   "headings": [
+    "H4:Cockpit",
+    "H5:Widgets du tableau de bord"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Ajouter un widget",
+    "Semaine",
+    "Mois",
+    "Année",
+    "Actuel",
+    "Comparer N-1"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 723,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 4
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/companies [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity?page=1&per_page=30"
+    },
+    {
+     "page": "/platform/companies [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity?page=1&per_page=30\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/companies [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity/types"
+    },
+    {
+     "page": "/platform/companies [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity/types\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/companies [tab:Funnel inscription]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/onboarding/funnel?days=30"
+    }
+   ]
+  },
+  {
+   "path": "/platform/dashboard/activity",
+   "source": "link:/platform/dashboard/overview",
+   "title": "Leezr",
+   "pattern": "/platform/dashboard/activity",
+   "ms": 922,
+   "finalPath": "/platform/dashboard/activity",
+   "headings": [
+    "H4:Activité",
+    "H5:Aucune activité"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Rafraîchir"
+   ],
+   "iconButtonsWithoutLabel": 5,
+   "inputs": 19,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 512,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/dashboard/funnel",
+   "source": "link:/platform/dashboard/overview",
+   "title": "Leezr",
+   "pattern": "/platform/dashboard/funnel",
+   "ms": 908,
+   "finalPath": "/platform/dashboard/funnel",
+   "headings": [
+    "H4:Funnel d'inscription"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Actualiser"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 15,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 384,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/invoices",
+   "source": "link:/platform/dashboard/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/invoices",
+   "ms": 969,
+   "finalPath": "/platform/billing/invoices",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Exporter CSV"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 39,
+   "tables": 1,
+   "rows": 20,
+   "pagination": 1,
+   "alerts": [
+    "Factures Toutes les factures finalisées. Filtrez par statut, période ou entreprise. Actions : marquer payée, annuler, rembourser, relancer o"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Actions"
+   ],
+   "textLength": 2689,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 4
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/billing/invoices [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/billing/coupons"
+    },
+    {
+     "page": "/platform/billing/invoices [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/plans"
+    },
+    {
+     "page": "/platform/billing/invoices [tab:Coupons]",
+     "kind": "console",
+     "text": "FetchError: [GET] \"/api/platform/plans\": 403 Forbidden\n    at async r (http://127.0.0.1:8842/build/assets/main-CLQVixb0.js:52:74336)\n    at async Proxy.fetchPlans (http://127.0.0.1:8842/build/assets/plans.store-Dv7ltA9M."
+    },
+    {
+     "page": "/platform/billing/invoices [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/modules"
+    }
+   ]
+  },
+  {
+   "path": "/platform/billing/subscriptions",
+   "source": "link:/platform/dashboard/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/subscriptions",
+   "ms": 928,
+   "finalPath": "/platform/billing/subscriptions",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Approuver",
+    "Rejeter"
+   ],
+   "iconButtonsWithoutLabel": 15,
+   "inputs": 16,
+   "tables": 1,
+   "rows": 11,
+   "pagination": 0,
+   "alerts": [
+    "Abonnements Tous les abonnements actifs, en essai ou en attente. Approuvez ou rejetez les demandes d'abonnement nécessitant une approbation "
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1689,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/settings/billing",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/settings/billing",
+   "ms": 953,
+   "finalPath": "/platform/dashboard/overview",
+   "headings": [
+    "H4:Cockpit",
+    "H5:Widgets du tableau de bord"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Ajouter un widget",
+    "Semaine",
+    "Mois",
+    "Année",
+    "Actuel",
+    "Comparer N-1"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 723,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 4
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/settings/billing [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity?page=1&per_page=30"
+    },
+    {
+     "page": "/platform/settings/billing [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity?page=1&per_page=30\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/settings/billing [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity/types"
+    },
+    {
+     "page": "/platform/settings/billing [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity/types\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/settings/billing [tab:Funnel inscription]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/onboarding/funnel?days=30"
+    }
+   ]
+  },
+  {
+   "path": "/platform/billing/payments",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/payments",
+   "ms": 946,
+   "finalPath": "/platform/billing/payments",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 16,
+   "tables": 1,
+   "rows": 5,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 949,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 4
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/billing/payments [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/billing/coupons"
+    },
+    {
+     "page": "/platform/billing/payments [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/plans"
+    },
+    {
+     "page": "/platform/billing/payments [tab:Coupons]",
+     "kind": "console",
+     "text": "FetchError: [GET] \"/api/platform/plans\": 403 Forbidden\n    at async r (http://127.0.0.1:8842/build/assets/main-CLQVixb0.js:52:74336)\n    at async Proxy.fetchPlans (http://127.0.0.1:8842/build/assets/plans.store-Dv7ltA9M."
+    },
+    {
+     "page": "/platform/billing/payments [tab:Coupons]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/modules"
+    }
+   ]
+  },
+  {
+   "path": "/platform/billing/dunning",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/dunning",
+   "ms": 923,
+   "finalPath": "/platform/billing/dunning",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 8,
+   "inputs": 16,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 0,
+   "alerts": [
+    "Relances Factures en retard dans le cycle de relance. Relancez le paiement ou escaladez vers le statut irrécovrable."
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 973,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/scheduled-debits",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/scheduled-debits",
+   "ms": 923,
+   "finalPath": "/platform/billing/scheduled-debits",
+   "headings": [
+    "H4:Aperçu facturation",
+    "H5:Aucun prélèvement programmé"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 16,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Prélèvements programmés Prélèvements SEPA programmés. Les prélèvements apparaissent ici lorsqu'une facture est émise avec un mode de paiemen"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 901,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/credit-notes",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/credit-notes",
+   "ms": 923,
+   "finalPath": "/platform/billing/credit-notes",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 16,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 733,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/coupons",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/coupons",
+   "ms": 924,
+   "finalPath": "/platform/billing/coupons",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Créer un code promo",
+    "Réessayer"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Coupons de réduction Gérez les codes de réduction applicables aux abonnements. Définissez le type (pourcentage ou montant fixe), la durée, l",
+    "Impossible de charger les données. Veuillez réessayer. Réessayer"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 837,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/wallets",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/wallets",
+   "ms": 922,
+   "finalPath": "/platform/billing/wallets",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 14,
+   "tables": 1,
+   "rows": 14,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1086,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/forensics",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/forensics",
+   "ms": 931,
+   "finalPath": "/platform/billing/forensics",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Exporter"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 14,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Audit & Forensique Chronologie détaillée des événements de facturation par entreprise. Sélectionnez une entreprise pour visualiser l'histori"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 917,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/governance",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/governance",
+   "ms": 925,
+   "finalPath": "/platform/billing/governance",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 14,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 801,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/ledger",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/ledger",
+   "ms": 927,
+   "finalPath": "/platform/billing/ledger",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 14,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 726,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/recovery",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/recovery",
+   "ms": 929,
+   "finalPath": "/platform/billing/recovery",
+   "headings": [
+    "H4:Aperçu facturation",
+    "H4:0",
+    "H4:0",
+    "H4:0",
+    "H5:1",
+    "H5:1"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Actualiser",
+    "Tout rejouer",
+    "Récupérer",
+    "Récupérer",
+    "Voir les relances",
+    "Voir les factures"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Récupération système État de santé du système de facturation. Surveille les webhooks échoués, sessions de paiement bloquées et confirmations",
+    "Tous les systèmes sont opérationnels — aucune anomalie détectée."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1413,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/reconciliation",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/reconciliation",
+   "ms": 909,
+   "finalPath": "/platform/billing/reconciliation",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 3,
+   "rows": 6,
+   "pagination": 0,
+   "alerts": [
+    "Détection et investigation en lecture seule — aucun écart n'est corrigé automatiquement."
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1523,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/tariff-review",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/tariff-review",
+   "ms": 932,
+   "finalPath": "/platform/billing/tariff-review",
+   "headings": [
+    "H4:Aperçu facturation"
+   ],
+   "tabs": [
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier"
+   ],
+   "buttons": [
+    "Paramètres",
+    "Tableau de bord",
+    "Abonnements",
+    "Factures",
+    "Paiements",
+    "Relances",
+    "Prélèvements programmés",
+    "Avoirs",
+    "Coupons",
+    "Portefeuilles",
+    "Forensique",
+    "Gouvernance",
+    "Grand livre",
+    "Récupération",
+    "Anomalies & rapprochement",
+    "Abonnements à vérifier",
+    "Actualiser"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 14,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "Ces abonnements ont un prix contractuel non vérifié : leur renouvellement est mis en attente tant qu'un administrateur n'a pas confirmé leur"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 777,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Tableau de bord",
+     "path": "/platform/billing/overview",
+     "textLength": 1340,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Abonnements",
+     "path": "/platform/billing/subscriptions",
+     "textLength": 1689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Factures",
+     "path": "/platform/billing/invoices",
+     "textLength": 2689,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Paiements",
+     "path": "/platform/billing/payments",
+     "textLength": 949,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Relances",
+     "path": "/platform/billing/dunning",
+     "textLength": 973,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Prélèvements programmés",
+     "path": "/platform/billing/scheduled-debits",
+     "textLength": 901,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Avoirs",
+     "path": "/platform/billing/credit-notes",
+     "textLength": 733,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Coupons",
+     "path": "/platform/billing/coupons",
+     "textLength": 837,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Portefeuilles",
+     "path": "/platform/billing/wallets",
+     "textLength": 1086,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Forensique",
+     "path": "/platform/billing/forensics",
+     "textLength": 917,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Gouvernance",
+     "path": "/platform/billing/governance",
+     "textLength": 801,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Grand livre",
+     "path": "/platform/billing/ledger",
+     "textLength": 726,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Récupération",
+     "path": "/platform/billing/recovery",
+     "textLength": 1413,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Anomalies & rapprochement",
+     "path": "/platform/billing/reconciliation",
+     "textLength": 1523,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/billing/tariff-review",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/pricing/review-subscriptions"
+    }
+   ]
+  },
+  {
+   "path": "/platform/companies/105/billing",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/companies/:id/billing",
+   "ms": 955,
+   "finalPath": "/platform/dashboard/overview",
+   "headings": [
+    "H4:Cockpit",
+    "H5:Widgets du tableau de bord"
+   ],
+   "tabs": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription"
+   ],
+   "buttons": [
+    "Vue d'ensemble",
+    "Activité",
+    "Funnel inscription",
+    "Ajouter un widget",
+    "Semaine",
+    "Mois",
+    "Année",
+    "Actuel",
+    "Comparer N-1"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 723,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Vue d'ensemble",
+     "path": "/platform/dashboard/overview",
+     "textLength": 723,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Activité",
+     "path": "/platform/dashboard/activity",
+     "textLength": 512,
+     "empty": true,
+     "errors": 4
+    },
+    {
+     "label": "Funnel inscription",
+     "path": "/platform/dashboard/funnel",
+     "textLength": 384,
+     "empty": false,
+     "errors": 1
+    }
+   ],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/platform/companies/105/billing [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity/types"
+    },
+    {
+     "page": "/platform/companies/105/billing [tab:Activité]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/activity?page=1&per_page=30"
+    },
+    {
+     "page": "/platform/companies/105/billing [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity?page=1&per_page=30\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/companies/105/billing [tab:Activité]",
+     "kind": "js",
+     "text": "[GET] \"/api/platform/activity/types\": 403 Forbidden"
+    },
+    {
+     "page": "/platform/companies/105/billing [tab:Funnel inscription]",
+     "kind": "api",
+     "status": 403,
+     "method": "GET",
+     "url": "/api/platform/onboarding/funnel?days=30"
+    }
+   ]
+  },
+  {
+   "path": "/platform/billing/consolidated-preview?company=101",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/consolidated-preview",
+   "ms": 926,
+   "finalPath": "/platform/billing/consolidated-preview?company=101",
+   "headings": [],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 2,
+   "rows": 7,
+   "pagination": 0,
+   "alerts": [
+    "Simulation visuelle — ne constitue pas une facture— Aucune facture n'est créée, fusionnée ni modifiée. Les documents comptables officiels re"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 950,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/invoices/112",
+   "source": "link:/platform/billing/overview",
+   "title": "Leezr",
+   "pattern": "/platform/billing/invoices/:id",
+   "ms": 914,
+   "finalPath": "/platform/billing/invoices/112",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour aux factures",
+    "Imprimer"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 13,
+   "tables": 5,
+   "rows": 10,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 1011,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  }
+ ],
+ "mobile": [
+  {
+   "path": "/platform/dashboard/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/platform/billing/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  }
+ ],
+ "queueLeft": 0
+}

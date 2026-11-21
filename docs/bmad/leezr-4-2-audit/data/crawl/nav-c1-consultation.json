@@ -1,0 +1,150 @@
+{
+ "groups": [
+  {
+   "key": "home",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "home"
+     },
+     "icon": "tabler-smart-home",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "team",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-team",
+     "title": "team",
+     "labelKey": "nav.groups.team",
+     "to": [],
+     "icon": "tabler-users",
+     "permission": null,
+     "tags": [],
+     "children": [
+      {
+       "key": "workforce-people",
+       "title": "Collaborators",
+       "to": {
+        "name": "company-people"
+       },
+       "icon": "tabler-users",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": []
+      },
+      {
+       "key": "workforce-contracts",
+       "title": "Employment contracts",
+       "to": {
+        "name": "company-workforce-contracts"
+       },
+       "icon": "tabler-file-text",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "settings",
+   "titleKey": "",
+   "placement": "nav",
+   "items": [
+    {
+     "key": "space-settings",
+     "title": "settings",
+     "labelKey": "nav.groups.settings",
+     "to": {
+      "name": "company-settings"
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [],
+     "hub": true,
+     "children": [
+      {
+       "key": "workforce-organization",
+       "title": "Organization",
+       "to": {
+        "name": "company-workforce-organization-tab",
+        "params": {
+         "tab": "departments"
+        }
+       },
+       "icon": "tabler-hierarchy-2",
+       "permission": "workforce.view",
+       "tags": [],
+       "children": [],
+       "settings": {
+        "section": "organization",
+        "level": "essential"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "personal_menu",
+   "titleKey": "",
+   "placement": "menu",
+   "items": [
+    {
+     "key": "my-space",
+     "title": "My Space",
+     "to": {
+      "name": "company-my-space-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-user-circle",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "account-settings",
+     "title": "Account Settings",
+     "to": {
+      "name": "account-settings-tab",
+      "params": {
+       "tab": "account"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": null,
+     "tags": [
+      "avatar"
+     ],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ],
+ "actions": []
+}

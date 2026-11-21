@@ -1,0 +1,48 @@
+{
+ "groups": [
+  {
+   "key": "clients",
+   "titleKey": "nav.groups.clients",
+   "items": [
+    {
+     "key": "communications",
+     "title": "Communications",
+     "to": {
+      "name": "platform-communications-tab",
+      "params": {
+       "tab": "support"
+      }
+     },
+     "icon": "tabler-message-circle-cog",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-support",
+   "label": "footer.support",
+   "to": {
+    "name": "platform-communications-tab",
+    "params": {
+     "tab": "support"
+    }
+   },
+   "href": null,
+   "icon": "tabler-message-circle-cog",
+   "sortOrder": 10
+  },
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

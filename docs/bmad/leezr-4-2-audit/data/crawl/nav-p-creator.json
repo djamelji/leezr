@@ -1,0 +1,32 @@
+{
+ "groups": [
+  {
+   "key": "clients",
+   "titleKey": "nav.groups.clients",
+   "items": [
+    {
+     "key": "platform-companies",
+     "title": "Companies",
+     "to": {
+      "name": "platform-companies"
+     },
+     "icon": "tabler-building",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

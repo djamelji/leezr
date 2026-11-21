@@ -1,0 +1,1667 @@
+{
+ "scope": "company",
+ "user": "consultation@leezr.test",
+ "tag": "c1-consultation",
+ "landing": "/home",
+ "navEntries": 7,
+ "pages": [
+  {
+   "path": "/home",
+   "source": "landing",
+   "group": null,
+   "title": "Leezr",
+   "pattern": "/home",
+   "ms": 913,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 214,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/people",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "workforce-people",
+   "pattern": "/company/people",
+   "ms": 912,
+   "finalPath": "/company/people",
+   "headings": [
+    "H4:Équipe"
+   ],
+   "tabs": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "buttons": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 5,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 199,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 199,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 733,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "label",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/contracts",
+   "source": "menu",
+   "group": "team",
+   "title": "Leezr",
+   "key": "workforce-contracts",
+   "pattern": "/company/workforce/contracts",
+   "ms": 919,
+   "finalPath": "/company/workforce/contracts",
+   "headings": [
+    "H4:Contrats de travail"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Modèles de contrat"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 4,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 392,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/settings",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "space-settings",
+   "pattern": "/company/settings",
+   "ms": 915,
+   "finalPath": "/company/settings",
+   "headings": [
+    "H4:Réglages"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 212,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": [
+    {
+     "id": "aria-required-children",
+     "impact": "critical",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/organization/departments",
+   "source": "menu",
+   "group": "settings",
+   "title": "Leezr",
+   "key": "workforce-organization",
+   "pattern": "/company/workforce/organization/departments",
+   "ms": 951,
+   "finalPath": "/company/workforce/organization/departments",
+   "headings": [
+    "H1:Organisation",
+    "H5:Ajouter un département",
+    "H5:Ajouter un poste"
+   ],
+   "tabs": [
+    "Départements",
+    "Postes"
+   ],
+   "buttons": [
+    "Départements",
+    "Postes",
+    "Annuler",
+    "Créer",
+    "Annuler",
+    "Créer"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 12,
+   "tables": 1,
+   "rows": 4,
+   "pagination": 2,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 529,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Départements",
+     "path": "/company/workforce/organization/departments",
+     "textLength": 529,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Postes",
+     "path": "/company/workforce/organization/roles",
+     "textLength": 588,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 2
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/overview",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "my-space",
+   "pattern": "/company/my-space/overview",
+   "ms": 924,
+   "finalPath": "/company/my-space/overview",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 454,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 454,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 848,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 230,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes signatures",
+     "path": "/company/my-space/signatures",
+     "textLength": 222,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/account-settings/account",
+   "source": "menu",
+   "group": "personal_menu",
+   "title": "Leezr",
+   "key": "account-settings",
+   "pattern": "/account-settings/account",
+   "ms": 919,
+   "finalPath": "/account-settings/account",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Téléverser une nouvelle photo",
+    "Enregistrer les modifications",
+    "Annuler"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 38,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [
+    "0 sur 6 champs obligatoires renseignés"
+   ],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 746,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 746,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": [],
+   "errors": []
+  },
+  {
+   "path": "/company/plan",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/plan",
+   "ms": 913,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing",
+   "ms": 905,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/members",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/members",
+   "ms": 906,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/people/hr",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/people/hr",
+   "ms": 931,
+   "finalPath": "/company/people/hr",
+   "headings": [
+    "H4:Équipe",
+    "H5:Aucun employé enregistré",
+    "H5:Importer des collaborateurs"
+   ],
+   "tabs": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "buttons": [
+    "Personnes",
+    "Gestion RH",
+    "Filtres",
+    "Télécharger le modèle",
+    "Suivant"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; aucun contrat, compte ou rémunéra"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 733,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 199,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 733,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/people/roles",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/people/roles",
+   "ms": 908,
+   "finalPath": "/company/people/roles",
+   "headings": [
+    "H4:Équipe"
+   ],
+   "tabs": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "buttons": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 5,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 199,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Personnes",
+     "path": "/company/people/roles",
+     "textLength": 199,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 733,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce",
+   "ms": 907,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 214,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/configuration",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/configuration",
+   "ms": 911,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/contract/templates",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/contract/templates",
+   "ms": 905,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/signature",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/signature",
+   "ms": 907,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/requirements",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/requirements",
+   "ms": 908,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/documents",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/documents",
+   "ms": 906,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/employees",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workforce/employees",
+   "ms": 906,
+   "finalPath": "/company/people/hr",
+   "headings": [
+    "H4:Équipe",
+    "H5:Aucun employé enregistré",
+    "H5:Importer des collaborateurs"
+   ],
+   "tabs": [
+    "Personnes",
+    "Gestion RH"
+   ],
+   "buttons": [
+    "Personnes",
+    "Gestion RH",
+    "Filtres",
+    "Télécharger le modèle",
+    "Suivant"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 5,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [
+    "Importez de NOUVEAUX collaborateurs depuis un fichier CSV. Les dossiers existants ne sont jamais écrasés ; aucun contrat, compte ou rémunéra"
+   ],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 733,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Personnes",
+     "path": "/company/people",
+     "textLength": 199,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Gestion RH",
+     "path": "/company/people/hr",
+     "textLength": 733,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/audit",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/audit",
+   "ms": 917,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/modules",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/modules",
+   "ms": 905,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/support",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/support",
+   "ms": 904,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workflows",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/workflows",
+   "ms": 906,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/notifications",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/notifications",
+   "ms": 906,
+   "finalPath": "/company/notifications",
+   "headings": [],
+   "tabs": [
+    "Notifications",
+    "Préférences"
+   ],
+   "buttons": [
+    "Notifications",
+    "Préférences"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 172,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Notifications",
+     "path": "/company/notifications",
+     "textLength": 172,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Préférences",
+     "path": "/company/notifications",
+     "textLength": 357,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/profile/overview",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/profile/overview",
+   "ms": 917,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/onboarding",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/onboarding",
+   "ms": 907,
+   "finalPath": "/onboarding",
+   "headings": [
+    "H1:Lien indisponible"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 119,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": [
+    {
+     "page": "/onboarding",
+     "kind": "api",
+     "status": 401,
+     "method": "GET",
+     "url": "/api/public/onboarding"
+    }
+   ]
+  },
+  {
+   "path": "/company/billing/pay",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/pay",
+   "ms": 1076,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/billing/consolidated-preview",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/billing/consolidated-preview",
+   "ms": 907,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/dev-lab",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/company/dev-lab",
+   "ms": 908,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/documents/templates",
+   "source": "link:/company/workforce/contracts",
+   "title": "Leezr",
+   "pattern": "/company/documents/templates",
+   "ms": 1072,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/onboarding",
+   "source": "link:/company/workforce/organization/departments",
+   "title": "Leezr",
+   "pattern": "/company/workforce/onboarding",
+   "ms": 905,
+   "finalPath": "/company/403",
+   "headings": [],
+   "tabs": [],
+   "buttons": [
+    "Retour",
+    "Aller au tableau de bord"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": true,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 139,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/organization/positions/4",
+   "source": "link:/company/workforce/organization/departments",
+   "title": "Leezr",
+   "pattern": "/company/workforce/organization/positions/:id",
+   "ms": 908,
+   "finalPath": "/company/workforce/organization/positions/4",
+   "headings": [
+    "H4:Gestionnaire administratif"
+   ],
+   "tabs": [
+    "Informations",
+    "Personnes (0)"
+   ],
+   "buttons": [
+    "Informations",
+    "Personnes (0)"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 475,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Informations",
+     "path": "/company/workforce/organization/positions/4",
+     "textLength": 475,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Personnes (0)",
+     "path": "/company/workforce/organization/positions/4/people",
+     "textLength": 314,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/documents",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/documents",
+   "ms": 916,
+   "finalPath": "/company/my-space/documents",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures",
+    "Téléverser",
+    "Téléverser",
+    "Téléverser",
+    "Téléverser",
+    "Téléverser",
+    "Télécharger"
+   ],
+   "iconButtonsWithoutLabel": 1,
+   "inputs": 0,
+   "tables": 1,
+   "rows": 5,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 848,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 454,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 848,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 230,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes signatures",
+     "path": "/company/my-space/signatures",
+     "textLength": 222,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/payslips",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/payslips",
+   "ms": 916,
+   "finalPath": "/company/my-space/payslips",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 230,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 454,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 848,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 230,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes signatures",
+     "path": "/company/my-space/signatures",
+     "textLength": 222,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/my-space/signatures",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/company/my-space/signatures",
+   "ms": 906,
+   "finalPath": "/company/my-space/signatures",
+   "headings": [
+    "H4:Mon espace"
+   ],
+   "tabs": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "buttons": [
+    "Aperçu",
+    "Mes documents",
+    "Mes bulletins",
+    "Mes signatures"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 222,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Aperçu",
+     "path": "/company/my-space/overview",
+     "textLength": 454,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes documents",
+     "path": "/company/my-space/documents",
+     "textLength": 848,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Mes bulletins",
+     "path": "/company/my-space/payslips",
+     "textLength": 230,
+     "empty": true,
+     "errors": 0
+    },
+    {
+     "label": "Mes signatures",
+     "path": "/company/my-space/signatures",
+     "textLength": 222,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/account-settings/security",
+   "source": "link:/company/my-space/overview",
+   "title": "Leezr",
+   "pattern": "/account-settings/security",
+   "ms": 930,
+   "finalPath": "/account-settings/security",
+   "headings": [],
+   "tabs": [
+    "Compte",
+    "Sécurité"
+   ],
+   "buttons": [
+    "Compte",
+    "Sécurité",
+    "Enregistrer les modifications",
+    "Activer la 2FA"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 3,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 353,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Compte",
+     "path": "/account-settings/account",
+     "textLength": 746,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Sécurité",
+     "path": "/account-settings/security",
+     "textLength": 353,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/",
+   "ms": 15913,
+   "finalPath": "/",
+   "headings": [
+    "H1:Gérez votre entreprise. Simplement. Professionnellement.",
+    "H2:Tout ce dont vous avez besoin pour gérer votre entreprise",
+    "H5:Gérez vos clients",
+    "H5:Organisez votre équipe",
+    "H5:Suivez vos opérations",
+    "H5:Personnalisez votre espace de travail",
+    "H5:Gardez le contrôle",
+    "H5:Grandissez en toute confiance"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Tableau de bord",
+    "Aller au tableau de bord",
+    "Créer votre espace de travail"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 2273,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/dashboard",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/dashboard",
+   "ms": 1126,
+   "finalPath": "/home",
+   "headings": [
+    "H4:Bienvenue,",
+    "H5:Vue d'ensemble"
+   ],
+   "tabs": [],
+   "buttons": [],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 0,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 214,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/register",
+   "source": "link:/company/dev-lab",
+   "title": "Leezr",
+   "pattern": "/register",
+   "ms": 917,
+   "finalPath": "/register",
+   "headings": [
+    "H4:Manage your business in one place",
+    "H4:What's your industry?",
+    "H5:Logistique"
+   ],
+   "tabs": [],
+   "buttons": [
+    "Previous",
+    "Next"
+   ],
+   "iconButtonsWithoutLabel": 0,
+   "inputs": 1,
+   "tables": 0,
+   "rows": 0,
+   "pagination": 0,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Save"
+   ],
+   "textLength": 482,
+   "overflowX": false,
+   "tabResults": [],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/company/workforce/organization/positions",
+   "source": "link:/company/workforce/organization/positions/4",
+   "title": "Leezr",
+   "pattern": "/company/workforce/organization/positions",
+   "ms": 1105,
+   "finalPath": "/company/workforce/organization/positions",
+   "headings": [
+    "H1:Organization",
+    "H5:Add Department",
+    "H5:Add Job Role"
+   ],
+   "tabs": [
+    "Departments",
+    "Job Roles"
+   ],
+   "buttons": [
+    "Departments",
+    "Job Roles",
+    "Cancel",
+    "Create",
+    "Cancel",
+    "Create"
+   ],
+   "iconButtonsWithoutLabel": 2,
+   "inputs": 15,
+   "tables": 1,
+   "rows": 4,
+   "pagination": 2,
+   "alerts": [],
+   "empty": false,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [
+    "Items per page",
+    "Cancel",
+    "Create",
+    "Cancel",
+    "Create"
+   ],
+   "textLength": 543,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Departments",
+     "path": "/company/workforce/organization/departments",
+     "textLength": 470,
+     "empty": false,
+     "errors": 0
+    },
+    {
+     "label": "Job Roles",
+     "path": "/company/workforce/organization/roles",
+     "textLength": 543,
+     "empty": false,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  }
+ ],
+ "mobile": [
+  {
+   "path": "/home",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/people",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/contracts",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/settings",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/workforce/organization/departments",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/company/my-space/overview",
+   "overflowX": false,
+   "scrollWidth": 390
+  },
+  {
+   "path": "/account-settings/account",
+   "overflowX": false,
+   "scrollWidth": 390
+  }
+ ],
+ "queueLeft": 0
+}

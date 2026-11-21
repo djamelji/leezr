@@ -1,0 +1,55 @@
+{
+ "groups": [
+  {
+   "key": "cockpit",
+   "titleKey": "nav.groups.cockpit",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "platform-dashboard-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-dashboard",
+     "permission": "view_dashboard",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "finance",
+   "titleKey": "nav.groups.finance",
+   "items": [
+    {
+     "key": "platform-billing",
+     "title": "Billing",
+     "to": {
+      "name": "platform-billing-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-file-invoice",
+     "permission": "view_billing",
+     "tags": [],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [],
+ "footer_links": [
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

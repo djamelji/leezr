@@ -1,0 +1,154 @@
+{
+ "scope": "platform",
+ "user": "support-only@leezr.com",
+ "tag": "p-support",
+ "landing": "/platform/communications/support",
+ "navEntries": 2,
+ "pages": [
+  {
+   "path": "/platform/communications/support",
+   "source": "landing",
+   "group": null,
+   "title": "Leezr",
+   "pattern": "/platform/communications/support",
+   "ms": 914,
+   "finalPath": "/platform/communications/support",
+   "headings": [
+    "H4:Communications"
+   ],
+   "tabs": [
+    "Support"
+   ],
+   "buttons": [
+    "Support"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 20,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 548,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Support",
+     "path": "/platform/communications/support",
+     "textLength": 548,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": [
+    {
+     "id": "aria-allowed-attr",
+     "impact": "critical",
+     "nodes": 1
+    },
+    {
+     "id": "button-name",
+     "impact": "critical",
+     "nodes": 4
+    },
+    {
+     "id": "list",
+     "impact": "serious",
+     "nodes": 1
+    }
+   ],
+   "errors": []
+  },
+  {
+   "path": "/platform/companies",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/platform/companies",
+   "ms": 925,
+   "finalPath": "/platform/communications/support",
+   "headings": [
+    "H4:Communications"
+   ],
+   "tabs": [
+    "Support"
+   ],
+   "buttons": [
+    "Support"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 20,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 548,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Support",
+     "path": "/platform/communications/support",
+     "textLength": 548,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  },
+  {
+   "path": "/platform/billing/overview",
+   "source": "extra",
+   "title": "Leezr",
+   "pattern": "/platform/billing/overview",
+   "ms": 937,
+   "finalPath": "/platform/communications/support",
+   "headings": [
+    "H4:Communications"
+   ],
+   "tabs": [
+    "Support"
+   ],
+   "buttons": [
+    "Support"
+   ],
+   "iconButtonsWithoutLabel": 4,
+   "inputs": 20,
+   "tables": 1,
+   "rows": 1,
+   "pagination": 2,
+   "alerts": [],
+   "empty": true,
+   "forbidden": false,
+   "rawKeys": [],
+   "englishHints": [],
+   "textLength": 548,
+   "overflowX": false,
+   "tabResults": [
+    {
+     "label": "Support",
+     "path": "/platform/communications/support",
+     "textLength": 548,
+     "empty": true,
+     "errors": 0
+    }
+   ],
+   "axe": null,
+   "errors": []
+  }
+ ],
+ "mobile": [
+  {
+   "path": "/platform/communications/support",
+   "overflowX": false,
+   "scrollWidth": 390
+  }
+ ],
+ "queueLeft": 0
+}

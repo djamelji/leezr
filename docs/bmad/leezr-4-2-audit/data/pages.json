@@ -1,0 +1,1876 @@
+{
+ "routes": [
+  {
+   "name": "root",
+   "path": "/"
+  },
+  {
+   "name": "$error",
+   "path": "/:error(.*)"
+  },
+  {
+   "name": "account-settings-tab",
+   "path": "/account-settings/:tab"
+  },
+  {
+   "name": "audience-confirm",
+   "path": "/audience/confirm"
+  },
+  {
+   "name": "audience-unsubscribe",
+   "path": "/audience/unsubscribe"
+  },
+  {
+   "name": "company403",
+   "path": "/company/403"
+  },
+  {
+   "name": "company-audit",
+   "path": "/company/audit"
+  },
+  {
+   "name": "company-billing",
+   "path": "/company/billing"
+  },
+  {
+   "name": "company-billing-tab",
+   "path": "/company/billing/:tab"
+  },
+  {
+   "name": "company-billing-consolidated-preview",
+   "path": "/company/billing/consolidated-preview"
+  },
+  {
+   "name": "company-billing-invoices-id",
+   "path": "/company/billing/invoices/:id"
+  },
+  {
+   "name": "company-billing-pay",
+   "path": "/company/billing/pay"
+  },
+  {
+   "name": "company-catalogs-tab",
+   "path": "/company/catalogs/:tab"
+  },
+  {
+   "name": "company-dev-lab",
+   "path": "/company/dev-lab"
+  },
+  {
+   "name": "company-documents-tab",
+   "path": "/company/documents/:tab"
+  },
+  {
+   "name": "company-members",
+   "path": "/company/members"
+  },
+  {
+   "name": "company-members-id",
+   "path": "/company/members/:id"
+  },
+  {
+   "name": "company-modules",
+   "path": "/company/modules"
+  },
+  {
+   "name": "company-modules-key",
+   "path": "/company/modules/:key"
+  },
+  {
+   "name": "company-my-deliveries",
+   "path": "/company/my-deliveries"
+  },
+  {
+   "name": "company-my-deliveries-id",
+   "path": "/company/my-deliveries/:id"
+  },
+  {
+   "name": "company-my-referrals",
+   "path": "/company/my-referrals"
+  },
+  {
+   "name": "company-my-space-tab",
+   "path": "/company/my-space/:tab"
+  },
+  {
+   "name": "company-notifications",
+   "path": "/company/notifications"
+  },
+  {
+   "name": "company-people",
+   "path": "/company/people"
+  },
+  {
+   "name": "company-people-person-ref",
+   "path": "/company/people/:personRef/:tab?"
+  },
+  {
+   "name": "company-people-hr",
+   "path": "/company/people/hr"
+  },
+  {
+   "name": "company-people-roles",
+   "path": "/company/people/roles"
+  },
+  {
+   "name": "company-plan",
+   "path": "/company/plan"
+  },
+  {
+   "name": "company-profile-tab",
+   "path": "/company/profile/:tab"
+  },
+  {
+   "name": "company-roles",
+   "path": "/company/roles"
+  },
+  {
+   "name": "company-settings",
+   "path": "/company/settings"
+  },
+  {
+   "name": "company-shipments",
+   "path": "/company/shipments"
+  },
+  {
+   "name": "company-shipments-id",
+   "path": "/company/shipments/:id"
+  },
+  {
+   "name": "company-shipments-create",
+   "path": "/company/shipments/create"
+  },
+  {
+   "name": "company-support",
+   "path": "/company/support"
+  },
+  {
+   "name": "company-support-id",
+   "path": "/company/support/:id"
+  },
+  {
+   "name": "company-workflows",
+   "path": "/company/workflows"
+  },
+  {
+   "name": "company-workflows-id",
+   "path": "/company/workflows/:id"
+  },
+  {
+   "name": "company-workforce",
+   "path": "/company/workforce"
+  },
+  {
+   "name": "company-workforce-configuration",
+   "path": "/company/workforce/configuration"
+  },
+  {
+   "name": "company-workforce-contract-templates",
+   "path": "/company/workforce/contract/templates"
+  },
+  {
+   "name": "company-workforce-contracts",
+   "path": "/company/workforce/contracts"
+  },
+  {
+   "name": "company-workforce-documents",
+   "path": "/company/workforce/documents"
+  },
+  {
+   "name": "company-workforce-dsn",
+   "path": "/company/workforce/dsn"
+  },
+  {
+   "name": "company-workforce-dsn-id",
+   "path": "/company/workforce/dsn/:id"
+  },
+  {
+   "name": "company-workforce-employees",
+   "path": "/company/workforce/employees"
+  },
+  {
+   "name": "company-workforce-employees-id",
+   "path": "/company/workforce/employees/:id"
+  },
+  {
+   "name": "company-workforce-hiring",
+   "path": "/company/workforce/hiring"
+  },
+  {
+   "name": "company-workforce-hiring-id",
+   "path": "/company/workforce/hiring/:id"
+  },
+  {
+   "name": "company-workforce-leave",
+   "path": "/company/workforce/leave/:tab?"
+  },
+  {
+   "name": "company-workforce-me",
+   "path": "/company/workforce/me"
+  },
+  {
+   "name": "company-workforce-onboarding",
+   "path": "/company/workforce/onboarding"
+  },
+  {
+   "name": "company-workforce-organization-tab",
+   "path": "/company/workforce/organization/:tab"
+  },
+  {
+   "name": "company-workforce-organization-positions-id",
+   "path": "/company/workforce/organization/positions/:id/:tab?"
+  },
+  {
+   "name": "company-workforce-payroll",
+   "path": "/company/workforce/payroll/:tab?"
+  },
+  {
+   "name": "company-workforce-payroll-id",
+   "path": "/company/workforce/payroll/:id(\\d+)"
+  },
+  {
+   "name": "company-workforce-planning",
+   "path": "/company/workforce/planning"
+  },
+  {
+   "name": "company-workforce-referrals",
+   "path": "/company/workforce/referrals/:tab?"
+  },
+  {
+   "name": "company-workforce-requirements",
+   "path": "/company/workforce/requirements"
+  },
+  {
+   "name": "company-workforce-settings-tab",
+   "path": "/company/workforce/settings/:tab"
+  },
+  {
+   "name": "company-workforce-signature",
+   "path": "/company/workforce/signature"
+  },
+  {
+   "name": "company-workforce-time",
+   "path": "/company/workforce/time/:tab?"
+  },
+  {
+   "name": "company-workforce-time-id",
+   "path": "/company/workforce/time/:id(\\d+)"
+  },
+  {
+   "name": "dashboard",
+   "path": "/dashboard"
+  },
+  {
+   "name": "forgot-password",
+   "path": "/forgot-password"
+  },
+  {
+   "name": "help-center",
+   "path": "/help-center"
+  },
+  {
+   "name": "help-center-topic-slug",
+   "path": "/help-center/:topicSlug"
+  },
+  {
+   "name": "help-center-topic-slug-article-slug",
+   "path": "/help-center/:topicSlug/:articleSlug"
+  },
+  {
+   "name": "home",
+   "path": "/home"
+  },
+  {
+   "name": "invitations",
+   "path": "/invitations"
+  },
+  {
+   "name": "login",
+   "path": "/login"
+  },
+  {
+   "name": "maintenance",
+   "path": "/maintenance"
+  },
+  {
+   "name": "onboarding",
+   "path": "/onboarding"
+  },
+  {
+   "name": "platform",
+   "path": "/platform"
+  },
+  {
+   "name": "platform-access-tab",
+   "path": "/platform/access/:tab"
+  },
+  {
+   "name": "platform-account-tab",
+   "path": "/platform/account/:tab"
+  },
+  {
+   "name": "platform-billing-tab",
+   "path": "/platform/billing/:tab"
+  },
+  {
+   "name": "platform-billing-consolidated-preview",
+   "path": "/platform/billing/consolidated-preview"
+  },
+  {
+   "name": "platform-billing-invoices-id",
+   "path": "/platform/billing/invoices/:id"
+  },
+  {
+   "name": "platform-catalog-tab",
+   "path": "/platform/catalog/:tab"
+  },
+  {
+   "name": "platform-communications-tab",
+   "path": "/platform/communications/:tab"
+  },
+  {
+   "name": "platform-companies",
+   "path": "/platform/companies"
+  },
+  {
+   "name": "platform-companies-id",
+   "path": "/platform/companies/:id/:tab?"
+  },
+  {
+   "name": "platform-companies-create",
+   "path": "/platform/companies/create"
+  },
+  {
+   "name": "platform-contract-templates",
+   "path": "/platform/contract-templates"
+  },
+  {
+   "name": "platform-dashboard-tab",
+   "path": "/platform/dashboard/:tab"
+  },
+  {
+   "name": "platform-documentation-slug",
+   "path": "/platform/documentation/:slug"
+  },
+  {
+   "name": "platform-documents-id",
+   "path": "/platform/documents/:id"
+  },
+  {
+   "name": "platform-forgot-password",
+   "path": "/platform/forgot-password"
+  },
+  {
+   "name": "platform-jobdomains-id",
+   "path": "/platform/jobdomains/:id"
+  },
+  {
+   "name": "platform-jobdomains-id-tab",
+   "path": "/platform/jobdomains/:id/:tab"
+  },
+  {
+   "name": "platform-login",
+   "path": "/platform/login"
+  },
+  {
+   "name": "platform-markets-key",
+   "path": "/platform/markets/:key"
+  },
+  {
+   "name": "platform-messaging-tab",
+   "path": "/platform/messaging/:tab"
+  },
+  {
+   "name": "platform-modules-key",
+   "path": "/platform/modules/:key/:tab?"
+  },
+  {
+   "name": "platform-operations-tab",
+   "path": "/platform/operations/:tab"
+  },
+  {
+   "name": "platform-organization-presets",
+   "path": "/platform/organization-presets"
+  },
+  {
+   "name": "platform-organization-presets-id",
+   "path": "/platform/organization-presets/:id"
+  },
+  {
+   "name": "platform-plans-key",
+   "path": "/platform/plans/:key"
+  },
+  {
+   "name": "platform-presentation-lab",
+   "path": "/platform/presentation-lab"
+  },
+  {
+   "name": "platform-reset-password",
+   "path": "/platform/reset-password"
+  },
+  {
+   "name": "platform-settings-tab",
+   "path": "/platform/settings/:tab"
+  },
+  {
+   "name": "platform-support-id",
+   "path": "/platform/support/:id"
+  },
+  {
+   "name": "platform-users-id",
+   "path": "/platform/users/:id"
+  },
+  {
+   "name": "referral",
+   "path": "/referral"
+  },
+  {
+   "name": "register",
+   "path": "/register"
+  },
+  {
+   "name": "reset-password",
+   "path": "/reset-password"
+  },
+  {
+   "name": "sign-token",
+   "path": "/sign/:token"
+  },
+  {
+   "name": "ui-lab",
+   "path": "/ui-lab"
+  }
+ ],
+ "pages": [
+  {
+   "file": "resources/js/pages/[...error].vue",
+   "path": "/:error(.*)",
+   "scope": "company",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 57
+  },
+  {
+   "file": "resources/js/pages/account-settings/[tab].vue",
+   "path": "/account-settings/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 82
+  },
+  {
+   "file": "resources/js/pages/audience/confirm.vue",
+   "path": "/audience/confirm",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 113
+  },
+  {
+   "file": "resources/js/pages/audience/unsubscribe.vue",
+   "path": "/audience/unsubscribe",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 113
+  },
+  {
+   "file": "resources/js/pages/company/403.vue",
+   "path": "/company/403",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 92
+  },
+  {
+   "file": "resources/js/pages/company/audit/index.vue",
+   "path": "/company/audit",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 207
+  },
+  {
+   "file": "resources/js/pages/company/billing/[tab].vue",
+   "path": "/company/billing/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.billing'",
+   "permission": "'billing.manage'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 104
+  },
+  {
+   "file": "resources/js/pages/company/billing/consolidated-preview.vue",
+   "path": "/company/billing/consolidated-preview",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.billing'",
+   "permission": "'billing.manage'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 320
+  },
+  {
+   "file": "resources/js/pages/company/billing/index.vue",
+   "path": "/company/billing",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 19
+  },
+  {
+   "file": "resources/js/pages/company/billing/invoices/[id].vue",
+   "path": "/company/billing/invoices/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.billing'",
+   "permission": "'billing.manage'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 887
+  },
+  {
+   "file": "resources/js/pages/company/billing/pay.vue",
+   "path": "/company/billing/pay",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.billing'",
+   "permission": "'billing.manage'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 1014
+  },
+  {
+   "file": "resources/js/pages/company/catalogs/[tab].vue",
+   "path": "/company/catalogs/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 467
+  },
+  {
+   "file": "resources/js/pages/company/dev-lab.vue",
+   "path": "/company/dev-lab",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce'",
+   "permission": "'workforce.view'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 277
+  },
+  {
+   "file": "resources/js/pages/company/documents/[tab].vue",
+   "path": "/company/documents/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 406
+  },
+  {
+   "file": "resources/js/pages/company/members/[id].vue",
+   "path": "/company/members/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.members'",
+   "permission": "'members.view' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 462
+  },
+  {
+   "file": "resources/js/pages/company/members/index.vue",
+   "path": "/company/members",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 16
+  },
+  {
+   "file": "resources/js/pages/company/modules/[key].vue",
+   "path": "/company/modules/:key",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.modules'",
+   "permission": "'modules.manage' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 344
+  },
+  {
+   "file": "resources/js/pages/company/modules/index.vue",
+   "path": "/company/modules",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.modules'",
+   "permission": "'modules.manage' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 1742
+  },
+  {
+   "file": "resources/js/pages/company/my-deliveries/[id].vue",
+   "path": "/company/my-deliveries/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'logistics_shipments'",
+   "permission": "'shipments.view_own' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 224
+  },
+  {
+   "file": "resources/js/pages/company/my-deliveries/index.vue",
+   "path": "/company/my-deliveries",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 227
+  },
+  {
+   "file": "resources/js/pages/company/my-referrals/index.vue",
+   "path": "/company/my-referrals",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 344
+  },
+  {
+   "file": "resources/js/pages/company/my-space/[tab].vue",
+   "path": "/company/my-space/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 232
+  },
+  {
+   "file": "resources/js/pages/company/notifications/index.vue",
+   "path": "/company/notifications",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 371
+  },
+  {
+   "file": "resources/js/pages/company/people/[personRef]/[[tab]].vue",
+   "path": "/company/people/:personRef/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 11
+  },
+  {
+   "file": "resources/js/pages/company/people/hr.vue",
+   "path": "/company/people/hr",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 11
+  },
+  {
+   "file": "resources/js/pages/company/people/index.vue",
+   "path": "/company/people",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 24
+  },
+  {
+   "file": "resources/js/pages/company/people/roles.vue",
+   "path": "/company/people/roles",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 11
+  },
+  {
+   "file": "resources/js/pages/company/plan.vue",
+   "path": "/company/plan",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 15
+  },
+  {
+   "file": "resources/js/pages/company/profile/[tab].vue",
+   "path": "/company/profile/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 85
+  },
+  {
+   "file": "resources/js/pages/company/roles.vue",
+   "path": "/company/roles",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.roles'",
+   "permission": "'roles.view' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 629
+  },
+  {
+   "file": "resources/js/pages/company/settings/index.vue",
+   "path": "/company/settings",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 317
+  },
+  {
+   "file": "resources/js/pages/company/shipments/[id].vue",
+   "path": "/company/shipments/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'logistics_shipments'",
+   "permission": "'shipments.view' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 523
+  },
+  {
+   "file": "resources/js/pages/company/shipments/create.vue",
+   "path": "/company/shipments/create",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 136
+  },
+  {
+   "file": "resources/js/pages/company/shipments/index.vue",
+   "path": "/company/shipments",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 275
+  },
+  {
+   "file": "resources/js/pages/company/support/[id].vue",
+   "path": "/company/support/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.support'",
+   "permission": "'support.view'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 258
+  },
+  {
+   "file": "resources/js/pages/company/support/index.vue",
+   "path": "/company/support",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.support'",
+   "permission": "'support.view'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 246
+  },
+  {
+   "file": "resources/js/pages/company/workflows/[id].vue",
+   "path": "/company/workflows/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.workflows'",
+   "permission": "'automations.view'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 522
+  },
+  {
+   "file": "resources/js/pages/company/workflows/index.vue",
+   "path": "/company/workflows",
+   "scope": "company",
+   "layout": null,
+   "module": "'core.workflows'",
+   "permission": "'automations.view'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 215
+  },
+  {
+   "file": "resources/js/pages/company/workforce/configuration.vue",
+   "path": "/company/workforce/configuration",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 21
+  },
+  {
+   "file": "resources/js/pages/company/workforce/contract/templates.vue",
+   "path": "/company/workforce/contract/templates",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 14
+  },
+  {
+   "file": "resources/js/pages/company/workforce/contracts/index.vue",
+   "path": "/company/workforce/contracts",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 217
+  },
+  {
+   "file": "resources/js/pages/company/workforce/documents/index.vue",
+   "path": "/company/workforce/documents",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 20
+  },
+  {
+   "file": "resources/js/pages/company/workforce/dsn/[id].vue",
+   "path": "/company/workforce/dsn/:id",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 362
+  },
+  {
+   "file": "resources/js/pages/company/workforce/dsn/index.vue",
+   "path": "/company/workforce/dsn",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 459
+  },
+  {
+   "file": "resources/js/pages/company/workforce/employees/[id].vue",
+   "path": "/company/workforce/employees/:id",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 430
+  },
+  {
+   "file": "resources/js/pages/company/workforce/employees/index.vue",
+   "path": "/company/workforce/employees",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 21
+  },
+  {
+   "file": "resources/js/pages/company/workforce/hiring/[id].vue",
+   "path": "/company/workforce/hiring/:id",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 454
+  },
+  {
+   "file": "resources/js/pages/company/workforce/hiring/index.vue",
+   "path": "/company/workforce/hiring",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 226
+  },
+  {
+   "file": "resources/js/pages/company/workforce/index.vue",
+   "path": "/company/workforce",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 17
+  },
+  {
+   "file": "resources/js/pages/company/workforce/leave/[[tab]].vue",
+   "path": "/company/workforce/leave/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce_leave'",
+   "permission": "'workforce.leave_request'",
+   "anyPermission": "['workforce.leave_view_all'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 1658
+  },
+  {
+   "file": "resources/js/pages/company/workforce/me.vue",
+   "path": "/company/workforce/me",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce' } })",
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 893
+  },
+  {
+   "file": "resources/js/pages/company/workforce/onboarding.vue",
+   "path": "/company/workforce/onboarding",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 350
+  },
+  {
+   "file": "resources/js/pages/company/workforce/organization/[tab].vue",
+   "path": "/company/workforce/organization/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 975
+  },
+  {
+   "file": "resources/js/pages/company/workforce/organization/positions/[id]/[[tab]].vue",
+   "path": "/company/workforce/organization/positions/:id/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 735
+  },
+  {
+   "file": "resources/js/pages/company/workforce/payroll/[[tab]].vue",
+   "path": "/company/workforce/payroll/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 564
+  },
+  {
+   "file": "resources/js/pages/company/workforce/payroll/[id].vue",
+   "path": "/company/workforce/payroll/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce_payroll'",
+   "permission": "'workforce.payroll_prepare' } }) // ADR-820",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 557
+  },
+  {
+   "file": "resources/js/pages/company/workforce/planning/index.vue",
+   "path": "/company/workforce/planning",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce_planning'",
+   "permission": "'workforce.planning_view' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 7100
+  },
+  {
+   "file": "resources/js/pages/company/workforce/referrals/[[tab]].vue",
+   "path": "/company/workforce/referrals/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce_referral'",
+   "permission": "'workforce_referral.review' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 443
+  },
+  {
+   "file": "resources/js/pages/company/workforce/requirements/index.vue",
+   "path": "/company/workforce/requirements",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 19
+  },
+  {
+   "file": "resources/js/pages/company/workforce/settings/[tab].vue",
+   "path": "/company/workforce/settings/:tab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 240
+  },
+  {
+   "file": "resources/js/pages/company/workforce/signature/index.vue",
+   "path": "/company/workforce/signature",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 15
+  },
+  {
+   "file": "resources/js/pages/company/workforce/time/[[tab]].vue",
+   "path": "/company/workforce/time/:tab?",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 1520
+  },
+  {
+   "file": "resources/js/pages/company/workforce/time/[id].vue",
+   "path": "/company/workforce/time/:id",
+   "scope": "company",
+   "layout": null,
+   "module": "'workforce'",
+   "permission": "'workforce.timesheet_view' } })",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 513
+  },
+  {
+   "file": "resources/js/pages/dashboard.vue",
+   "path": "/dashboard",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 9
+  },
+  {
+   "file": "resources/js/pages/forgot-password.vue",
+   "path": "/forgot-password",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": "true",
+   "redirect": false,
+   "lines": 181
+  },
+  {
+   "file": "resources/js/pages/help-center/[topicSlug]/[articleSlug].vue",
+   "path": "/help-center/:topicSlug/:articleSlug",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 427
+  },
+  {
+   "file": "resources/js/pages/help-center/[topicSlug]/index.vue",
+   "path": "/help-center/:topicSlug",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 181
+  },
+  {
+   "file": "resources/js/pages/help-center/index.vue",
+   "path": "/help-center",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 352
+  },
+  {
+   "file": "resources/js/pages/home.vue",
+   "path": "/home",
+   "scope": "public/auth",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 31
+  },
+  {
+   "file": "resources/js/pages/index.vue",
+   "path": "/",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 404
+  },
+  {
+   "file": "resources/js/pages/invitations.vue",
+   "path": "/invitations",
+   "scope": "public/auth",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 43
+  },
+  {
+   "file": "resources/js/pages/login.vue",
+   "path": "/login",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": "true",
+   "redirect": false,
+   "lines": 275
+  },
+  {
+   "file": "resources/js/pages/maintenance.vue",
+   "path": "/maintenance",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 363
+  },
+  {
+   "file": "resources/js/pages/onboarding/index.vue",
+   "path": "/onboarding",
+   "scope": "company",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true } })",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 408
+  },
+  {
+   "file": "resources/js/pages/platform/access/[tab].vue",
+   "path": "/platform/access/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.users'",
+   "permission": null,
+   "anyPermission": "['manage_platform_users'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 83
+  },
+  {
+   "file": "resources/js/pages/platform/account/[tab].vue",
+   "path": "/platform/account/:tab",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 75
+  },
+  {
+   "file": "resources/js/pages/platform/billing/[tab].vue",
+   "path": "/platform/billing/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.billing'",
+   "permission": "'view_billing'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 164
+  },
+  {
+   "file": "resources/js/pages/platform/billing/consolidated-preview.vue",
+   "path": "/platform/billing/consolidated-preview",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 282
+  },
+  {
+   "file": "resources/js/pages/platform/billing/invoices/[id].vue",
+   "path": "/platform/billing/invoices/:id",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 826
+  },
+  {
+   "file": "resources/js/pages/platform/catalog/[tab].vue",
+   "path": "/platform/catalog/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.modules'",
+   "permission": null,
+   "anyPermission": "['manage_modules'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 99
+  },
+  {
+   "file": "resources/js/pages/platform/communications/[tab].vue",
+   "path": "/platform/communications/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.support'",
+   "permission": null,
+   "anyPermission": "['manage_support'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 87
+  },
+  {
+   "file": "resources/js/pages/platform/companies/[id]/[[tab]].vue",
+   "path": "/platform/companies/:id/:tab?",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.companies'",
+   "permission": null,
+   "anyPermission": "['view_companies'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 1424
+  },
+  {
+   "file": "resources/js/pages/platform/companies/create.vue",
+   "path": "/platform/companies/create",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.companies'",
+   "permission": "'create_companies'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 577
+  },
+  {
+   "file": "resources/js/pages/platform/companies/index.vue",
+   "path": "/platform/companies",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.companies'",
+   "permission": null,
+   "anyPermission": "['view_companies'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 90
+  },
+  {
+   "file": "resources/js/pages/platform/contract-templates/index.vue",
+   "path": "/platform/contract-templates",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 278
+  },
+  {
+   "file": "resources/js/pages/platform/dashboard/[tab].vue",
+   "path": "/platform/dashboard/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.dashboard'",
+   "permission": "'view_dashboard'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 72
+  },
+  {
+   "file": "resources/js/pages/platform/documentation/[slug].vue",
+   "path": "/platform/documentation/:slug",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.documentation'",
+   "permission": "'manage_documentation'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 354
+  },
+  {
+   "file": "resources/js/pages/platform/documents/[id].vue",
+   "path": "/platform/documents/:id",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.documents'",
+   "permission": "'manage_document_catalog'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 446
+  },
+  {
+   "file": "resources/js/pages/platform/forgot-password.vue",
+   "path": "/platform/forgot-password",
+   "scope": "platform",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": "true",
+   "redirect": false,
+   "lines": 169
+  },
+  {
+   "file": "resources/js/pages/platform/index.vue",
+   "path": "/platform",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.dashboard'",
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 37
+  },
+  {
+   "file": "resources/js/pages/platform/jobdomains/[id]/[tab].vue",
+   "path": "/platform/jobdomains/:id/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.jobdomains'",
+   "permission": "'manage_jobdomains'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 781
+  },
+  {
+   "file": "resources/js/pages/platform/jobdomains/[id]/index.vue",
+   "path": "/platform/jobdomains/:id",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.jobdomains'",
+   "permission": "'manage_jobdomains'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 24
+  },
+  {
+   "file": "resources/js/pages/platform/login.vue",
+   "path": "/platform/login",
+   "scope": "platform",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": "true",
+   "redirect": false,
+   "lines": 258
+  },
+  {
+   "file": "resources/js/pages/platform/markets/[key].vue",
+   "path": "/platform/markets/:key",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.markets'",
+   "permission": "'manage_markets'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 667
+  },
+  {
+   "file": "resources/js/pages/platform/messaging/[tab].vue",
+   "path": "/platform/messaging/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.email'",
+   "permission": "'manage_email'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 107
+  },
+  {
+   "file": "resources/js/pages/platform/modules/[key]/[[tab]].vue",
+   "path": "/platform/modules/:key/:tab?",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.modules'",
+   "permission": "'manage_modules'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 1674
+  },
+  {
+   "file": "resources/js/pages/platform/operations/[tab].vue",
+   "path": "/platform/operations/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.alerts'",
+   "permission": null,
+   "anyPermission": "['view_system_health'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": true,
+   "lines": 109
+  },
+  {
+   "file": "resources/js/pages/platform/organization-presets/[id].vue",
+   "path": "/platform/organization-presets/:id",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 390
+  },
+  {
+   "file": "resources/js/pages/platform/organization-presets/index.vue",
+   "path": "/platform/organization-presets",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 278
+  },
+  {
+   "file": "resources/js/pages/platform/plans/[key].vue",
+   "path": "/platform/plans/:key",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.plans'",
+   "permission": "'manage_plans'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 768
+  },
+  {
+   "file": "resources/js/pages/platform/presentation-lab.vue",
+   "path": "/platform/presentation-lab",
+   "scope": "platform",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 69
+  },
+  {
+   "file": "resources/js/pages/platform/reset-password.vue",
+   "path": "/platform/reset-password",
+   "scope": "platform",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 247
+  },
+  {
+   "file": "resources/js/pages/platform/settings/[tab].vue",
+   "path": "/platform/settings/:tab",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.settings'",
+   "permission": null,
+   "anyPermission": "['manage_theme_settings'",
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 108
+  },
+  {
+   "file": "resources/js/pages/platform/support/[id].vue",
+   "path": "/platform/support/:id",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.support'",
+   "permission": "'manage_support'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 478
+  },
+  {
+   "file": "resources/js/pages/platform/users/[id].vue",
+   "path": "/platform/users/:id",
+   "scope": "platform",
+   "layout": "'platform'",
+   "module": "'platform.users'",
+   "permission": "'manage_platform_users'",
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 542
+  },
+  {
+   "file": "resources/js/pages/referral/index.vue",
+   "path": "/referral",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true } })",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 240
+  },
+  {
+   "file": "resources/js/pages/register/index.vue",
+   "path": "/register",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": "true",
+   "redirect": false,
+   "lines": 911
+  },
+  {
+   "file": "resources/js/pages/reset-password.vue",
+   "path": "/reset-password",
+   "scope": "public/auth",
+   "layout": "'blank'",
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": "true",
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 246
+  },
+  {
+   "file": "resources/js/pages/sign/[token].vue",
+   "path": "/sign/:token",
+   "scope": "public/auth",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 279
+  },
+  {
+   "file": "resources/js/pages/ui-lab.vue",
+   "path": "/ui-lab",
+   "scope": "company",
+   "layout": null,
+   "module": null,
+   "permission": null,
+   "anyPermission": null,
+   "public": null,
+   "unauthenticatedOnly": null,
+   "redirect": false,
+   "lines": 145
+  }
+ ]
+}

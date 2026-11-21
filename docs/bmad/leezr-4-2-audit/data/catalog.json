@@ -1,0 +1,2898 @@
+{
+    "modules": {
+        "payments.stripe": {
+            "name": "Stripe Payment Gateway",
+            "scope": "admin",
+            "type": "addon",
+            "surface": "structure",
+            "visibility": "hidden",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        },
+        "core.settings": {
+            "name": "Company Settings",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "company-profile",
+                    "title": "Company Profile",
+                    "to": {
+                        "name": "company-profile-tab",
+                        "params": {
+                            "tab": "overview"
+                        }
+                    },
+                    "permission": "settings.view",
+                    "group": "settings"
+                },
+                {
+                    "key": "company-catalogs",
+                    "title": "Catalogues",
+                    "to": {
+                        "name": "company-catalogs-tab",
+                        "params": {
+                            "tab": "fields"
+                        }
+                    },
+                    "anyPermission": [
+                        "settings.manage",
+                        "documents.configure",
+                        "workforce.manage"
+                    ],
+                    "group": "settings"
+                },
+                {
+                    "key": "my-space",
+                    "title": "My Space",
+                    "to": {
+                        "name": "company-my-space-tab",
+                        "params": {
+                            "tab": "overview"
+                        }
+                    },
+                    "group": "personal"
+                },
+                {
+                    "key": "account-settings",
+                    "title": "Account Settings",
+                    "to": {
+                        "name": "account-settings-tab",
+                        "params": {
+                            "tab": "account"
+                        }
+                    },
+                    "group": "personal"
+                }
+            ],
+            "routeNames": [
+                "company-profile-tab"
+            ],
+            "permissions": [
+                "settings.view",
+                "settings.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "settings.company_info",
+                    "permissions": [
+                        "settings.view"
+                    ]
+                },
+                {
+                    "key": "settings.company_management",
+                    "permissions": [
+                        "settings.manage"
+                    ]
+                }
+            ]
+        },
+        "core.documentation": {
+            "name": "Documentation",
+            "scope": "company",
+            "type": "core",
+            "surface": "core",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "documentation.view"
+            ],
+            "bundles": [
+                {
+                    "key": "documentation.access",
+                    "permissions": [
+                        "documentation.view"
+                    ]
+                }
+            ]
+        },
+        "core.roles": {
+            "name": "Roles",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "settings-roles",
+                    "title": "Roles & permissions",
+                    "to": {
+                        "name": "company-people-roles"
+                    },
+                    "permission": "roles.view",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [
+                "company-roles"
+            ],
+            "permissions": [
+                "roles.view",
+                "roles.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "roles.governance",
+                    "permissions": [
+                        "roles.view",
+                        "roles.manage"
+                    ]
+                }
+            ]
+        },
+        "core.jobdomain": {
+            "name": "Industry Profile",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "jobdomain.view",
+                "jobdomain.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "jobdomain.info",
+                    "permissions": [
+                        "jobdomain.view"
+                    ]
+                },
+                {
+                    "key": "jobdomain.management",
+                    "permissions": [
+                        "jobdomain.manage"
+                    ]
+                }
+            ]
+        },
+        "core.dashboard": {
+            "name": "Dashboard",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "dashboard",
+                    "title": "Dashboard",
+                    "to": {
+                        "name": "home"
+                    },
+                    "group": "home"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        },
+        "core.audit": {
+            "name": "Audit Log",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "audit",
+                    "title": "Audit Log",
+                    "to": {
+                        "name": "company-audit"
+                    },
+                    "permission": "audit.view",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [
+                "company-audit"
+            ],
+            "permissions": [
+                "audit.view"
+            ],
+            "bundles": [
+                {
+                    "key": "audit.viewer",
+                    "permissions": [
+                        "audit.view"
+                    ]
+                }
+            ]
+        },
+        "core.support": {
+            "name": "Support",
+            "scope": "company",
+            "type": "core",
+            "surface": "core",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "company-support",
+                "company-support-id"
+            ],
+            "permissions": [
+                "support.view",
+                "support.create"
+            ],
+            "bundles": [
+                {
+                    "key": "support.access",
+                    "permissions": [
+                        "support.view",
+                        "support.create"
+                    ]
+                }
+            ]
+        },
+        "core.theme": {
+            "name": "Theme",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "theme.view",
+                "theme.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "theme.full",
+                    "permissions": [
+                        "theme.view",
+                        "theme.manage"
+                    ]
+                },
+                {
+                    "key": "theme.readonly",
+                    "permissions": [
+                        "theme.view"
+                    ]
+                }
+            ]
+        },
+        "core.members": {
+            "name": "Members",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "people",
+                    "title": "Collaborators",
+                    "to": {
+                        "name": "company-people"
+                    },
+                    "anyPermission": [
+                        "members.view",
+                        "workforce.view",
+                        "roles.view"
+                    ],
+                    "group": "team"
+                }
+            ],
+            "routeNames": [
+                "company-people",
+                "company-people-hr",
+                "company-people-roles",
+                "company-members",
+                "company-members-id"
+            ],
+            "permissions": [
+                "members.view",
+                "members.invite",
+                "members.manage",
+                "members.credentials",
+                "members.sensitive_read"
+            ],
+            "bundles": [
+                {
+                    "key": "members.team_view",
+                    "permissions": [
+                        "members.view"
+                    ]
+                },
+                {
+                    "key": "members.team_access",
+                    "permissions": [
+                        "members.view",
+                        "members.invite"
+                    ]
+                },
+                {
+                    "key": "members.team_management",
+                    "permissions": [
+                        "members.manage",
+                        "members.credentials"
+                    ]
+                },
+                {
+                    "key": "members.sensitive_data",
+                    "permissions": [
+                        "members.sensitive_read"
+                    ]
+                }
+            ]
+        },
+        "core.workflows": {
+            "name": "Workflows",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workflows",
+                    "title": "Workflows",
+                    "to": {
+                        "name": "company-workflows"
+                    },
+                    "permission": "automations.view",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [
+                "company-workflows",
+                "company-workflows-id"
+            ],
+            "permissions": [
+                "automations.view",
+                "automations.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "automations.access",
+                    "permissions": [
+                        "automations.view",
+                        "automations.manage"
+                    ]
+                }
+            ]
+        },
+        "core.documents": {
+            "name": "Documents",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "settings-documents",
+                    "title": "Document types & rules",
+                    "to": {
+                        "name": "company-documents-tab",
+                        "params": {
+                            "tab": "settings"
+                        }
+                    },
+                    "permission": "documents.configure",
+                    "group": "settings"
+                },
+                {
+                    "key": "documents",
+                    "title": "Documents",
+                    "to": {
+                        "name": "company-documents-tab",
+                        "params": {
+                            "tab": "todo"
+                        }
+                    },
+                    "anyPermission": [
+                        "documents.view",
+                        "workforce_documents.view",
+                        "workforce_signature.view"
+                    ],
+                    "group": "documents"
+                }
+            ],
+            "routeNames": [
+                "company-documents-tab"
+            ],
+            "permissions": [
+                "documents.view",
+                "documents.view_confidential",
+                "documents.manage",
+                "documents.configure",
+                "payslips.import",
+                "payslips.review",
+                "payslips.publish",
+                "payslips.download"
+            ],
+            "bundles": [
+                {
+                    "key": "documents.access",
+                    "permissions": [
+                        "documents.view"
+                    ]
+                },
+                {
+                    "key": "documents.management",
+                    "permissions": [
+                        "documents.manage",
+                        "documents.view_confidential",
+                        "documents.configure"
+                    ]
+                },
+                {
+                    "key": "documents.processing",
+                    "permissions": [
+                        "documents.manage"
+                    ]
+                },
+                {
+                    "key": "payslips.distribution",
+                    "permissions": [
+                        "payslips.import",
+                        "payslips.review",
+                        "payslips.publish",
+                        "payslips.download"
+                    ]
+                }
+            ]
+        },
+        "core.modules": {
+            "name": "Module Catalog",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "modules",
+                    "title": "Modules",
+                    "to": {
+                        "name": "company-modules"
+                    },
+                    "permission": "modules.manage",
+                    "group": "modules"
+                }
+            ],
+            "routeNames": [
+                "company-modules"
+            ],
+            "permissions": [
+                "modules.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "modules.management",
+                    "permissions": [
+                        "modules.manage"
+                    ]
+                }
+            ]
+        },
+        "core.notifications": {
+            "name": "Notifications",
+            "scope": "company",
+            "type": "core",
+            "surface": "core",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        },
+        "core.billing": {
+            "name": "Plan & Billing",
+            "scope": "company",
+            "type": "core",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "billing",
+                    "title": "Billing",
+                    "to": {
+                        "name": "company-billing-tab",
+                        "params": {
+                            "tab": "overview"
+                        }
+                    },
+                    "permission": "billing.manage",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [
+                "company-billing-tab"
+            ],
+            "permissions": [
+                "billing.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "billing.management",
+                    "permissions": [
+                        "billing.manage"
+                    ]
+                }
+            ]
+        },
+        "platform.settings": {
+            "name": "Settings",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "settings",
+                    "title": "Settings",
+                    "to": {
+                        "name": "platform-settings-tab",
+                        "params": {
+                            "tab": "general"
+                        }
+                    },
+                    "permission": "manage_theme_settings",
+                    "group": "configuration"
+                }
+            ],
+            "routeNames": [
+                "platform-settings-tab",
+                "platform-feature-flags",
+                "platform-account-tab"
+            ],
+            "permissions": [
+                "manage_theme_settings",
+                "manage_session_settings",
+                "manage_maintenance"
+            ],
+            "bundles": [
+                {
+                    "key": "settings.appearance",
+                    "permissions": [
+                        "manage_theme_settings"
+                    ]
+                },
+                {
+                    "key": "settings.sessions",
+                    "permissions": [
+                        "manage_session_settings"
+                    ]
+                },
+                {
+                    "key": "settings.maintenance",
+                    "permissions": [
+                        "manage_maintenance"
+                    ]
+                }
+            ]
+        },
+        "platform.documentation": {
+            "name": "Documentation",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-documentation",
+                "platform-documentation-slug",
+                "platform-communications-tab"
+            ],
+            "permissions": [
+                "manage_documentation"
+            ],
+            "bundles": [
+                {
+                    "key": "documentation.admin",
+                    "permissions": [
+                        "manage_documentation"
+                    ]
+                }
+            ]
+        },
+        "platform.plans": {
+            "name": "Plans",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-plans",
+                "platform-plans-key",
+                "platform-catalog-tab"
+            ],
+            "permissions": [
+                "manage_plans"
+            ],
+            "bundles": [
+                {
+                    "key": "plans.catalog",
+                    "permissions": [
+                        "manage_plans"
+                    ]
+                }
+            ]
+        },
+        "platform.security": {
+            "name": "Security",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "security.alerts.view",
+                "security.alerts.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "security.full",
+                    "permissions": [
+                        "security.alerts.view",
+                        "security.alerts.manage"
+                    ]
+                },
+                {
+                    "key": "security.readonly",
+                    "permissions": [
+                        "security.alerts.view"
+                    ]
+                }
+            ]
+        },
+        "platform.activity": {
+            "name": "Activity Feed",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "platform.audit"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-activity",
+                "platform-dashboard-tab"
+            ],
+            "permissions": [],
+            "bundles": []
+        },
+        "platform.roles": {
+            "name": "Roles",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-access-tab"
+            ],
+            "permissions": [
+                "manage_roles"
+            ],
+            "bundles": [
+                {
+                    "key": "roles.access_control",
+                    "permissions": [
+                        "manage_roles"
+                    ]
+                }
+            ]
+        },
+        "platform.alerts": {
+            "name": "Alert Center",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "operations",
+                    "title": "Operations",
+                    "to": {
+                        "name": "platform-operations-tab",
+                        "params": {
+                            "tab": "health"
+                        }
+                    },
+                    "anyPermission": [
+                        "view_system_health",
+                        "view_alerts",
+                        "security.alerts.view",
+                        "view_ai",
+                        "view_usage_monitoring",
+                        "manage_automations",
+                        "realtime.metrics.view"
+                    ],
+                    "group": "system"
+                }
+            ],
+            "routeNames": [
+                "platform-alerts",
+                "platform-operations-tab"
+            ],
+            "permissions": [
+                "view_alerts",
+                "manage_alerts"
+            ],
+            "bundles": [
+                {
+                    "key": "alerts.readonly",
+                    "permissions": [
+                        "view_alerts"
+                    ]
+                },
+                {
+                    "key": "alerts.full",
+                    "permissions": [
+                        "view_alerts",
+                        "manage_alerts"
+                    ]
+                }
+            ]
+        },
+        "platform.dashboard": {
+            "name": "Dashboard",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "dashboard",
+                    "title": "Dashboard",
+                    "to": {
+                        "name": "platform-dashboard-tab",
+                        "params": {
+                            "tab": "overview"
+                        }
+                    },
+                    "permission": "view_dashboard",
+                    "group": "cockpit"
+                }
+            ],
+            "routeNames": [
+                "platform",
+                "platform-dashboard-tab"
+            ],
+            "permissions": [
+                "view_dashboard",
+                "view_system_health",
+                "view_usage_monitoring"
+            ],
+            "bundles": [
+                {
+                    "key": "dashboard.base",
+                    "permissions": [
+                        "view_dashboard"
+                    ]
+                },
+                {
+                    "key": "dashboard.supervision",
+                    "permissions": [
+                        "view_dashboard",
+                        "view_system_health",
+                        "view_usage_monitoring"
+                    ]
+                }
+            ]
+        },
+        "platform.realtime": {
+            "name": "Realtime Backbone",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-realtime",
+                "platform-operations-tab"
+            ],
+            "permissions": [
+                "realtime.metrics.view",
+                "realtime.connections.view",
+                "realtime.governance"
+            ],
+            "bundles": [
+                {
+                    "key": "realtime.full",
+                    "permissions": [
+                        "realtime.metrics.view",
+                        "realtime.connections.view",
+                        "realtime.governance"
+                    ]
+                },
+                {
+                    "key": "realtime.readonly",
+                    "permissions": [
+                        "realtime.metrics.view",
+                        "realtime.connections.view"
+                    ]
+                }
+            ]
+        },
+        "platform.audit": {
+            "name": "Audit Logs",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-access-tab",
+                "platform-companies"
+            ],
+            "permissions": [
+                "view_audit_logs"
+            ],
+            "bundles": [
+                {
+                    "key": "audit.view",
+                    "permissions": [
+                        "view_audit_logs"
+                    ]
+                }
+            ]
+        },
+        "platform.support": {
+            "name": "Support",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "communications",
+                    "title": "Communications",
+                    "to": {
+                        "name": "platform-communications-tab",
+                        "params": {
+                            "tab": "support"
+                        }
+                    },
+                    "anyPermission": [
+                        "manage_support",
+                        "assign_support"
+                    ],
+                    "group": "clients"
+                }
+            ],
+            "routeNames": [
+                "platform-support",
+                "platform-support-id",
+                "platform-communications-tab"
+            ],
+            "permissions": [
+                "manage_support",
+                "assign_support"
+            ],
+            "bundles": [
+                {
+                    "key": "support.admin",
+                    "permissions": [
+                        "manage_support",
+                        "assign_support"
+                    ]
+                }
+            ]
+        },
+        "platform.markets": {
+            "name": "Markets",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-international-tab",
+                "platform-markets-key",
+                "platform-settings-tab"
+            ],
+            "permissions": [
+                "manage_markets"
+            ],
+            "bundles": [
+                {
+                    "key": "markets.governance",
+                    "permissions": [
+                        "manage_markets"
+                    ]
+                }
+            ]
+        },
+        "platform.ai": {
+            "name": "AI",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-ai-tab",
+                "platform-operations-tab"
+            ],
+            "permissions": [
+                "view_ai",
+                "manage_ai"
+            ],
+            "bundles": [
+                {
+                    "key": "ai.full",
+                    "permissions": [
+                        "view_ai",
+                        "manage_ai"
+                    ]
+                },
+                {
+                    "key": "ai.readonly",
+                    "permissions": [
+                        "view_ai"
+                    ]
+                }
+            ]
+        },
+        "platform.users": {
+            "name": "Platform Users",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "platform-access",
+                    "title": "Access Management",
+                    "to": {
+                        "name": "platform-access-tab",
+                        "params": {
+                            "tab": "users"
+                        }
+                    },
+                    "anyPermission": [
+                        "manage_platform_users",
+                        "manage_roles",
+                        "view_audit_logs"
+                    ],
+                    "group": "governance"
+                }
+            ],
+            "routeNames": [
+                "platform-access-tab",
+                "platform-users-id"
+            ],
+            "permissions": [
+                "manage_platform_users",
+                "manage_platform_user_credentials"
+            ],
+            "bundles": [
+                {
+                    "key": "users.management",
+                    "permissions": [
+                        "manage_platform_users",
+                        "manage_platform_user_credentials"
+                    ]
+                }
+            ]
+        },
+        "platform.jobdomains": {
+            "name": "Job Domains",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "contract-templates",
+                    "title": "Contract Templates",
+                    "to": {
+                        "name": "platform-contract-templates"
+                    },
+                    "permission": "manage_jobdomains",
+                    "group": "governance"
+                }
+            ],
+            "routeNames": [
+                "platform-jobdomains-id",
+                "platform-jobdomains-id-tab",
+                "platform-catalog-tab",
+                "platform-organization-presets",
+                "platform-organization-presets-id",
+                "platform-contract-templates"
+            ],
+            "permissions": [
+                "manage_jobdomains",
+                "presets.view",
+                "presets.edit",
+                "presets.publish",
+                "presets.preview_company"
+            ],
+            "bundles": [
+                {
+                    "key": "jobdomains.catalog",
+                    "permissions": [
+                        "manage_jobdomains"
+                    ]
+                },
+                {
+                    "key": "presets.reader",
+                    "permissions": [
+                        "presets.view",
+                        "presets.preview_company"
+                    ]
+                },
+                {
+                    "key": "presets.editor",
+                    "permissions": [
+                        "presets.view",
+                        "presets.edit"
+                    ]
+                },
+                {
+                    "key": "presets.publisher",
+                    "permissions": [
+                        "presets.view",
+                        "presets.publish"
+                    ]
+                }
+            ]
+        },
+        "platform.fields": {
+            "name": "Custom Fields",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-catalog-tab"
+            ],
+            "permissions": [
+                "manage_field_definitions"
+            ],
+            "bundles": [
+                {
+                    "key": "fields.catalog",
+                    "permissions": [
+                        "manage_field_definitions"
+                    ]
+                }
+            ]
+        },
+        "platform.automations": {
+            "name": "Automations",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-automations",
+                "platform-operations-tab"
+            ],
+            "permissions": [
+                "manage_automations",
+                "run_sensitive_automations"
+            ],
+            "bundles": [
+                {
+                    "key": "automations.admin",
+                    "permissions": [
+                        "manage_automations",
+                        "run_sensitive_automations"
+                    ]
+                }
+            ]
+        },
+        "platform.documents": {
+            "name": "Document Types",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-documents-id",
+                "platform-catalog-tab"
+            ],
+            "permissions": [
+                "manage_document_catalog"
+            ],
+            "bundles": [
+                {
+                    "key": "documents.catalog",
+                    "permissions": [
+                        "manage_document_catalog"
+                    ]
+                }
+            ]
+        },
+        "platform.audience": {
+            "name": "Audience",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "manage_audience"
+            ],
+            "bundles": [
+                {
+                    "key": "audience.management",
+                    "permissions": [
+                        "manage_audience"
+                    ]
+                }
+            ]
+        },
+        "platform.modules": {
+            "name": "Modules",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "catalog",
+                    "title": "Catalog",
+                    "to": {
+                        "name": "platform-catalog-tab",
+                        "params": {
+                            "tab": "modules"
+                        }
+                    },
+                    "permission": "manage_modules",
+                    "group": "governance"
+                }
+            ],
+            "routeNames": [
+                "platform-modules-key",
+                "platform-catalog-tab"
+            ],
+            "permissions": [
+                "manage_modules"
+            ],
+            "bundles": [
+                {
+                    "key": "modules.catalog",
+                    "permissions": [
+                        "manage_modules"
+                    ]
+                }
+            ]
+        },
+        "platform.translations": {
+            "name": "Translations",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [
+                "manage_translations"
+            ],
+            "bundles": [
+                {
+                    "key": "translations.management",
+                    "permissions": [
+                        "manage_translations"
+                    ]
+                }
+            ]
+        },
+        "platform.notifications": {
+            "name": "Notifications",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "platform-messaging-tab"
+            ],
+            "permissions": [
+                "manage_notifications"
+            ],
+            "bundles": [
+                {
+                    "key": "notifications.admin",
+                    "permissions": [
+                        "manage_notifications"
+                    ]
+                }
+            ]
+        },
+        "platform.companies": {
+            "name": "Companies",
+            "scope": "admin",
+            "type": "internal",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "platform-companies",
+                    "title": "Companies",
+                    "to": {
+                        "name": "platform-companies"
+                    },
+                    "anyPermission": [
+                        "view_companies",
+                        "create_companies"
+                    ],
+                    "group": "clients"
+                }
+            ],
+            "routeNames": [
+                "platform-companies",
+                "platform-companies-id",
+                "platform-companies-create"
+            ],
+            "permissions": [
+                "view_companies",
+                "manage_companies",
+                "view_company_users",
+                "create_companies",
+                "override_company_commercial_terms"
+            ],
+            "bundles": [
+                {
+                    "key": "companies.readonly",
+                    "permissions": [
+                        "view_companies",
+                        "view_company_users"
+                    ]
+                },
+                {
+                    "key": "companies.supervision",
+                    "permissions": [
+                        "view_companies",
+                        "manage_companies",
+                        "view_company_users"
+                    ]
+                },
+                {
+                    "key": "companies.onboarding",
+                    "permissions": [
+                        "create_companies"
+                    ]
+                },
+                {
+                    "key": "companies.commercial_override",
+                    "permissions": [
+                        "override_company_commercial_terms"
+                    ]
+                }
+            ]
+        },
+        "platform.email": {
+            "name": "Email Hub",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "governance",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "platform-messaging",
+                    "title": "Messaging",
+                    "to": {
+                        "name": "platform-messaging-tab",
+                        "params": {
+                            "tab": "inbox"
+                        }
+                    },
+                    "permission": "manage_email",
+                    "group": "cockpit"
+                }
+            ],
+            "routeNames": [
+                "platform-email-tab",
+                "platform-messaging-tab"
+            ],
+            "permissions": [
+                "manage_email"
+            ],
+            "bundles": [
+                {
+                    "key": "email.full",
+                    "permissions": [
+                        "manage_email"
+                    ]
+                }
+            ]
+        },
+        "platform.billing": {
+            "name": "Payments",
+            "scope": "admin",
+            "type": "platform",
+            "surface": "structure",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "platform-billing",
+                    "title": "Billing",
+                    "to": {
+                        "name": "platform-billing-tab",
+                        "params": {
+                            "tab": "overview"
+                        }
+                    },
+                    "permission": "view_billing",
+                    "group": "finance"
+                }
+            ],
+            "routeNames": [
+                "platform-billing-tab",
+                "platform-billing-invoices-id"
+            ],
+            "permissions": [
+                "view_billing",
+                "manage_billing"
+            ],
+            "bundles": [
+                {
+                    "key": "billing.full",
+                    "permissions": [
+                        "view_billing",
+                        "manage_billing"
+                    ]
+                },
+                {
+                    "key": "billing.readonly",
+                    "permissions": [
+                        "view_billing"
+                    ]
+                }
+            ]
+        },
+        "workforce_contract": {
+            "name": "Contrats de travail",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce",
+                "workforce_documents"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "settings-templates",
+                    "title": "Document templates",
+                    "to": {
+                        "name": "company-documents-tab",
+                        "params": {
+                            "tab": "templates"
+                        }
+                    },
+                    "permission": "workforce_contract.view",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce_contract.view",
+                "workforce_contract.manage_templates",
+                "workforce_contract.generate"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce_contract.management",
+                    "permissions": [
+                        "workforce_contract.view",
+                        "workforce_contract.manage_templates",
+                        "workforce_contract.generate"
+                    ]
+                }
+            ]
+        },
+        "workforce_referral": {
+            "name": "Workforce Referral",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workforce-referrals",
+                    "title": "Referrals",
+                    "to": {
+                        "name": "company-workforce-referrals"
+                    },
+                    "permission": "workforce_referral.review",
+                    "group": "team"
+                },
+                {
+                    "key": "my-referrals",
+                    "title": "My referrals",
+                    "to": {
+                        "name": "company-my-referrals"
+                    },
+                    "permission": "workforce_referral.refer",
+                    "group": "personal"
+                },
+                {
+                    "key": "settings-referrals",
+                    "title": "Referrals",
+                    "to": {
+                        "name": "company-workforce-referrals",
+                        "params": {
+                            "tab": "settings"
+                        }
+                    },
+                    "permission": "workforce_referral.manage",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [
+                "company-workforce-referrals"
+            ],
+            "permissions": [
+                "workforce_referral.refer",
+                "workforce_referral.review",
+                "workforce_referral.manage"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce_referral.employee",
+                    "permissions": [
+                        "workforce_referral.refer"
+                    ]
+                },
+                {
+                    "key": "workforce_referral.review",
+                    "permissions": [
+                        "workforce_referral.review"
+                    ]
+                },
+                {
+                    "key": "workforce_referral.management",
+                    "permissions": [
+                        "workforce_referral.review",
+                        "workforce_referral.manage"
+                    ]
+                }
+            ]
+        },
+        "workforce_signature": {
+            "name": "Signatures électroniques",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce",
+                "workforce_documents"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "settings-signature",
+                    "title": "Electronic signature",
+                    "to": {
+                        "name": "company-workforce-settings-tab",
+                        "params": {
+                            "tab": "signature"
+                        }
+                    },
+                    "permission": "workforce_signature.admin",
+                    "anyPermission": [
+                        "workforce.view"
+                    ],
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce_signature.view",
+                "workforce_signature.request",
+                "workforce_signature.manage",
+                "workforce_signature.view_evidence",
+                "workforce_signature.admin"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce_signature.management",
+                    "permissions": [
+                        "workforce_signature.view",
+                        "workforce_signature.request",
+                        "workforce_signature.manage",
+                        "workforce_signature.view_evidence",
+                        "workforce_signature.admin"
+                    ]
+                },
+                {
+                    "key": "workforce_signature.readonly",
+                    "permissions": [
+                        "workforce_signature.view"
+                    ]
+                }
+            ]
+        },
+        "workforce_leave": {
+            "name": "Workforce Leave",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workforce-leave",
+                    "title": "Leave",
+                    "to": {
+                        "name": "company-workforce-leave"
+                    },
+                    "permission": "workforce.leave_request",
+                    "anyPermission": [
+                        "workforce.leave_view_all",
+                        "workforce.leave_approve"
+                    ],
+                    "group": "time"
+                },
+                {
+                    "key": "settings-leave-types",
+                    "title": "Absence types",
+                    "to": {
+                        "name": "company-workforce-leave",
+                        "params": {
+                            "tab": "config"
+                        }
+                    },
+                    "permission": "workforce.leave_request",
+                    "anyPermission": [
+                        "workforce.leave_view_all",
+                        "workforce.leave_approve"
+                    ],
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce.leave_request",
+                "workforce.leave_approve",
+                "workforce.leave_view_all",
+                "workforce.leave_manage",
+                "workforce.leave_adjust"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce.leave_employee",
+                    "permissions": [
+                        "workforce.leave_request"
+                    ]
+                },
+                {
+                    "key": "workforce.leave_management",
+                    "permissions": [
+                        "workforce.leave_request",
+                        "workforce.leave_approve",
+                        "workforce.leave_view_all",
+                        "workforce.leave_manage"
+                    ]
+                },
+                {
+                    "key": "workforce.leave_adjustment",
+                    "permissions": [
+                        "workforce.leave_adjust"
+                    ]
+                }
+            ]
+        },
+        "workforce_documents": {
+            "name": "Workforce Documents",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [],
+            "routeNames": [
+                "company-workforce-documents"
+            ],
+            "permissions": [
+                "workforce_documents.view",
+                "workforce_documents.generate",
+                "workforce_documents.manage_templates",
+                "workforce_documents.sign"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce_documents.employee",
+                    "permissions": [
+                        "workforce_documents.view"
+                    ]
+                },
+                {
+                    "key": "workforce_documents.management",
+                    "permissions": [
+                        "workforce_documents.view",
+                        "workforce_documents.generate",
+                        "workforce_documents.manage_templates",
+                        "workforce_documents.sign"
+                    ]
+                }
+            ]
+        },
+        "workforce_payroll": {
+            "name": "Workforce Payroll",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce",
+                "workforce_leave"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workforce-payroll",
+                    "title": "Payroll",
+                    "to": {
+                        "name": "company-workforce-payroll"
+                    },
+                    "permission": "workforce.payroll_prepare",
+                    "group": "payroll"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce.payroll_prepare",
+                "workforce.payroll_validate",
+                "workforce.payroll_export"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce.payroll",
+                    "permissions": [
+                        "workforce.payroll_prepare",
+                        "workforce.payroll_validate",
+                        "workforce.payroll_export",
+                        "workforce.compensation_read"
+                    ]
+                }
+            ]
+        },
+        "workforce_planning": {
+            "name": "Workforce Planning",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "workforce"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workforce-planning",
+                    "title": "Planning",
+                    "to": {
+                        "name": "company-workforce-planning"
+                    },
+                    "permission": "workforce.planning_view",
+                    "group": "time"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce.planning_view",
+                "workforce.planning_manage",
+                "workforce.planning_publish",
+                "workforce.coverage_manage"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce.planning_employee",
+                    "permissions": [
+                        "workforce.planning_view"
+                    ]
+                },
+                {
+                    "key": "workforce.planning_management",
+                    "permissions": [
+                        "workforce.planning_view",
+                        "workforce.planning_manage",
+                        "workforce.planning_publish",
+                        "workforce.coverage_manage"
+                    ]
+                }
+            ]
+        },
+        "workforce": {
+            "name": "Workforce",
+            "scope": "company",
+            "type": "addon",
+            "surface": "hr",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": null,
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "workforce-me",
+                    "title": "My Work",
+                    "to": {
+                        "name": "company-workforce-me"
+                    },
+                    "group": "personal"
+                },
+                {
+                    "key": "workforce-people",
+                    "title": "Collaborators",
+                    "to": {
+                        "name": "company-people"
+                    },
+                    "permission": "workforce.view",
+                    "group": "team"
+                },
+                {
+                    "key": "workforce-hiring",
+                    "title": "Hiring",
+                    "to": {
+                        "name": "company-workforce-hiring"
+                    },
+                    "permission": "workforce.manage",
+                    "group": "team"
+                },
+                {
+                    "key": "workforce-contracts",
+                    "title": "Employment contracts",
+                    "to": {
+                        "name": "company-workforce-contracts"
+                    },
+                    "permission": "workforce.view",
+                    "group": "team"
+                },
+                {
+                    "key": "workforce-time",
+                    "title": "Time Tracking",
+                    "to": {
+                        "name": "company-workforce-time"
+                    },
+                    "permission": "workforce.timesheet_view",
+                    "group": "time"
+                },
+                {
+                    "key": "workforce-organization",
+                    "title": "Organization",
+                    "to": {
+                        "name": "company-workforce-organization-tab",
+                        "params": {
+                            "tab": "departments"
+                        }
+                    },
+                    "permission": "workforce.view",
+                    "group": "settings"
+                },
+                {
+                    "key": "workforce-requirements",
+                    "title": "Requested information & documents",
+                    "to": {
+                        "name": "company-workforce-requirements"
+                    },
+                    "anyPermission": [
+                        "settings.manage",
+                        "documents.configure"
+                    ],
+                    "group": "settings"
+                },
+                {
+                    "key": "workforce-settings",
+                    "title": "HR Settings",
+                    "to": {
+                        "name": "company-workforce-settings-tab",
+                        "params": {
+                            "tab": "general"
+                        }
+                    },
+                    "permission": "workforce.view",
+                    "group": "settings"
+                }
+            ],
+            "routeNames": [],
+            "permissions": [
+                "workforce.view",
+                "workforce.manage",
+                "workforce.export",
+                "workforce.import",
+                "workforce.contracts",
+                "workforce.compensation_read",
+                "workforce.compensation_manage",
+                "workforce.sensitive_read",
+                "workforce.view_all",
+                "workforce.time_manage",
+                "workforce.time_approve",
+                "workforce.admin",
+                "workforce.timesheet_view",
+                "workforce.timesheet_submit",
+                "workforce.timesheet_approve",
+                "workforce.timesheet_approve_team"
+            ],
+            "bundles": [
+                {
+                    "key": "workforce.team",
+                    "permissions": [
+                        "workforce.view",
+                        "workforce.manage",
+                        "workforce.time_manage",
+                        "workforce.timesheet_view",
+                        "workforce.planning_view",
+                        "workforce.export"
+                    ]
+                },
+                {
+                    "key": "workforce.hr_management",
+                    "permissions": [
+                        "workforce.view",
+                        "workforce.contracts",
+                        "workforce.compensation_read",
+                        "workforce.compensation_manage",
+                        "workforce.sensitive_read",
+                        "workforce.admin",
+                        "workforce.import",
+                        "workforce.export",
+                        "workforce.timesheet_view",
+                        "workforce.planning_view"
+                    ]
+                },
+                {
+                    "key": "workforce.hr_consultation",
+                    "permissions": [
+                        "workforce.view",
+                        "workforce.view_all"
+                    ]
+                },
+                {
+                    "key": "workforce.manager",
+                    "permissions": [
+                        "workforce.view",
+                        "workforce.timesheet_view",
+                        "workforce.timesheet_approve",
+                        "workforce.planning_view",
+                        "workforce.planning_manage",
+                        "workforce.planning_publish",
+                        "workforce.leave_request",
+                        "workforce.leave_view_all",
+                        "workforce.leave_approve"
+                    ]
+                },
+                {
+                    "key": "workforce.operations",
+                    "permissions": [
+                        "workforce.view",
+                        "workforce.timesheet_view",
+                        "workforce.time_manage",
+                        "workforce.timesheet_approve",
+                        "workforce.planning_view",
+                        "workforce.planning_manage",
+                        "workforce.planning_publish"
+                    ]
+                },
+                {
+                    "key": "workforce.time_validation",
+                    "permissions": [
+                        "workforce.timesheet_view",
+                        "workforce.time_manage",
+                        "workforce.time_approve"
+                    ]
+                },
+                {
+                    "key": "workforce.timesheet_employee",
+                    "permissions": [
+                        "workforce.timesheet_view",
+                        "workforce.timesheet_submit"
+                    ]
+                },
+                {
+                    "key": "workforce.timesheet_management",
+                    "permissions": [
+                        "workforce.timesheet_view",
+                        "workforce.timesheet_submit",
+                        "workforce.timesheet_approve",
+                        "workforce.time_approve"
+                    ]
+                },
+                {
+                    "key": "workforce.timesheet_team_approver",
+                    "permissions": [
+                        "workforce.timesheet_view",
+                        "workforce.timesheet_approve_team"
+                    ]
+                }
+            ]
+        },
+        "logistics_shipments": {
+            "name": "Shipments",
+            "scope": "company",
+            "type": "addon",
+            "surface": "operations",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [],
+            "minPlan": null,
+            "compatibleJobdomains": [
+                "logistique"
+            ],
+            "commercialStatus": "available",
+            "navItems": [
+                {
+                    "key": "shipments",
+                    "title": "Shipments",
+                    "to": {
+                        "name": "company-shipments"
+                    },
+                    "permission": "shipments.view"
+                },
+                {
+                    "key": "my-deliveries",
+                    "title": "My Deliveries",
+                    "to": {
+                        "name": "company-my-deliveries"
+                    },
+                    "permission": "shipments.view_own",
+                    "excludePermission": "shipments.view"
+                }
+            ],
+            "routeNames": [
+                "company-shipments",
+                "company-shipments-create",
+                "company-shipments-id",
+                "company-my-deliveries",
+                "company-my-deliveries-id"
+            ],
+            "permissions": [
+                "shipments.view",
+                "shipments.create",
+                "shipments.manage_status",
+                "shipments.assign",
+                "shipments.view_own",
+                "shipments.manage_fields",
+                "shipments.delete"
+            ],
+            "bundles": [
+                {
+                    "key": "shipments.operations",
+                    "permissions": [
+                        "shipments.view",
+                        "shipments.create",
+                        "shipments.manage_status",
+                        "shipments.assign"
+                    ]
+                },
+                {
+                    "key": "shipments.administration",
+                    "permissions": [
+                        "shipments.manage_fields",
+                        "shipments.delete"
+                    ]
+                },
+                {
+                    "key": "shipments.delivery",
+                    "permissions": [
+                        "shipments.view_own",
+                        "shipments.manage_status"
+                    ]
+                }
+            ]
+        },
+        "logistics_tracking": {
+            "name": "Real-Time Tracking",
+            "scope": "company",
+            "type": "addon",
+            "surface": "operations",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "logistics_shipments"
+            ],
+            "minPlan": null,
+            "compatibleJobdomains": [
+                "logistique"
+            ],
+            "commercialStatus": "preview",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        },
+        "logistics_fleet": {
+            "name": "Fleet Management",
+            "scope": "company",
+            "type": "addon",
+            "surface": "operations",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "logistics_shipments"
+            ],
+            "minPlan": "pro",
+            "compatibleJobdomains": [
+                "logistique"
+            ],
+            "commercialStatus": "preview",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        },
+        "logistics_analytics": {
+            "name": "Logistics Analytics",
+            "scope": "company",
+            "type": "addon",
+            "surface": "operations",
+            "visibility": "visible",
+            "hidden": false,
+            "requires": [
+                "logistics_shipments"
+            ],
+            "minPlan": "business",
+            "compatibleJobdomains": [
+                "logistique"
+            ],
+            "commercialStatus": "preview",
+            "navItems": [],
+            "routeNames": [],
+            "permissions": [],
+            "bundles": []
+        }
+    },
+    "jobdomains": [
+        {
+            "id": 1,
+            "key": "logistique",
+            "label": "Logistique",
+            "is_active": 1,
+            "signup_available": 1
+        },
+        {
+            "id": 2,
+            "key": "beta-services",
+            "label": "Beta Services",
+            "is_active": 1,
+            "signup_available": 0
+        }
+    ],
+    "plans": [
+        {
+            "key": "starter",
+            "name": "Starter",
+            "is_active": 1,
+            "price_monthly": 0,
+            "price_yearly": 0,
+            "trial_days": 0
+        },
+        {
+            "key": "pro",
+            "name": "Pro",
+            "is_active": 1,
+            "price_monthly": 2900,
+            "price_yearly": 29000,
+            "trial_days": 14
+        },
+        {
+            "key": "business",
+            "name": "Business",
+            "is_active": 1,
+            "price_monthly": 7900,
+            "price_yearly": 79000,
+            "trial_days": 14
+        }
+    ],
+    "markets": [
+        {
+            "key": "FR",
+            "name": "France",
+            "is_active": 1
+        },
+        {
+            "key": "GB",
+            "name": "United Kingdom",
+            "is_active": 1
+        }
+    ],
+    "platform_roles": [
+        {
+            "id": 1,
+            "key": "super_admin",
+            "name": "Super Admin",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 2,
+            "key": "admin",
+            "name": "Admin",
+            "permissions": [
+                "manage_theme_settings",
+                "manage_session_settings",
+                "manage_maintenance",
+                "manage_documentation",
+                "manage_plans",
+                "security.alerts.view",
+                "security.alerts.manage",
+                "manage_roles",
+                "view_alerts",
+                "manage_alerts",
+                "realtime.metrics.view",
+                "realtime.connections.view",
+                "realtime.governance",
+                "view_audit_logs",
+                "manage_support",
+                "assign_support",
+                "manage_markets",
+                "view_ai",
+                "manage_ai",
+                "manage_platform_users",
+                "manage_platform_user_credentials",
+                "manage_jobdomains",
+                "manage_field_definitions",
+                "manage_automations",
+                "run_sensitive_automations",
+                "manage_document_catalog",
+                "manage_audience",
+                "manage_modules",
+                "manage_translations",
+                "manage_notifications",
+                "manage_companies",
+                "view_company_users",
+                "manage_email",
+                "view_billing",
+                "manage_billing",
+                "view_dashboard",
+                "view_companies",
+                "presets.view",
+                "presets.edit",
+                "presets.publish",
+                "presets.preview_company"
+            ]
+        },
+        {
+            "id": 4,
+            "key": "e2e_limited_933372",
+            "name": "E2E Limited 933372",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 6,
+            "key": "e2e_limited_040272",
+            "name": "E2E Limited 040272",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 8,
+            "key": "e2e_limited_167803",
+            "name": "E2E Limited 167803",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 10,
+            "key": "e2e_limited_260651",
+            "name": "E2E Limited 260651",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 12,
+            "key": "e2e_limited_547488",
+            "name": "E2E Limited 547488",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 14,
+            "key": "e2e_limited_682953",
+            "name": "E2E Limited 682953",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 16,
+            "key": "e2e_limited_969641",
+            "name": "E2E Limited 969641",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 18,
+            "key": "e2e_limited_415003",
+            "name": "E2E Limited 415003",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 19,
+            "key": "e2e_plt_limited_288937",
+            "name": "E2E Plt Limited 288937",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 21,
+            "key": "e2e_limited_733129",
+            "name": "E2E Limited 733129",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 23,
+            "key": "e2e_limited_681042",
+            "name": "E2E Limited 681042",
+            "permissions": [
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 24,
+            "key": "finance_reader",
+            "name": "Finance Reader",
+            "permissions": [
+                "view_billing",
+                "view_dashboard"
+            ]
+        },
+        {
+            "id": 25,
+            "key": "ai_only",
+            "name": "ai_only",
+            "permissions": [
+                "view_ai"
+            ]
+        },
+        {
+            "id": 26,
+            "key": "roles_only",
+            "name": "roles_only",
+            "permissions": [
+                "manage_roles"
+            ]
+        },
+        {
+            "id": 27,
+            "key": "gov_mgr",
+            "name": "gov_mgr",
+            "permissions": [
+                "manage_plans",
+                "manage_roles",
+                "manage_markets",
+                "manage_platform_users",
+                "manage_jobdomains",
+                "manage_modules",
+                "presets.view",
+                "presets.edit",
+                "presets.publish",
+                "presets.preview_company"
+            ]
+        },
+        {
+            "id": 28,
+            "key": "support_only",
+            "name": "support_only",
+            "permissions": [
+                "manage_support"
+            ]
+        },
+        {
+            "id": 29,
+            "key": "usage_only",
+            "name": "usage_only",
+            "permissions": [
+                "view_usage_monitoring"
+            ]
+        },
+        {
+            "id": 30,
+            "key": "e2e_assign_8011",
+            "name": "E2E ADR-801.1 assign only",
+            "permissions": [
+                "assign_support"
+            ]
+        }
+    ],
+    "platform_users": [
+        {
+            "id": 1,
+            "email": "admin@leezr.com",
+            "roles": [
+                "super_admin",
+                "admin"
+            ]
+        },
+        {
+            "id": 16,
+            "email": "ai-only@leezr.com",
+            "roles": [
+                "ai_only"
+            ]
+        },
+        {
+            "id": 2,
+            "email": "dev@leezr.com",
+            "roles": [
+                "admin"
+            ]
+        },
+        {
+            "id": 21,
+            "email": "e2e.assign.8011@leezr.com",
+            "roles": [
+                "e2e_assign_8011"
+            ]
+        },
+        {
+            "id": 5,
+            "email": "e2e.limited.040272@leezr.com",
+            "roles": [
+                "e2e_limited_040272"
+            ]
+        },
+        {
+            "id": 6,
+            "email": "e2e.limited.167803@leezr.com",
+            "roles": [
+                "e2e_limited_167803"
+            ]
+        },
+        {
+            "id": 7,
+            "email": "e2e.limited.260651@leezr.com",
+            "roles": [
+                "e2e_limited_260651"
+            ]
+        },
+        {
+            "id": 11,
+            "email": "e2e.limited.415003@leezr.com",
+            "roles": [
+                "e2e_limited_415003"
+            ]
+        },
+        {
+            "id": 8,
+            "email": "e2e.limited.547488@leezr.com",
+            "roles": [
+                "e2e_limited_547488"
+            ]
+        },
+        {
+            "id": 14,
+            "email": "e2e.limited.681042@leezr.com",
+            "roles": [
+                "e2e_limited_681042"
+            ]
+        },
+        {
+            "id": 9,
+            "email": "e2e.limited.682953@leezr.com",
+            "roles": [
+                "e2e_limited_682953"
+            ]
+        },
+        {
+            "id": 13,
+            "email": "e2e.limited.733129@leezr.com",
+            "roles": [
+                "e2e_limited_733129"
+            ]
+        },
+        {
+            "id": 4,
+            "email": "e2e.limited.933372@leezr.com",
+            "roles": [
+                "e2e_limited_933372"
+            ]
+        },
+        {
+            "id": 10,
+            "email": "e2e.limited.969641@leezr.com",
+            "roles": [
+                "e2e_limited_969641"
+            ]
+        },
+        {
+            "id": 12,
+            "email": "e2e.plt.limited.288937@leezr.com",
+            "roles": [
+                "e2e_plt_limited_288937"
+            ]
+        },
+        {
+            "id": 15,
+            "email": "finance-reader@leezr.com",
+            "roles": [
+                "finance_reader"
+            ]
+        },
+        {
+            "id": 18,
+            "email": "gov-mgr@leezr.com",
+            "roles": [
+                "gov_mgr"
+            ]
+        },
+        {
+            "id": 3,
+            "email": "prod@leezr.com",
+            "roles": [
+                "admin"
+            ]
+        },
+        {
+            "id": 17,
+            "email": "roles-only@leezr.com",
+            "roles": [
+                "roles_only"
+            ]
+        },
+        {
+            "id": 19,
+            "email": "support-only@leezr.com",
+            "roles": [
+                "support_only"
+            ]
+        },
+        {
+            "id": 20,
+            "email": "usage-only@leezr.com",
+            "roles": [
+                "usage_only"
+            ]
+        }
+    ],
+    "companies": [
+        {
+            "id": 1,
+            "name": "Leezr Logistics",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 2,
+            "name": "Trial Logistics",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 3,
+            "name": "Pending Approval Co",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 4,
+            "name": "NW",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 5,
+            "name": "Beta Services",
+            "jobdomain_key": "beta-services",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 6,
+            "name": "[RECETTE] Overdue Provisional",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 7,
+            "name": "[RECETTE] Healthy Paid",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 8,
+            "name": "[RECETTE] Overdue Failed",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 9,
+            "name": "[RECETTE] Financial Artifacts",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 10,
+            "name": "WT",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 11,
+            "name": "[RECETTE] Leezr Logistics (aperçu)",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 12,
+            "name": "OrgTest 6ae16b5c31ccf",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 13,
+            "name": "OrgT2 6ae16b9b14b18",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 14,
+            "name": "OrgT3 6ae16bd257463",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 21,
+            "name": "C2 Recette Co",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 22,
+            "name": "Sec Recette",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 31,
+            "name": "[M6E LOAD] 5 collaborateurs",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 32,
+            "name": "[M6E LOAD] 25 collaborateurs",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 33,
+            "name": "[M6E LOAD] 50 collaborateurs",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 34,
+            "name": "[M6E LOAD] 100 collaborateurs",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 58,
+            "name": "VORTEX",
+            "jobdomain_key": "beta-services",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 101,
+            "name": "E2E Recette 8091 433828",
+            "jobdomain_key": "logistique",
+            "plan_key": "starter",
+            "market_key": "FR",
+            "status": "active"
+        },
+        {
+            "id": 105,
+            "name": "Recette 834 Transports Fictifs",
+            "jobdomain_key": "logistique",
+            "plan_key": "pro",
+            "market_key": "FR",
+            "status": "active"
+        }
+    ]
+}
