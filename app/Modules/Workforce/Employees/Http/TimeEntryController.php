@@ -19,6 +19,8 @@ use Illuminate\Http\Request;
 
 class TimeEntryController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals; // ADR-848
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -30,11 +32,7 @@ class TimeEntryController extends Controller
         ]);
 
         // ADR-634 : voir les pointages d'un collaborateur exige « voir tout », soi-même, ou rapport direct.
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, (int) $request->query('employee_id'), 'time'),
-            403,
-            'Not authorized to view this employee\'s time entries.'
-        );
+        $this->guardEmployeeTime($request, (int) $request->query('employee_id'));
 
         $entries = TimeEntryReadModel::forEmployee(
             companyId: $companyId,
@@ -62,17 +60,9 @@ class TimeEntryController extends Controller
         // ciblée sur un collaborateur, elle applique le scope (soi + rapports directs).
         $reqEmployeeId = $request->query('employee_id') ? (int) $request->query('employee_id') : null;
         if ($reqEmployeeId !== null) {
-            abort_unless(
-                WorkforceAccess::canViewEmployeeData($request, $reqEmployeeId, 'time'),
-                403,
-                'Not authorized to view this employee\'s time entries.'
-            );
+            $this->guardEmployeeTime($request, $reqEmployeeId);
         } else {
-            abort_unless(
-                WorkforceAccess::hasViewAll($request, 'time'),
-                403,
-                'Not authorized to view company-wide time entries.'
-            );
+            abort_unless(WorkforceAccess::hasViewAll($request, 'time'), 403, 'Not authorized to view company-wide time entries.');
         }
 
         return response()->json(TimeEntryReadModel::forCompany(
@@ -102,12 +92,21 @@ class TimeEntryController extends Controller
         )));
     }
 
-    /** W-G5 — scope temps : vue globale si « voir tout » (timesheet_approve/time_manage) ; sinon soi + rapports. */
-    private function timeScope(Request $request): ?array
+    /** ADR-848 : a time entry of the company (tenant first : 404 before any validation) — was repeated 5 times. */
+    private function entry(Request $request, int $id): TimeEntry
     {
-        return WorkforceAccess::hasViewAll($request, 'time')
-            ? null
-            : WorkforceAccess::visibleEmployeeIds($request, 'time');
+        return TimeEntry::withoutGlobalScopes()->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
+    }
+
+    /** ADR-634 : a person's time entries need « see all », oneself or a direct report. */
+    private function guardEmployeeTime(Request $request, int $employeeId): void
+    {
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'time'), 403, 'Not authorized to view this employee\'s time entries.');
+    }
+
+    private function employee(int $companyId, int $id): Employee
+    {
+        return Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
     }
 
     /** W-G5 — synthèse opérationnelle du cockpit Pointage (jour borné, scopé). */
@@ -118,7 +117,7 @@ class TimeEntryController extends Controller
         return response()->json(\App\Modules\Workforce\ReadModels\TimeCockpitReadModel::summary(
             companyId: $request->attributes->get('company_id'),
             date: $request->filled('date') ? Carbon::parse($request->query('date')) : Carbon::today(),
-            visibleIds: $this->timeScope($request),
+            visibleIds: WorkforceAccess::scopeIdsOrNull($request, 'time') /* W-G5 : voir tout, sinon soi + rapports */,
         ));
     }
 
@@ -135,7 +134,7 @@ class TimeEntryController extends Controller
         return response()->json(\App\Modules\Workforce\ReadModels\TimeCockpitReadModel::board(
             companyId: $request->attributes->get('company_id'),
             date: $request->filled('date') ? Carbon::parse($request->query('date')) : Carbon::today(),
-            visibleIds: $this->timeScope($request),
+            visibleIds: WorkforceAccess::scopeIdsOrNull($request, 'time') /* W-G5 : voir tout, sinon soi + rapports */,
             filters: [
                 'department_id' => $request->query('department_id'),
                 'employee_id' => $request->query('employee_id'),
@@ -159,35 +158,19 @@ class TimeEntryController extends Controller
             'source' => 'nullable|string|in:manual,mobile,kiosk,import',
         ]);
 
-        $employee = Employee::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($validated['employee_id']);
+        $employee = $this->employee($companyId, (int) $validated['employee_id']);
 
-        try {
-            $entry = app(ClockInUseCase::class)->execute(
-                employee: $employee,
-                source: $validated['source'] ?? 'manual',
-            );
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($entry, 201);
+        return $this->domain(fn () => app(ClockInUseCase::class)->execute(
+            employee: $employee,
+            source: $validated['source'] ?? 'manual',
+        ), 201);
     }
 
     public function clockOut(Request $request, int $id): JsonResponse
     {
-        $entry = TimeEntry::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $entry = $this->entry($request, $id);
 
-        try {
-            $entry = app(ClockOutUseCase::class)->execute($entry);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($entry);
+        return $this->domain(fn () => app(ClockOutUseCase::class)->execute($entry));
     }
 
     public function startBreak(Request $request, int $id): JsonResponse
@@ -196,35 +179,19 @@ class TimeEntryController extends Controller
             'type' => 'nullable|string|in:lunch,rest,personal',
         ]);
 
-        $entry = TimeEntry::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $entry = $this->entry($request, $id);
 
-        try {
-            $break = app(StartBreakUseCase::class)->execute(
-                entry: $entry,
-                type: $validated['type'] ?? 'rest',
-            );
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($break, 201);
+        return $this->domain(fn () => app(StartBreakUseCase::class)->execute(
+            entry: $entry,
+            type: $validated['type'] ?? 'rest',
+        ), 201);
     }
 
     public function endBreak(Request $request, int $id): JsonResponse
     {
-        $entry = TimeEntry::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $entry = $this->entry($request, $id);
 
-        try {
-            $break = app(EndBreakUseCase::class)->execute($entry);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($break);
+        return $this->domain(fn () => app(EndBreakUseCase::class)->execute($entry));
     }
 
     public function store(Request $request): JsonResponse
@@ -238,25 +205,10 @@ class TimeEntryController extends Controller
             'clock_out' => 'required|date|after:clock_in',
         ]);
 
-        $employee = Employee::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($validated['employee_id']);
+        $employee = $this->employee($companyId, (int) $validated['employee_id']);
 
-        $entry = TimeEntry::create([
-            'company_id' => $companyId,
-            'employee_id' => $employee->id,
-            'date' => $validated['date'],
-            'clock_in' => Carbon::parse($validated['clock_in']),
-            'clock_out' => Carbon::parse($validated['clock_out']),
-            'status' => TimeEntry::STATUS_COMPLETED,
-            'source' => 'manual',
-        ]);
-
-        $entry->computeTotals();
-        $entry->update([
-            'total_worked_minutes' => $entry->total_worked_minutes,
-            'total_break_minutes' => $entry->total_break_minutes,
-        ]);
+        $entry = app(\App\Modules\Workforce\UseCases\RecordManualTimeEntryUseCase::class)
+            ->execute($companyId, $employee, $validated['date'], $validated['clock_in'], $validated['clock_out']); // ADR-848
 
         return response()->json($entry, 201);
     }
@@ -264,9 +216,7 @@ class TimeEntryController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         // Tenant d'abord (404 pour une ressource inexistante/d'une autre Company avant toute validation).
-        $entry = TimeEntry::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $entry = $this->entry($request, $id);
 
         // W-G5 : correction guidée → MOTIF OBLIGATOIRE (traçabilité). reason transmis au use case.
         $validated = $request->validate([
@@ -283,27 +233,17 @@ class TimeEntryController extends Controller
             'Not authorized to correct this employee\'s time entry.'
         );
 
-        try {
-            $entry = app(UpdateTimeEntryUseCase::class)->execute($entry, $validated, $request->user()->id);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($entry);
+        return $this->domain(fn () => app(UpdateTimeEntryUseCase::class)->execute($entry, $validated, $request->user()->id));
     }
 
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $entry = TimeEntry::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $entry = $this->entry($request, $id);
 
-        try {
+        return $this->domain(function () use ($entry) {
             app(DeleteTimeEntryUseCase::class)->execute($entry);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
 
-        return response()->json(['message' => 'Time entry deleted']);
+            return ['message' => 'Time entry deleted'];
+        });
     }
 }

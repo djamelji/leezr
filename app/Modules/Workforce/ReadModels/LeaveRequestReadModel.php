@@ -132,4 +132,35 @@ class LeaveRequestReadModel
 
         return $stats;
     }
+
+    /**
+     * Lot 3 §7 (ADR-716) — PUBLISHED shifts impacted by a leave request, shown to the decider BEFORE approval.
+     * Read only (no shift or balance change, no automatic removal), no medical reason. ADR-848 : moved verbatim
+     * from LeaveController::impactedShifts.
+     */
+    public static function impactedShifts(\App\Core\Workforce\LeaveRequest $leave): array
+    {
+        $shifts = \App\Core\Workforce\Shift::withoutGlobalScopes()
+            ->where('company_id', $leave->company_id)
+            ->where('employee_id', $leave->employee_id)
+            ->where('status', \App\Core\Workforce\Shift::STATUS_PUBLISHED)
+            ->whereDate('date', '>=', $leave->date_from->toDateString())
+            ->whereDate('date', '<=', $leave->date_to->toDateString())
+            ->orderBy('start_at')
+            ->get(['id', 'date', 'start_at', 'end_at', 'work_location_id', 'status']);
+
+        return [
+            'leave_id' => $leave->id,
+            'employee_id' => $leave->employee_id,
+            'status' => $leave->status,
+            'impacted_count' => $shifts->count(),
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'date' => $s->date->toDateString(),
+                'start' => $s->start_at?->toIso8601String(),
+                'end' => $s->end_at?->toIso8601String(),
+                'work_location_id' => $s->work_location_id,
+            ])->values(),
+        ];
+    }
 }

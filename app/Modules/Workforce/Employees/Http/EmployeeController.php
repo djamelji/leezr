@@ -9,14 +9,14 @@ use App\Modules\Workforce\UseCases\CreateEmployeeUseCase;
 use App\Modules\Workforce\UseCases\TerminateEmployeeUseCase;
 use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Core\Workforce\Employee;
-use App\Core\Models\Company;
-use App\Modules\Workforce\Employees\Services\EmployeeAccessService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals; // ADR-848
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -85,15 +85,12 @@ class EmployeeController extends Controller
             'mapping' => 'required|array',
         ]);
 
-        try {
+        return $this->domain(function () use ($companyId, $validated) {
             $service = app(\App\Modules\Workforce\Employees\Services\EmployeeImportService::class);
             $parsed = $service->parse($validated['content']);
-            $report = $service->preview($companyId, $parsed['rows'], $validated['mapping']);
 
-            return response()->json(['headers' => $parsed['headers'], ...$report]);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+            return ['headers' => $parsed['headers'], ...$service->preview($companyId, $parsed['rows'], $validated['mapping'])];
+        });
     }
 
     // ── Import : application (W-G2) — transactionnel, idempotent, audité ──
@@ -106,15 +103,11 @@ class EmployeeController extends Controller
             'mapping' => 'required|array',
         ]);
 
-        try {
+        return $this->domain(function () use ($companyId, $validated, $actorId) {
             $service = app(\App\Modules\Workforce\Employees\Services\EmployeeImportService::class);
-            $parsed = $service->parse($validated['content']);
-            $result = $service->apply($companyId, $parsed['rows'], $validated['mapping'], $actorId);
 
-            return response()->json($result, 201);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+            return $service->apply($companyId, $service->parse($validated['content'])['rows'], $validated['mapping'], $actorId);
+        }, 201);
     }
 
     // ── Actions groupées : dry-run (W-G2) ──
@@ -128,13 +121,9 @@ class EmployeeController extends Controller
             'target_id' => 'required|integer',
         ]);
 
-        try {
-            return response()->json(app(\App\Modules\Workforce\Employees\Services\EmployeeBulkActionService::class)->preview(
-                $companyId, $validated['action'], $validated['employee_ids'], $validated['target_id'], $this->visibleIds($request),
-            ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return $this->domain(fn () => app(\App\Modules\Workforce\Employees\Services\EmployeeBulkActionService::class)->preview(
+            $companyId, $validated['action'], $validated['employee_ids'], $validated['target_id'], $this->visibleIds($request),
+        ));
     }
 
     // ── Actions groupées : application (W-G2) ──
@@ -149,13 +138,9 @@ class EmployeeController extends Controller
             'target_id' => 'required|integer',
         ]);
 
-        try {
-            return response()->json(app(\App\Modules\Workforce\Employees\Services\EmployeeBulkActionService::class)->apply(
-                $companyId, $validated['action'], $validated['employee_ids'], $validated['target_id'], $this->visibleIds($request), $actorId,
-            ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return $this->domain(fn () => app(\App\Modules\Workforce\Employees\Services\EmployeeBulkActionService::class)->apply(
+            $companyId, $validated['action'], $validated['employee_ids'], $validated['target_id'], $this->visibleIds($request), $actorId,
+        ));
     }
 
     /**
@@ -165,11 +150,7 @@ class EmployeeController extends Controller
     public function file(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, $id, 'employee'),
-            403,
-            'Not authorized to view this employee file.'
-        );
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $id, 'employee'), 403, 'Not authorized to view this employee file.');
         $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->find($id);
         if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);
@@ -209,83 +190,7 @@ class EmployeeController extends Controller
             'manager_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)->where('status', '!=', Employee::STATUS_TERMINATED)], // ADR-817 (D17)
         ]);
 
-        $data = new CreateEmployeeData(
-            companyId: $companyId,
-            firstName: $validated['first_name'],
-            lastName: $validated['last_name'],
-            hireDate: $validated['hire_date'],
-            email: $validated['email'] ?? null,
-            phone: $validated['phone'] ?? null,
-            employeeNumber: $validated['employee_number'] ?? null,
-            departmentId: $validated['department_id'] ?? null,
-            jobRoleId: $validated['job_role_id'] ?? null,
-            managerId: $validated['manager_id'] ?? null,
-        );
-
-        $employee = app(CreateEmployeeUseCase::class)->execute($data);
-
-        return response()->json($employee, 201);
-    }
-
-    // ── W-HR-UX-3 : accès à l'espace collaborateur DEPUIS la fiche (réutilise le mécanisme Members) ──
-
-    public function accessStatus(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-
-        return response()->json(app(EmployeeAccessService::class)->status($company, $employee));
-    }
-
-    public function grantAccess(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-        $data = $request->validate([
-            'email' => 'required|email|max:255',
-            'company_role_id' => 'nullable|integer',
-        ]);
-
-        $status = app(EmployeeAccessService::class)->grant(
-            $company, $employee, $data['email'], $data['company_role_id'] ?? null, (int) $request->user()->id,
-        );
-
-        return response()->json($status);
-    }
-
-    public function resendAccess(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-
-        return response()->json(app(EmployeeAccessService::class)->resendInvitation($company, $employee));
-    }
-
-    // ── SECURITY-1: suspend / restore / revoke company access ──
-    public function suspendAccess(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-        $reason = $request->validate(['reason' => 'nullable|string|max:255'])['reason'] ?? null;
-
-        return response()->json(app(EmployeeAccessService::class)->suspend($company, $employee, (int) $request->user()->id, $reason));
-    }
-
-    public function restoreAccess(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-
-        return response()->json(app(EmployeeAccessService::class)->restore($company, $employee, (int) $request->user()->id));
-    }
-
-    public function revokeAccess(Request $request, int $id): JsonResponse
-    {
-        $company = $request->attributes->get('company') ?? Company::withoutGlobalScopes()->findOrFail($request->attributes->get('company_id'));
-        $employee = Employee::withoutGlobalScopes()->where('company_id', $company->id)->findOrFail($id);
-        $reason = $request->validate(['reason' => 'nullable|string|max:255'])['reason'] ?? null;
-
-        return response()->json(app(EmployeeAccessService::class)->revoke($company, $employee, (int) $request->user()->id, $reason));
+        return response()->json(app(CreateEmployeeUseCase::class)->execute(CreateEmployeeData::fromValidated($companyId, $validated)), 201);
     }
 
     public function update(Request $request, int $id): JsonResponse

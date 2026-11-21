@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 
 class LeaveController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals; // ADR-848
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -26,11 +28,7 @@ class LeaveController extends Controller
 
         if ($employeeId) {
             // ADR-634 : lire les congés d'un collaborateur exige « voir tout », soi-même, ou rapport direct.
-            abort_unless(
-                WorkforceAccess::canViewEmployeeData($request, (int) $employeeId, 'leave'),
-                403,
-                'Not authorized to view this employee\'s leave.'
-            );
+            $this->guardLeave($request, (int) $employeeId, 'Not authorized to view this employee\'s leave.');
             $leaves = LeaveRequestReadModel::forEmployee(
                 companyId: $companyId,
                 employeeId: (int) $employeeId,
@@ -41,11 +39,7 @@ class LeaveController extends Controller
             );
         } else {
             // File d'approbation = vue de gestion : réservée aux capacités « voir tout » congés.
-            abort_unless(
-                WorkforceAccess::hasViewAll($request, 'leave'),
-                403,
-                'Not authorized to view the approval queue.'
-            );
+            abort_unless(WorkforceAccess::hasViewAll($request, 'leave'), 403, 'Not authorized to view the approval queue.');
             $leaves = LeaveRequestReadModel::pendingForApproval($companyId, $perPage);
         }
 
@@ -54,17 +48,10 @@ class LeaveController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $leave = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->with(['leaveType', 'employee'])
-            ->findOrFail($id);
+        $leave = $this->leave($request, $id)->load(['leaveType', 'employee']);
 
         // W-D/W-G3 : lire une demande exige de pouvoir voir ce collaborateur (soi / rapport / vue globale).
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, $leave->employee_id, 'leave'),
-            403,
-            'Not authorized to view this leave request.'
-        );
+        $this->guardLeave($request, $leave->employee_id, 'Not authorized to view this leave request.');
 
         // W-G3 : voir une absence ≠ voir son MOTIF. Le motif n'est exposé qu'à soi-même ou à la vue
         // globale RH (approbateurs). Un manager en vue d'équipe (lecture seule) ne voit pas le motif.
@@ -75,6 +62,18 @@ class LeaveController extends Controller
         }
 
         return response()->json($data);
+    }
+
+    /** ADR-848 : a leave request of the company (tenant-explicit) — was repeated in every action. */
+    private function leave(Request $request, int $id): LeaveRequest
+    {
+        return LeaveRequest::withoutGlobalScopes()->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
+    }
+
+    /** W-D/W-G3 : acting on a request needs to see that person (self / report / see all) — 403 with the action's message. */
+    private function guardLeave(Request $request, int $employeeId, string $message): void
+    {
+        abort_unless(WorkforceAccess::canViewEmployeeData($request, $employeeId, 'leave'), 403, $message);
     }
 
     private static function isSelf(Request $request, int $employeeId): bool
@@ -89,38 +88,11 @@ class LeaveController extends Controller
      */
     public function impactedShifts(Request $request, int $id): JsonResponse
     {
-        $companyId = $request->attributes->get('company_id');
-        $leave = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $companyId)->findOrFail($id);
+        $leave = $this->leave($request, $id);
 
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, $leave->employee_id, 'leave'),
-            403,
-            'Not authorized to view this leave request.'
-        );
+        $this->guardLeave($request, $leave->employee_id, 'Not authorized to view this leave request.');
 
-        $shifts = \App\Core\Workforce\Shift::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->where('employee_id', $leave->employee_id)
-            ->where('status', \App\Core\Workforce\Shift::STATUS_PUBLISHED)
-            ->whereDate('date', '>=', $leave->date_from->toDateString())
-            ->whereDate('date', '<=', $leave->date_to->toDateString())
-            ->orderBy('start_at')
-            ->get(['id', 'date', 'start_at', 'end_at', 'work_location_id', 'status']);
-
-        return response()->json([
-            'leave_id' => $leave->id,
-            'employee_id' => $leave->employee_id,
-            'status' => $leave->status,
-            'impacted_count' => $shifts->count(),
-            'shifts' => $shifts->map(fn ($s) => [
-                'id' => $s->id,
-                'date' => $s->date->toDateString(),
-                'start' => $s->start_at?->toIso8601String(),
-                'end' => $s->end_at?->toIso8601String(),
-                'work_location_id' => $s->work_location_id,
-            ])->values(),
-        ]);
+        return response()->json(\App\Modules\Workforce\ReadModels\LeaveRequestReadModel::impactedShifts($leave)); // ADR-848
     }
 
     public function store(Request $request): JsonResponse
@@ -138,13 +110,10 @@ class LeaveController extends Controller
             'reason' => 'nullable|string|max:1000',
         ]);
 
-        $employee = Employee::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($validated['employee_id']);
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($validated['employee_id']);
         abort_unless(WorkforceAccess::canViewEmployeeData($request, $employee->id, 'leave'), 403); // ADR-780 : self or report only
 
-        try {
-            return response()->json(app(RequestLeaveUseCase::class)->execute(
+        return $this->domain(fn () => app(RequestLeaveUseCase::class)->execute(
                 employee: $employee,
                 leaveTypeId: $validated['leave_type_id'],
                 dateFrom: $validated['date_from'],
@@ -155,9 +124,6 @@ class LeaveController extends Controller
                 endTime: $validated['end_time'] ?? null,
                 hoursCountHundredths: $validated['hours_count_hundredths'] ?? null,
             ), 201);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     /**
@@ -175,8 +141,7 @@ class LeaveController extends Controller
             'end_time' => 'nullable|date_format:H:i',
         ]);
 
-        $employee = Employee::withoutGlobalScopes()
-            ->where('company_id', $companyId)->findOrFail($validated['employee_id']);
+        $employee = Employee::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($validated['employee_id']);
         abort_unless(WorkforceAccess::canViewEmployeeData($request, $employee->id, 'leave'), 403);
 
         $contract = $employee->currentContract;
@@ -196,68 +161,42 @@ class LeaveController extends Controller
     public function approve(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate(['review_note' => 'nullable|string|max:1000']);
-        $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $leaveRequest = $this->leave($request, $id);
 
         // W-G3 : périmètre manager — on ne peut approuver que les demandes de collaborateurs visibles.
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, $leaveRequest->employee_id, 'leave'),
-            403,
-            'Not authorized to approve this leave request.'
-        );
+        $this->guardLeave($request, $leaveRequest->employee_id, 'Not authorized to approve this leave request.');
 
-        try {
-            return response()->json(app(ApproveLeaveRequestUseCase::class)->execute(
+        return $this->domain(fn () => app(ApproveLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 reviewerId: $request->user()->id,
                 reviewNote: $validated['review_note'] ?? null,
             ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     public function reject(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate(['review_note' => 'nullable|string|max:1000']);
-        $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $leaveRequest = $this->leave($request, $id);
 
         // W-G3 : périmètre manager — on ne peut refuser que les demandes de collaborateurs visibles.
-        abort_unless(
-            WorkforceAccess::canViewEmployeeData($request, $leaveRequest->employee_id, 'leave'),
-            403,
-            'Not authorized to reject this leave request.'
-        );
+        $this->guardLeave($request, $leaveRequest->employee_id, 'Not authorized to reject this leave request.');
 
-        try {
-            return response()->json(app(RejectLeaveRequestUseCase::class)->execute(
+        return $this->domain(fn () => app(RejectLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 reviewerId: $request->user()->id,
                 reviewNote: $validated['review_note'] ?? null,
             ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     public function cancel(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate(['cancellation_reason' => 'nullable|string|max:1000']);
-        $leaveRequest = LeaveRequest::withoutGlobalScopes()
-            ->where('company_id', $request->attributes->get('company_id'))
-            ->findOrFail($id);
+        $leaveRequest = $this->leave($request, $id);
 
-        try {
-            return response()->json(app(CancelLeaveRequestUseCase::class)->execute(
+        return $this->domain(fn () => app(CancelLeaveRequestUseCase::class)->execute(
                 request: $leaveRequest,
                 cancellationReason: $validated['cancellation_reason'] ?? null,
             ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     public function calendar(Request $request): JsonResponse
@@ -272,9 +211,7 @@ class LeaveController extends Controller
         ]);
 
         // W-G3 : scope manager — vue globale RH (leave_view_all / leave_approve) sinon soi + rapports.
-        $visibleIds = WorkforceAccess::hasViewAll($request, 'leave')
-            ? null
-            : WorkforceAccess::visibleEmployeeIds($request, 'leave');
+        $visibleIds = WorkforceAccess::scopeIdsOrNull($request, 'leave');
 
         return response()->json(LeaveRequestReadModel::calendar(
             companyId: $request->attributes->get('company_id'),
@@ -306,7 +243,7 @@ class LeaveController extends Controller
         return response()->json(LeaveRequestReadModel::statistics(
             $request->attributes->get('company_id'),
             $request->query('year') ? (int) $request->query('year') : null,
-            WorkforceAccess::hasViewAll($request, 'leave') ? null : WorkforceAccess::visibleEmployeeIds($request, 'leave'), // ADR-781
+            WorkforceAccess::scopeIdsOrNull($request, 'leave'), // ADR-781
         ));
     }
 }

@@ -775,13 +775,13 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     // W-HR-UX-3 — accès à l'espace collaborateur depuis la fiche (réutilise l'invitation Members, gated members.invite).
     // ADR-771 : l'état d'accès (e-mail du compte, statut, rôle, motif de suspension) est une donnée de
     // COMPTE — facette comptes, plus `workforce.view`. Un gestionnaire de comptes sans droit RH y accède.
-    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'accessStatus'])->whereNumber('id')->middleware('company.access:use-any-permission,members.view|members.invite|members.manage');
-    Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
-    Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
+    Route::get('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'accessStatus'])->whereNumber('id')->middleware('company.access:use-any-permission,members.view|members.invite|members.manage');
+    Route::post('employees/{id}/access', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'grantAccess'])->whereNumber('id')->middleware($perm('members.invite'));
+    Route::post('employees/{id}/access/resend', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'resendAccess'])->whereNumber('id')->middleware($perm('members.invite'));
     // SECURITY-1 (ADR-688): access lifecycle — sensitive, gated members.manage.
-    Route::post('employees/{id}/access/suspend', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'suspendAccess'])->whereNumber('id')->middleware($perm('members.manage'));
-    Route::post('employees/{id}/access/restore', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'restoreAccess'])->whereNumber('id')->middleware($perm('members.manage'));
-    Route::post('employees/{id}/access/revoke', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'revokeAccess'])->whereNumber('id')->middleware($perm('members.manage'));
+    Route::post('employees/{id}/access/suspend', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'suspendAccess'])->whereNumber('id')->middleware($perm('members.manage'));
+    Route::post('employees/{id}/access/restore', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'restoreAccess'])->whereNumber('id')->middleware($perm('members.manage'));
+    Route::post('employees/{id}/access/revoke', [\App\Modules\Workforce\Employees\Http\EmployeeAccessController::class, 'revokeAccess'])->whereNumber('id')->middleware($perm('members.manage'));
 
     // Contracts — view to read, contracts to create/activate
     Route::get('contracts', [\App\Modules\Workforce\Employees\Http\ContractController::class, 'register'])->middleware($perm('workforce.view')); // ADR-822 : registre

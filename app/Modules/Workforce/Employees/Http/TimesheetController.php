@@ -15,12 +15,13 @@ use App\Modules\Workforce\UseCases\LockTimesheetUseCase;
 use App\Modules\Workforce\UseCases\RejectTimesheetUseCase;
 use App\Modules\Workforce\UseCases\ReopenTimesheetUseCase;
 use App\Modules\Workforce\UseCases\SubmitTimesheetUseCase;
-use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TimesheetController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals; // ADR-848
+
     /**
      * B3-checkpoint (ADR-699) — PÉRIMÈTRE (domaine 'time'), réutilise WorkforceAccess (comme les pointages).
      * null = vue globale si l'utilisateur a view-all ('time' ⇐ timesheet_approve OU time_manage) ; sinon
@@ -43,6 +44,12 @@ class TimesheetController extends Controller
         abort_unless(WorkforceAccess::canApproveTimesheet($request, $employeeId), 403, 'Approbation hors de votre périmètre.');
     }
 
+    /** ADR-848 : a period of the company (tenant-explicit) — was repeated in every action. */
+    private function period(int $companyId, int $id): TimesheetPeriod
+    {
+        return TimesheetPeriod::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
@@ -63,10 +70,7 @@ class TimesheetController extends Controller
     {
         $companyId = $request->attributes->get('company_id');
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->with('employee:id,first_name,last_name')
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id)->load('employee:id,first_name,last_name');
         $this->guardEmployee($request, $period->employee_id);
 
         $lines = TimesheetLineReadModel::forPeriod($period->id);
@@ -89,9 +93,7 @@ class TimesheetController extends Controller
     {
         $companyId = $request->attributes->get('company_id');
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         // L'historique de correction est une donnée RH soumise au périmètre d'accès.
         $this->guardEmployee($request, $period->employee_id);
 
@@ -109,21 +111,15 @@ class TimesheetController extends Controller
     public function compliance(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
-        $period = TimesheetPeriod::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardEmployee($request, $period->employee_id);
 
-        $results = app(\App\Modules\Workforce\Services\WorkTimeComplianceChecker::class)->check($period);
-        $counts = collect($results)->countBy('status');
+        $checker = app(\App\Modules\Workforce\Services\WorkTimeComplianceChecker::class);
+        $results = $checker->check($period);
 
         return response()->json([
             'results' => $results,
-            'summary' => [
-                'violation' => $counts['violation'] ?? 0,
-                'warning' => $counts['warning'] ?? 0,
-                'not_verifiable' => $counts['not_verifiable'] ?? 0,
-                'not_applicable' => $counts['not_applicable'] ?? 0,
-                'pass' => $counts['pass'] ?? 0,
-            ],
+            'summary' => $checker->summarize($results),
             // Projection de consultation calculée MAINTENANT — pas une décision réglementaire historisée.
             'computed_at' => now()->toIso8601String(),
         ]);
@@ -140,39 +136,25 @@ class TimesheetController extends Controller
         ]);
         $this->guardEmployee($request, (int) $validated['employee_id']);
 
-        try {
-            $period = app(GenerateTimesheetUseCase::class)->execute(
-                companyId: $companyId,
-                employeeId: $validated['employee_id'],
-                periodStart: $validated['period_start'],
-                periodEnd: $validated['period_end'],
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period, 201);
+        return $this->domain(fn () => app(GenerateTimesheetUseCase::class)->execute(
+            companyId: $companyId,
+            employeeId: $validated['employee_id'],
+            periodStart: $validated['period_start'],
+            periodEnd: $validated['period_end'],
+        ), 201);
     }
 
     public function submit(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardEmployee($request, $period->employee_id);
 
-        try {
-            $period = app(SubmitTimesheetUseCase::class)->execute(
-                period: $period,
-                submittedBy: $request->user()->id,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period);
+        return $this->domain(fn () => app(SubmitTimesheetUseCase::class)->execute(
+            period: $period,
+            submittedBy: $request->user()->id,
+        ));
     }
 
     public function approve(Request $request, int $id): JsonResponse
@@ -183,22 +165,14 @@ class TimesheetController extends Controller
             'approval_note' => 'nullable|string|max:1000',
         ]);
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardApprove($request, $period->employee_id);
 
-        try {
-            $period = app(ApproveTimesheetUseCase::class)->execute(
-                period: $period,
-                approvedBy: $request->user()->id,
-                approvalNote: $validated['approval_note'] ?? null,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period);
+        return $this->domain(fn () => app(ApproveTimesheetUseCase::class)->execute(
+            period: $period,
+            approvedBy: $request->user()->id,
+            approvalNote: $validated['approval_note'] ?? null,
+        ));
     }
 
     public function reject(Request $request, int $id): JsonResponse
@@ -209,63 +183,39 @@ class TimesheetController extends Controller
             'rejection_reason' => 'required|string|max:1000',
         ]);
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardApprove($request, $period->employee_id);
 
-        try {
-            $period = app(RejectTimesheetUseCase::class)->execute(
-                period: $period,
-                rejectedBy: $request->user()->id,
-                rejectionReason: $validated['rejection_reason'],
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period);
+        return $this->domain(fn () => app(RejectTimesheetUseCase::class)->execute(
+            period: $period,
+            rejectedBy: $request->user()->id,
+            rejectionReason: $validated['rejection_reason'],
+        ));
     }
 
     public function reopen(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardEmployee($request, $period->employee_id);
 
-        try {
-            $period = app(ReopenTimesheetUseCase::class)->execute(
-                period: $period,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period);
+        return $this->domain(fn () => app(ReopenTimesheetUseCase::class)->execute(
+            period: $period,
+        ));
     }
 
     public function lock(Request $request, int $id): JsonResponse
     {
         $companyId = $request->attributes->get('company_id');
 
-        $period = TimesheetPeriod::withoutGlobalScopes()
-            ->where('company_id', $companyId)
-            ->findOrFail($id);
+        $period = $this->period($companyId, $id);
         $this->guardEmployee($request, $period->employee_id);
 
-        try {
-            $period = app(LockTimesheetUseCase::class)->execute(
-                period: $period,
-                lockedBy: $request->user()->id,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-
-        return response()->json($period);
+        return $this->domain(fn () => app(LockTimesheetUseCase::class)->execute(
+            period: $period,
+            lockedBy: $request->user()->id,
+        ));
     }
 
     public function statistics(Request $request): JsonResponse

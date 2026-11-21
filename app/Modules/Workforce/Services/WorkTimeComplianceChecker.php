@@ -279,4 +279,18 @@ class WorkTimeComplianceChecker
 
         return $v === null ? null : (int) round(((float) $v) * 60);
     }
+
+    /** ADR-848 : count of results per status (was built in TimesheetController::compliance). */
+    public function summarize(array $results): array
+    {
+        $counts = collect($results)->countBy('status');
+
+        return [
+            'violation' => $counts['violation'] ?? 0,
+            'warning' => $counts['warning'] ?? 0,
+            'not_verifiable' => $counts['not_verifiable'] ?? 0,
+            'not_applicable' => $counts['not_applicable'] ?? 0,
+            'pass' => $counts['pass'] ?? 0,
+        ];
+    }
 }

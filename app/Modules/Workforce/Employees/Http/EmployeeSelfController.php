@@ -29,6 +29,8 @@ use Illuminate\Http\Request;
  */
 class EmployeeSelfController
 {
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals; // ADR-848
+
     private function resolveEmployee(Request $request): Employee
     {
         return Employee::withoutCompanyScope()
@@ -171,13 +173,13 @@ class EmployeeSelfController
         ]);
 
         return $this->domain(fn () => app(RequestLeaveUseCase::class)->execute(
-                employee: $employee,
-                leaveTypeId: $validated['leave_type_id'],
-                dateFrom: $validated['date_from'],
-                dateTo: $validated['date_to'],
-                daysCountHundredths: $validated['days_count_hundredths'],
-                reason: $validated['reason'] ?? null,
-            ), 201);
+            employee: $employee,
+            leaveTypeId: $validated['leave_type_id'],
+            dateFrom: $validated['date_from'],
+            dateTo: $validated['date_to'],
+            daysCountHundredths: $validated['days_count_hundredths'],
+            reason: $validated['reason'] ?? null,
+        ), 201);
     }
 
     /**
@@ -228,15 +230,5 @@ class EmployeeSelfController
         return response()->json([
             'documents' => GeneratedDocumentReadModel::forEmployee($employee->id, $companyId),
         ]);
-    }
-
-    /** ADR-848 : run a use case ; a business refusal (DomainException) answers 422 with its message. */
-    private function domain(callable $fn, int $status = 200): JsonResponse
-    {
-        try {
-            return response()->json($fn(), $status);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 }

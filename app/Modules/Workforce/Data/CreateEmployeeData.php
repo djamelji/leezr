@@ -19,4 +19,21 @@ class CreateEmployeeData
         public readonly ?int $jobRoleId = null,
         public readonly ?int $managerId = null,
     ) {}
+
+    /** ADR-848 : from the validated request of EmployeeController::store (moved verbatim). */
+    public static function fromValidated(int $companyId, array $validated): self
+    {
+        return new self(
+            companyId: $companyId,
+            firstName: $validated['first_name'],
+            lastName: $validated['last_name'],
+            hireDate: $validated['hire_date'],
+            email: $validated['email'] ?? null,
+            phone: $validated['phone'] ?? null,
+            employeeNumber: $validated['employee_number'] ?? null,
+            departmentId: $validated['department_id'] ?? null,
+            jobRoleId: $validated['job_role_id'] ?? null,
+            managerId: $validated['manager_id'] ?? null,
+        );
+    }
 }
