@@ -9,6 +9,7 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useCatalogText } from '@/composables/useCatalogText'
 import JobdomainPresetTab from '../_JobdomainPresetTab.vue'
 import JobdomainAdvanced from '../_JobdomainAdvanced.vue'
+import JobdomainCompanyFields from '../_JobdomainCompanyFields.vue'
 
 definePage({
   meta: {
@@ -29,6 +30,7 @@ const { moduleName } = useCatalogText()
 const SECTIONS = [
   { key: 'general', icon: 'tabler-briefcase' },
   { key: 'modules', icon: 'tabler-puzzle' },
+  { key: 'fields', icon: 'tabler-forms' }, // ADR-835 : champs demandés à la création d'une société
   { key: 'setup', icon: 'tabler-rocket' },
 ]
 // Anciennes sections (ADR-820) → nouvelles
@@ -554,6 +556,11 @@ const advanced = ref(null)
           </VBtn>
         </VCardActions>
       </VCard>
+    </template>
+
+    <!-- ── Champs de création société (ADR-835) ── -->
+    <template v-else-if="section === 'fields'">
+      <JobdomainCompanyFields :jobdomain-id="id" />
     </template>
 
     <!-- ── Configuration initiale ── -->

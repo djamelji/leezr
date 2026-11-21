@@ -13,6 +13,8 @@ use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\Subscription;
 use App\Modules\Core\Billing\Services\CouponService;
 use App\Core\Companies\CompanyProvisioner;
+use App\Core\Fields\CompanyCreationFields;
+use Illuminate\Validation\ValidationException;
 use App\Core\Modules\ModuleActivationEngine;
 use App\Core\Markets\Market;
 use App\Core\Notifications\NotificationDispatcher;
@@ -34,6 +36,13 @@ class RegisterCompanyUseCase
         $isFree = ! $plan || ($plan->price_monthly <= 0 && $plan->price_yearly <= 0);
         $interval = $data->billingInterval ?? 'monthly';
 
+        // ADR-835 : company fields checked by the SAME rule as the Platform creation wizard (required, formats,
+        // defaults, JobDomain customisation) — before anything is created.
+        $checkedFields = CompanyCreationFields::validate($data->jobdomainKey, CompanyProvisioner::resolveMarketKey($data->marketKey), $data->dynamicFields, app()->getLocale());
+        if ($checkedFields['errors'] !== []) {
+            throw ValidationException::withMessages(collect($checkedFields['errors'])->mapWithKeys(fn ($m, $code) => ["dynamic_fields.$code" => [$m]])->all());
+        }
+
         // Anti-abuse: check if this email already used a trial (any previous company)
         $hasUsedTrial = false;
         $existingUser = User::where('email', $data->email)->first();
@@ -46,7 +55,7 @@ class RegisterCompanyUseCase
 
         $hasTrial = ! $hasUsedTrial && ($plan?->trial_days ?? 0) > 0;
 
-        $result = DB::transaction(function () use ($data, $planKey, $plan, $isFree, $hasTrial, $interval) {
+        $result = DB::transaction(function () use ($data, $checkedFields, $planKey, $plan, $isFree, $hasTrial, $interval) {
             $user = User::create([
                 'first_name' => $data->firstName,
                 'last_name' => $data->lastName,
@@ -64,7 +73,7 @@ class RegisterCompanyUseCase
             ]);
 
             CompanyProvisioner::initializeActivity($company, $data->jobdomainKey, $user->id);
-            CompanyProvisioner::applyIdentity($company, $data->legalStatusKey, $data->dynamicFields, $data->billingSameAsCompany);
+            CompanyProvisioner::applyIdentity($company, $data->legalStatusKey, $checkedFields['values'], $data->billingSameAsCompany);
 
             // ADR-300: Activate selected addon modules at registration
             foreach ($data->addonKeys as $addonKey) {

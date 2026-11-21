@@ -54,7 +54,7 @@ class Adr820ModuleDataMappingTest extends TestCase
         PresetService::setRecommendations('logistique', [$this->libraryLink(), ['kind' => 'rbac', 'family_key' => 'lg_rbac']]);
 
         $id = $this->postJson('/api/register', ['first_name' => 'O', 'last_name' => 'W', 'email' => 'own820@example.test', 'password' => 'P@ssw0rd!Strong',
-            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Map 820', 'jobdomain_key' => 'logistique', 'plan_key' => 'starter'])->assertCreated()->json('company.id');
+            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Map 820', 'jobdomain_key' => 'logistique', 'plan_key' => 'starter', 'dynamic_fields' => ['siret' => '12345678901234']])->assertCreated()->json('company.id');
         $this->c = Company::findOrFail($id);
         $this->owner = User::where('email', 'own820@example.test')->sole();
         // Accès chauffeur confirmé (ADR-808 : droits opérationnels en attente jusqu'à confirmation).

@@ -3197,6 +3197,16 @@
     }
   },
   "platformFields": {
+    "creation": {
+      "title": "Création d'une société",
+      "hint": "Règles héritées par tous les métiers (inscription en ligne et création depuis Platform). Un métier peut les personnaliser dans JobDomains › Champs.",
+      "required": "Obligatoire",
+      "markets": "Marchés concernés",
+      "marketsHint": "Vide = tous les marchés.",
+      "default": "Valeur par défaut",
+      "legal": "Imposé par la loi sur",
+      "legalHint": "Sur ces marchés, aucun métier ne peut masquer ce champ ni le rendre facultatif."
+    },
     "fieldDefinitions": "Définitions de champs",
     "platformUserActivations": "Activations utilisateur plateforme",
     "addDefinition": "Ajouter une définition",
@@ -5200,6 +5210,11 @@
     "couponError_coupon_already_used": "Ce code promo a déjà été utilisé.",
     "loadError": "Impossible de charger les données d'inscription. Veuillez rafraîchir la page.",
     "registrationSuccess": "Votre compte a été créé avec succès ! Bienvenue.",
+    "companyFields": {
+      "requiredMissing": "Informations obligatoires à compléter : {fields}",
+      "tooLong": "Valeur trop longue : {fields}",
+      "invalidFormat": "Format incorrect : {fields}"
+    },
     "pleaseCorrectErrors": "Veuillez corriger les erreurs ci-dessous pour continuer.",
     "hero": {
       "title": "Gérez votre entreprise en un seul endroit",
@@ -5775,6 +5790,8 @@
         "updated": "Champ modifié"
       },
       "jobdomain": {
+        "company_field_updated": "Champ de création société personnalisé pour un métier",
+        "company_field_reset": "Champ de création société revenu à l'héritage",
         "changed": "Métier modifié"
       },
       "leave_ledger": {
@@ -11834,10 +11851,35 @@
     "noPopulation": "Aucune personne n'a encore de rôle de livraison.",
     "showOthers": "Afficher les autres champs compatibles ({n})"
   },
+  "jobdomainCompanyFields": {
+    "title": "Champs demandés à la création d'une société",
+    "subtitle": "Ces réglages s'appliquent à l'inscription en ligne et à la création depuis Platform. Chaque champ hérite du catalogue global ; personnalisez-le seulement si ce métier a besoin d'une règle différente.",
+    "columns": {
+      "field": "Champ",
+      "visible": "Affiché",
+      "required": "Obligatoire",
+      "markets": "Marchés",
+      "default": "Valeur par défaut",
+      "origin": "Origine"
+    },
+    "allMarkets": "Tous les marchés",
+    "inherited": "Hérité",
+    "customised": "Personnalisé",
+    "legal": "Imposé par la loi : {markets}",
+    "reset": "Revenir à l'héritage",
+    "resetDone": "Le champ suit de nouveau le catalogue global.",
+    "saved": "Réglage du champ enregistré.",
+    "error": "Impossible d'enregistrer ce réglage.",
+    "dialogIntro": "Par défaut, ce champ suit le catalogue global. Activez la personnalisation pour définir une règle propre à ce métier : seules les valeurs différentes du catalogue sont conservées.",
+    "customise": "Personnaliser pour ce métier",
+    "inheritedValue": "Catalogue global : {value}",
+    "legalHint": "Ce champ est imposé par la loi sur {markets} : il y reste affiché et obligatoire quel que soit le réglage du métier."
+  },
   "jobdomainSimple": {
     "section": {
       "general": "Métier",
       "modules": "Modules",
+      "fields": "Champs",
       "setup": "Configuration initiale"
     },
     "experienceTitle": "Expérience métier (facultatif)",

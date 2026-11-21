@@ -3197,6 +3197,16 @@
     }
   },
   "platformFields": {
+    "creation": {
+      "title": "Company creation",
+      "hint": "Rules inherited by every business (online sign-up and creation from Platform). A business may customise them in JobDomains › Fields.",
+      "required": "Required",
+      "markets": "Markets concerned",
+      "marketsHint": "Empty = all markets.",
+      "default": "Default value",
+      "legal": "Imposed by law on",
+      "legalHint": "On these markets, no business can hide this field or make it optional."
+    },
     "fieldDefinitions": "Field Definitions",
     "platformUserActivations": "Platform User Activations",
     "addDefinition": "Add Definition",
@@ -5200,6 +5210,11 @@
     "couponError_coupon_already_used": "This promo code has already been used.",
     "loadError": "Unable to load registration data. Please refresh the page.",
     "registrationSuccess": "Your account has been created successfully! Welcome.",
+    "companyFields": {
+      "requiredMissing": "Required information to complete: {fields}",
+      "tooLong": "Value too long: {fields}",
+      "invalidFormat": "Invalid format: {fields}"
+    },
     "pleaseCorrectErrors": "Please correct the errors below to continue.",
     "hero": {
       "title": "Manage your business in one place",
@@ -5775,6 +5790,8 @@
         "updated": "Field updated"
       },
       "jobdomain": {
+        "company_field_updated": "Company creation field customised for a business",
+        "company_field_reset": "Company creation field back to inheritance",
         "changed": "Business line changed"
       },
       "leave_ledger": {
@@ -11834,10 +11851,35 @@
     "noPopulation": "Nobody has a delivery role yet.",
     "showOthers": "Show other compatible fields ({n})"
   },
+  "jobdomainCompanyFields": {
+    "title": "Fields asked when a company is created",
+    "subtitle": "These settings apply to the online sign-up and to the creation from Platform. Each field inherits the global catalog; customise it only if this business needs a different rule.",
+    "columns": {
+      "field": "Field",
+      "visible": "Shown",
+      "required": "Required",
+      "markets": "Markets",
+      "default": "Default value",
+      "origin": "Origin"
+    },
+    "allMarkets": "All markets",
+    "inherited": "Inherited",
+    "customised": "Customised",
+    "legal": "Imposed by law: {markets}",
+    "reset": "Back to inheritance",
+    "resetDone": "The field follows the global catalog again.",
+    "saved": "Field setting saved.",
+    "error": "Unable to save this setting.",
+    "dialogIntro": "By default, this field follows the global catalog. Turn on customisation to set a rule specific to this business: only the values that differ from the catalog are kept.",
+    "customise": "Customise for this business",
+    "inheritedValue": "Global catalog: {value}",
+    "legalHint": "This field is imposed by law on {markets}: it stays shown and required there whatever the business setting."
+  },
   "jobdomainSimple": {
     "section": {
       "general": "Business",
       "modules": "Modules",
+      "fields": "Fields",
       "setup": "Initial configuration"
     },
     "experienceTitle": "Business experience (optional)",

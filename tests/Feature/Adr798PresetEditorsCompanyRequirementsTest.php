@@ -90,7 +90,9 @@ class Adr798PresetEditorsCompanyRequirementsTest extends TestCase
     {
         return json_encode(CreationParity::fingerprint($c) + [
             'employees' => Employee::withoutGlobalScopes()->where('company_id', $c->id)->orderBy('id')->get(['id', 'job_role_id', 'status', 'user_id']),
-            'field_values' => DB::table('field_values')->count(), 'requests' => DocumentRequest::where('company_id', $c->id)->count(),
+            // values OF this company and its members (ADR-835 : a sign-up now stores the new company's SIRET)
+            'field_values' => DB::table('field_values')->where(fn ($q) => $q->where(fn ($q) => $q->where('model_type', $c->getMorphClass())->where('model_id', $c->id))
+                ->orWhere(fn ($q) => $q->where('model_type', (new \App\Core\Models\User)->getMorphClass())->whereIn('model_id', $c->memberships()->pluck('user_id'))))->count(), 'requests' => DocumentRequest::where('company_id', $c->id)->count(),
             'compliance' => collect(DocumentResolverService::requirementMap($c->id, null, 'FR'))->map(fn ($e) => [$e['required'], $e['visible']]),
         ]);
     }
@@ -275,7 +277,7 @@ class Adr798PresetEditorsCompanyRequirementsTest extends TestCase
 
         // Inscription : drapeau désactivé → chemin historique ; activé → initialisation versionnée (presets requis).
         $register = fn (string $email) => $this->postJson('/api/register', ['first_name' => 'R', 'last_name' => 'U', 'email' => $email, 'password' => 'P@ssw0rd!Strong',
-            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Reg '.$email, 'jobdomain_key' => 'logistique'])->assertCreated()->json('company.id');
+            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Reg '.$email, 'jobdomain_key' => 'logistique', 'dynamic_fields' => ['siret' => '12345678901234']])->assertCreated()->json('company.id');
         $legacyId = $register('legacy@example.test');
         $this->assertSame(0, PresetApplication::where('company_id', $legacyId)->count());
         $this->app['auth']->forgetGuards();

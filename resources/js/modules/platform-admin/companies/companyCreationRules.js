@@ -135,32 +135,5 @@ export function overridePayload(state) {
   }
 }
 
-// ── Company fields of the activity (e.g. SIRET) : checked on the Company step, same rule as the server ──────
-// (CompanyCreationFields::matchesFormat) : only a « / »-delimited pattern is a regular expression.
-function matchesFormat(pattern, value) {
-  if (typeof pattern !== 'string' || pattern.length <= 2 || pattern[0] !== '/')
-    return true
-  const end = pattern.lastIndexOf('/')
-  try {
-    return new RegExp(pattern.slice(1, end), pattern.slice(end + 1).replace(/[^imsu]/g, '')).test(value)
-  }
-  catch {
-    return true
-  }
-}
-
-/** @returns {{ missing: string[], tooLong: string[], invalid: string[] }} field labels per problem */
-export function companyFieldIssues(fields = [], values = {}) {
-  const out = { missing: [], tooLong: [], invalid: [] }
-  for (const f of fields) {
-    const v = String(values?.[f.code] ?? '').trim()
-    if (f.required && v === '')
-      out.missing.push(f.label)
-    else if (v !== '' && f.max && [...v].length > Number(f.max))
-      out.tooLong.push(f.label)
-    else if (v !== '' && !matchesFormat(f.pattern, v))
-      out.invalid.push(f.label)
-  }
-
-  return out
-}
+// ADR-835 : company creation fields — single client rule shared with the public sign-up
+export { companyFieldIssues, applyFieldDefaults } from '../../../core/fields/companyCreationFieldRules.js'

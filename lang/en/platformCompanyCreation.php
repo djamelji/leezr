@@ -14,7 +14,7 @@ return [
         'jobdomainInactive' => 'This activity is not available.',
         'legalStatusMarket' => 'This legal form does not exist in the selected country.',
         'unknownField' => 'This field is not part of the company information for this activity and country.',
-        'fieldRequired' => ':field is required for this country.',
+        'fieldRequired' => ':field is required.',
         'fieldTooLong' => ':field is too long.',
         'fieldFormat' => ':field does not have the expected format.',
     ],

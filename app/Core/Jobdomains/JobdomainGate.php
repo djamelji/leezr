@@ -179,6 +179,15 @@ class JobdomainGate
             // ADR-819 (Company 2.0) : une entrée « recommandée » reste au catalogue, sans être activée.
             $defaultFields = array_values(array_filter($defaultFields, fn ($f) => empty($f['recommended'])));
 
+            // ADR-835 : a company field the JobDomain shows at creation outside its field list is activated too —
+            // otherwise the value typed in the creation form would be dropped.
+            $listed = array_column($defaultFields, 'code');
+            foreach (\App\Core\Fields\CompanyCreationFields::extraVisibleCodes($jobdomainKey) as $code) {
+                if (! in_array($code, $listed, true)) {
+                    $defaultFields[] = ['code' => $code];
+                }
+            }
+
             if (!empty($defaultFields)) {
                 $fieldConfigs = collect($defaultFields)->keyBy('code');
                 $codes = $fieldConfigs->keys()->toArray();

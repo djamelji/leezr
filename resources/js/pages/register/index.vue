@@ -28,6 +28,7 @@ import RegisterStepAddons from './_RegisterStepAddons.vue'
 import RegisterStepCompany from './_RegisterStepCompany.vue'
 import RegisterStepAccount from './_RegisterStepAccount.vue'
 import RegisterStepSummary from './_RegisterStepSummary.vue'
+import { applyFieldDefaults, companyFieldIssues } from '@/core/fields/companyCreationFieldRules'
 
 definePage({
   meta: {
@@ -211,7 +212,8 @@ watch([selectedJobdomain, selectedMarket], async ([jd, mk]) => {
       if (newCodes.has(k))
         pruned[k] = v
     }
-    dynamicFieldValues.value = pruned
+    // ADR-835 : default values configured in Platform (catalog or JobDomain) pre-filled, never over a typed value
+    dynamicFieldValues.value = applyFieldDefaults(companyFields.value, pruned)
   }
   if (mk) {
     await fetchLegalStatuses(mk)
@@ -336,12 +338,25 @@ const filledDynamicFields = computed(() => {
 })
 
 // ─── Step validation ─────────────────────────────────────
+// ADR-835 : company fields checked with the SAME rule as the server and the Platform wizard (required, length,
+// format) — the sign-up never discovers a missing field only at the end.
+const companyFieldMessages = computed(() => {
+  const issues = companyFieldIssues(companyFields.value, dynamicFieldValues.value)
+  const fmt = (key, list) => list.length ? [t(`register.companyFields.${key}`, { fields: list.join(', ') })] : []
+
+  return [...fmt('requiredMissing', issues.missing), ...fmt('tooLong', issues.tooLong), ...fmt('invalidFormat', issues.invalid)]
+})
+
+const serverFieldErrors = computed(() => Object.entries(errors.value || {})
+  .filter(([key]) => key.startsWith('dynamic_fields.'))
+  .flatMap(([, list]) => [].concat(list)))
+
 const canAdvance = computed(() => {
   switch (currentStep.value) {
     case 0: return !!selectedJobdomain.value
     case 1: return !!selectedPlan.value
     case 2: return true
-    case 3: return !!form.value.company_name && !!selectedMarket.value
+    case 3: return !!form.value.company_name && !!selectedMarket.value && !fieldsLoading.value && companyFieldMessages.value.length === 0
     case 4: return !!(form.value.first_name && form.value.last_name && form.value.email && form.value.password)
     default: return true
   }
@@ -404,6 +419,10 @@ const handleRegister = async () => {
       // Navigate to the account step if field errors exist there
       if (errors.value.email || errors.value.password || errors.value.first_name || errors.value.last_name)
         currentStep.value = 4
+
+      // ADR-835 : a refused company field brings back to the Company step, where it is explained
+      if (Object.keys(errors.value).some(key => key.startsWith('dynamic_fields.') || key === 'company_name'))
+        currentStep.value = 3
 
       // Show a friendly summary instead of Laravel's generic "(and N more errors)"
       errorMessage.value = t('register.pleaseCorrectErrors')
@@ -721,6 +740,20 @@ const authThemeMask = useGenerateImageVariant(authV2MaskLight, authV2MaskDark)
               :market-dial-code="marketDialCode"
               :errors="errors"
             />
+            <VAlert
+              v-if="selectedJobdomain && !fieldsLoading && (companyFieldMessages.length || serverFieldErrors.length)"
+              type="warning"
+              variant="tonal"
+              class="mt-4"
+              data-testid="register-company-fields"
+            >
+              <div
+                v-for="msg in [...companyFieldMessages, ...serverFieldErrors]"
+                :key="msg"
+              >
+                {{ msg }}
+              </div>
+            </VAlert>
           </VWindowItem>
 
           <!-- Step 4: Account -->

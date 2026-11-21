@@ -610,6 +610,11 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         Route::get('/jobdomains/{id}/composition', [$jm, 'composition'])->whereNumber('id'); // ADR-821
         Route::put('/jobdomains/{id}/composition', [$jm, 'saveComposition'])->whereNumber('id');
         Route::get('/jobdomains/{id}/initialization-plan', [$jm, 'initializationPlan'])->whereNumber('id');
+        // ADR-835 — champs de création société du JobDomain (hérités du catalogue global / personnalisés)
+        $jcf = \App\Modules\Platform\Jobdomains\Http\JobdomainCompanyFieldController::class;
+        Route::get('/jobdomains/{id}/company-fields', [$jcf, 'index'])->whereNumber('id');
+        Route::put('/jobdomains/{id}/company-fields/{fieldId}', [$jcf, 'update'])->whereNumber('id')->whereNumber('fieldId');
+        Route::delete('/jobdomains/{id}/company-fields/{fieldId}', [$jcf, 'destroy'])->whereNumber('id')->whereNumber('fieldId');
         Route::post('/jobdomains/{id}/presets/{kind}/draft', [$jm, 'presetDraft'])->whereNumber('id'); // ADR-799
         Route::post('/jobdomains/{id}/presets/{kind}/{presetId}/publish', [$jm, 'presetPublish'])->whereNumber('id')->whereNumber('presetId');
         Route::get('/companies/{companyId}/jobdomain-compatibility', [$jm, 'companyCompatibility'])->whereNumber('companyId');

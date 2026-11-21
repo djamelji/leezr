@@ -51,7 +51,7 @@ class Adr809LogisticsSignupTest extends TestCase
         $this->app['auth']->forgetGuards();
         $this->app['auth']->setDefaultDriver('web'); // the previous request's guard must not leak (ADR-801.1)
         $id = $this->postJson('/api/register', ['first_name' => 'R', 'last_name' => 'U', 'email' => $email, 'password' => 'P@ssw0rd!Strong',
-            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Reg '.$email, 'jobdomain_key' => $jobdomain, 'plan_key' => 'starter'])->assertCreated()->json('company.id');
+            'password_confirmation' => 'P@ssw0rd!Strong', 'company_name' => 'Reg '.$email, 'jobdomain_key' => $jobdomain, 'plan_key' => 'starter'] + ($jobdomain === 'logistique' ? ['dynamic_fields' => ['siret' => '12345678901234']] : []))->assertCreated()->json('company.id');
 
         return Company::findOrFail($id);
     }

@@ -53,6 +53,9 @@ class UpsertPlatformFieldUseCase
         $definition = FieldDefinition::whereNull('company_id')->findOrFail($id);
 
         $before = $definition->only('label', 'translations', 'validation_rules', 'options', 'default_order');
+        if ($definition->scope === FieldDefinition::SCOPE_COMPANY && array_key_exists('validation_rules', $validated)) {
+            $this->assertCreationRules($definition, (array) ($validated['validation_rules'] ?? []), $validated['options'] ?? $definition->options);
+        }
         $definition->update($validated);
 
         $this->audit->logPlatform(
@@ -61,5 +64,31 @@ class UpsertPlatformFieldUseCase
         );
 
         return $definition;
+    }
+
+    /**
+     * ADR-835 — creation rules of a company field in the global catalog : legal markets within the field's markets,
+     * a legally imposed field is required, a default value respects the technical limits.
+     */
+    private function assertCreationRules(FieldDefinition $definition, array $rules, mixed $options): void
+    {
+        $errors = [];
+        $markets = $rules['applicable_markets'] ?? null;
+        $legal = (array) ($rules['legal_required_markets'] ?? []);
+        if ($legal !== [] && $markets !== null && array_diff($legal, (array) $markets) !== []) {
+            $errors['validation_rules.legal_required_markets'] = [__('jobdomainCompanyFields.errors.marketsOutsideCatalog', ['markets' => implode(', ', array_diff($legal, (array) $markets))])];
+        }
+        if ($legal !== [] && empty($rules['required'])) {
+            $errors['validation_rules.required'] = [__('jobdomainCompanyFields.errors.legal', ['markets' => implode(', ', $legal)])];
+        }
+        $default = trim((string) ($rules['default'] ?? ''));
+        if ($default !== '' && \App\Core\Fields\CompanyCreationFields::valueProblem([
+            'type' => $definition->type, 'options' => $options, 'max' => $rules['max'] ?? null, 'pattern' => $rules['pattern'] ?? null,
+        ], $default) !== null) {
+            $errors['validation_rules.default'] = [__('jobdomainCompanyFields.errors.default')];
+        }
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 }

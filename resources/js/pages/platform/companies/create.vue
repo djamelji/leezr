@@ -10,7 +10,7 @@ import { usePublicMarkets } from '@/composables/usePublicMarkets'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCatalogText } from '@/composables/useCatalogText'
 import RegisterStepCompany from '@/pages/register/_RegisterStepCompany.vue'
-import { companyFieldIssues, keepSelectable, overrideApplies, overrideErrors, overridePayload, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
+import { applyFieldDefaults, companyFieldIssues, keepSelectable, overrideApplies, overrideErrors, overridePayload, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
 import CreateStepActivity from './_CreateStepActivity.vue'
 import CreateStepModules from './_CreateStepModules.vue'
 import CreateStepSubscription from './_CreateStepSubscription.vue'
@@ -113,6 +113,11 @@ watch(() => form.company.market_key, mk => {
 watch(() => [form.jobdomain_key, form.company.market_key], ([jd, mk]) => {
   if (jd)
     fetchFields(jd, mk).catch(() => {})
+})
+
+// ADR-835 : the default value configured in Platform (catalog or JobDomain) is pre-filled, never over a typed value
+watch(companyFields, list => {
+  form.company.dynamic_fields = applyFieldDefaults(list, form.company.dynamic_fields)
 })
 
 watch(() => form.jobdomain_key, (jd, old) => {

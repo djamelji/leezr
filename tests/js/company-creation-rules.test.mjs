@@ -104,3 +104,19 @@ test('valid values pass : « / » pattern is a regex, « email » is only a rend
 test('too long and wrong format are reported, like the server', () => {
   assert.deepEqual(companyFieldIssues(fields, { siret: '123456789012345', naf_code: 'ABC' }), { missing: [], tooLong: ['SIRET'], invalid: ['Code NAF'] })
 })
+
+// ── ADR-835 : JobDomain-configurable fields — defaults and select choices, same rule as the server ──────────
+import { applyFieldDefaults } from '../../resources/js/modules/platform-admin/companies/companyCreationRules.js'
+
+test('a default value satisfies a required field and is pre-filled without overwriting a typed value', () => {
+  const f = [{ code: 'country_code', label: 'Pays', required: true, max: 2, default: 'FR' }, { code: 'city', label: 'Ville', required: false, default: null }]
+  assert.deepEqual(companyFieldIssues(f, {}), { missing: [], tooLong: [], invalid: [] })
+  assert.deepEqual(applyFieldDefaults(f, { city: 'Lyon' }), { country_code: 'FR', city: 'Lyon' })
+  assert.deepEqual(applyFieldDefaults(f, { country_code: 'BE' }), { country_code: 'BE' })
+})
+
+test('a select value outside the choices is refused', () => {
+  const f = [{ code: 'size', label: 'Taille', type: 'select', options: ['s', 'm'], required: false }]
+  assert.deepEqual(companyFieldIssues(f, { size: 'xl' }).invalid, ['Taille'])
+  assert.deepEqual(companyFieldIssues(f, { size: 'm' }).invalid, [])
+})

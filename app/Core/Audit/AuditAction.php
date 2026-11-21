@@ -62,6 +62,8 @@ final class AuditAction
     // ─── Plan / Jobdomain ───────────────────────────────
     public const PLAN_CHANGED = 'plan.changed';
     public const JOBDOMAIN_CHANGED = 'jobdomain.changed';
+    public const JOBDOMAIN_COMPANY_FIELD_UPDATED = 'jobdomain.company_field_updated'; // ADR-835
+    public const JOBDOMAIN_COMPANY_FIELD_RESET = 'jobdomain.company_field_reset';
 
     // ─── Company lifecycle ──────────────────────────────
     public const COMPANY_SUSPENDED = 'company.suspended';

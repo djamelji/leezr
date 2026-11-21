@@ -186,6 +186,7 @@ class RegistrationTunnelTest extends TestCase
             'jobdomain_key' => 'logistique',
             'market_key' => 'FR',
             'legal_status_key' => 'sas',
+            'dynamic_fields' => ['siret' => '12345678901234'], // ADR-835 : required fields checked on sign-up too
         ]);
 
         $response->assertStatus(201);
@@ -214,6 +215,7 @@ class RegistrationTunnelTest extends TestCase
             'market_key' => 'FR',
             'billing_same_as_company' => true,
             'dynamic_fields' => [
+                'siret' => '12345678901234',
                 'company_address' => '10 rue de la Paix',
                 'company_city' => 'Paris',
                 'company_postal_code' => '75002',
@@ -260,6 +262,7 @@ class RegistrationTunnelTest extends TestCase
             'market_key' => 'FR',
             'billing_same_as_company' => false,
             'dynamic_fields' => [
+                'siret' => '12345678901234',
                 'company_address' => '10 rue de la Paix',
                 'company_city' => 'Paris',
                 'billing_address' => '5 avenue des Champs',
@@ -292,11 +295,12 @@ class RegistrationTunnelTest extends TestCase
     // 9) Register without dynamic_fields works (backward compat)
     // ═══════════════════════════════════════════════════════
 
-    public function test_register_without_dynamic_fields_backward_compat(): void
+    // ADR-835 : the public sign-up applies the SAME company field rules as the Platform wizard — a required field
+    // (SIRET for Logistique in France) is refused when missing, before anything is created.
+    public function test_register_without_required_dynamic_field_is_refused_then_accepted(): void
     {
         $this->get('/sanctum/csrf-cookie');
-
-        $response = $this->postJson('/api/register', [
+        $payload = [
             'first_name' => 'Simple',
             'last_name' => 'User',
             'email' => 'simple@tunnel.test',
@@ -304,11 +308,13 @@ class RegistrationTunnelTest extends TestCase
             'password_confirmation' => 'P@ssw0rd!Strong',
             'company_name' => 'Simple Co',
             'jobdomain_key' => 'logistique',
-        ]);
+        ];
 
-        $response->assertStatus(201)
-            ->assertJsonStructure(['user', 'company']);
+        $this->postJson('/api/register', $payload)->assertStatus(422)->assertJsonValidationErrors('dynamic_fields.siret');
+        $this->assertDatabaseMissing('companies', ['name' => 'Simple Co']);
 
+        $this->postJson('/api/register', $payload + ['dynamic_fields' => ['siret' => '12345678901234']])
+            ->assertStatus(201)->assertJsonStructure(['user', 'company']);
         $this->assertDatabaseHas('companies', ['name' => 'Simple Co']);
     }
 }

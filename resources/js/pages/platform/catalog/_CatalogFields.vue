@@ -3,6 +3,7 @@ import { usePlatformFieldsStore } from '@/modules/platform-admin/fields/fields.s
 import { usePlatformMarketsStore } from '@/modules/platform-admin/markets/markets.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { usePublicMarkets } from '@/composables/usePublicMarkets'
 
 // Sub-component — no definePage — hub: platform/catalog/[tab].vue
 
@@ -20,6 +21,13 @@ const isDefEditMode = ref(false)
 const editingDef = ref(null)
 const defForm = ref({ code: '', scope: 'company', label: '', type: 'string', validation_rules: null, options: null, default_order: 0, translations: {} })
 const defLoading = ref(false)
+
+// ─── ADR-835 : company creation rules of the global catalog (inherited by every JobDomain) ──
+const { markets: publicMarkets, fetchMarkets: fetchPublicMarkets } = usePublicMarkets()
+const creation = ref({ required: false, markets: [], default: '', legal: [] })
+const defErrors = ref({})
+const marketItems = computed(() => publicMarkets.value.map(m => ({ title: m.name, value: m.key })))
+const isCompanyEdit = computed(() => isDefEditMode.value && defForm.value.scope === 'company')
 
 // ─── Languages for translations ──────────────────────
 const activeLanguages = computed(() =>
@@ -116,8 +124,34 @@ const openEditDefDrawer = def => {
     default_order: def.default_order,
     translations: def.translations ? { ...def.translations } : {},
   }
+  const r = def.validation_rules || {}
+  creation.value = { required: !!r.required, markets: [...(r.applicable_markets || [])], default: r.default ?? '', legal: [...(r.legal_required_markets || [])] }
+  defErrors.value = {}
+  if (def.scope === 'company' && !publicMarkets.value.length)
+    fetchPublicMarkets().catch(() => {})
   drawerLocale.value = 'en'
   isDefDrawerOpen.value = true
+}
+
+// keeps every other rule (max, pattern, category…) and sets the creation ones ; empty = not set
+const creationRules = () => {
+  const rules = { ...(defForm.value.validation_rules || {}) }
+  const c = creation.value
+  rules.required = !!c.required
+  if (c.markets.length)
+    rules.applicable_markets = [...c.markets]
+  else
+    delete rules.applicable_markets
+  if (String(c.default ?? '').trim() !== '')
+    rules.default = String(c.default).trim()
+  else
+    delete rules.default
+  if (c.legal.length)
+    rules.legal_required_markets = [...c.legal]
+  else
+    delete rules.legal_required_markets
+
+  return rules
 }
 
 const handleDefSubmit = async () => {
@@ -132,7 +166,7 @@ const handleDefSubmit = async () => {
       const data = await fieldsStore.updateFieldDefinition(editingDef.value.id, {
         label: canonicalLabel,
         translations,
-        validation_rules: defForm.value.validation_rules,
+        validation_rules: isCompanyEdit.value ? creationRules() : defForm.value.validation_rules,
         options: defForm.value.options,
         default_order: Number(defForm.value.default_order) || 0,
       })
@@ -154,6 +188,7 @@ const handleDefSubmit = async () => {
     isDefDrawerOpen.value = false
   }
   catch (error) {
+    defErrors.value = error?.data?.errors || {}
     toast(error?.data?.message || t('common.operationFailed'), 'error')
   }
   finally {
@@ -571,6 +606,56 @@ const scopeColor = scope => {
                 :placeholder="t('platformFields.fieldLabelPlaceholder')"
               />
             </VCol>
+
+            <template v-if="isCompanyEdit">
+              <VCol cols="12">
+                <h6 class="text-h6">
+                  {{ t('platformFields.creation.title') }}
+                </h6>
+                <p class="text-body-2 mb-0">
+                  {{ t('platformFields.creation.hint') }}
+                </p>
+              </VCol>
+              <VCol cols="12">
+                <VSwitch
+                  v-model="creation.required"
+                  :label="t('platformFields.creation.required')"
+                  :error-messages="defErrors['validation_rules.required']"
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppSelect
+                  v-model="creation.markets"
+                  :items="marketItems"
+                  multiple
+                  chips
+                  closable-chips
+                  :label="t('platformFields.creation.markets')"
+                  :hint="t('platformFields.creation.marketsHint')"
+                  persistent-hint
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppTextField
+                  v-model="creation.default"
+                  :label="t('platformFields.creation.default')"
+                  :error-messages="defErrors['validation_rules.default']"
+                />
+              </VCol>
+              <VCol cols="12">
+                <AppSelect
+                  v-model="creation.legal"
+                  :items="marketItems"
+                  multiple
+                  chips
+                  closable-chips
+                  :label="t('platformFields.creation.legal')"
+                  :hint="t('platformFields.creation.legalHint')"
+                  persistent-hint
+                  :error-messages="defErrors['validation_rules.legal_required_markets']"
+                />
+              </VCol>
+            </template>
 
             <VCol cols="12">
               <AppTextField

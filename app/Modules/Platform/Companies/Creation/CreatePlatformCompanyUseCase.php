@@ -235,31 +235,20 @@ final class CreatePlatformCompanyUseCase
         if ($legal && ! LegalStatus::where('market_key', $market)->where('key', $legal)->exists()) {
             $errors['company.legal_status_key'] = [__('platformCompanyCreation.errors.legalStatusMarket')];
         }
-        $fields = collect(CompanyCreationFields::resolve($data['jobdomain_key'], $market, app()->getLocale()))->keyBy('code');
-        $values = $data['company']['dynamic_fields'] ?? [];
-        foreach (array_keys($values) as $code) {
-            if (! $fields->has($code)) {
-                $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.unknownField')];
-            }
-        }
-        foreach ($fields as $code => $f) {
-            $v = trim((string) ($values[$code] ?? ''));
-            if ($f['required'] && $v === '') {
-                $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldRequired', ['field' => $f['label']])];
-            } elseif ($v !== '' && $f['max'] && mb_strlen($v) > (int) $f['max']) {
-                $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldTooLong', ['field' => $f['label']])];
-            } elseif ($v !== '' && ! CompanyCreationFields::matchesFormat($f['pattern'], $v)) {
-                $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldFormat', ['field' => $f['label']])];
-            }
+        // ADR-835 : the SAME rule as the public sign-up (required, formats, defaults, JobDomain customisation)
+        $checked = CompanyCreationFields::validate($data['jobdomain_key'], $market, $data['company']['dynamic_fields'] ?? [], app()->getLocale());
+        foreach ($checked['errors'] as $code => $message) {
+            $errors["company.dynamic_fields.$code"] = [$message];
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
     }
 
+    /** Values to store : trimmed, defaults applied (ADR-835) — validated beforehand by assertIdentity. */
     private function dynamicFields(array $data): array
     {
-        return array_filter(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $data['company']['dynamic_fields'] ?? []), fn ($v) => $v !== null && $v !== '');
+        return CompanyCreationFields::validate($data['jobdomain_key'], $data['company']['market_key'], $data['company']['dynamic_fields'] ?? [], app()->getLocale())['values'];
     }
 
     /** Onboarding state of a company (created ≠ in service) — Platform view. */
