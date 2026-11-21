@@ -1,7 +1,7 @@
 <script setup>
 import { useCatalogText } from '@/composables/useCatalogText'
 
-// ADR-834 — step B : ONE activity per company (single radio choice, same Vuexy CustomRadiosWithIcon as sign-up).
+// ADR-834 — step A (first : the activity decides the required company fields) : ONE activity per company (single radio choice, same Vuexy CustomRadiosWithIcon as sign-up).
 const { t } = useI18n()
 const { dataText } = useCatalogText()
 

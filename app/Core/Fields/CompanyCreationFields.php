@@ -54,4 +54,17 @@ final class CompanyCreationFields
             ];
         })->sortBy('order')->values()->all();
     }
+
+    /**
+     * Same rule as FieldValidationService (ADR-785) : only a « / »-delimited pattern is a regular expression ;
+     * « email », « phone »… are rendering hints and never refuse a value.
+     */
+    public static function matchesFormat(?string $pattern, string $value): bool
+    {
+        if (! is_string($pattern) || strlen($pattern) <= 2 || $pattern[0] !== '/') {
+            return true;
+        }
+
+        return @preg_match($pattern, $value) !== 0;
+    }
 }

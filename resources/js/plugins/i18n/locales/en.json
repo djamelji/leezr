@@ -12054,7 +12054,9 @@
     },
     "company": {
       "intro": "Enter the company's legal identity. Required information depends on the selected country.",
-      "chooseActivityFirst": "Choose the activity in the next step: business-specific information will then appear here.",
+      "chooseActivityFirst": "Choose the activity in the previous step first: the business-specific required information (company number, etc.) will then appear here.",
+      "tooLong": "Value too long: {fields}",
+      "invalidFormat": "Invalid format: {fields}",
       "requiredMissing": "Required information missing: {fields}"
     },
     "activity": {
@@ -12250,6 +12252,7 @@
     },
     "issues": {
       "title": "To continue:",
+      "fieldsLoading": "Loading the information required for this activity…",
       "companyName": "Enter the company's trading name.",
       "market": "Choose the country.",
       "activity": "Choose the company's activity.",

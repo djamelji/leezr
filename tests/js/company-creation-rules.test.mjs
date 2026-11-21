@@ -83,3 +83,24 @@ test('the payload of an applicable override carries only the chosen duration', (
   const state = { plan: pro, canOverride: true, overrideEnabled: true, override: { type: 'complimentary', trial_days: 30, complimentary_months: 3, reason: '  Partenaire stratégique  ' } }
   assert.deepEqual(overridePayload(state), { type: 'complimentary', reason: 'Partenaire stratégique', trial_days: null, complimentary_months: 3 })
 })
+
+// ── ADR-834 fix : SIRET never asked, then « SIRET missing » at the end ─────────────────────────────────────
+import { companyFieldIssues } from '../../resources/js/modules/platform-admin/companies/companyCreationRules.js'
+
+const fields = [
+  { code: 'siret', label: 'SIRET', required: true, max: 14, pattern: null },
+  { code: 'naf_code', label: 'Code NAF', required: false, max: 6, pattern: '/^\\d{2}\\.?\\d{2}[A-Za-z]$/' },
+  { code: 'billing_email', label: 'E-mail de facturation', required: false, max: 254, pattern: 'email' },
+]
+
+test('required activity field (SIRET) is reported missing on the Company step', () => {
+  assert.deepEqual(companyFieldIssues(fields, {}), { missing: ['SIRET'], tooLong: [], invalid: [] })
+})
+
+test('valid values pass : « / » pattern is a regex, « email » is only a rendering hint', () => {
+  assert.deepEqual(companyFieldIssues(fields, { siret: '12345678901234', naf_code: '49.41A', billing_email: 'a@b.fr' }), { missing: [], tooLong: [], invalid: [] })
+})
+
+test('too long and wrong format are reported, like the server', () => {
+  assert.deepEqual(companyFieldIssues(fields, { siret: '123456789012345', naf_code: 'ABC' }), { missing: [], tooLong: ['SIRET'], invalid: ['Code NAF'] })
+})

@@ -13,7 +13,7 @@ const props = defineProps({
   initialization: { type: Object, default: null },
   outcome: { type: Object, default: null },
   lookup: { type: Object, default: null },
-  missingRequiredFields: { type: Array, default: () => [] },
+  companyFieldMessages: { type: Array, default: () => [] },
   paidBlocked: { type: Boolean, default: false },
   serverErrors: { type: Object, default: () => ({}) },
 })
@@ -29,15 +29,16 @@ const left = computed(() => confirmable.value.filter(p => !props.form.initializa
 
 const warnings = computed(() => {
   const w = []
-  if (props.missingRequiredFields.length)
-    w.push({ text: t('platformCompanyCreation.company.requiredMissing', { fields: props.missingRequiredFields.join(', ') }), step: 0 })
+  props.companyFieldMessages.forEach(text => w.push({ text, step: 1 }))
   if (props.paidBlocked)
     w.push({ text: t('platformCompanyCreation.modules.paidNeedsTrial'), step: 2 })
   if (props.outcome?.status === 'pending_payment')
     w.push({ text: props.outcome.kind === 'trial_used' ? t('platformCompanyCreation.subscription.trialUsed') : t('platformCompanyCreation.subscription.pendingPayment'), step: 3 })
   if (props.lookup?.exists)
     w.push({ text: props.lookup.active ? t('platformCompanyCreation.administrator.existingActive', { name: [props.lookup.first_name, props.lookup.last_name].filter(Boolean).join(' ') }) : t('platformCompanyCreation.administrator.existingInactive'), step: 4 })
-  Object.values(props.serverErrors).flat().forEach(text => w.push({ text, step: null }))
+  // a server refusal points back to the step that collects the field (company.* → Company, administrator.* → Administrator)
+  const stepOf = key => key.startsWith('company.') ? 1 : key.startsWith('jobdomain') ? 0 : key.startsWith('administrator.') ? 4 : null
+  Object.entries(props.serverErrors).forEach(([key, list]) => [].concat(list).forEach(text => w.push({ text, step: stepOf(key) })))
 
   return w
 })
@@ -53,8 +54,8 @@ const toComplete = computed(() => {
 })
 
 const sections = computed(() => [
-  { step: 0, title: t('platformCompanyCreation.summary.company'), lines: [props.form.company.name, [props.market?.name, legalStatus.value?.name].filter(Boolean).join(' · ')] },
-  { step: 1, title: t('platformCompanyCreation.summary.activity'), lines: [props.jobdomain?.label] },
+  { step: 0, title: t('platformCompanyCreation.summary.activity'), lines: [props.jobdomain?.label] },
+  { step: 1, title: t('platformCompanyCreation.summary.company'), lines: [props.form.company.name, [props.market?.name, legalStatus.value?.name].filter(Boolean).join(' · ')] },
   { step: 2, title: t('platformCompanyCreation.summary.modules'), lines: [t('platformCompanyCreation.summary.baseModules', { count: baseCount.value }, baseCount.value), selectedModules.value.length ? selectedModules.value.map(m => m.name).join(', ') : t('platformCompanyCreation.summary.noSelectedModules')] },
   { step: 3, title: t('platformCompanyCreation.summary.subscription'), lines: [[props.plan?.name, props.form.subscription.annual ? t('common.annually') : t('common.monthly')].filter(Boolean).join(' · '), props.outcome ? t(`platformCompanyCreation.statuses.${props.outcome.status}`) : '', props.form.subscription.overrideEnabled ? t('platformCompanyCreation.summary.override', { reason: props.form.subscription.override.reason }) : ''] },
   { step: 4, title: t('platformCompanyCreation.summary.administrator'), lines: [[props.form.administrator.first_name, props.form.administrator.last_name].join(' '), props.form.administrator.email] },

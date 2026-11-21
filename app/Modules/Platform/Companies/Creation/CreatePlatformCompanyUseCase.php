@@ -248,7 +248,7 @@ final class CreatePlatformCompanyUseCase
                 $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldRequired', ['field' => $f['label']])];
             } elseif ($v !== '' && $f['max'] && mb_strlen($v) > (int) $f['max']) {
                 $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldTooLong', ['field' => $f['label']])];
-            } elseif ($v !== '' && $f['pattern'] && @preg_match('/'.str_replace('/', '\/', $f['pattern']).'/u', $v) === 0) {
+            } elseif ($v !== '' && ! CompanyCreationFields::matchesFormat($f['pattern'], $v)) {
                 $errors["company.dynamic_fields.$code"] = [__('platformCompanyCreation.errors.fieldFormat', ['field' => $f['label']])];
             }
         }

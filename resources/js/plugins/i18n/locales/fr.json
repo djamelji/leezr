@@ -12054,7 +12054,9 @@
     },
     "company": {
       "intro": "Saisissez l'identité légale de la société. Les informations obligatoires dépendent du pays choisi.",
-      "chooseActivityFirst": "Choisissez d'abord l'activité à l'étape suivante : certaines informations propres au métier apparaîtront alors ici.",
+      "chooseActivityFirst": "Choisissez d'abord l'activité à l'étape précédente : les informations obligatoires propres au métier (SIRET, etc.) apparaîtront alors ici.",
+      "tooLong": "Valeur trop longue : {fields}",
+      "invalidFormat": "Format incorrect : {fields}",
       "requiredMissing": "Informations obligatoires à compléter : {fields}"
     },
     "activity": {
@@ -12250,6 +12252,7 @@
     },
     "issues": {
       "title": "Pour continuer :",
+      "fieldsLoading": "Chargement des informations demandées pour cette activité…",
       "companyName": "Indiquez le nom commercial de la société.",
       "market": "Choisissez le pays.",
       "activity": "Choisissez l'activité de la société.",

@@ -10,7 +10,7 @@ import { usePublicMarkets } from '@/composables/usePublicMarkets'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCatalogText } from '@/composables/useCatalogText'
 import RegisterStepCompany from '@/pages/register/_RegisterStepCompany.vue'
-import { keepSelectable, overrideApplies, overrideErrors, overridePayload, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
+import { companyFieldIssues, keepSelectable, overrideApplies, overrideErrors, overridePayload, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
 import CreateStepActivity from './_CreateStepActivity.vue'
 import CreateStepModules from './_CreateStepModules.vue'
 import CreateStepSubscription from './_CreateStepSubscription.vue'
@@ -52,8 +52,8 @@ const localizeModules = list => list.map(m => ({
 const { fields: companyFields, loading: fieldsLoading, fetchFields } = usePublicFields()
 const { markets, legalStatuses, loading: marketsLoading, legalStatusesLoading, fetchMarkets, fetchLegalStatuses } = usePublicMarkets()
 
-const STEP_KEYS = ['company', 'activity', 'modules', 'subscription', 'administrator', 'initialization', 'summary']
-const STEP_ICONS = ['tabler-building', 'tabler-briefcase', 'tabler-puzzle', 'tabler-credit-card', 'tabler-user-shield', 'tabler-adjustments', 'tabler-checklist']
+const STEP_KEYS = ['activity', 'company', 'modules', 'subscription', 'administrator', 'initialization', 'summary']
+const STEP_ICONS = ['tabler-briefcase', 'tabler-building', 'tabler-puzzle', 'tabler-credit-card', 'tabler-user-shield', 'tabler-adjustments', 'tabler-checklist']
 
 const stepItems = computed(() => STEP_KEYS.map((key, i) => ({
   title: t(`platformCompanyCreation.steps.${key}.title`),
@@ -179,9 +179,14 @@ const subscriptionOutcome = computed(() => subscriptionOutcomeRule({
 
 const paidBlocked = computed(() => paidOptionsBlocked(form.module_keys, preview.value.modules, subscriptionOutcome.value))
 
-const missingRequiredFields = computed(() => companyFields.value
-  .filter(f => f.required && !String(form.company.dynamic_fields[f.code] ?? '').trim())
-  .map(f => f.label))
+// the activity's company fields (e.g. SIRET) : required, length and format checked HERE, as the server does —
+// never discovered only at the end
+const companyFieldMessages = computed(() => {
+  const issues = companyFieldIssues(companyFields.value, form.company.dynamic_fields)
+  const fmt = (key, list) => list.length ? [t(`platformCompanyCreation.company.${key}`, { fields: list.join(', ') })] : []
+
+  return [...fmt('requiredMissing', issues.missing), ...fmt('tooLong', issues.tooLong), ...fmt('invalidFormat', issues.invalid)]
+})
 
 // The override form is validated ONLY when it applies (permission + switch + paid plan) : a hidden override
 // (free plan selected after enabling it) never blocks « Next » and is never sent.
@@ -205,15 +210,15 @@ watch(selectedPlan, plan => {
 const emailValid = computed(() => /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(form.administrator.email || ''))
 
 const stepValid = computed(() => [
-  !!form.company.name.trim() && !!form.company.market_key && (!form.jobdomain_key || missingRequiredFields.value.length === 0),
   !!form.jobdomain_key,
+  !!form.company.name.trim() && !!form.company.market_key && !!form.jobdomain_key && !fieldsLoading.value && companyFieldMessages.value.length === 0,
   !previewLoading.value,
   !!form.subscription.plan_key && overrideValid.value,
   !!form.administrator.first_name.trim() && !!form.administrator.last_name.trim() && emailValid.value && !lookupLoading.value,
   true,
 ])
 
-const allValid = computed(() => stepValid.value.every(Boolean) && missingRequiredFields.value.length === 0 && !paidBlocked.value)
+const allValid = computed(() => stepValid.value.every(Boolean) && !paidBlocked.value)
 const canAdvance = computed(() => currentStep.value === STEP_KEYS.length - 1 ? allValid.value : stepValid.value[currentStep.value])
 
 const goTo = step => {
@@ -231,12 +236,14 @@ const stepIssues = computed(() => {
   const a = form.administrator
 
   return [
+    [!form.jobdomain_key && k('activity')],
     [
+      !form.jobdomain_key && k('activity'),
       !form.company.name.trim() && k('companyName'),
       !form.company.market_key && k('market'),
-      form.jobdomain_key && missingRequiredFields.value.length && t('platformCompanyCreation.company.requiredMissing', { fields: missingRequiredFields.value.join(', ') }),
+      form.jobdomain_key && fieldsLoading.value && k('fieldsLoading'),
+      ...(form.jobdomain_key && !fieldsLoading.value ? companyFieldMessages.value : []),
     ],
-    [!form.jobdomain_key && k('activity')],
     [previewLoading.value && k('modulesLoading')],
     [
       !form.subscription.plan_key && k('plan'),
@@ -366,7 +373,18 @@ const submit = async () => {
               class="disable-tab-transition"
               :touch="false"
             >
-              <!-- A — Company -->
+              <!-- A — Activity -->
+              <VWindowItem>
+                <CreateStepActivity
+                  v-model:selected-jobdomain="form.jobdomain_key"
+                  :jobdomains="options.jobdomains"
+                  :modules="preview.modules"
+                  :loading="previewLoading"
+                  :has-selected-modules="form.module_keys.length > 0"
+                />
+              </VWindowItem>
+
+              <!-- B — Company (after the activity : its required fields, e.g. SIRET, depend on it) -->
               <VWindowItem>
                 <p class="text-body-1">
                   {{ t('platformCompanyCreation.company.intro') }}
@@ -396,24 +414,18 @@ const submit = async () => {
                   i18n-prefix="platformCompanyCreation.form"
                 />
                 <VAlert
-                  v-if="form.jobdomain_key && missingRequiredFields.length"
+                  v-if="form.jobdomain_key && companyFieldMessages.length"
                   type="warning"
                   variant="tonal"
                   class="mt-4"
                 >
-                  {{ t('platformCompanyCreation.company.requiredMissing', { fields: missingRequiredFields.join(', ') }) }}
+                  <div
+                    v-for="msg in companyFieldMessages"
+                    :key="msg"
+                  >
+                    {{ msg }}
+                  </div>
                 </VAlert>
-              </VWindowItem>
-
-              <!-- B — Activity -->
-              <VWindowItem>
-                <CreateStepActivity
-                  v-model:selected-jobdomain="form.jobdomain_key"
-                  :jobdomains="options.jobdomains"
-                  :modules="preview.modules"
-                  :loading="previewLoading"
-                  :has-selected-modules="form.module_keys.length > 0"
-                />
               </VWindowItem>
 
               <!-- C — Modules -->
@@ -478,7 +490,7 @@ const submit = async () => {
                   :initialization="preview.initialization"
                   :outcome="subscriptionOutcome"
                   :lookup="administratorLookup"
-                  :missing-required-fields="missingRequiredFields"
+                  :company-field-messages="companyFieldMessages"
                   :paid-blocked="paidBlocked"
                   :server-errors="serverErrors"
                   @go-to="goTo"

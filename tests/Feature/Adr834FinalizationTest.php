@@ -155,6 +155,20 @@ class Adr834FinalizationTest extends TestCase
     }
 
     // JobDomain actif non public : proposé par Platform ; inactif : jamais
+    public function test_activity_company_fields_missing_siret_refused_and_hint_formats_never_refuse(): void
+    {
+        $sales = $this->operator(['create_companies']);
+        $company = fn (array $fields) => ['company' => ['name' => 'Fictive '.Str::random(5), 'market_key' => 'FR', 'dynamic_fields' => $fields]];
+
+        $this->actingAs($sales, 'platform')->postJson('/api/platform/companies', $this->payload($company(['siret' => ''])))
+            ->assertUnprocessable()->assertJsonValidationErrors('company.dynamic_fields.siret');
+        // « email » / « phone » are rendering hints, a « / » pattern is a real regex : valid values are accepted
+        $this->postJson('/api/platform/companies', $this->payload($company(['siret' => '12345678901234', 'billing_email' => 'compta@fictif.test', 'naf_code' => '49.41A'])))
+            ->assertCreated();
+        $this->postJson('/api/platform/companies', $this->payload($company(['siret' => '12345678901234', 'naf_code' => 'ABC'])))
+            ->assertUnprocessable()->assertJsonValidationErrors('company.dynamic_fields.naf_code');
+    }
+
     public function test_active_non_public_jobdomain_is_allowed_and_inactive_never(): void
     {
         $operator = $this->operator(['create_companies']);
