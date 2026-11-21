@@ -50,7 +50,6 @@ class TenantScopeBypassGuardTest extends TestCase
         'app/Modules/Workforce/UseCases/RejectTimesheetUseCase.php',
         'app/Modules/Workforce/UseCases/ReopenTimesheetUseCase.php',
         // Signature — racine de confiance = TOKEN opaque haché (ou parent HTTP tenant) — B
-        'app/Modules/Workforce/Signature/Http/SignatureController.php',
         'app/Modules/Workforce/Signature/Http/SignerController.php',
         'app/Modules/Workforce/Signature/Services/ExternalPadesCoordinator.php',
         'app/Modules/Workforce/Signature/Services/SignerEnrollmentService.php',

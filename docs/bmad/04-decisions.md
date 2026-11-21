@@ -29800,3 +29800,53 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - `Adr847PlatformAuditActorTest` : 7 tests.
 - Recette navigateur `audit842-m82-recipe` : 2 tests, et M8 + M8.1 + M8.2 passent ensemble (6 sur 6).
 - La reproduction de l'erreur 500 avant correction, puis le 200 après, ont été faits sur le clone MySQL avec un rôle fictif de 40 caractères (`scripts/audit842-m82-fixture.php`).
+
+---
+
+## ADR-848 — Leezr 4.2 M9 : assainissement technique (contrôleurs, doublons, code obsolète)
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local · **Mission** : Leezr 4.2 M9
+
+**Contexte.**
+- `ControllerSizeInvariantTest` échouait depuis de nombreuses missions : 13 contrôleurs de plus de 250 lignes, 4 `DB::` et 7 `->save()` hors liste.
+- L'inventaire 4.2 (`05-technical-cleanup.md`) listait aussi : un diagnostic « temporaire », un fichier inerte, des dépendances inutilisées, des laboratoires compilés dans le build de production et des doublons.
+
+**Décision.**
+1. **Aucune liste d'exceptions élargie.** Le traitement est déplacé **tel quel** vers le service, le cas d'usage ou le modèle de lecture du module, ou le contrôleur est découpé par responsabilité. Adresses, noms de route, middlewares, permissions, validations et réponses sont conservés.
+   - `ShiftController` est découpé en `ShiftQueryController`, `ShiftOperationController` et `ShiftReplacementController`.
+   - L'accès à l'espace collaborateur passe dans `EmployeeAccessController`.
+   - Résultat : 13 contrôleurs ramenés sous 250 lignes, plus de `DB::` ni de `->save()` hors liste. Les 4 tests de l'invariant sont verts.
+2. **Doublons consolidés vers une implémentation de référence** :
+   - rendu PDF des factures (`InvoicePdfRenderer`) : la copie Platform était dégradée ;
+   - périmètre d'écriture de la planification (trait `PlanningScope`, 3 copies) ;
+   - opération annulable (`PlanningOperationRecorder::attachCreated`, 5 copies) ;
+   - réponses aux refus métier (trait `RespondsToDomainRefusals`) ;
+   - copies de `scopeIdsOrNull` ;
+   - nouveau lien et invitation de signataire (`SignerInvitationIssuer`) ;
+   - garde de périmètre des signatures ;
+   - prévisualisation de contrat ;
+   - couleurs des statuts d'expédition et de la gravité d'audit côté front.
+
+   Quasi-doublons conservés et documentés : dépôt par le salarié lui-même, invitations soumises à la machine d'états des signataires.
+3. **Supprimés (classe A, preuves dans le README M9)** :
+   - `GET /api/whoami` (SEC-11) ;
+   - `public/mockServiceWorker.js.disabled` ;
+   - 9 dépendances front sans référence ;
+   - 8 imports morts.
+
+   Les laboratoires de conception sont exclus du build de production (TEC-02).
+4. **Sécurité liée au nettoyage** :
+   - métadonnées de l'endpoint public d'entonnoir bornées ;
+   - `scripts/dev/seed_email_recette.php` (suppression par préfixe) réservé aux clones marqués ;
+   - un contournement de portée par société déplacé a été refiltré par `company_id` : la liste `TenantScopeBypassGuardTest` rétrécit.
+5. **Conservés** : pages-alias, routes publiques, webhooks, procédures d'incident, clés de traduction dynamiques (D), `world-settings` (D) et `register/funnel-track` (D, indicateurs d'abandon à 0 tant que l'inscription n'est pas réinstrumentée).
+
+**Conséquences.**
+- **Tests** :
+  - suite PHPUnit complète : 4 882 tests verts, 0 échec (premier vert complet depuis l'introduction de l'invariant) ;
+  - tests JS : 39 sur 39 ;
+  - build propre.
+- **Recettes navigateur** : M9 (2 tests) et toutes les recettes Leezr 4.2 rejouées.
+  - Les échecs du rejeu enchaîné venaient d'effets d'ordre entre recettes (fixtures, mot de passe de recette) et de deux recettes en retard sur le comportement réel : M3 sur le regroupement des onglets de M5, M2 sur la pagination de Mailpit.
+  - Ces deux recettes ont été alignées ; chaque recette passe précédée de sa fixture.
+- Détail complet : `docs/bmad/leezr-4-2-audit/m9/README.md`.

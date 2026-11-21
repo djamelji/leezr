@@ -48,7 +48,9 @@ test('M3-1 super-admin : tous les onglets, aucun refus', async ({ page }) => {
   await loginPlatform(page, 'admin@leezr.com', PASSWORD)
   for (const tab of ['overview', 'activity', 'funnel']) await open(page, `/platform/dashboard/${tab}`)
   await open(page, '/platform/billing/overview')
-  await expect(page.getByRole('tab', { name: /Coupons/ })).toBeVisible()
+
+  // ADR-842 (M5) grouped the billing tabs : coupons live in the « Offres commerciales » group (ADR-848 : recipe aligned)
+  await expect(page.getByRole('tab', { name: /Offres commerciales/ })).toBeVisible()
   for (const tab of ['coupons', 'tariff-review']) await open(page, `/platform/billing/${tab}`)
   await open(page, '/platform/companies/105')
   await expect(page.getByTestId('platform-record-forbidden')).toHaveCount(0)

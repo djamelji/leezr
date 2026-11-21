@@ -1,0 +1,8 @@
+{
+  "shift_operation": 316,
+  "invoice": 116,
+  "pdf": {
+    "status": 200,
+    "head": "%PDF-"
+  }
+}

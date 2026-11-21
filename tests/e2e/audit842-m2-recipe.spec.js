@@ -40,6 +40,13 @@ const mails = async to => {
   return r.ok ? (await r.json()).messages || [] : []
 }
 
+// ADR-848 (M9) : Mailpit search pages at 50 — count with the total it reports, not the length of one page
+const mailCount = async to => {
+  const r = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}&limit=1`)
+
+  return r.ok ? (await r.json()).messages_count ?? 0 : 0
+}
+
 test.beforeEach(({ page }) => { page.setDefaultTimeout(15000); fs.mkdirSync(OUT, { recursive: true }) })
 
 /** Enable 2FA through the UI, return { secret, codes } (kept in memory only). */
@@ -66,7 +73,7 @@ async function enableThroughUi(page) {
 test('M2-A — Company : régénération et désactivation exigent un facteur valide', async ({ page }) => {
   test.setTimeout(4 * 60 * 1000)
 
-  const before = (await mails(OWNER)).length
+  const before = (await mailCount(OWNER))
 
   await loginCompany(page, OWNER, PASSWORD)
   await page.goto('/account-settings/security', { waitUntil: 'networkidle' })
@@ -119,7 +126,7 @@ test('M2-A — Company : régénération et désactivation exigent un facteur va
   await shot(page, 'A5-desactivee')
 
   // security notices reached the (controlled) Mailpit inbox ; none contains a code
-  await expect.poll(async () => (await mails(OWNER)).length, { timeout: 15000 }).toBeGreaterThanOrEqual(before + 2)
+  await expect.poll(async () => (await mailCount(OWNER)), { timeout: 15000 }).toBeGreaterThanOrEqual(before + 2)
 
   const latest = (await mails(OWNER)).slice(0, 2)
   for (const m of latest) {
@@ -146,7 +153,7 @@ test('M2-B — mot de passe d’un membre : notice, robustesse, sessions fermée
 
   await loginCompany(memberPage, MEMBER, PASSWORD)
 
-  const before = (await mails(MEMBER)).length
+  const before = (await mailCount(MEMBER))
 
   await loginCompany(page, OWNER, PASSWORD)
   await page.goto('/company/people', { waitUntil: 'networkidle' })
@@ -177,7 +184,7 @@ test('M2-B — mot de passe d’un membre : notice, robustesse, sessions fermée
   await memberPage.screenshot({ path: `${OUT}/apres-B3-membre-deconnecte.jpg`, type: 'jpeg', quality: 60 })
   await memberCtx.close()
 
-  await expect.poll(async () => (await mails(MEMBER)).length, { timeout: 15000 }).toBeGreaterThan(before)
+  await expect.poll(async () => (await mailCount(MEMBER)), { timeout: 15000 }).toBeGreaterThan(before)
 
   const audit = await page.evaluate(async () => (await fetch('/api/audit?per_page=50', { headers: { Accept: 'application/json', 'X-Company-Id': '106' }, credentials: 'include' })).text())
 

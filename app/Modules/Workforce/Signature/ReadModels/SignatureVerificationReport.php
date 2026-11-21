@@ -206,7 +206,7 @@ class SignatureVerificationReport
     /** Re-vérifie INDÉPENDAMMENT les signatures personnelles stockées (preuve individuelle par signataire). */
     private static function verifyPersonalSignatures(SignatureRequest $req): array
     {
-        $doc = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()->find($req->generated_document_id);
+        $doc = \App\Core\Documents\GeneratedDocument::withoutGlobalScopes()->where('company_id', $req->company_id)->find($req->generated_document_id) /* ADR-848 : re-filtered by the request's company */;
         $docSha = $doc ? app(\App\Modules\Workforce\Signature\Services\SignatureDocumentService::class)->fingerprint($doc) : null;
         $svc = app(\App\Core\Crypto\PersonalSignatureService::class);
         $out = [];
