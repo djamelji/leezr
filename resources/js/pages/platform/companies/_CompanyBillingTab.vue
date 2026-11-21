@@ -2,6 +2,7 @@
 import { loadStripe } from '@stripe/stripe-js'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
+import { $platformApi } from '@/utils/platformApi'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
@@ -243,9 +244,8 @@ const openCancelDialog = async () => {
   isCancelDialogOpen.value = true
   cancelPreviewLoading.value = true
   try {
-    const { data } = await useApi(`/platform/api/companies/${props.companyId}/subscription/cancel-preview`)
-
-    cancelPreview.value = data.value
+    // ADR-837 (M1) : the former path was double-prefixed (/api/platform/api/…) → 404, preview never shown
+    cancelPreview.value = await $platformApi(`/companies/${props.companyId}/subscription/cancel-preview`)
   }
   catch {
     cancelPreview.value = null

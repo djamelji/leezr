@@ -39,7 +39,7 @@ const kpiFontStyle = computed(() => {
   >
     <!-- ═══ WIL: presentationMode-driven rendering (ADR-201) ═══ -->
 
-    <!-- micro: KPI number only, centered, scaled -->
+    <!-- micro: KPI number + its label (ADR-837 / Leezr 4.2 UXP-07 : an indicator is never shown without a label) -->
     <template v-if="pm === 'micro'">
       <div class="widget-body widget-body--centered">
         <VSkeletonLoader
@@ -58,6 +58,13 @@ const kpiFontStyle = computed(() => {
           :style="kpiFontStyle"
         >
           {{ formattedAmount }}
+        </div>
+        <div
+          v-if="!loading && data"
+          class="text-caption text-medium-emphasis text-center"
+          data-testid="revenue-mtd-label"
+        >
+          {{ t('platformBilling.widgets.revenueMtd') }}
         </div>
       </div>
     </template>
@@ -179,11 +186,10 @@ const kpiFontStyle = computed(() => {
 
     <!-- ═══ Fallback: density-only (pm is null — flag OFF or unknown) ═══ -->
     <template v-else>
-      <div
-        v-if="density !== 'S'"
-        class="d-flex align-center gap-2 overflow-hidden widget-header"
-      >
+      <!-- ADR-837 (UXP-07) : the title stays at every density — only the icon is dropped when space is short -->
+      <div class="d-flex align-center gap-2 overflow-hidden widget-header">
         <VAvatar
+          v-if="density !== 'S'"
           color="success"
           variant="tonal"
           :size="avatarSize"

@@ -5,6 +5,7 @@ const { t, locale } = useI18n()
 
 const events = ref([])
 const loading = ref(true)
+const failed = ref(false)
 
 // Action → display metadata
 const actionMeta = {
@@ -32,6 +33,22 @@ const actionMeta = {
 
 const defaultMeta = { icon: 'tabler-point', color: 'primary', label: null }
 
+// plan / interval change → « Pro → Business · annuel » ; other events : no technical target shown
+const intervalLabel = i => (i === 'yearly' ? t('billingTimeline.yearly') : i === 'monthly' ? t('billingTimeline.monthly') : null)
+
+const detail = event => {
+  const m = event.metadata || {}
+  if (!m.from_plan && !m.to_plan)
+    return null
+  const plans = [m.from_plan, m.to_plan].filter(Boolean).map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(' → ')
+
+  const interval = m.from_interval && m.to_interval && m.from_interval !== m.to_interval
+    ? `${intervalLabel(m.from_interval)} → ${intervalLabel(m.to_interval)}`
+    : intervalLabel(m.to_interval)
+
+  return [plans, interval].filter(Boolean).join(' · ')
+}
+
 const getMeta = action => actionMeta[action] || defaultMeta
 
 const formatRelativeTime = dateStr => {
@@ -54,19 +71,28 @@ const formatRelativeTime = dateStr => {
   return date.toLocaleDateString(locale.value)
 }
 
-onMounted(async () => {
+// ADR-837 (M1) : the route is GET /api/billing/timeline (routes/company.php) ; useApi never throws, so a failed
+// call is shown as an ERROR (with retry), never disguised as an empty history.
+const load = async () => {
+  loading.value = true
+  failed.value = false
   try {
-    const { data } = await useApi('/company/billing/timeline')
+    const { data, error } = await useApi('/billing/timeline')
 
+    if (error.value)
+      throw error.value
     events.value = data.value?.events || []
   }
   catch {
     events.value = []
+    failed.value = true
   }
   finally {
     loading.value = false
   }
-})
+}
+
+onMounted(load)
 </script>
 
 <template>
@@ -78,6 +104,25 @@ onMounted(async () => {
     >
       <VProgressCircular indeterminate />
     </div>
+
+    <!-- Error state (never shown as an empty history) -->
+    <VAlert
+      v-else-if="failed"
+      type="error"
+      variant="tonal"
+      data-testid="billing-timeline-error"
+    >
+      {{ t('billingTimeline.loadError') }}
+      <template #append>
+        <VBtn
+          variant="text"
+          size="small"
+          @click="load"
+        >
+          {{ t('common.retry') }}
+        </VBtn>
+      </template>
+    </VAlert>
 
     <!-- Empty state -->
     <EmptyState
@@ -130,12 +175,13 @@ onMounted(async () => {
               <span class="app-timeline-meta">{{ formatRelativeTime(event.created_at) }}</span>
             </div>
 
-            <!-- Target info -->
+            <!-- Business detail (ADR-837) : what changed, never a technical reference -->
             <div
-              v-if="event.target_type"
+              v-if="detail(event)"
               class="app-timeline-text mt-1"
+              data-testid="billing-timeline-detail"
             >
-              {{ event.target_type }}<span v-if="event.target_id"> #{{ event.target_id }}</span>
+              {{ detail(event) }}
             </div>
           </VTimelineItem>
         </VTimeline>

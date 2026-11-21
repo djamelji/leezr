@@ -197,7 +197,7 @@ const kpis = computed(() => [
     <div class="cw-body d-flex flex-grow-1" :class="statsLayout === 'aside' ? 'flex-row' : 'flex-column'">
       <!-- Bandeau KPI AU-DESSUS (wide) -->
       <div v-if="statsLayout === 'strip' && isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-1 flex-shrink-0">
-        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.mrrShort') }}</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
         <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
         <VTooltip v-if="hasData" location="bottom" max-width="260">
           <template #activator="{ props: ep }">
@@ -243,13 +243,13 @@ const kpis = computed(() => [
 
       <!-- Stats BANDEAU sous le graphe (standard) -->
       <div v-if="statsLayout === 'strip' && !isWide" class="cw-strip d-flex align-center gap-4 flex-wrap px-5 py-2 flex-shrink-0">
-        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.mrrShort') }}</span><span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-1" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span></div>
         <div v-for="k in kpis" :key="k.key" class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ k.val }}</span><span class="text-caption text-medium-emphasis">{{ k.l }}</span></div>
       </div>
 
       <!-- Stats MINIMAL (compact) -->
       <div v-if="statsLayout === 'min'" class="cw-min d-flex align-center gap-3 px-3 py-2 flex-shrink-0">
-        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">MRR</span></div>
+        <div class="d-flex align-baseline gap-1"><span class="text-subtitle-1 font-weight-medium text-high-emphasis">{{ money(mrr) }}</span><span class="text-caption text-medium-emphasis">{{ t('platform.widgets.commercial.mrrShort') }}</span></div>
         <div class="d-flex align-baseline gap-1"><span class="text-body-2 font-weight-medium text-high-emphasis">{{ money(arr) }}</span><span class="text-caption text-medium-emphasis">ARR</span></div>
         <span v-if="showPrev && deltaPct !== null" class="text-caption font-weight-medium ms-auto" :class="deltaPct >= 0 ? 'text-success' : 'text-error'">{{ pct(deltaPct) }}</span>
       </div>

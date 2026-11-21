@@ -1311,7 +1311,7 @@
       "lastInvoicesDesc": "Most recent invoices issued",
       "lastRefunds": "Last Refunds",
       "lastRefundsDesc": "Most recent credit notes issued",
-      "revenueMtd": "Revenue MTD",
+      "revenueMtd": "Revenue this month",
       "revenueMtdDesc": "Month-to-date revenue",
       "mrr": "MRR",
       "mrrDesc": "Monthly recurring revenue",
@@ -2308,6 +2308,7 @@
     "confirmSuspend": "Suspend \"{name}\"? All company members will lose access.",
     "companySuspended": "Company suspended.",
     "failedToSuspend": "Failed to suspend company.",
+    "planChangeScheduled": "Plan change scheduled: it takes effect on the date shown in the preview.",
     "planUpdated": "Plan updated.",
     "failedToUpdatePlan": "Failed to update plan.",
     "companyReactivated": "Company reactivated.",
@@ -4601,7 +4602,7 @@
     "tabs": {
       "overview": "Overview",
       "activity": "Activity",
-      "funnel": "Registration Funnel"
+      "funnel": "Sign-up journey"
     },
     "statsError": "Some statistics could not be loaded.",
     "statsPartialError": "{count} stat(s) could not be loaded.",
@@ -6508,6 +6509,7 @@
     "generic": "Payment failed. Please try again or contact support."
   },
   "billingTimeline": {
+    "loadError": "Unable to load the billing history.",
     "title": "Billing Activity",
     "emptyTitle": "No activity yet",
     "emptyDesc": "Your billing activity will appear here as events occur.",
@@ -6534,7 +6536,9 @@
     "planChangeExecuted": "Plan change applied",
     "planChangeCancelled": "Plan change cancelled",
     "addonSubscribed": "Add-on activated",
-    "addonUnsubscribed": "Add-on removed"
+    "addonUnsubscribed": "Add-on removed",
+    "yearly": "yearly",
+    "monthly": "monthly"
   },
   "notifications": {
     "inbox": "Notifications",
@@ -10056,10 +10060,11 @@
         "noHistoryN1": "No prior-year history for this period (new platform)",
         "estimated": "Estimated",
         "estimatedHistory": "History reconstructed from currently active subscriptions (no stored MRR snapshot). The prior-year comparison is an estimate, not a certified figure.",
-        "mrrNow": "Current MRR",
-        "arr": "ARR",
+        "mrrNow": "Monthly recurring revenue (MRR, excl. tax)",
+        "arr": "annual revenue (ARR, excl. tax)",
         "trials": "Trials in progress",
-        "vsN1": "Same point last year"
+        "vsN1": "Same point last year",
+        "mrrShort": "monthly revenue (MRR, excl. tax)"
       },
       "activeSubsShort": "active subs"
     }

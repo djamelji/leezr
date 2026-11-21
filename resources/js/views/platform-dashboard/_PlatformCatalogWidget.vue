@@ -1,9 +1,13 @@
 <script setup>
 // ADR-746 (P2) — « Catalogue & adoption » (platform). Données réelles (CompanyModule, Jobdomain).
+import { useCatalogText } from '@/composables/useCatalogText'
 import { computed } from 'vue'
 
 const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
 const { t } = useI18n()
+
+// ADR-837 (UXP-07) : module names, never technical keys
+const { moduleName } = useCatalogText()
 const d = computed(() => props.data || {})
 const top = computed(() => d.value.top_modules ?? [])
 const maxC = computed(() => Math.max(1, ...top.value.map(m => m.companies)))
@@ -25,16 +29,16 @@ const jobdomains = computed(() => d.value.jobdomains ?? [])
       <div class="d-flex flex-column gap-2">
         <div v-for="m in top" :key="m.key">
           <div class="d-flex align-center justify-space-between mb-1">
-            <span class="text-body-2 text-high-emphasis text-truncate">{{ m.key }}</span>
+            <span class="text-body-2 text-high-emphasis text-truncate">{{ moduleName(m.key, m.key) }}</span>
             <span class="text-caption text-medium-emphasis flex-shrink-0">{{ t('platform.widgets.companiesN', { n: m.companies }) }}</span>
           </div>
-          <VProgressLinear :model-value="(m.companies / maxC) * 100" color="primary" height="6" rounded bg-color="rgba(var(--v-theme-on-surface),0.08)" :aria-label="m.key" />
+          <VProgressLinear :model-value="(m.companies / maxC) * 100" color="primary" height="6" rounded bg-color="rgba(var(--v-theme-on-surface),0.08)" :aria-label="moduleName(m.key, m.key)" />
         </div>
       </div>
       <VDivider class="my-2" />
       <div class="d-flex flex-wrap gap-2">
         <VChip v-for="j in jobdomains" :key="j.key" size="small" variant="tonal" color="secondary" label>
-          {{ j.key }} · {{ j.companies }}
+          {{ j.label || j.key }} · {{ j.companies }}
         </VChip>
       </div>
     </div>

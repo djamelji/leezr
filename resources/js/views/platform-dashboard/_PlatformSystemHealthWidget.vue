@@ -3,7 +3,10 @@
 import { computed } from 'vue'
 
 const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
-const { t } = useI18n()
+const { t, te } = useI18n()
+
+// ADR-837 (UXP-07) : translated service names (systemHealth.*), server label only as a fallback
+const sectionLabel = s => (te(`systemHealth.${s.key}`) ? t(`systemHealth.${s.key}`) : s.label)
 const d = computed(() => props.data || {})
 const COLOR = { healthy: 'success', warning: 'warning', critical: 'error' }
 const ICON = { healthy: 'tabler-circle-check', warning: 'tabler-alert-triangle', critical: 'tabler-alert-octagon' }
@@ -28,7 +31,7 @@ const sections = computed(() => d.value.sections ?? [])
       <div class="d-flex flex-column gap-2">
         <div v-for="s in sections" :key="s.key" class="d-flex align-center gap-2 py-1">
           <VIcon :icon="ICON[s.status] || 'tabler-point'" :color="COLOR[s.status] || 'secondary'" size="18" />
-          <span class="text-body-2 text-high-emphasis flex-grow-1">{{ s.label }}</span>
+          <span class="text-body-2 text-high-emphasis flex-grow-1">{{ sectionLabel(s) }}</span>
           <span class="text-caption text-medium-emphasis">{{ t('platform.widgets.health.' + s.status) }}</span>
         </div>
       </div>

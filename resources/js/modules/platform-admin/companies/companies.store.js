@@ -51,10 +51,11 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
       this._plans = await $platformApi('/plans')
     },
 
-    async updateCompanyPlan(id, planKey, interval = 'monthly') {
+    // ADR-837 : no default interval — the server KEEPS the current one unless an interval is explicitly chosen
+    async updateCompanyPlan(id, planKey, interval = null) {
       const data = await $platformApi(`/companies/${id}/plan`, {
         method: 'PUT',
-        body: { plan_key: planKey, interval },
+        body: interval ? { plan_key: planKey, interval } : { plan_key: planKey },
       })
 
       this._updateCompanyInList(data.company)
@@ -62,9 +63,9 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
       return data
     },
 
-    async fetchPlanChangePreview(id, planKey, interval = 'monthly') {
+    async fetchPlanChangePreview(id, planKey, interval = null) {
       return await $platformApi(`/companies/${id}/plan-preview`, {
-        params: { plan_key: planKey, interval },
+        params: interval ? { plan_key: planKey, interval } : { plan_key: planKey },
       })
     },
 

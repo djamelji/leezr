@@ -5,11 +5,11 @@ namespace App\Modules\Platform\Companies\Http;
 use App\Core\Audit\AuditAction;
 use App\Core\Audit\AuditLogger;
 use App\Core\Billing\CompanyWalletTransaction;
-use App\Core\Billing\PlanChangeExecutor;
 use App\Core\Billing\ReadModels\CompanyBillingReadService;
 use App\Core\Billing\WalletLedger;
 use App\Core\Models\Company;
 use App\Core\Plans\PlanRegistry;
+use App\Modules\Platform\Companies\UseCases\ChangeCompanyPlanUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -27,10 +27,11 @@ class CompanyBillingAdminController
         ]);
 
         $company = Company::findOrFail($id);
+        // ADR-837 : the preview keeps the CURRENT interval unless another one is asked (never silently monthly)
         $preview = CompanyBillingReadService::planChangePreview(
             $company,
             $request->query('plan_key'),
-            $request->query('interval', 'monthly'),
+            $request->query('interval') ?? ChangeCompanyPlanUseCase::currentInterval($company) ?? 'monthly',
         );
 
         if (! $preview) {
@@ -42,36 +43,30 @@ class CompanyBillingAdminController
         return response()->json($preview);
     }
 
-    public function updatePlan(Request $request, int $id): JsonResponse
+    public function updatePlan(Request $request, int $id, ChangeCompanyPlanUseCase $useCase): JsonResponse
     {
         $validated = $request->validate([
             'plan_key' => ['required', 'string', Rule::in(PlanRegistry::keys())],
-            'interval' => ['sometimes', 'string', 'in:monthly,yearly'],
+            'interval' => ['sometimes', 'nullable', 'string', 'in:monthly,yearly'],
+            'idempotency_key' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         $company = Company::findOrFail($id);
 
         try {
-            $intent = PlanChangeExecutor::schedule(
-                company: $company,
-                toPlanKey: $validated['plan_key'],
-                toInterval: $validated['interval'] ?? 'monthly',
-                timing: 'immediate',
-                idempotencyKey: "admin-plan-change-{$company->id}-{$validated['plan_key']}-".now()->timestamp,
-            );
-
-            $company->refresh()->loadCount('memberships');
-
-            return response()->json([
-                'message' => 'Plan updated.',
-                'company' => $company,
-                'intent' => $intent,
-            ]);
+            // ADR-837 : same engine as the self-service — interval kept, policy timing, audited
+            $intent = $useCase->execute($company, $validated['plan_key'], $validated['interval'] ?? null, $validated['idempotency_key'] ?? null);
         } catch (\RuntimeException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 422);
+            return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        $company->refresh()->loadCount('memberships');
+
+        return response()->json([
+            'message' => $intent->isExecuted() ? 'Plan updated.' : 'Plan change scheduled.',
+            'company' => $company,
+            'intent' => $intent,
+        ]);
     }
 
     public function adjustWallet(Request $request, int $id): JsonResponse

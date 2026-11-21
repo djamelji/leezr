@@ -38,7 +38,7 @@ class PlatformCatalogOverviewWidget implements WidgetManifest
                 ->map(fn ($r) => ['key' => $r->module_key, 'companies' => (int) $r->c])->all();
 
             $jobdomains = Jobdomain::withCount('companies')->get()
-                ->map(fn ($j) => ['key' => $j->key, 'companies' => (int) $j->companies_count])->all();
+                ->map(fn ($j) => ['key' => $j->key, 'label' => $j->label, 'companies' => (int) $j->companies_count])->all(); // ADR-837 : business label, not the key
 
             return [
                 'modules_tracked' => CompanyModule::distinct('module_key')->count('module_key'),

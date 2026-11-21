@@ -168,6 +168,7 @@ const suspend = async company => {
     cancelTitle: t('common.actionCancelled'),
     cancelMsg: t('common.operationCancelled'),
   })
+
   if (!ok)
     return
 
@@ -200,23 +201,8 @@ const reactivate = async company => {
   }
 }
 
-const changePlan = async (company, planKey) => {
-  if (planKey === company.plan_key)
-    return
-
-  actionLoading.value = company.id
-
-  try {
-    await companiesStore.updateCompanyPlan(company.id, planKey)
-    toast(t('companies.planUpdated'), 'success')
-  }
-  catch (error) {
-    toast(error?.data?.message || t('companies.failedToUpdatePlan'), 'error')
-  }
-  finally {
-    actionLoading.value = null
-  }
-}
+// plan name for the read-only column (the catalogue may be unavailable without manage_plans : fall back to the key)
+const planName = key => companiesStore.plans.find(p => p.key === key)?.name || key || '\u2014'
 
 const fmtDate = dateStr => {
   if (!dateStr)
@@ -499,21 +485,20 @@ const segmentChips = computed(() => [
           </VChip>
         </template>
 
-        <!-- Plan column (inline select) -->
+        <!--
+          Plan column — READ ONLY (ADR-837 / Leezr 4.2 UXP-01) : a commercial change goes through the company
+          record › Configuration (preview of the consequences, explicit confirmation, audit), never from the list. 
+        -->
         <template #item.plan_key="{ item }">
-          <div @click.stop>
-            <VSelect
-              :model-value="item.plan_key"
-              :items="companiesStore.plans"
-              item-title="name"
-              item-value="key"
-              density="compact"
-              variant="outlined"
-              hide-details
-              :loading="actionLoading === item.id"
-              @update:model-value="changePlan(item, $event)"
-            />
-          </div>
+          <VChip
+            size="small"
+            label
+            color="primary"
+            variant="tonal"
+            :data-testid="`company-plan-${item.id}`"
+          >
+            {{ planName(item.plan_key) }}
+          </VChip>
         </template>
 
         <!-- Members count -->
@@ -551,7 +536,10 @@ const segmentChips = computed(() => [
           >
             {{ item.open_tickets_count }}
           </VChip>
-          <span v-else class="text-disabled">0</span>
+          <span
+            v-else
+            class="text-disabled"
+          >0</span>
         </template>
 
         <!-- Preset pattern: Actions (suspend/reactivate + eye + dots menu) -->

@@ -266,9 +266,12 @@ const confirmPlanChange = async () => {
   showPlanPreview.value = false
 
   try {
-    await companiesStore.updateCompanyPlan(company.value.id, pendingPlanKey.value)
-    company.value.plan_key = pendingPlanKey.value
-    toast(t('companies.planUpdated'), 'success')
+    // ADR-837 : interval kept by the server ; a change the billing policy defers is SCHEDULED, not applied now
+    const res = await companiesStore.updateCompanyPlan(company.value.id, pendingPlanKey.value)
+    const executed = res?.intent?.status === 'executed'
+    company.value.plan_key = res?.company?.plan_key ?? company.value.plan_key
+    planForm.value.plan_key = company.value.plan_key
+    toast(executed ? t('companies.planUpdated') : t('companies.planChangeScheduled'), 'success')
 
     const profileData = await companiesStore.fetchCompanyProfile(route.params.id)
 
