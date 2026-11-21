@@ -8,6 +8,7 @@ defineProps({
   outcome: { type: Object, default: null },
   canOverride: { type: Boolean, default: false },
   paidBlocked: { type: Boolean, default: false },
+  overrideErrors: { type: Object, default: () => ({}) }, // ADR-834 fix : shown under the fields, never a silent block
 })
 
 const { t } = useI18n()
@@ -110,6 +111,7 @@ const outcomeText = o => ({
               min="1"
               max="90"
               :label="t('platformCompanyCreation.subscription.override.trialDays')"
+              :error-messages="overrideErrors.duration ? [t('platformCompanyCreation.subscription.override.errors.duration', overrideErrors.duration)] : []"
             />
             <AppTextField
               v-else
@@ -118,6 +120,7 @@ const outcomeText = o => ({
               min="1"
               max="12"
               :label="t('platformCompanyCreation.subscription.override.months')"
+              :error-messages="overrideErrors.duration ? [t('platformCompanyCreation.subscription.override.errors.duration', overrideErrors.duration)] : []"
             />
           </VCol>
           <VCol
@@ -128,6 +131,7 @@ const outcomeText = o => ({
               v-model="override.reason"
               rows="2"
               :label="t('platformCompanyCreation.subscription.override.reason')"
+              :error-messages="overrideErrors.reason ? [t('platformCompanyCreation.subscription.override.errors.reason')] : []"
               :hint="t('platformCompanyCreation.subscription.override.reasonHint')"
               persistent-hint
             />

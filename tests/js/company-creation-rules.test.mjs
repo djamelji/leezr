@@ -51,3 +51,35 @@ test('paid options are blocked outside a trial', () => {
   assert.equal(paidOptionsBlocked(['workforce'], modules, { status: 'pending_payment' }), true)
   assert.equal(paidOptionsBlocked(['logistics_tracking'], modules, { status: 'active' }), false)
 })
+
+// ── ADR-834 fix : step 4 « Subscription » blocked by a hidden, invalid override ───────────────────────────
+import { overrideApplies, overrideErrors, overridePayload } from '../../resources/js/modules/platform-admin/companies/companyCreationRules.js'
+
+const pro = { key: 'pro', is_free: false, trial_days: 14 }
+const starter = { key: 'starter', is_free: true, trial_days: 0 }
+const emptyOverride = { type: 'trial', trial_days: 30, complimentary_months: 3, reason: '' }
+
+test('regression : an override enabled then hidden by a free plan does not apply (never validated, never sent)', () => {
+  const state = { plan: starter, canOverride: true, overrideEnabled: true, override: emptyOverride }
+  assert.equal(overrideApplies(state), false)
+  assert.equal(overridePayload(state), null)
+  assert.deepEqual(subscriptionOutcome({ ...state, trialUsed: false }), { status: 'active', kind: 'free' })
+})
+
+test('an override without the permission does not apply', () => {
+  assert.equal(overrideApplies({ plan: pro, canOverride: false, overrideEnabled: true }), false)
+  assert.equal(overridePayload({ plan: pro, canOverride: false, overrideEnabled: true, override: { ...emptyOverride, reason: 'Accord commercial signé' } }), null)
+})
+
+test('an applicable override is validated field by field, with the server bounds', () => {
+  assert.deepEqual(overrideErrors(emptyOverride), { reason: true })
+  assert.deepEqual(overrideErrors({ ...emptyOverride, reason: 'Accord commercial signé', trial_days: 0 }), { duration: { min: 1, max: 90 } })
+  assert.deepEqual(overrideErrors({ ...emptyOverride, reason: 'Accord commercial signé', trial_days: '' }), { duration: { min: 1, max: 90 } })
+  assert.deepEqual(overrideErrors({ type: 'complimentary', complimentary_months: 13, reason: 'Accord commercial signé' }), { duration: { min: 1, max: 12 } })
+  assert.deepEqual(overrideErrors({ ...emptyOverride, reason: 'Accord commercial signé', trial_days: 45 }), {})
+})
+
+test('the payload of an applicable override carries only the chosen duration', () => {
+  const state = { plan: pro, canOverride: true, overrideEnabled: true, override: { type: 'complimentary', trial_days: 30, complimentary_months: 3, reason: '  Partenaire stratégique  ' } }
+  assert.deepEqual(overridePayload(state), { type: 'complimentary', reason: 'Partenaire stratégique', trial_days: null, complimentary_months: 3 })
+})

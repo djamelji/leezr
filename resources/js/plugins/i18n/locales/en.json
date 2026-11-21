@@ -12103,7 +12103,11 @@
         "trialDays": "Trial length (days)",
         "months": "Free period (months)",
         "reason": "Reason",
-        "reasonHint": "At least 10 characters: commercial agreement, partner, pilot…"
+        "reasonHint": "At least 10 characters: commercial agreement, partner, pilot…",
+        "errors": {
+          "reason": "Give the reason for the override (at least 10 characters), or turn it off.",
+          "duration": "Between {min} and {max}."
+        }
       },
       "complimentary": "Free period of {months} months: the subscription is active without payment during this period."
     },

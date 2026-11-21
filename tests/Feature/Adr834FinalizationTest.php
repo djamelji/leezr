@@ -139,6 +139,21 @@ class Adr834FinalizationTest extends TestCase
             ->assertJsonPath('stage', 'awaiting_payment')->assertJsonPath('in_service', false);
     }
 
+    // Non-régression du blocage de l'étape « Abonnement » : une dérogation n'existe pas sur un plan gratuit — le serveur
+    // la refuse toujours (l'assistant ne l'envoie plus) ; sur un plan payant, sans dérogation, la création passe.
+    public function test_override_on_free_plan_is_refused_and_plans_without_override_create(): void
+    {
+        $sales = $this->operator(['create_companies', 'override_company_commercial_terms']);
+        $override = ['type' => 'trial', 'trial_days' => 30, 'reason' => 'Pilote commercial validé'];
+        $this->actingAs($sales, 'platform')->postJson('/api/platform/companies', $this->payload(['subscription' => ['plan_key' => 'starter', 'override' => $override]]))
+            ->assertUnprocessable()->assertJsonValidationErrors('subscription.override');
+
+        foreach (['starter' => 'active', 'pro' => 'trialing', 'business' => 'trialing'] as $plan => $status) {
+            $id = $this->postJson('/api/platform/companies', $this->payload(['subscription' => ['plan_key' => $plan, 'override' => null]]))->assertCreated()->json('company.id');
+            $this->assertSame($status, Subscription::where('company_id', $id)->value('status'), $plan);
+        }
+    }
+
     // JobDomain actif non public : proposé par Platform ; inactif : jamais
     public function test_active_non_public_jobdomain_is_allowed_and_inactive_never(): void
     {

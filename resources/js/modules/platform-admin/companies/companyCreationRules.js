@@ -70,7 +70,7 @@ export function subscriptionOutcome({ plan, canOverride = false, overrideEnabled
     return null
   if (plan.is_free)
     return { status: 'active', kind: 'free' }
-  if (overrideEnabled && canOverride) {
+  if (overrideApplies({ plan, canOverride, overrideEnabled })) {
     return override.type === 'trial'
       ? { status: 'trialing', kind: 'override_trial', days: Number(override.trial_days) }
       : { status: 'active', kind: 'override_complimentary', months: Number(override.complimentary_months) }
@@ -95,3 +95,42 @@ export function paidOptionsBlocked(selected, modules, outcome) {
 export const STAGES = ['created', 'administrator_invited', 'awaiting_payment', 'operational']
 export const STAGE_COLORS = { created: 'secondary', administrator_invited: 'info', awaiting_payment: 'warning', operational: 'success' }
 export const STAGE_ICONS = { created: 'tabler-building', administrator_invited: 'tabler-mail-forward', awaiting_payment: 'tabler-credit-card', operational: 'tabler-circle-check' }
+
+/** Commercial override bounds — same as CreatePlatformCompanyRequest (trial 1–90 days, free period 1–12 months, reason ≥ 10). */
+export const OVERRIDE_LIMITS = { trial: { min: 1, max: 90 }, complimentary: { min: 1, max: 12 } }
+export const OVERRIDE_REASON_MIN = 10
+
+/**
+ * An override EXISTS only when the operator may grant one, chose to, and the plan is paid (a free plan has no
+ * commercial terms ; the server refuses it). Anything else is not an override — never validated, never sent.
+ */
+export function overrideApplies({ plan, canOverride = false, overrideEnabled = false }) {
+  return !!(overrideEnabled && canOverride && plan && !plan.is_free)
+}
+
+/** Field errors of an applicable override : { reason?: true, duration?: { min, max } } — empty object = valid. */
+export function overrideErrors(override = {}) {
+  const errors = {}
+  const limits = OVERRIDE_LIMITS[override.type] || OVERRIDE_LIMITS.trial
+  const n = Number(override.type === 'complimentary' ? override.complimentary_months : override.trial_days)
+  if (String(override.reason ?? '').trim().length < OVERRIDE_REASON_MIN)
+    errors.reason = true
+  if (!Number.isInteger(n) || n < limits.min || n > limits.max)
+    errors.duration = { ...limits }
+
+  return errors
+}
+
+/** The `subscription.override` sent to the server : null unless an override applies. */
+export function overridePayload(state) {
+  if (!overrideApplies(state))
+    return null
+  const o = state.override
+
+  return {
+    type: o.type,
+    reason: String(o.reason ?? '').trim(),
+    trial_days: o.type === 'trial' ? Number(o.trial_days) : null,
+    complimentary_months: o.type === 'complimentary' ? Number(o.complimentary_months) : null,
+  }
+}

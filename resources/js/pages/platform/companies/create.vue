@@ -10,7 +10,7 @@ import { usePublicMarkets } from '@/composables/usePublicMarkets'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCatalogText } from '@/composables/useCatalogText'
 import RegisterStepCompany from '@/pages/register/_RegisterStepCompany.vue'
-import { keepSelectable, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
+import { keepSelectable, overrideApplies, overrideErrors, overridePayload, paidOptionsBlocked, subscriptionOutcome as subscriptionOutcomeRule } from '@/modules/platform-admin/companies/companyCreationRules'
 import CreateStepActivity from './_CreateStepActivity.vue'
 import CreateStepModules from './_CreateStepModules.vue'
 import CreateStepSubscription from './_CreateStepSubscription.vue'
@@ -183,14 +183,23 @@ const missingRequiredFields = computed(() => companyFields.value
   .filter(f => f.required && !String(form.company.dynamic_fields[f.code] ?? '').trim())
   .map(f => f.label))
 
-const overrideValid = computed(() => {
-  if (!form.subscription.overrideEnabled)
-    return true
-  const o = form.subscription.override
-  const n = o.type === 'trial' ? Number(o.trial_days) : Number(o.complimentary_months)
-  const max = o.type === 'trial' ? 90 : 12
+// The override form is validated ONLY when it applies (permission + switch + paid plan) : a hidden override
+// (free plan selected after enabling it) never blocks « Next » and is never sent.
+const overrideState = computed(() => ({
+  plan: selectedPlan.value,
+  canOverride: options.value.can_override,
+  overrideEnabled: form.subscription.overrideEnabled,
+  override: form.subscription.override,
+}))
 
-  return o.reason.trim().length >= 10 && Number.isInteger(n) && n >= 1 && n <= max
+const overrideActive = computed(() => overrideApplies(overrideState.value))
+const overrideFieldErrors = computed(() => overrideActive.value ? overrideErrors(form.subscription.override) : {})
+const overrideValid = computed(() => Object.keys(overrideFieldErrors.value).length === 0)
+
+// a free plan has no commercial terms : leaving a paid plan clears the override decision (explicit again if needed)
+watch(selectedPlan, plan => {
+  if (plan?.is_free)
+    form.subscription.overrideEnabled = false
 })
 
 const emailValid = computed(() => /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(form.administrator.email || ''))
@@ -239,9 +248,7 @@ const submit = async () => {
       subscription: {
         plan_key: s.plan_key,
         interval: interval.value,
-        override: s.overrideEnabled && options.value.can_override
-          ? { type: s.override.type, reason: s.override.reason.trim(), trial_days: s.override.type === 'trial' ? Number(s.override.trial_days) : null, complimentary_months: s.override.type === 'complimentary' ? Number(s.override.complimentary_months) : null }
-          : null,
+        override: overridePayload(overrideState.value),
       },
       administrator: { ...form.administrator, email: form.administrator.email.trim() },
       initialization: form.initialization,
@@ -388,6 +395,7 @@ const submit = async () => {
                   :plans="options.plans"
                   :outcome="subscriptionOutcome"
                   :can-override="options.can_override"
+                  :override-errors="overrideFieldErrors"
                   :paid-blocked="paidBlocked"
                 />
               </VWindowItem>

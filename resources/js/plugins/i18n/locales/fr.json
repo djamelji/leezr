@@ -12103,7 +12103,11 @@
         "trialDays": "Durée de l'essai (jours)",
         "months": "Durée offerte (mois)",
         "reason": "Motif",
-        "reasonHint": "Au moins 10 caractères : accord commercial, partenaire, pilote…"
+        "reasonHint": "Au moins 10 caractères : accord commercial, partenaire, pilote…",
+        "errors": {
+          "reason": "Indiquez le motif de la dérogation (au moins 10 caractères), ou désactivez-la.",
+          "duration": "Entre {min} et {max}."
+        }
       },
       "complimentary": "Période offerte de {months} mois : l'abonnement est actif sans paiement pendant cette période."
     },
