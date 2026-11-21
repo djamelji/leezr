@@ -17,6 +17,7 @@ declare global {
   const applyTheme: typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']
   const applyTypography: typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
+  const auditSeverityColor: typeof import('./resources/js/utils/auditSeverity.js')['auditSeverityColor']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('@core/utils/formatters')['avatarText']
   const betweenValidator: typeof import('@core/utils/validators')['betweenValidator']
@@ -160,6 +161,7 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const shipmentStatusColor: typeof import('./resources/js/utils/shipments.js')['shipmentStatusColor']
   const signPersonal: typeof import('./resources/js/utils/webcryptoSigner.js')['signPersonal']
   const signRawBase64: typeof import('./resources/js/utils/webcryptoSigner.js')['signRawBase64']
   const startVersionPolling: typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']
@@ -440,6 +442,7 @@ declare module 'vue' {
     readonly applyTheme: UnwrapRef<typeof import('./resources/js/composables/useApplyTheme.js')['applyTheme']>
     readonly applyTypography: UnwrapRef<typeof import('./resources/js/composables/useApplyTypography.js')['applyTypography']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
+    readonly auditSeverityColor: UnwrapRef<typeof import('./resources/js/utils/auditSeverity.js')['auditSeverityColor']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('@core/utils/formatters')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('@core/utils/validators')['betweenValidator']>
@@ -583,6 +586,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly shipmentStatusColor: UnwrapRef<typeof import('./resources/js/utils/shipments.js')['shipmentStatusColor']>
     readonly signPersonal: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['signPersonal']>
     readonly signRawBase64: UnwrapRef<typeof import('./resources/js/utils/webcryptoSigner.js')['signRawBase64']>
     readonly startVersionPolling: UnwrapRef<typeof import('./resources/js/utils/versionCheck.js')['startVersionPolling']>

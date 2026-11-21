@@ -423,6 +423,8 @@
     "displayLocale": true,
     "isolateTabParam": true,
     "rememberReturnPath": true,
-    "ledgerAmountDisplay": true
+    "ledgerAmountDisplay": true,
+    "auditSeverityColor": true,
+    "shipmentStatusColor": true
   }
 }
