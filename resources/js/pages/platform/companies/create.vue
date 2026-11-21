@@ -342,6 +342,7 @@ const submit = async () => {
                   :fields-loading="fieldsLoading"
                   :market-dial-code="selectedMarket?.dial_code || '+33'"
                   :errors="{ company_name: serverErrors['company.name'] || [] }"
+                  i18n-prefix="platformCompanyCreation.form"
                 />
                 <VAlert
                   v-if="form.jobdomain_key && missingRequiredFields.length"

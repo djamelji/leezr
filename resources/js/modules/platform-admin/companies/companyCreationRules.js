@@ -87,3 +87,11 @@ export function paidOptionsBlocked(selected, modules, outcome) {
 
   return selected.some(k => byKey[k]?.class === 'option') && outcome?.status !== 'trialing'
 }
+
+/**
+ * Start-of-service stages (server : CompanyOnboardingChecklist::stage) in their order, with the colour each one
+ * takes everywhere (list, record). « Created » is never shown as « operational ».
+ */
+export const STAGES = ['created', 'administrator_invited', 'awaiting_payment', 'operational']
+export const STAGE_COLORS = { created: 'secondary', administrator_invited: 'info', awaiting_payment: 'warning', operational: 'success' }
+export const STAGE_ICONS = { created: 'tabler-building', administrator_invited: 'tabler-mail-forward', awaiting_payment: 'tabler-credit-card', operational: 'tabler-circle-check' }

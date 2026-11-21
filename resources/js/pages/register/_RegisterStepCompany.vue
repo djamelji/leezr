@@ -12,6 +12,8 @@ const props = defineProps({
   fieldsLoading: { type: Boolean, default: false },
   marketDialCode: { type: String, default: '+33' },
   errors: { type: Object, default: () => ({}) },
+  // ADR-834 : the Platform wizard reuses this step with operator wording (default = public sign-up wording)
+  i18nPrefix: { type: String, default: 'register' },
 })
 
 const companyName = defineModel('companyName', { type: String })
@@ -46,10 +48,10 @@ const legalStatusItems = computed(() => {
 
 <template>
   <h4 class="text-h4 mb-1">
-    {{ t('register.companyDetails') }}
+    {{ t(`${i18nPrefix}.companyDetails`) }}
   </h4>
   <p class="text-body-1 mb-6">
-    {{ t('register.companyDetailsDesc') }}
+    {{ t(`${i18nPrefix}.companyDetailsDesc`) }}
   </p>
 
   <!-- Company name + Country + Legal status -->
@@ -60,8 +62,8 @@ const legalStatusItems = computed(() => {
     >
       <AppTextField
         v-model="companyName"
-        :label="t('register.companyName')"
-        :placeholder="t('register.companyNamePlaceholder')"
+        :label="t(`${i18nPrefix}.companyName`)"
+        :placeholder="t(`${i18nPrefix}.companyNamePlaceholder`)"
         :error-messages="errors.company_name"
       />
     </VCol>
@@ -71,9 +73,9 @@ const legalStatusItems = computed(() => {
     >
       <AppSelect
         v-model="selectedMarket"
-        :label="t('register.country')"
+        :label="t(`${i18nPrefix}.country`)"
         :items="markets.map(mk => ({ title: mk.name, value: mk.key }))"
-        :placeholder="t('register.selectCountry')"
+        :placeholder="t(`${i18nPrefix}.selectCountry`)"
         :loading="marketsLoading"
       />
     </VCol>
@@ -83,9 +85,9 @@ const legalStatusItems = computed(() => {
     >
       <AppSelect
         v-model="legalStatusKey"
-        :label="t('register.legalStatus')"
+        :label="t(`${i18nPrefix}.legalStatus`)"
         :items="legalStatusItems"
-        :placeholder="t('register.selectLegalStatus')"
+        :placeholder="t(`${i18nPrefix}.selectLegalStatus`)"
         :disabled="!selectedMarket"
         :loading="legalStatusesLoading"
         clearable
@@ -113,7 +115,7 @@ const legalStatusItems = computed(() => {
     <template v-if="addressFields.length > 0">
       <VDivider class="my-4" />
       <h6 class="text-h6 mb-2">
-        {{ t('register.companyAddress') }}
+        {{ t(`${i18nPrefix}.companyAddress`) }}
       </h6>
       <VRow>
         <DynamicFormRenderer
@@ -128,11 +130,11 @@ const legalStatusItems = computed(() => {
     <!-- Billing address toggle -->
     <VDivider class="my-4" />
     <h6 class="text-h6 mb-2">
-      {{ t('register.billingAddress') }}
+      {{ t(`${i18nPrefix}.billingAddress`) }}
     </h6>
     <VSwitch
       v-model="billingIsSameAsCompany"
-      :label="t('register.billingSameAsCompany')"
+      :label="t(`${i18nPrefix}.billingSameAsCompany`)"
       class="mb-2"
     />
 

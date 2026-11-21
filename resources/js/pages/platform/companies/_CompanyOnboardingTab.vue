@@ -6,6 +6,7 @@ import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/co
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
+import { STAGES, STAGE_COLORS, STAGE_ICONS } from '@/modules/platform-admin/companies/companyCreationRules'
 
 const props = defineProps({
   companyId: { type: [Number, String], required: true },
@@ -21,8 +22,22 @@ const { toast } = useAppToast()
 const state = ref(null)
 const loading = ref(true)
 const resending = ref(false)
-const canResend = computed(() => platformAuth.hasPermission('create_companies'))
+// same rights as the APIs : re-send = creator (create_companies) or manage_companies ; profile = manage_companies ;
+// billing tab = view_companies
+const canResend = computed(() => platformAuth.hasPermission('create_companies') || platformAuth.hasPermission('manage_companies'))
 const canEditProfile = computed(() => platformAuth.hasPermission('manage_companies'))
+const canSeeBilling = computed(() => platformAuth.hasPermission('view_companies'))
+
+// stages of THIS company : the payment stage only when the subscription actually awaits payment
+const stages = computed(() => {
+  if (!state.value)
+    return []
+  const awaitingPayment = item('subscription')?.detail.status === 'pending_payment'
+  const list = STAGES.filter(s => s !== 'awaiting_payment' || awaitingPayment || state.value.stage === 'awaiting_payment')
+  const current = list.indexOf(state.value.stage)
+
+  return list.map((key, i) => ({ key, done: state.value.in_service || i < current, current: i === current }))
+})
 
 const load = async () => {
   loading.value = true
@@ -88,10 +103,31 @@ const camel = key => key.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
           {{ t('platformCompanyCreation.onboarding.progress', { done: state.completed_count, total: state.total_count }) }}
         </div>
       </VCardText>
-      <VProgressLinear
-        :model-value="state.total_count ? (state.completed_count / state.total_count) * 100 : 0"
-        :color="state.in_service ? 'success' : 'warning'"
-      />
+      <VDivider />
+      <VCardText>
+        <ol
+          class="d-flex flex-wrap gap-3 ps-0 mb-0"
+          style="list-style: none;"
+          :aria-label="t('platformCompanyCreation.onboarding.title')"
+        >
+          <li
+            v-for="s in stages"
+            :key="s.key"
+            :aria-current="s.current ? 'step' : undefined"
+          >
+            <VChip
+              :color="s.done || s.current ? STAGE_COLORS[s.key] : 'secondary'"
+              :variant="s.current ? 'elevated' : 'tonal'"
+              :prepend-icon="s.done ? 'tabler-check' : STAGE_ICONS[s.key]"
+            >
+              {{ t(`platformCompanyCreation.stages.${s.key}`) }}
+            </VChip>
+          </li>
+        </ol>
+        <p class="text-body-2 text-medium-emphasis mt-3 mb-0">
+          {{ t(`platformCompanyCreation.stageHints.${state.stage}`) }}
+        </p>
+      </VCardText>
     </VCard>
 
     <VCard :title="t('platformCompanyCreation.onboarding.title')">
@@ -168,7 +204,7 @@ const camel = key => key.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
             <span v-if="item('subscription').detail.trial_ends_at"> · {{ formatDate(item('subscription').detail.trial_ends_at) }}</span>
           </VListItemSubtitle>
           <template
-            v-if="canEditProfile"
+            v-if="canSeeBilling"
             #append
           >
             <VBtn

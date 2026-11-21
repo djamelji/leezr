@@ -202,6 +202,10 @@ export const usePlatformCompaniesStore = defineStore('platformCompanies', {
       return await $platformApi('/companies', { method: 'POST', body: payload })
     },
 
+    async fetchMyCreatedCompanies() {
+      return await $platformApi('/company-creation/companies')
+    },
+
     async fetchCompanyOnboarding(id) {
       return await $platformApi(`/companies/${id}/onboarding`)
     },

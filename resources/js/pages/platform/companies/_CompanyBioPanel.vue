@@ -10,6 +10,7 @@ const props = defineProps({
   membersCount: { type: Number, default: 0 },
   incompleteProfilesCount: { type: Number, default: 0 },
   actionLoading: { type: Boolean, default: false },
+  canManage: { type: Boolean, default: true }, // ADR-834 : suspend / reactivate = manage_companies
 })
 
 const emit = defineEmits(['suspend', 'reactivate'])
@@ -216,7 +217,10 @@ const subscriptionStatus = computed(() => {
     <VDivider />
 
     <!-- Actions -->
-    <VCardActions class="justify-center pa-4">
+    <VCardActions
+      v-if="canManage"
+      class="justify-center pa-4"
+    >
       <VBtn
         v-if="company.status === 'active'"
         color="warning"

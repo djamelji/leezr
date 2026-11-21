@@ -1,6 +1,9 @@
 <script setup>
+import { useCatalogText } from '@/composables/useCatalogText'
+
 // ADR-834 — step B : ONE activity per company (single radio choice, same Vuexy CustomRadiosWithIcon as sign-up).
 const { t } = useI18n()
+const { dataText } = useCatalogText()
 
 const props = defineProps({
   jobdomains: { type: Array, required: true },
@@ -13,7 +16,7 @@ const selectedJobdomain = defineModel('selectedJobdomain', { type: String })
 
 const radioContent = computed(() => props.jobdomains.map(jd => ({
   title: jd.label,
-  desc: jd.description || '',
+  desc: dataText(jd.description) || '',
   value: jd.key,
   offeredForSignup: jd.offered_for_signup,
 })))

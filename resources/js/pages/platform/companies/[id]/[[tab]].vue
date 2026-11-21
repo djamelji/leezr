@@ -9,6 +9,7 @@ import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 import { usePlatformCompaniesStore } from '@/modules/platform-admin/companies/companies.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import CompanyBioPanel from '../_CompanyBioPanel.vue'
 import CompanyBillingTab from '../_CompanyBillingTab.vue'
 import CompanyMembersTab from '../_CompanyMembersTab.vue'
@@ -23,7 +24,8 @@ definePage({
     module: 'platform.companies',
     navActiveKey: 'platform-companies',
     // ADR-834 : the creation operator (create_companies) follows the start of service of the companies it creates
-    anyPermission: ['manage_companies', 'create_companies'],
+    // GET /companies/{id} : view_companies, or create_companies on a company the operator created (scope middleware)
+    anyPermission: ['view_companies', 'create_companies'],
   },
 })
 
@@ -35,7 +37,13 @@ const { toast } = useAppToast()
 
 const isLoading = ref(true)
 const actionLoading = ref(false)
-const COMPANY_TABS = ['overview', 'onboarding', 'configuration', 'billing', 'modules', 'members', 'activity'] // ADR-821 : configuration séparée de la synthèse
+const platformAuth = usePlatformAuthStore()
+// ADR-834 : each tab / action only for the permission its API requires (create_companies alone = overview + start of service)
+const canManage = computed(() => platformAuth.hasPermission('manage_companies'))
+const canViewAll = computed(() => platformAuth.hasPermission('view_companies'))
+const TAB_PERMISSION = { configuration: 'manage_companies', billing: 'view_companies', modules: 'view_companies', members: 'view_companies', activity: 'view_companies' }
+const tabAllowed = tab => !TAB_PERMISSION[tab] || platformAuth.hasPermission(TAB_PERMISSION[tab])
+const COMPANY_TABS = ['overview', 'onboarding', 'configuration', 'billing', 'modules', 'members', 'activity'].filter(tabAllowed) // ADR-821 : configuration séparée de la synthèse
 // ADR-820 : l'onglet vient du chemin ; les anciens liens `?tab=billing` (jusqu'ici ignorés) sont compris puis réécrits.
 const askedTab = route.params.tab || route.query.tab
 const activeTab = ref(COMPANY_TABS.includes(askedTab) ? askedTab : 'overview')
@@ -115,7 +123,8 @@ onMounted(async () => {
   try {
     const [profileData] = await Promise.all([
       companiesStore.fetchCompanyProfile(route.params.id),
-      companiesStore.fetchPlans(),
+      // the plan list (GET /plans = manage_plans) only feeds the plan change, itself reserved to manage_companies
+      canManage.value && platformAuth.hasPermission('manage_plans') ? companiesStore.fetchPlans().catch(() => null) : null,
     ])
 
     applyProfile(profileData)
@@ -445,7 +454,7 @@ const tabs = computed(() => [
   { value: 'modules', icon: 'tabler-puzzle', title: t('platformCompanyDetail.modules') },
   { value: 'members', icon: 'tabler-users', title: t('platformCompanyDetail.members.tab') },
   { value: 'activity', icon: 'tabler-history', title: t('platformCompanyDetail.activity.tab') },
-])
+].filter(tab => tabAllowed(tab.value)))
 </script>
 
 <template>
@@ -480,6 +489,7 @@ const tabs = computed(() => [
             :members-count="company.memberships_count ?? 0"
             :incomplete-profiles-count="incompleteProfilesCount"
             :action-loading="actionLoading"
+            :can-manage="canManage"
             @suspend="openSuspendDialog"
             @reactivate="reactivate"
           />
@@ -546,7 +556,10 @@ const tabs = computed(() => [
                     :title="t('platformCompanySummary.subscription')"
                     :subtitle="plan?.name || company.plan_key || '—'"
                   >
-                    <template #append>
+                    <template
+                      v-if="canViewAll"
+                      #append
+                    >
                       <VBtn
                         size="small"
                         variant="text"
@@ -576,7 +589,10 @@ const tabs = computed(() => [
               <VCard data-test="pc-active-modules">
                 <VCardItem>
                   <VCardTitle>{{ t('platformCompanySummary.activeModules', { n: activeModulesList.length }) }}</VCardTitle>
-                  <template #append>
+                  <template
+                    v-if="canViewAll"
+                    #append
+                  >
                     <VBtn
                       size="small"
                       variant="text"
@@ -889,6 +905,7 @@ const tabs = computed(() => [
                             density="compact"
                             hide-details
                             :loading="moduleToggleLoading === mod.key"
+                            :disabled="!canManage"
                             @update:model-value="toggleModule(mod)"
                           />
                         </td>

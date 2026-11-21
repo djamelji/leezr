@@ -12205,6 +12205,61 @@
       "pendingDecisions": "Laissé à la société : {items}",
       "decisionsDone": "Aucune décision en attente.",
       "ownerSteps": "Premiers pas de la société"
+    },
+    "form": {
+      "companyDetails": "Identité de la société",
+      "companyDetailsDesc": "Ces informations figureront sur les factures et les documents de la société.",
+      "companyName": "Nom commercial",
+      "companyNamePlaceholder": "Nom de la société",
+      "country": "Pays",
+      "selectCountry": "Sélectionnez le pays",
+      "legalStatus": "Forme juridique",
+      "selectLegalStatus": "Sélectionnez la forme juridique",
+      "companyAddress": "Adresse de la société",
+      "billingAddress": "Adresse de facturation",
+      "billingSameAsCompany": "L'adresse de facturation est identique à celle de la société",
+      "choosePlan": "Abonnement de la société",
+      "allPlansInclude": "Tous les plans comprennent les fonctions essentielles. Le plan pourra être changé ensuite depuis la fiche.",
+      "recommended": "Recommandé",
+      "annualSaving": "Économie de {percent} %",
+      "includedModules": "Modules inclus :"
+    },
+    "stages": {
+      "created": "Société créée",
+      "administrator_invited": "Administrateur invité",
+      "awaiting_payment": "Paiement en attente",
+      "operational": "Opérationnelle"
+    },
+    "stageHints": {
+      "created": "La société existe, mais des informations manquent encore avant sa mise en service.",
+      "administrator_invited": "L'invitation est envoyée : la société sera utilisable quand l'administrateur aura activé son compte.",
+      "awaiting_payment": "L'administrateur est actif. Les opérations métier restent bloquées jusqu'au règlement de l'abonnement.",
+      "operational": "La société est en service : administrateur actif, informations complètes, abonnement utilisable."
+    },
+    "list": {
+      "title": "Sociétés que vous avez créées",
+      "subtitle": "Suivez leur mise en service. L'accès aux autres sociétés nécessite une autre permission.",
+      "stage": "Mise en service",
+      "createdAt": "Créée le",
+      "open": "Ouvrir",
+      "empty": "Vous n'avez pas encore créé de société."
     }
+  },
+  "catalogTexts": {
+    "Free tier with core features": "Offre gratuite avec les fonctions essentielles",
+    "Full access to industry modules": "Accès complet aux modules métier",
+    "Premium features and addons": "Fonctions avancées et options premium",
+    "Up to 5 members": "Jusqu'à 5 membres",
+    "Core modules only": "Modules essentiels uniquement",
+    "Community support": "Support communautaire",
+    "Unlimited members": "Membres illimités",
+    "All industry modules": "Tous les modules métier",
+    "Priority support": "Support prioritaire",
+    "Custom roles": "Rôles personnalisés",
+    "Everything in Pro": "Tout le plan Pro",
+    "Premium addons": "Options premium",
+    "Dedicated support": "Support dédié",
+    "Advanced analytics": "Analyses avancées",
+    "Transport, fleet management, dispatch": "Transport, gestion de flotte, répartition"
   }
 }

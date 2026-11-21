@@ -1,11 +1,15 @@
 <script setup>
 import { formatMoney } from '@/utils/money'
+import { useCatalogText } from '@/composables/useCatalogText'
 
 const { t } = useI18n()
+const { dataText } = useCatalogText() // ADR-834 : plan texts administered in English, shown in the interface language
 
 defineProps({
   plans: { type: Array, required: true },
   previewModules: { type: Array, default: () => [] },
+  // ADR-834 : the Platform wizard reuses this step with operator wording (default = public sign-up wording)
+  i18nPrefix: { type: String, default: 'register' },
 })
 
 const selectedPlan = defineModel('selectedPlan', { type: String })
@@ -14,10 +18,10 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
 
 <template>
   <h4 class="text-h4 mb-1">
-    {{ t('register.choosePlan') }}
+    {{ t(`${i18nPrefix}.choosePlan`) }}
   </h4>
   <p class="text-body-1 mb-4">
-    {{ t('register.allPlansInclude') }}
+    {{ t(`${i18nPrefix}.allPlansInclude`) }}
   </p>
 
   <!-- Monthly/Annual toggle -->
@@ -68,7 +72,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
             color="primary"
             variant="elevated"
           >
-            {{ t('register.recommended') }}
+            {{ t(`${i18nPrefix}.recommended`) }}
           </VChip>
         </VCardText>
 
@@ -77,7 +81,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
             {{ plan.name }}
           </h5>
           <p class="text-body-2 mb-4">
-            {{ plan.description }}
+            {{ dataText(plan.description) }}
           </p>
 
           <div class="d-flex justify-center align-baseline pb-2">
@@ -96,7 +100,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
             size="small"
             class="mb-3"
           >
-            {{ t('register.annualSaving', { percent: Math.round((1 - plan.price_yearly / (plan.price_monthly * 12)) * 100) }) }}
+            {{ t(`${i18nPrefix}.annualSaving`, { percent: Math.round((1 - plan.price_yearly / (plan.price_monthly * 12)) * 100) }) }}
           </VChip>
           <div
             v-else
@@ -119,7 +123,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
                 />
               </template>
               <VListItemTitle class="text-body-2">
-                {{ feature }}
+                {{ dataText(feature) }}
               </VListItemTitle>
             </VListItem>
           </VList>
@@ -151,7 +155,7 @@ const annualToggle = defineModel('annualToggle', { type: Boolean })
     class="mt-4"
   >
     <p class="text-body-2 font-weight-medium mb-2">
-      {{ t('register.includedModules') }}
+      {{ t(`${i18nPrefix}.includedModules`) }}
     </p>
     <div class="d-flex flex-wrap gap-2">
       <VChip

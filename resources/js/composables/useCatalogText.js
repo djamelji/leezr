@@ -26,7 +26,20 @@ export function useCatalogText() {
     return te(k) ? t(k) : (fallback ?? key)
   }
 
+  // ADR-834 — texts ADMINISTERED in Platform (plan description / features, activity description) are stored in
+  // English. `catalogTexts` maps the original text to its translation, looked up literally (texts contain dots) ;
+  // an edited or unknown text is shown as written — never a missing-key placeholder.
+  const dataText = text => {
+    if (!text)
+      return text
+    const map = tm('catalogTexts')
+    const value = map && typeof map === 'object' ? map[text] : null
+
+    return value ? rt(value) : text
+  }
+
   return {
+    dataText,
     catalogText,
     moduleName,
     capLabel: c => catalogText('bundles', c.key, 'label', c.label ?? null),

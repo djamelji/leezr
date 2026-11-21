@@ -32,6 +32,7 @@ const outcomeText = o => ({
     v-model:selected-plan="planKey"
     v-model:annual-toggle="annual"
     :plans="plans"
+    i18n-prefix="platformCompanyCreation.form"
   />
 
   <VAlert

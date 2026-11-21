@@ -12205,6 +12205,44 @@
       "pendingDecisions": "Left to the company: {items}",
       "decisionsDone": "No pending decision.",
       "ownerSteps": "Company's first steps"
+    },
+    "form": {
+      "companyDetails": "Company identity",
+      "companyDetailsDesc": "This information appears on the company's invoices and documents.",
+      "companyName": "Trading name",
+      "companyNamePlaceholder": "Company name",
+      "country": "Country",
+      "selectCountry": "Select the country",
+      "legalStatus": "Legal form",
+      "selectLegalStatus": "Select the legal form",
+      "companyAddress": "Company address",
+      "billingAddress": "Billing address",
+      "billingSameAsCompany": "The billing address is the same as the company address",
+      "choosePlan": "Company subscription",
+      "allPlansInclude": "Every plan includes the core features. The plan can be changed later from the company record.",
+      "recommended": "Recommended",
+      "annualSaving": "Save {percent}%",
+      "includedModules": "Included modules:"
+    },
+    "stages": {
+      "created": "Company created",
+      "administrator_invited": "Administrator invited",
+      "awaiting_payment": "Awaiting payment",
+      "operational": "Operational"
+    },
+    "stageHints": {
+      "created": "The company exists, but information is still missing before its start of service.",
+      "administrator_invited": "The invitation is sent: the company becomes usable once the administrator has activated the account.",
+      "awaiting_payment": "The administrator is active. Business operations stay blocked until the subscription is paid.",
+      "operational": "The company is in service: active administrator, complete information, usable subscription."
+    },
+    "list": {
+      "title": "Companies you created",
+      "subtitle": "Follow their start of service. Access to other companies requires another permission.",
+      "stage": "Start of service",
+      "createdAt": "Created on",
+      "open": "Open",
+      "empty": "You have not created any company yet."
     }
   }
 }
