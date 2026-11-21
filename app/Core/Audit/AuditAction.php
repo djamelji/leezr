@@ -62,6 +62,9 @@ final class AuditAction
     public const MEMBER_PASSWORD_RESET_SENT = 'member.password_reset_sent';
     public const PLATFORM_USER_PASSWORD_RESET_SENT = 'platform_user.password_reset_sent';
     public const PLATFORM_USER_PASSWORD_CHANGED = 'platform_user.password_changed';
+
+    // ADR-844 (M7) — personal workforce data exported (filters and volume only)
+    public const WORKFORCE_TIME_EXPORTED = 'workforce.time_exported';
     public const USER_AVATAR_UPDATED = 'user.avatar_updated';
 
     // ─── Platform users ──────────────────────────────────

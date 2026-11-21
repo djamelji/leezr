@@ -6054,6 +6054,9 @@
         "disable_refused": "Désactivation de la double authentification refusée",
         "backup_codes_regenerated": "Codes de secours régénérés",
         "backup_codes_refused": "Régénération des codes de secours refusée"
+      },
+      "workforce": {
+        "time_exported": "Export des temps / absences"
       }
     },
     "actionCode": "Code technique"
@@ -12464,5 +12467,107 @@
   },
   "onboardingWidget": {
     "dismissAria": "Masquer le guide de démarrage"
+  },
+  "timeExport": {
+    "button": "Exporter",
+    "title": "Exporter les temps et absences",
+    "subtitle": "Choisissez la période, les personnes et les données : un aperçu s'affiche avant le téléchargement.",
+    "period": "Période",
+    "from": "Du",
+    "to": "Au",
+    "periodLabel": "Du {from} au {to}",
+    "employees": "Collaborateurs",
+    "allEmployees": "Tous ceux que vous pouvez consulter",
+    "site": "Site",
+    "siteHint": "S'applique au planning",
+    "whatToExport": "Données à exporter",
+    "preview": "Afficher l'aperçu",
+    "downloadCsv": "Télécharger (CSV)",
+    "rows": "{n} ligne(s)",
+    "everyoneVisible": "toutes les personnes visibles",
+    "appliedFilters": "Filtres appliqués : du {from} au {to} · personnes : {people} · heures exprimées dans le fuseau {tz}",
+    "previewTruncated": "Aperçu des {shown} premières lignes sur {n}.",
+    "ranges": {
+      "this_week": "Cette semaine",
+      "last_week": "Semaine dernière",
+      "this_month": "Ce mois-ci",
+      "last_month": "Mois dernier",
+      "custom": "Période personnalisée"
+    },
+    "datasets": {
+      "entries": {
+        "label": "Pointages",
+        "hint": "Arrivées, départs, temps travaillé et pauses enregistrés",
+        "file": "pointages"
+      },
+      "breaks": {
+        "label": "Pauses",
+        "hint": "Détail de chaque pause pointée",
+        "file": "pauses"
+      },
+      "daily": {
+        "label": "Prévu / réalisé",
+        "hint": "Par jour, d'après les feuilles de temps : prévu, pointé, heures sup. identifiées, validation",
+        "file": "prevu-realise"
+      },
+      "planning": {
+        "label": "Planning",
+        "hint": "Créneaux planifiés, site et statut",
+        "file": "planning"
+      },
+      "leaves": {
+        "label": "Absences et congés",
+        "hint": "Demandes approuvées, en attente, refusées ou annulées",
+        "file": "absences"
+      }
+    },
+    "warnings": {
+      "empty": "Aucune donnée sur cette période.",
+      "large": "Export volumineux : le téléchargement peut prendre quelques secondes.",
+      "too_large": "Plus de {max} lignes : réduisez la période ou le nombre de collaborateurs.",
+      "unvalidated": "{n} journée(s) proviennent de feuilles de temps non validées.",
+      "pending_leaves": "Certaines demandes d'absence sont encore en attente de décision.",
+      "open_entries": "Certains pointages sont encore en cours (pas d'heure de départ)."
+    },
+    "errors": {
+      "generation": "L'export n'a pas pu être généré. Réessayez ; si le problème persiste, contactez le support."
+    },
+    "columns": {
+      "date": "Date",
+      "employee_number": "Matricule",
+      "last_name": "Nom",
+      "first_name": "Prénom",
+      "department": "Service",
+      "clock_in": "Arrivée",
+      "clock_out": "Départ",
+      "break_minutes": "Pauses (min)",
+      "worked_minutes": "Travaillé (min)",
+      "worked_hhmm": "Travaillé (hh:mm)",
+      "status": "Statut",
+      "source": "Origine",
+      "start": "Début",
+      "end": "Fin",
+      "type": "Type",
+      "duration_minutes": "Durée (min)",
+      "planned_minutes": "Prévu (min)",
+      "difference_minutes": "Écart réalisé − prévu (min)",
+      "overtime_identified_minutes": "Heures sup. identifiées (min)",
+      "leave_minutes": "Absence (min)",
+      "leave_type": "Type d'absence",
+      "rest_day": "Jour de repos",
+      "anomalies": "Anomalies",
+      "timesheet_status": "Statut de la feuille",
+      "validated": "Validé",
+      "site": "Site",
+      "timezone": "Fuseau horaire",
+      "shift_minutes": "Durée du créneau (min)",
+      "from": "Du",
+      "to": "Au",
+      "start_time": "Heure de début",
+      "end_time": "Heure de fin",
+      "days": "Jours",
+      "hours": "Heures",
+      "reviewed_at": "Décision le"
+    }
   }
 }

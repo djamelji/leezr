@@ -6053,6 +6053,9 @@
         "disable_refused": "Two-factor deactivation refused",
         "backup_codes_regenerated": "Backup codes regenerated",
         "backup_codes_refused": "Backup code regeneration refused"
+      },
+      "workforce": {
+        "time_exported": "Time / absence export"
       }
     },
     "actionCode": "Technical code"
@@ -12446,5 +12449,107 @@
   },
   "onboardingWidget": {
     "dismissAria": "Hide the getting-started guide"
+  },
+  "timeExport": {
+    "button": "Export",
+    "title": "Export time and absences",
+    "subtitle": "Choose the period, the people and the data: a preview is shown before downloading.",
+    "period": "Period",
+    "from": "From",
+    "to": "To",
+    "periodLabel": "From {from} to {to}",
+    "employees": "Employees",
+    "allEmployees": "Everyone you can view",
+    "site": "Site",
+    "siteHint": "Applies to planning",
+    "whatToExport": "Data to export",
+    "preview": "Show preview",
+    "downloadCsv": "Download (CSV)",
+    "rows": "{n} row(s)",
+    "everyoneVisible": "everyone visible",
+    "appliedFilters": "Applied filters: from {from} to {to} · people: {people} · times in the {tz} timezone",
+    "previewTruncated": "Preview of the first {shown} rows out of {n}.",
+    "ranges": {
+      "this_week": "This week",
+      "last_week": "Last week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "custom": "Custom period"
+    },
+    "datasets": {
+      "entries": {
+        "label": "Clock-ins",
+        "hint": "Clock in/out, worked time and breaks as recorded",
+        "file": "clock-ins"
+      },
+      "breaks": {
+        "label": "Breaks",
+        "hint": "Each recorded break",
+        "file": "breaks"
+      },
+      "daily": {
+        "label": "Planned / worked",
+        "hint": "Per day, from timesheets: planned, worked, identified overtime, validation",
+        "file": "planned-worked"
+      },
+      "planning": {
+        "label": "Planning",
+        "hint": "Planned shifts, site and status",
+        "file": "planning"
+      },
+      "leaves": {
+        "label": "Absences and leave",
+        "hint": "Approved, pending, rejected or cancelled requests",
+        "file": "absences"
+      }
+    },
+    "warnings": {
+      "empty": "No data for this period.",
+      "large": "Large export: the download may take a few seconds.",
+      "too_large": "More than {max} rows: shorten the period or select fewer people.",
+      "unvalidated": "{n} day(s) come from timesheets that are not validated.",
+      "pending_leaves": "Some absence requests are still waiting for a decision.",
+      "open_entries": "Some clock-ins are still open (no clock-out)."
+    },
+    "errors": {
+      "generation": "The export could not be generated. Try again; if it persists, contact support."
+    },
+    "columns": {
+      "date": "Date",
+      "employee_number": "Employee number",
+      "last_name": "Last name",
+      "first_name": "First name",
+      "department": "Department",
+      "clock_in": "Clock in",
+      "clock_out": "Clock out",
+      "break_minutes": "Breaks (min)",
+      "worked_minutes": "Worked (min)",
+      "worked_hhmm": "Worked (hh:mm)",
+      "status": "Status",
+      "source": "Source",
+      "start": "Start",
+      "end": "End",
+      "type": "Type",
+      "duration_minutes": "Duration (min)",
+      "planned_minutes": "Planned (min)",
+      "difference_minutes": "Worked − planned (min)",
+      "overtime_identified_minutes": "Identified overtime (min)",
+      "leave_minutes": "Leave (min)",
+      "leave_type": "Leave type",
+      "rest_day": "Rest day",
+      "anomalies": "Anomalies",
+      "timesheet_status": "Timesheet status",
+      "validated": "Validated",
+      "site": "Site",
+      "timezone": "Timezone",
+      "shift_minutes": "Shift span (min)",
+      "from": "From",
+      "to": "To",
+      "start_time": "Start time",
+      "end_time": "End time",
+      "days": "Days",
+      "hours": "Hours",
+      "reviewed_at": "Decided on"
+    }
   }
 }

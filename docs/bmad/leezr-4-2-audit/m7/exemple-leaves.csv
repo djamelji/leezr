@@ -1,0 +1,3 @@
+﻿Matricule;Nom;Prénom;"Type d'absence";Du;Au;"Heure de début";"Heure de fin";Jours;Heures;Statut;"Décision le"
+M7-B;Éxport;Bruno;"Congés payés";2026-03-16;2026-03-18;;;2,5;;approuvée;
+M7-A;Export;Alice;"Congés payés";2026-03-20;2026-03-20;;;1;;"en attente";

@@ -9,6 +9,7 @@ import { useDisplay } from 'vuetify'
 import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionContext'
 import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
 import { useSettingsEntry } from '@/composables/useSettingsEntry'
+import TimeExportDialog from '@/components/workforce/TimeExportDialog.vue'
 
 const props = defineProps({
   active: { type: String, required: true }, // planning | time | leave | me
@@ -24,6 +25,12 @@ const space = usePersonalSpaceStore()
 const { to: preferencesTo } = useSettingsEntry('workforce-settings')
 
 onMounted(() => { space.load() })
+
+// ADR-844 (M7, FUN-06) — export of the space's data, from the space itself (no new menu entry), with the
+// same right as the employees export ; the dialog starts on the data of the current view.
+const exportOpen = ref(false)
+const canExport = computed(() => props.active !== 'me' && can('workforce.export'))
+const exportPreset = computed(() => ({ planning: ['planning'], time: ['daily', 'entries'], leave: ['leaves'] }[props.active] || ['daily']))
 
 const views = computed(() => [
   {
@@ -84,6 +91,16 @@ const views = computed(() => [
         >
           {{ t('timeSpace.preferences') }}
         </VBtn>
+        <VBtn
+          v-if="canExport && !bare"
+          variant="tonal"
+          color="primary"
+          prepend-icon="tabler-file-export"
+          data-test="time-export-open"
+          @click="exportOpen = true"
+        >
+          {{ t('timeExport.button') }}
+        </VBtn>
         <slot name="actions" />
       </div>
     </div>
@@ -117,6 +134,11 @@ const views = computed(() => [
         >{{ t(`timeSpace.short.${v.key}`) }}</span>
       </VTab>
     </VTabs>
+    <TimeExportDialog
+      v-if="canExport"
+      v-model="exportOpen"
+      :preset="exportPreset"
+    />
   </div>
 </template>
 

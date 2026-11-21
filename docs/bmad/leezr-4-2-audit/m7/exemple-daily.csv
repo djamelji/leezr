@@ -1,0 +1,3 @@
+﻿Date;Matricule;Nom;Prénom;"Prévu (min)";"Travaillé (min)";"Écart réalisé − prévu (min)";"Pauses (min)";"Heures sup. identifiées (min)";"Absence (min)";"Type d'absence";"Jour de repos";Anomalies;"Statut de la feuille de temps";Validé
+2026-03-10;M7-A;Export;Alice;450;480;30;30;30;0;;non;0;approuvée;oui
+2026-03-12;M7-B;Éxport;Bruno;420;480;60;0;60;0;;non;0;soumise;non

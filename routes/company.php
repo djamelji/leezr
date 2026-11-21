@@ -725,6 +725,9 @@ Route::prefix('workforce')->middleware('company.access:use-module,workforce')->g
     Route::post('employees', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'store'])->middleware($perm('workforce.manage'));
     // W-G2 (ADR-642) — export / import / actions groupées (segments statiques AVANT employees/{id}).
     Route::get('employees/export', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'export'])->middleware($perm('workforce.export'));
+    // ADR-844 (Leezr 4.2 M7, FUN-06) — time / planning / absence exports by period (same right as the employees export)
+    Route::get('exports/time/preview', [\App\Modules\Workforce\Exports\Http\TimeExportController::class, 'preview'])->middleware([$perm('workforce.export'), 'throttle:60,1']);
+    Route::get('exports/time/download', [\App\Modules\Workforce\Exports\Http\TimeExportController::class, 'download'])->middleware([$perm('workforce.export'), 'throttle:20,1']);
     Route::get('employees/import/template', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'importTemplate'])->middleware($perm('workforce.import'));
     Route::post('employees/import/preview', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'importPreview'])->middleware($perm('workforce.import'));
     Route::post('employees/import', [\App\Modules\Workforce\Employees\Http\EmployeeController::class, 'import'])->middleware($perm('workforce.import'));

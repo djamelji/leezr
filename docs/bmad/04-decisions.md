@@ -29675,3 +29675,15 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 4. **Langue / accessibilité** : toute clé anglaise doit exister en français (test) ; bouton de fermeture du guide de démarrage nommé. Le bouton de fermeture du composant `@core` `AppDrawerHeaderSection` reste sans nom (modification de `@core` non décidée).
 
 **Tests.** `Adr843CompanyWorkspaceTest` (4) ; recette navigateur 4/4 (8 profils, 2 métiers, desktop + mobile, parcours dispatcher → chauffeur de bout en bout).
+
+## ADR-844 — Leezr 4.2 M7 : exports temps, planning et absences par période (FUN-06)
+
+**Date** : 2026-11-21 — **Statut** : livré local (commit non poussé). Documentation des colonnes : `docs/bmad/leezr-4-2-audit/m7/README.md`.
+
+**Décision.**
+1. Réutilisation de l'export collaborateurs (W-G2, ADR-642) : CSV streamé UTF-8 avec BOM, borné, droit `workforce.export`, périmètre `WorkforceAccess`. Pas de second système, pas de fichier stocké, pas de dépendance (XLSX non proposé).
+2. `TimeExportService` lit les sources existantes sans rien recalculer : pointages, pauses, feuilles de temps (prévu, pointé, heures supplémentaires identifiées, statut ; « validé » = approuvée ou verrouillée), planning (site, fuseau du créneau), demandes d'absence (statut, jours / heures enregistrés). Heures de pointage dans le fuseau du marché de la société.
+3. Routes `GET /workforce/exports/time/preview` (comptes, 15 lignes, avertissements : vide, volumineux, trop volumineux, journées non validées, absences en attente, pointages en cours) et `GET /workforce/exports/time/download` (un type par fichier, journal `workforce.time_exported` sans contenu, limiteur de débit).
+4. Interface : bouton « Exporter » dans l'en-tête commun de l'espace Planning & temps (pas de nouvelle rubrique), boîte de dialogue filtres → aperçu → téléchargement ; en-têtes et statuts dans la langue de l'interface.
+
+**Tests.** `Adr844WorkforceTimeExportTest` (6, valeurs attendues écrites à la main : fuseau, période, pauses, prévu/réalisé, validation, heures sup., planning + site, absences approuvées / en attente / brouillon exclu, un collaborateur, périmètre manager, droit refusé, autre société, journal sans contenu, bornes, aucune colonne sensible) ; `tests/js/time-export.test.mjs` (4) ; recette navigateur 3/3 avec téléchargements réels relus.
