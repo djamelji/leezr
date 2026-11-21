@@ -46,8 +46,19 @@ const home = computed(() =>
 </script>
 
 <template>
+  <!-- ADR-847 (M8.2) : suspended company, a member without billing / support rights — say WHY, offer nothing that would bounce -->
   <AppAccessState
-    v-if="pending"
+    v-if="auth.isCompanySuspended"
+    icon="tabler-building-off"
+    color="warning"
+    :title="t('companySuspended.title')"
+    :message="t('companySuspended.message')"
+    :hint="t('companySuspended.hint')"
+    :actions="[]"
+    testid="company-access-suspended"
+  />
+  <AppAccessState
+    v-else-if="pending"
     icon="tabler-hourglass"
     color="info"
     :title="t('forbidden.pendingTitle')"

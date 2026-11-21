@@ -67,6 +67,11 @@ export const useNotificationStore = defineStore('notification', {
 
     // Boot: lightweight count only. Accepts opts to forward _authCheck to API client.
     async fetchUnreadCount(opts = {}) {
+      // ADR-847 (M8.2) : notifications are refused to a suspended company — never requested in that state
+      if (!this._platformMode) {
+        const { useAuthStore } = await import('@/core/stores/auth')
+        if (useAuthStore().isCompanySuspended) return
+      }
       try {
         const data = await this._call('/unread-count', opts)
         const prevCount = this._unreadCount

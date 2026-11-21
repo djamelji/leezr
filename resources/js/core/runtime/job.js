@@ -55,6 +55,14 @@ export class Job {
       }
     }
 
+    // ADR-847 (M8.2) : resources the server refuses to a SUSPENDED company are not requested at all
+    if (this.resource.skipWhenSuspended && deps.resolveStore('auth').isCompanySuspended) {
+      this.status = 'done'
+      deps.journal.log('job:skip-suspended', { key: this.key })
+
+      return
+    }
+
     this.status = 'running'
     this.error = null
     const start = Date.now()

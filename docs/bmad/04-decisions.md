@@ -29758,3 +29758,45 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - `Adr845CompanyLifecycleTest` adapté : une archive avec un module en erreur est désormais `partial`.
 - Recettes M8 et M8.1 : 4 réussites sur 4, rejouables.
 - Risques résiduels R-M81-1 à 3 et décisions D-M81-1 et 2 listés dans `docs/bmad/leezr-4-2-audit/m8/README.md`.
+
+---
+
+## ADR-847 — Leezr 4.2 M8.2 : connexion Platform bloquée par une clé de rôle longue, mode Company suspendue utilisable
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local · **Mission** : Leezr 4.2 M8.2 (corrige R-M81-1 et R-M81-2)
+
+**Cause R-M81-2 (prouvée sur clone MySQL).**
+- `AuditLogger::resolvePlatformActor()` écrivait la **clé du premier rôle** de l'opérateur dans `platform_audit_logs.actor_type` (`varchar(20)`).
+- Cette colonne est conçue comme une **catégorie** : admin, system, webhook.
+- `platform_roles.key` est `varchar(255)` et sa validation accepte 50 caractères.
+- Résultat : tout rôle dont la clé dépasse 20 caractères faisait échouer chaque action journalisée de ses titulaires, **connexion comprise** (erreur 1406, réponse 500).
+- La catégorie mêlée au rôle cassait aussi l'affichage : le fil d'activité affichait la clé du rôle au lieu du nom de l'opérateur.
+
+**Cause R-M81-1 (prouvée en navigateur).**
+- Pour une société suspendue, `SetCompanyContext` refuse tout sauf facturation, support et récupération des données.
+- Pourtant, l'application chargeait au démarrage la navigation, les modules, le métier, l'espace personnel, les notifications et le flux temps réel, et le toast 403 affichait la phrase brute du serveur.
+- Plus grave : après une **reconnexion à froid**, les modules n'étaient pas chargés, la Facturation paraissait inactive, et la page de récupération était renvoyée vers « module indisponible ». Le mode suspendu était donc inutilisable. La recette M8.1 passait uniquement parce que les modules avaient été chargés avant la suspension.
+
+**Décision.**
+1. **Journal Platform**
+   - Migration additive : colonne `platform_audit_logs.actor_role` (`varchar(255)`, aussi large que sa source).
+   - `actor_type` = catégorie, contrôlée (`PLATFORM_ACTOR_TYPES` ; une valeur inconnue lève une erreur explicite, jamais tronquée).
+   - `actor_role` = clé de rôle complète.
+   - Historique : rien n'est réécrit. Les lignes dont `actor_type` contenait un rôle voient ce rôle **copié** dans `actor_role`.
+   - Lecteurs adaptés : fil d'activité (nom de l'opérateur retrouvé, catégorie `admin` affichée), export CSV, onglet Journaux (« admin · rôle »).
+   - L'en-tête navigateur (texte libre envoyé par le client) est borné à sa colonne de 500 caractères et **signalé** (`user_agent_truncated`, `user_agent_length`). Aucun identifiant n'est jamais tronqué.
+   - Les validations des clés RBAC sont cohérentes : rôle Platform ≤ 50 ≤ 255 ; actions ≤ 100 (invariant testé).
+2. **Mode Company suspendue** (le serveur reste l'autorité, aucune protection assouplie)
+   - `/my-companies` expose `suspended` ; le 403 de suspension porte `code: company_suspended`.
+   - Démarrage : les ressources marquées `skipWhenSuspended` (navigation, modules, métier) ne sont plus demandées, sur le modèle du saut par permission (ADR-418). L'espace personnel, les notifications et le flux temps réel ne sont pas sollicités non plus.
+   - Menu local réduit : « Données et fin de contrat » (`billing.manage`) et « Support » (`support.view`).
+   - Routeur : seules les routes Facturation, Support et 403 sont ouvertes ; le reste renvoie vers la récupération des données, ou vers Support pour un membre sans droit Facturation.
+   - Page 403 : état « Entreprise suspendue » explicite.
+   - Filet de sécurité : un 403 `company_suspended` affiche un seul message traduit et resynchronise le drapeau.
+   - Réactivation : la page de récupération détecte le changement d'état et relance un démarrage complet.
+3. Décisions M8.1 conservées : exécution exceptionnelle désactivée, pas de destinataire extérieur, double validation, statuts complet / partiel / échoué. Billing et conservation inchangés.
+
+**Conséquences.**
+- `Adr847PlatformAuditActorTest` : 7 tests.
+- Recette navigateur `audit842-m82-recipe` : 2 tests, et M8 + M8.1 + M8.2 passent ensemble (6 sur 6).
+- La reproduction de l'erreur 500 avant correction, puis le 200 après, ont été faits sur le clone MySQL avec un rôle fictif de 40 caractères (`scripts/audit842-m82-fixture.php`).

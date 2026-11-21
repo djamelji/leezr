@@ -178,10 +178,55 @@ Le propriétaire reste le **seul demandeur ordinaire**. La procédure Platform s
 ## 5. Risques résiduels et décisions
 
 **Risques résiduels :**
-- **R-M81-1** : société suspendue, l'interface affiche une notification brute en anglais (« This company is currently suspended. ») issue des autres appels de l'application. Ce comportement est antérieur à M8.1 et la page de récupération reste utilisable. Correction à décider : une gestion globale du 403 de suspension.
-- **R-M81-2** (défaut latent découvert pendant la recette) : le journal Platform copie la clé du rôle dans `platform_audit_logs.actor_type`, limitée à 20 caractères. Un rôle Platform dont la clé dépasse 20 caractères empêche donc la connexion de ses titulaires (500). Ce défaut est hors périmètre et n'est pas corrigé ; la recette utilise une clé courte.
+- **R-M81-1** (**corrigé M8.2, ADR-847**) : société suspendue, l'interface affiche une notification brute en anglais (« This company is currently suspended. ») issue des autres appels de l'application. Ce comportement est antérieur à M8.1 et la page de récupération reste utilisable. Correction à décider : une gestion globale du 403 de suspension.
+- **R-M81-2** (**corrigé M8.2, ADR-847** ; défaut latent découvert pendant la recette) : le journal Platform copie la clé du rôle dans `platform_audit_logs.actor_type`, limitée à 20 caractères. Un rôle Platform dont la clé dépasse 20 caractères empêche donc la connexion de ses titulaires (500). Ce défaut est hors périmètre et n'est pas corrigé ; la recette utilise une clé courte.
 - **R-M81-3** : une société suspendue peut lancer des exports dans la limite de 5 par 10 minutes, avec 10 minutes entre deux demandes. La charge est donc bornée, mais pas nulle.
 
 **Décisions à valider :**
 - **D-M81-1** : quels justificatifs d'autorité accepter (mandat, extrait Kbis, jugement, pièce d'identité) et qui les contrôle, avant d'activer l'exécution des exports exceptionnels.
 - **D-M81-2** : le destinataire d'un export exceptionnel doit-il pouvoir être une personne extérieure (liquidateur, héritier) ? Aujourd'hui c'est impossible par conception : seul un membre de la société peut le recevoir, ce qui évite tout lien public.
+
+---
+
+# M8.2 — Connexion Platform et mode Company suspendue (ADR-847)
+
+## Causes
+
+**R-M81-2 — connexion Platform en erreur 500**
+- Le journal Platform écrivait la **clé du rôle** de l'opérateur dans `platform_audit_logs.actor_type`, une colonne de 20 caractères prévue pour une catégorie (admin, system, webhook).
+- Toute clé de rôle de plus de 20 caractères faisait échouer chaque action journalisée, connexion comprise.
+- Reproduit avant correction sur le clone MySQL : rôle fictif de 40 caractères, connexion en 500. Après correction : 200.
+
+**R-M81-1 — mode Company suspendue**
+- L'application chargeait au démarrage six ressources refusées à une société suspendue : navigation, modules, métier, espace personnel, notifications, temps réel. Le serveur répondait par un message brut en anglais.
+- **Défaut plus grave découvert pendant la correction** : après une reconnexion à froid, les modules n'étaient pas chargés. La Facturation paraissait inactive et la page de récupération était renvoyée vers « module indisponible ». Le mode suspendu était donc inutilisable ; la recette M8.1 passait seulement parce que les modules avaient été chargés avant la suspension.
+
+## Correctifs
+
+**Journal Platform**
+- Nouvelle colonne `actor_role` (255 caractères, migration additive). `actor_type` redevient une catégorie contrôlée ; une valeur inconnue est une erreur explicite, jamais tronquée.
+- Historique conservé : rien n'est réécrit, et la clé de rôle est **copiée** dans `actor_role`.
+- Lecteurs adaptés : fil d'activité, export CSV, onglet Journaux.
+- L'en-tête navigateur (texte libre envoyé par le client) est borné à 500 caractères **et signalé** dans les métadonnées.
+
+**Mode Company suspendue**
+- `/my-companies` expose `suspended`. Le démarrage ne demande plus aucune ressource refusée ; menu réduit (« Données et fin de contrat », « Support ») ; routeur limité à Facturation, Support et 403.
+- Page 403 « Entreprise suspendue » pour un membre sans droit.
+- Un 403 de suspension affiche un seul message traduit.
+- Réactivation : redémarrage complet de l'application.
+- Le serveur reste l'autorité : toutes les autres routes répondent toujours 403, vérifié en recette.
+
+## Recette navigateur (`tests/e2e/audit842-m82-recipe.spec.js`)
+
+| # | Contrôle | Résultat |
+|---|---|---|
+| 1 | Connexion Platform avec une clé de rôle de 40 caractères | OK (auparavant 500) |
+| 2 | Connexion super administrateur, lecteur, rôle court | OK |
+| 3 | Journal : `admin · recette847_role_avec_une_cle_tres_longue`, rôle complet | OK |
+| 4 | Permissions respectées (suspendre et journaux refusés, page 403) | OK |
+| 5 | Société suspendue : connexion à froid vers la page de récupération, export téléchargé et lu | OK |
+| 6 | Aucune requête refusée, aucun message brut (connexion, navigation, actualisation, reconnexion) | OK |
+| 7 | Autres modules : écrans renvoyés vers la récupération ; API toujours en 403 | OK |
+| + | Membre sans droit : état « Entreprise suspendue » ; réactivation : menu complet rétabli | OK |
+
+Captures dans `m82/apres-*.jpg`.

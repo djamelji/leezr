@@ -217,7 +217,9 @@
       "workforce-referrals": "Referrals",
       "my-referrals": "Referral",
       "settings-referrals": "Referral",
-      "workforce-contracts": "Contracts"
+      "workforce-contracts": "Contracts",
+      "suspendedClosure": "Data & end of contract",
+      "suspendedSupport": "Support"
     }
   },
   "roles": {
@@ -12701,5 +12703,11 @@
       "row": "Exceptional, delivered to {name}",
       "disabled": "Execution disabled pending validation: checking a representative's authority is not validated yet. Requests are recorded and audited, but no archive is produced."
     }
+  },
+  "companySuspended": {
+    "toast": "Your company is suspended: this feature is not available. Billing, support and retrieving your data remain available.",
+    "title": "Company suspended",
+    "message": "Access to this company is suspended: its features are not available for now.",
+    "hint": "Contact the owner or an administrator of the company. Your data is not deleted."
   }
 }

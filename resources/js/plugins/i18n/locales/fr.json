@@ -217,7 +217,9 @@
       "workforce-referrals": "Parrainages",
       "my-referrals": "Parrainage",
       "settings-referrals": "Parrainage",
-      "workforce-contracts": "Contrats"
+      "workforce-contracts": "Contrats",
+      "suspendedClosure": "Données et fin de contrat",
+      "suspendedSupport": "Support"
     }
   },
   "roles": {
@@ -12719,5 +12721,11 @@
       "row": "Exceptionnel, remis à {name}",
       "disabled": "Exécution désactivée en attente de validation : la vérification de l'autorité d'un représentant n'est pas encore validée. Les demandes sont enregistrées et journalisées, mais aucune archive n'est produite."
     }
+  },
+  "companySuspended": {
+    "toast": "Votre entreprise est suspendue : cette fonctionnalité n'est pas disponible. La facturation, le support et la récupération de vos données restent accessibles.",
+    "title": "Entreprise suspendue",
+    "message": "L'accès à cette entreprise est suspendu : ses fonctionnalités ne sont pas disponibles pour le moment.",
+    "hint": "Rapprochez-vous du propriétaire ou d'un administrateur de l'entreprise. Vos données ne sont pas supprimées."
   }
 }

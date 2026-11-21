@@ -604,6 +604,7 @@ export const useRuntimeStore = defineStore('runtime', {
       const companyId = authStore.currentCompanyId
 
       if (!companyId) return
+      if (authStore.isCompanySuspended) return // ADR-847 : the stream is refused to a suspended company
 
       // ADR-126 + ADR-427: Channel router — domain events go through global DomainEventBus
       const notificationHandler = createNotificationHandler(() => {

@@ -118,9 +118,10 @@ const actionOptions = computed(() => [
           <VChip
             size="small"
             variant="tonal"
-            :color="item.actor_type === 'admin' ? 'primary' : 'secondary'"
+            :color="item.actor_type === 'admin' || item.actor_role ? 'primary' : 'secondary'"
+            :data-testid="`log-actor-${item.id}`"
           >
-            {{ item.actor_type }}
+            {{ item.actor_role && item.actor_role !== item.actor_type ? `${item.actor_type} · ${item.actor_role}` : item.actor_type }}
           </VChip>
         </template>
 

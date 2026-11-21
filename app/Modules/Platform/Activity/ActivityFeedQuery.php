@@ -61,6 +61,7 @@ class ActivityFeedQuery
             'action',
             'actor_id',
             'actor_type',
+            'actor_role', // ADR-847
             'target_type',
             'target_id',
             'severity',
@@ -79,6 +80,7 @@ class ActivityFeedQuery
             'action',
             'actor_id',
             'actor_type',
+            DB::raw('NULL as actor_role'),
             'target_type',
             'target_id',
             'severity',

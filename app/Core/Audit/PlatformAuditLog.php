@@ -19,6 +19,7 @@ class PlatformAuditLog extends Model
     protected $fillable = [
         'actor_id',
         'actor_type',
+        'actor_role', // ADR-847
         'action',
         'target_type',
         'target_id',

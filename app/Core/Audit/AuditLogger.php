@@ -38,7 +38,8 @@ class AuditLogger
 
         $log = PlatformAuditLog::create([
             'actor_id' => $options['actorId'] ?? $actor['id'],
-            'actor_type' => $options['actorType'] ?? $actor['type'],
+            'actor_type' => self::platformActorType($options['actorType'] ?? $actor['type']),
+            'actor_role' => array_key_exists('actorType', $options) ? null : $actor['role'],
             'action' => $action,
             'target_type' => $targetType,
             'target_id' => $targetId,
@@ -47,8 +48,8 @@ class AuditLogger
             'diff_after' => $options['diffAfter'] ?? null,
             'correlation_id' => $options['correlationId'] ?? null,
             'ip_address' => $this->request->ip(),
-            'user_agent' => $this->request->userAgent(),
-            'metadata' => $options['metadata'] ?? null,
+            'user_agent' => $this->userAgent(),
+            'metadata' => $this->withClientFlags($options['metadata'] ?? null),
             'created_at' => now(),
         ]);
 
@@ -90,18 +91,29 @@ class AuditLogger
         $user = $this->request->user('platform');
 
         if (! $user instanceof PlatformUser) {
-            return ['id' => null, 'type' => 'system'];
+            return ['id' => null, 'type' => 'system', 'role' => null];
         }
 
         $roles = $user->relationLoaded('roles')
             ? $user->roles
             : $user->roles()->get();
 
-        $type = $roles->contains('key', 'super_admin')
-            ? 'super_admin'
-            : ($roles->first()?->key ?? 'admin');
+        // ADR-847 : the CATEGORY is « admin » ; the role key (any length a role may have) goes to actor_role
+        $role = $roles->contains('key', 'super_admin') ? 'super_admin' : $roles->first()?->key;
 
-        return ['id' => $user->id, 'type' => $type];
+        return ['id' => $user->id, 'type' => 'admin', 'role' => $role];
+    }
+
+    /** ADR-847 : platform actor categories (actor_type, varchar 20). An unknown value is a programming error : loud, never truncated. */
+    public const PLATFORM_ACTOR_TYPES = ['admin', 'system', 'webhook'];
+
+    private static function platformActorType(string $type): string
+    {
+        if (! in_array($type, self::PLATFORM_ACTOR_TYPES, true)) {
+            throw new \InvalidArgumentException("Unknown platform audit actor type « $type » (expected: ".implode(', ', self::PLATFORM_ACTOR_TYPES).')');
+        }
+
+        return $type;
     }
 
     /**
@@ -126,8 +138,8 @@ class AuditLogger
             'diff_after' => $options['diffAfter'] ?? null,
             'correlation_id' => $options['correlationId'] ?? null,
             'ip_address' => $this->request->ip(),
-            'user_agent' => $this->request->userAgent(),
-            'metadata' => $options['metadata'] ?? null,
+            'user_agent' => $this->userAgent(),
+            'metadata' => $this->withClientFlags($options['metadata'] ?? null),
             'created_at' => now(),
         ]);
 
@@ -201,5 +213,29 @@ class AuditLogger
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * ADR-847 — the user agent is CLIENT-supplied (any length) and stored in a 500-character column : longer values
+     * would make the audited action itself fail (login included). Kept to the column size and FLAGGED in metadata
+     * (`user_agent_truncated`), never cut silently. Identifiers (actor, role, target) are never truncated.
+     */
+    public const USER_AGENT_MAX = 500;
+
+    private function userAgent(): ?string
+    {
+        $ua = $this->request->userAgent();
+
+        return $ua === null ? null : mb_substr($ua, 0, self::USER_AGENT_MAX);
+    }
+
+    private function withClientFlags(?array $metadata): ?array
+    {
+        $ua = $this->request->userAgent();
+        if ($ua !== null && mb_strlen($ua) > self::USER_AGENT_MAX) {
+            return ($metadata ?? []) + ['user_agent_truncated' => true, 'user_agent_length' => mb_strlen($ua)];
+        }
+
+        return $metadata;
     }
 }

@@ -45,7 +45,7 @@ class AuditExportController extends Controller
 
     private function streamCsv($query): StreamedResponse
     {
-        $columns = ['id', 'actor_id', 'actor_type', 'action', 'target_type', 'target_id', 'severity', 'correlation_id', 'ip_address', 'created_at'];
+        $columns = ['id', 'actor_id', 'actor_type', 'actor_role', 'action', 'target_type', 'target_id', 'severity', 'correlation_id', 'ip_address', 'created_at'];
 
         return response()->streamDownload(function () use ($query, $columns) {
             $handle = fopen('php://output', 'w');

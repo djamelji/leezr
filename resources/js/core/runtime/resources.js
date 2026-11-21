@@ -14,6 +14,7 @@
  * @property {string[]} dependsOn   - Resource keys that must resolve first
  * @property {boolean}  critical    - If true, failure → error phase
  * @property {boolean}  [cacheable] - If false, never cache (default true)
+ * @property {boolean}  [skipWhenSuspended] - ADR-847 : not requested while the current company is suspended
  */
 
 /** @type {ResourceDef[]} */
@@ -49,6 +50,7 @@ export const companyResources = [
     dependsOn: ['auth:me'],
     critical: false, // Non-blocking — app works with default jobdomain
     permission: 'jobdomain.view', // ADR-418: scheduler skips if user lacks permission
+    skipWhenSuspended: true, // ADR-847
   },
   {
     key: 'features:modules',
@@ -59,6 +61,7 @@ export const companyResources = [
     ttl: 5 * 60 * 1000, // 5 minutes
     dependsOn: ['auth:companies'], // Needs X-Company-Id header set
     critical: false, // Nav falls back to static items
+    skipWhenSuspended: true, // ADR-847 : the module gate is bypassed for the routes open while suspended
   },
   {
     key: 'features:nav',
@@ -69,6 +72,7 @@ export const companyResources = [
     ttl: 5 * 60 * 1000,
     dependsOn: ['auth:companies'],
     critical: true, // ADR-153: ready must include nav hydration
+    skipWhenSuspended: true, // ADR-847 : the nav store serves the suspended menu instead
   },
 ]
 

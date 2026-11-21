@@ -5,6 +5,8 @@ import { getXsrfToken, refreshCsrf } from '@/utils/csrf'
 import { safeRedirect } from '@/utils/safeRedirect'
 import { sameBuild } from '@/utils/versionCheck'
 
+let suspendedNoticeShown = false // ADR-847 : one suspension notice per page load
+
 function getCurrentCompanyId() {
   return useCookie('currentCompanyId').value
 }
@@ -121,6 +123,23 @@ export const $api = ofetch.create({
 
     // 403 Forbidden
     if (status === 403) {
+      // ADR-847 (M8.2) : a suspended company gets ONE translated explanation, never the raw server sentence —
+      // and the suspension flag is refreshed so the menu and routes switch to the suspended mode.
+      if (response._data?.code === 'company_suspended') {
+        if (!suspendedNoticeShown) {
+          suspendedNoticeShown = true
+          toast(getI18n().global.t('companySuspended.toast'), 'warning')
+        }
+        Promise.all([import('@/core/runtime/cache'), import('@/core/stores/auth')])
+          .then(([{ cacheRemove }, { useAuthStore }]) => {
+            cacheRemove('auth:companies')
+
+            return useAuthStore().fetchMyCompanies()
+          })
+          .catch(() => {})
+
+        return
+      }
       if (!options._silent403)
         toast(response._data?.message || 'Unauthorized action.', 'error')
 

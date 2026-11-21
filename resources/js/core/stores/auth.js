@@ -23,6 +23,9 @@ export const useAuthStore = defineStore('auth', {
     companies: state => state._companies,
     currentCompanyId: state => state._currentCompanyId,
     currentCompany: state => state._companies.find(c => c.id === Number(state._currentCompanyId)),
+
+    // ADR-847 (M8.2) : suspended company — only billing, support and data recovery are reachable (server-enforced)
+    isCompanySuspended() { return Boolean(this.currentCompany?.suspended) },
     isOwner: state => {
       const company = state._companies.find(c => c.id === Number(state._currentCompanyId))
 

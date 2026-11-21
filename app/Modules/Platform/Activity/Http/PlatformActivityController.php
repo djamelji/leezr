@@ -98,7 +98,9 @@ class PlatformActivityController
                 'category' => ActivityCategoryMap::categorize($row->action),
                 'actor_id' => $row->actor_id,
                 'actor_name' => $actorName,
-                'actor_type' => $row->actor_type,
+                // ADR-847 : historical platform rows stored the ROLE key in actor_type — shown as an admin with that role
+                'actor_type' => $row->source === 'platform' && ($row->actor_role ?? null) !== null ? 'admin' : $row->actor_type,
+                'actor_role' => $row->actor_role ?? null,
                 'target_type' => $row->target_type,
                 'target_id' => $row->target_id,
                 'company_id' => $row->company_id,
@@ -124,7 +126,7 @@ class PlatformActivityController
             'user' => $userNames->get($row->actor_id, 'User #' . $row->actor_id),
             'system' => 'System',
             'webhook' => 'Webhook',
-            default => $row->actor_type,
+            default => $row->source === 'platform' && $row->actor_id ? $adminNames->get($row->actor_id, 'Admin #'.$row->actor_id) : $row->actor_type,
         };
     }
 

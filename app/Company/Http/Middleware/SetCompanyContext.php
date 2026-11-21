@@ -33,6 +33,7 @@ class SetCompanyContext
         if ($company->isSuspended() && !self::isSuspendedBypass($request)) {
             return response()->json([
                 'message' => 'This company is currently suspended.',
+                'code' => 'company_suspended', // ADR-847 : the SPA shows its own translated explanation
             ], 403);
         }
 

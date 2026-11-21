@@ -3,6 +3,8 @@ import { $api } from '@/utils/api'
 import { formatMoney } from '@/utils/money'
 import { useCompanyBillingStore } from '@/modules/company/billing/billing.store'
 import BillingCancelDialog from './_BillingCancelDialog.vue'
+import { useAuthStore } from '@/core/stores/auth'
+import { cacheRemove } from '@/core/runtime/cache'
 
 // ADR-845 (Leezr 4.2 M8) — « Data & end of contract » : understand the effects, get a full export of the data,
 // check what is still open, cancel or undo a scheduled cancellation. Server : /company/lifecycle, /company/data-exports
@@ -32,10 +34,23 @@ const EXPORT_COLOR = { 'pending': 'info', 'running': 'info', 'ready': 'success',
 const AVAILABLE = ['ready', 'partial'] // ADR-846 : complete or partial archive, both downloadable
 const missingLabel = m => t(`companyClosure.export.missing.${m.part}`) + (m.count ? ` (${m.count})` : '') + ' — ' + t(`companyClosure.export.reasons.${m.reason}`)
 
+const auth = useAuthStore()
+
 const load = async () => {
   try {
     life.value = await $api('/company/lifecycle')
     error.value = ''
+
+    // ADR-847 : the suspension flag of /my-companies is cached — resync it when the server state differs
+    if ((life.value.operational.state === 'suspended') !== auth.isCompanySuspended) {
+      const reactivated = auth.isCompanySuspended
+
+      cacheRemove('auth:companies')
+      await auth.fetchMyCompanies()
+
+      // menu, modules and features were never loaded while suspended : a full boot brings them back
+      if (reactivated) window.location.reload()
+    }
   }
   catch { error.value = t('companyClosure.loadError') }
   finally { loading.value = false }

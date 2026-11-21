@@ -35,6 +35,8 @@ class UserCompaniesReadModel
                 'id' => $membership->company->id,
                 'name' => $membership->company->name,
                 'slug' => $membership->company->slug,
+                // ADR-847 : the SPA opens only billing / support / data recovery while suspended (server stays the authority)
+                'suspended' => $membership->company->status === 'suspended',
                 'role' => $membership->role,
                 'is_administrative' => $isAdministrative,
                 'plan_key' => CompanyEntitlements::planKey($membership->company),

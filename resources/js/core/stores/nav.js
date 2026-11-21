@@ -1,6 +1,22 @@
 import { defineStore } from 'pinia'
 import { $api } from '@/utils/api'
 import { $platformApi } from '@/utils/platformApi'
+import { useAuthStore } from '@/core/stores/auth'
+
+// ADR-847 (Leezr 4.2 M8.2) — menu of a SUSPENDED company : only what the server still serves (billing, data recovery,
+// support ; invoices are a tab of the same page). /api/nav is never called in that state (refused by the server).
+const SUSPENDED_GROUPS = [{
+  key: 'suspended',
+  items: [
+    { key: 'suspendedClosure', labelKey: 'nav.company.suspendedClosure', icon: 'tabler-file-zip', permission: 'billing.manage', to: { name: 'company-billing-tab', params: { tab: 'closure' } } },
+    { key: 'suspendedSupport', labelKey: 'nav.company.suspendedSupport', icon: 'tabler-headset', permission: 'support.view', to: { name: 'company-support' } },
+  ],
+}]
+
+const suspended = () => {
+  try { return useAuthStore().isCompanySuspended }
+  catch { return false }
+}
 
 export const useNavStore = defineStore('nav', {
   state: () => ({
@@ -17,24 +33,24 @@ export const useNavStore = defineStore('nav', {
 
   getters: {
     platformGroups: state => state._platformGroups,
-    companyGroups: state => state._companyGroups,
+    companyGroups: state => (suspended() ? SUSPENDED_GROUPS : state._companyGroups),
     platformWidgets: state => state._platformWidgets,
-    companyWidgets: state => state._companyWidgets,
+    companyWidgets: state => (suspended() ? [] : state._companyWidgets),
     platformFooterLinks: state => state._platformFooterLinks,
-    companyFooterLinks: state => state._companyFooterLinks,
+    companyFooterLinks: state => (suspended() ? [] : state._companyFooterLinks),
 
     /** ADR-775 — contextual actions the user may perform (server-filtered : module + RBAC). */
-    companyActions: state => state._companyActions,
+    companyActions: state => (suspended() ? [] : state._companyActions),
 
     /** ADR-775 — personal entries shown in the avatar menu (groups placed in 'menu'). */
-    companyPersonalMenu: state => state._companyGroups.filter(g => g.placement === 'menu').flatMap(g => g.items),
+    companyPersonalMenu: state => (suspended() ? [] : state._companyGroups).filter(g => g.placement === 'menu').flatMap(g => g.items),
     platformLoaded: state => state._platformLoaded,
-    companyLoaded: state => state._companyLoaded,
+    companyLoaded: state => state._companyLoaded || suspended(), // ADR-847 : the suspended menu is local
 
     /** Hydration source of truth — used by router guard + layout gate. */
     isHydrated: state => scope => {
       if (scope === 'platform') return state._platformLoaded
-      if (scope === 'company') return state._companyLoaded
+      if (scope === 'company') return state._companyLoaded || suspended() // ADR-847 : the suspended menu is local
 
       return true
     },

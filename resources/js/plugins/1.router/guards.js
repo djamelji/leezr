@@ -5,6 +5,9 @@ import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { useModuleStore } from '@/core/stores/module'
 import { useWorldStore } from '@/core/stores/world'
 
+// ADR-847 : route names (and their children) open to a suspended company
+const SUSPENDED_ROUTES = ['company-billing', 'company-support', 'company403']
+
 export const setupGuards = router => {
   router.beforeEach(async to => {
     // Version mismatch check (ADR-045e / ADR-341)
@@ -117,6 +120,14 @@ export const setupGuards = router => {
       return { path: '/home' }
     }
 
+    // ADR-847 (Leezr 4.2 M8.2) — SUSPENDED company : the server serves only billing, support and data recovery. Every
+    // other screen is replaced by those (no request to a refused feature, no raw 403). The server stays the authority.
+    if (auth.isCompanySuspended) {
+      const open = typeof to.name === 'string' && SUSPENDED_ROUTES.some(n => to.name === n || to.name.startsWith(`${n}-`))
+      if (!open)
+        return auth.hasPermission('billing.manage') ? { name: 'company-billing-tab', params: { tab: 'closure' } } : { name: 'company-support' }
+    }
+
     // Surface guard — structure routes require tenant hydration + management level
     if (to.meta.surface === 'structure') {
       if (!auth.currentCompany) {
@@ -128,8 +139,9 @@ export const setupGuards = router => {
       }
     }
 
-    // Module guard — boot is already complete, modules are hydrated
-    if (to.meta.module) {
+    // Module guard — boot is already complete, modules are hydrated (not while suspended : modules are not loaded,
+    // and the routes still open there — billing, support — belong to core modules)
+    if (to.meta.module && !auth.isCompanySuspended) {
       const moduleStore = useModuleStore()
 
       // ADR-839 (Leezr 4.2 M3, UXC-02) — never a silent redirect : an explicit page says whether the module is
