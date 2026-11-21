@@ -22,6 +22,19 @@ const SECTIONS = [
   { key: 'advanced', icon: 'tabler-code' },
 ]
 const section = computed(() => (SECTIONS.some(x => x.key === route.params.tab) ? route.params.tab : 'general'))
+
+// ADR-842 (M5, UXP-14) — a section with nothing to show is not offered as a tab (its address still opens it,
+// with its empty state) : a simple module shows General · Commercial · Companies · Advanced.
+const has = v => Array.isArray(v) ? v.length > 0 : Boolean(v && Object.keys(v).length)
+const visibleSections = computed(() => SECTIONS.filter(sec => {
+  const m = mod.value
+  if (!m) return true
+  if (sec.key === 'features') return has(m.nav_items) || has(m.contributions) || has(m.data_needs) || has(m.setup_steps)
+  if (sec.key === 'dependencies') return has(m.requires_all) || has(m.dependents_all)
+  if (sec.key === 'permissions') return has(m.permissions)
+
+  return true
+}))
 const { moduleName } = useCatalogText()
 const route = useRoute()
 const router = useRouter()
@@ -643,7 +656,7 @@ const planLabel = planKey => {
         data-test="pm-tabs"
       >
         <VTab
-          v-for="sec in SECTIONS"
+          v-for="sec in visibleSections.concat(SECTIONS.filter(x => x.key === section && !visibleSections.some(v => v.key === x.key)))"
           :key="sec.key"
           :value="sec.key"
           :prepend-icon="sec.icon"

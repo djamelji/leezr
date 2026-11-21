@@ -102,7 +102,7 @@ class Adr839PermissionsAndUnavailableFeaturesTest extends TestCase
             foreach ($tabs as $tab => $uri) {
                 $permission = $this->routePermission($uri);
                 $this->assertNotNull($permission, "$uri is permission-guarded");
-                $this->assertMatchesRegularExpression("/tab: '".preg_quote($tab, '/')."', permission: '".preg_quote($permission, '/')."'/", $source,
+                $this->assertMatchesRegularExpression("/tab: '".preg_quote($tab, '/')."'(, group: '[a-z]+')?, permission: '".preg_quote($permission, '/')."'/", $source, // ADR-842 : group allowed
                     "$file : the « $tab » tab declares $permission (= $uri)");
             }
             $this->assertStringContainsString('platformAuth.hasPermission(item.permission)', $source, "$file filters its tabs");

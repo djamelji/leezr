@@ -1426,7 +1426,30 @@
     "confirmReset": "Réinitialiser les modifications ?",
     "confirmResetDesc": "Toutes vos modifications non sauvegardées seront perdues.",
     "confirmResetBtn": "Réinitialiser",
-    "noMessages": "Aucun message pour le moment"
+    "noMessages": "Aucun message pour le moment",
+    "groups": {
+      "overview": {
+        "title": "Vue d'ensemble",
+        "hint": "Indicateurs, alertes et activité récente de la facturation."
+      },
+      "subscriptions": {
+        "title": "Abonnements",
+        "hint": "Contrats des entreprises, renouvellements et abonnements dont le tarif doit être vérifié."
+      },
+      "invoicing": {
+        "title": "Factures et paiements",
+        "hint": "Factures émises, encaissements, prélèvements, relances, avoirs et portefeuilles."
+      },
+      "offers": {
+        "title": "Offres commerciales",
+        "hint": "Promotions et coupons. Les plans se gèrent dans le Catalogue.",
+        "plansLink": "Gérer les plans dans le Catalogue"
+      },
+      "control": {
+        "title": "Contrôle et suivi",
+        "hint": "Anomalies, rapprochements, santé technique de la facturation et comptabilité (lecture et diagnostic)."
+      }
+    }
   },
   "orgPreset": {
     "title": "Organisation proposée",
@@ -2317,8 +2340,8 @@
     "noCompanies": "Aucune entreprise trouvée.",
     "noSearchResults": "Aucune entreprise ne correspond à vos critères de recherche.",
     "searchPlaceholder": "Rechercher par nom ou slug…",
-    "filterByStatus": "Filtrer par statut",
-    "filterByPlan": "Filtrer par plan",
+    "filterByStatus": "Statut",
+    "filterByPlan": "Abonnement",
     "allStatuses": "Tous les statuts",
     "allPlans": "Tous les abonnements",
     "suspended": "Suspendue",
@@ -2326,14 +2349,14 @@
     "mrr": "Récurrent / mois (HT)",
     "lastActivity": "Dernière activité",
     "openTickets": "Tickets ouverts",
-    "filterByHealth": "Filtrer par santé",
+    "filterByHealth": "Santé",
     "healthHealthy": "Saine",
     "healthAttention": "Attention",
     "healthAtRisk": "À risque",
     "segmentAll": "Toutes",
     "segmentAtRisk": "À risque",
     "segmentHighValue": "Haute valeur",
-    "segmentTrialEnding": "Trial expire",
+    "segmentTrialEnding": "Essai bientôt terminé",
     "stats": {
       "total": "Entreprises totales",
       "active": "Actives",
@@ -2341,7 +2364,12 @@
       "mrr": "Revenu récurrent mensuel (MRR, HT)",
       "atRisk": "À risque"
     },
-    "mrrTrial": "Essai"
+    "mrrTrial": "Essai",
+    "actions": {
+      "suspend": "Suspendre l'entreprise",
+      "reactivate": "Réactiver l'entreprise",
+      "open": "Ouvrir la fiche"
+    }
   },
   "companyPlan": {
     "pendingApproval": "En attente d'approbation",
@@ -3163,7 +3191,11 @@
     "role": "Rôles",
     "searchPlaceholder": "Rechercher…",
     "filterByRole": "Filtrer par rôle",
-    "filterByStatus": "Filtrer par statut"
+    "filterByStatus": "Filtrer par statut",
+    "actions": {
+      "delete": "Supprimer l'opérateur",
+      "open": "Ouvrir la fiche"
+    }
   },
   "platformAccess": {
     "title": "Gestion des accès"
@@ -3599,7 +3631,7 @@
     "country": "Pays",
     "profileUpdated": "Profil de l'entreprise mis à jour.",
     "profileUpdateFailed": "Échec de la mise à jour du profil.",
-    "overview": "Aperçu",
+    "overview": "Synthèse",
     "modules": "Modules",
     "jobDomain": "Domaine d'activité",
     "noJobDomain": "Aucun domaine d'activité assigné",
@@ -3643,7 +3675,7 @@
       "owner": "Propriétaire"
     },
     "billing": {
-      "tab": "Facturation",
+      "tab": "Abonnement et facturation",
       "subscription": "Abonnement",
       "interval": "Intervalle",
       "periodEnd": "Fin de période",
@@ -3762,7 +3794,11 @@
       "reason": "Motif",
       "apply": "Appliquer"
     },
-    "walletAdjustFailed": "Échec de l'ajustement du portefeuille."
+    "walletAdjustFailed": "Échec de l'ajustement du portefeuille.",
+    "planChange": {
+      "title": "Changer d'offre",
+      "hint": "Choisissez la nouvelle offre : un aperçu chiffré (prorata, date d'effet, périodicité conservée) est présenté avant toute confirmation."
+    }
   },
   "platformCompanyUsers": {
     "title": "Utilisateurs d'entreprise",
@@ -12016,7 +12052,7 @@
     "usedByAll": "Nécessaire à"
   },
   "platformCompanySummary": {
-    "configuration": "Configuration",
+    "configuration": "Identité et adresses",
     "identityTitle": "L'entreprise",
     "jobdomain": "Métier",
     "subscription": "Abonnement",

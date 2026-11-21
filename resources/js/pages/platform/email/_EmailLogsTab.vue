@@ -4,7 +4,16 @@ import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
 
 const { toast } = useAppToast()
-const { t } = useI18n()
+const { t, te, tm, rt } = useI18n()
+
+// ADR-842 (M5, UXP-09) — e-mails sent before ADR-781 logged their translation KEY as subject. Display the
+// template it stands for (values that were not kept shown as « … ») instead of the raw key ; stored data unchanged.
+const subjectLabel = subject => {
+  if (!subject || !/^email(?:\.[\w-]+)+$/.test(subject) || !te(subject)) return subject
+  const template = tm(subject)
+
+  return (typeof template === 'string' ? template : rt(template)).replace(/\{\w+\}/g, '…')
+}
 
 const logs = ref([])
 const stats = ref({ sent_24h: 0, failed_24h: 0, success_rate: 100 })
@@ -340,8 +349,12 @@ watch(search, debouncedSearch)
                     {{ log.recipient_email }}
                   </div>
                 </td>
-                <td class="text-body-2">
-                  {{ log.subject }}
+                <td
+                  class="text-body-2"
+                  :title="log.subject"
+                  data-testid="email-log-subject"
+                >
+                  {{ subjectLabel(log.subject) }}
                 </td>
                 <td>
                   <VChip

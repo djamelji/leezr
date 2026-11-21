@@ -36,11 +36,11 @@ test('M1-A/B — liste en lecture seule, changement contrôlé depuis la fiche (
   expect(await row.locator('.v-select').count(), 'no plan selector left in the list').toBe(0)
   await shot(page, 'A-liste-plan-lecture-seule')
 
-  // B — company record › Configuration › plan selector → preview → confirm
-  await page.goto(`/platform/companies/${COMPANY}/configuration`, { waitUntil: 'networkidle' })
+  // B — company record › Subscription & billing › plan selector → preview → confirm (moved there in ADR-842 / M5)
+  await page.goto(`/platform/companies/${COMPANY}/billing`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
   // the label is not linked to the field (a11y gap UXP-15) : target the plan combobox by its value
-  await page.locator('.v-select', { hasText: /^\s*Pro\s*$/ }).getByRole('combobox').first().click()
+  await page.getByTestId('company-plan-change').locator('.v-select').getByRole('combobox').first().click()
   await page.locator('.v-overlay--active .v-list-item', { hasText: 'Business' }).first().click()
   const dialog = page.locator('.v-overlay--active .v-card', { hasText: 'Aperçu du changement de plan' })
   await expect(dialog).toBeVisible()
@@ -74,7 +74,7 @@ test('M1-D — tableau de bord Platform lisible', async ({ page }) => {
   await page.goto('/platform/dashboard/overview', { waitUntil: 'networkidle' })
   await page.waitForTimeout(2500)
   const body = await page.locator('.layout-page-content').innerText()
-  await expect(page.getByText("Chiffre d'affaires du mois").first()).toBeVisible()
+  await expect(page.getByText('Facturé ce mois (HT)').first()).toBeVisible() // renamed by ADR-841 (M4)
   for (const bad of ['companies', 'a valider', 'Funnel', 'Sante systeme', 'echoues', 'workforce_leave', 'core.documentation', 'Scheduler', 'non assignés', '(7j)'])
     expect(body, `no « ${bad} » left`).not.toContain(bad)
   await shot(page, 'D-tableau-de-bord')
@@ -88,10 +88,10 @@ test('M1-E — un opérateur sans permission commerciale ne peut pas changer le 
   await loginPlatform(page, 'viewer842@platform.test', PASSWORD)
   await page.goto(`/platform/companies/${COMPANY}`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1500)
-  await expect(page.getByRole('tab', { name: /Configuration/ })).toHaveCount(0)
-  await page.goto(`/platform/companies/${COMPANY}/configuration`, { waitUntil: 'networkidle' })
+  await expect(page.getByRole('tab', { name: /Identité et adresses/ })).toHaveCount(0)
+  await page.goto(`/platform/companies/${COMPANY}/billing`, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1200)
-  expect(await page.locator('.v-select', { hasText: /^\s*Pro\s*$/ }).count(), 'no plan selector without manage_companies').toBe(0)
+  expect(await page.getByTestId('company-plan-change').count(), 'no plan change without manage_companies').toBe(0)
   const status = await page.evaluate(async id => {
     const xsrf = decodeURIComponent((document.cookie.match(/XSRF-TOKEN=([^;]+)/) || [])[1] || '')
     const r = await fetch(`/api/platform/companies/${id}/plan`, { method: 'PUT', credentials: 'include', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf }, body: JSON.stringify({ plan_key: 'starter' }) })

@@ -1,4 +1,5 @@
 <script setup>
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { usePlatformNav } from '@/composables/usePlatformNav'
 import { useNavStore } from '@/core/stores/nav'
 
@@ -18,6 +19,9 @@ const navItems = computed(() => {
   if (!navStore.platformLoaded) return [] // ADR-153: gate until hydrated
   return rawNavItems.value.filter(item => !item.heading)
 })
+
+// ADR-842 (M5, UXP-12) — the floating theme customizer is a template tool : reserved to manage_theme_settings
+const canCustomizeTheme = computed(() => usePlatformAuthStore().hasPermission('manage_theme_settings'))
 </script>
 
 <template>
@@ -47,6 +51,7 @@ const navItems = computed(() => {
     </template>
 
     <!-- 👉 Customizer -->
-    <TheCustomizer />
+    <!-- ADR-842 (M5, UXP-12) : the template's theme customizer only for operators who manage the theme -->
+    <TheCustomizer v-if="canCustomizeTheme" />
   </HorizontalNavLayout>
 </template>

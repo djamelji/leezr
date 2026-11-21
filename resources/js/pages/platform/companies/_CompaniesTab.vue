@@ -13,7 +13,7 @@ import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { formatDate } from '@/utils/datetime'
 import { formatMoney } from '@/utils/money'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
@@ -22,6 +22,7 @@ const platformAuth = usePlatformAuthStore()
 const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
 // ADR-841 — financial figures (MRR) only with view_billing : the API omits them otherwise
 const canSeeFinance = computed(() => platformAuth.hasPermission('view_billing'))
+const canManageCompanies = computed(() => platformAuth.hasPermission('manage_companies'))
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
@@ -156,7 +157,8 @@ const relativeTime = dateStr => {
   const diffDays = Math.floor(diffHours / 24)
   const diffMonths = Math.floor(diffDays / 30)
 
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+  // ADR-842 (M5, UXP-10) — the interface language, not the browser's (« 9 hours ago » on a French screen)
+  const rtf = new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' })
 
   if (diffMin < 1) return rtf.format(-diffSec, 'second')
   if (diffHours < 1) return rtf.format(-diffMin, 'minute')
@@ -382,7 +384,7 @@ const segmentChips = computed(() => [
             :items="statusOptions"
             clearable
             clear-icon="tabler-x"
-            style="inline-size: 10rem;"
+            style="inline-size: 12rem;"
           />
 
           <!-- Plan filter -->
@@ -392,7 +394,7 @@ const segmentChips = computed(() => [
             :items="planFilterOptions"
             clearable
             clear-icon="tabler-x"
-            style="inline-size: 10rem;"
+            style="inline-size: 12rem;"
           />
 
           <!-- Health filter -->
@@ -402,7 +404,7 @@ const segmentChips = computed(() => [
             :items="healthOptions"
             clearable
             clear-icon="tabler-x"
-            style="inline-size: 10rem;"
+            style="inline-size: 12rem;"
           />
 
           <!-- ADR-834 : creation wizard, only for operators allowed to create -->
@@ -566,8 +568,11 @@ const segmentChips = computed(() => [
 
         <!-- Preset pattern: Actions (suspend/reactivate + eye + dots menu) -->
         <template #item.actions="{ item }">
+          <!-- ADR-842 (M5, UXP-11 / R1) : named icon buttons ; suspension only for manage_companies -->
           <IconBtn
-            v-if="item.status === 'active'"
+            v-if="canManageCompanies && item.status === 'active'"
+            v-tooltip="t('companies.actions.suspend')"
+            :aria-label="t('companies.actions.suspend')"
             :loading="actionLoading === item.id"
             @click="suspend(item)"
           >
@@ -577,7 +582,9 @@ const segmentChips = computed(() => [
             />
           </IconBtn>
           <IconBtn
-            v-else
+            v-else-if="canManageCompanies"
+            v-tooltip="t('companies.actions.reactivate')"
+            :aria-label="t('companies.actions.reactivate')"
             :loading="actionLoading === item.id"
             @click="reactivate(item)"
           >
@@ -587,46 +594,15 @@ const segmentChips = computed(() => [
             />
           </IconBtn>
 
-          <IconBtn @click="router.push({ name: 'platform-companies-id', params: { id: item.id } })">
+          <IconBtn
+            v-tooltip="t('companies.actions.open')"
+            :aria-label="t('companies.actions.open')"
+            @click="router.push({ name: 'platform-companies-id', params: { id: item.id } })"
+          >
             <VIcon icon="tabler-eye" />
           </IconBtn>
 
-          <VBtn
-            icon
-            variant="text"
-            color="medium-emphasis"
-          >
-            <VIcon icon="tabler-dots-vertical" />
-            <VMenu activator="parent">
-              <VList>
-                <VListItem :to="{ name: 'platform-companies-id', params: { id: item.id } }">
-                  <template #prepend>
-                    <VIcon icon="tabler-eye" />
-                  </template>
-                  <VListItemTitle>{{ t('common.view') }}</VListItemTitle>
-                </VListItem>
-
-                <VListItem
-                  v-if="item.status === 'active'"
-                  @click="suspend(item)"
-                >
-                  <template #prepend>
-                    <VIcon icon="tabler-ban" />
-                  </template>
-                  <VListItemTitle>{{ t('companies.suspend') }}</VListItemTitle>
-                </VListItem>
-                <VListItem
-                  v-else
-                  @click="reactivate(item)"
-                >
-                  <template #prepend>
-                    <VIcon icon="tabler-check" />
-                  </template>
-                  <VListItemTitle>{{ t('companies.reactivate') }}</VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </VBtn>
+          <!-- ADR-842 (M5) : the « ⋮ » menu repeated the same three actions — removed -->
         </template>
 
         <!-- Preset pattern: TablePagination in #bottom -->

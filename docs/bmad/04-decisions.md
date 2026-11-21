@@ -29652,3 +29652,14 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 **Tests.** `Adr841FinancialIndicatorsTest` (6, montants attendus calculés à la main : mensuel, annuel, essai, coupon + option, en retard, résilié, sans abonnement, changement programmé non compté, changement immédiat compté une fois sans prorata, facturé / encaissé / reste dû / remboursé, RBAC API, isolation Company) ; `tests/js/ledger-amount.test.mjs` (4) ; recette navigateur 3/3 avec attendus SQL indépendants.
 
 **Conséquences.** Le MRR affiché change de valeur sur la Facturation et le tableau de bord (options incluses, options hors facturation exclues) et sur la liste (prix contractés). Historique MRR toujours reconstruit (ADR-747) ; règle `REVENUE` proratisée en cas de crédit portefeuille signalée, non modifiée.
+
+## ADR-842 — Leezr 4.2 M5 : ergonomie Platform (Facturation par domaines, fiche entreprise sans doublon, finitions)
+
+**Date** : 2026-11-21 — **Statut** : livré local (commit non poussé) — **Origine** : UXP-05, 06, 09, 10, 11, 12, 14. Rapport : `docs/bmad/leezr-4-2-audit/m5/README.md`.
+
+**Décision.**
+1. **Facturation** : les 15 pages sont regroupées dans la page (pas dans le menu, qui reste issu du manifeste) en 5 groupes métier — Vue d'ensemble · Abonnements · Factures et paiements · Offres commerciales · Contrôle et suivi. Rangée principale = groupes, rangée secondaire = pages du groupe, phrase d'explication par groupe. Adresses `/platform/billing/{page}` et permissions par page inchangées ; un groupe n'apparaît que si l'une de ses pages est permise. Les plans restent au Catalogue (lien depuis « Offres commerciales »).
+2. **Fiche entreprise** : l'identité n'apparaît qu'au panneau gauche ; la Synthèse montre la situation. Le changement d'offre (décision commerciale, aperçu → confirmation, R3) quitte le formulaire d'identité pour l'onglet « Abonnement et facturation », réservé à `manage_companies`. Onglets renommés « Synthèse », « Identité et adresses », « Abonnement et facturation ».
+3. **Finitions** : dates relatives dans la langue de l'interface ; boutons-icônes nommés (aria-label + infobulle) et menus « ⋮ » redondants retirés sur les listes Entreprises et Utilisateurs Platform, actions de gestion affichées seulement avec leur droit ; personnalisateur de thème réservé à `manage_theme_settings` ; sujets d'e-mails historiques en clé résolus à l'affichage ; onglets vides de la fiche module masqués.
+
+**Tests.** `Adr842PlatformErgonomicsTest` (4, invariants de structure : chaque page dans un seul groupe et adresse conservée, une information par emplacement, boutons nommés, outils de démonstration masqués) ; recette navigateur 5/5 (5 profils, clavier, mobile, adresses directes, retour arrière) ; recette M1 rejouée 4/4 (sélecteurs mis à jour).

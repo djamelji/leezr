@@ -331,7 +331,11 @@ const deleteUser = async member => {
 
         <!-- Preset pattern: Actions (trash + eye + dots menu) -->
         <template #item.actions="{ item }">
+          <!-- ADR-842 (M5, UXP-11 / R1) : named icon buttons ; deletion only for manage_platform_users ; no duplicate menu -->
           <IconBtn
+            v-if="platformAuthStore.hasPermission('manage_platform_users')"
+            v-tooltip="t('platformUsers.actions.delete')"
+            :aria-label="t('platformUsers.actions.delete')"
             :disabled="hasRole(item, 'super_admin')"
             :loading="actionLoading === item.id"
             @click="deleteUser(item)"
@@ -339,37 +343,13 @@ const deleteUser = async member => {
             <VIcon icon="tabler-trash" />
           </IconBtn>
 
-          <IconBtn @click="router.push(`/platform/users/${item.id}`)">
+          <IconBtn
+            v-tooltip="t('platformUsers.actions.open')"
+            :aria-label="t('platformUsers.actions.open')"
+            @click="router.push(`/platform/users/${item.id}`)"
+          >
             <VIcon icon="tabler-eye" />
           </IconBtn>
-
-          <VBtn
-            icon
-            variant="text"
-            color="medium-emphasis"
-          >
-            <VIcon icon="tabler-dots-vertical" />
-            <VMenu activator="parent">
-              <VList>
-                <VListItem :to="`/platform/users/${item.id}`">
-                  <template #prepend>
-                    <VIcon icon="tabler-eye" />
-                  </template>
-                  <VListItemTitle>{{ t('common.view') }}</VListItemTitle>
-                </VListItem>
-
-                <VListItem
-                  :disabled="hasRole(item, 'super_admin')"
-                  @click="deleteUser(item)"
-                >
-                  <template #prepend>
-                    <VIcon icon="tabler-trash" />
-                  </template>
-                  <VListItemTitle>{{ t('common.delete') }}</VListItemTitle>
-                </VListItem>
-              </VList>
-            </VMenu>
-          </VBtn>
         </template>
 
         <!-- Preset pattern: TablePagination in #bottom -->

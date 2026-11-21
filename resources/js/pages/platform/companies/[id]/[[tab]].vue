@@ -453,8 +453,9 @@ const summaryStats = computed(() => [
     value: t(`platformCompanySummary.status.${company.value?.status || 'active'}`), label: t('platformCompanyDetail.companyStatus') },
   { key: 'members', icon: 'tabler-users', color: 'primary', value: company.value?.memberships_count ?? 0, label: t('platformCompanySummary.members') },
   { key: 'modules', icon: 'tabler-puzzle', color: 'info', value: activeModulesList.value.length, label: t('platformCompanySummary.modules') },
-  { key: 'plan', icon: 'tabler-receipt', color: 'warning', value: plan.value?.name || company.value?.plan_key || '—', label: t('platformCompanySummary.subscription') },
 ])
+// ADR-842 (M5, UXP-06) — identity (activity, plan, owner, market, creation date) lives in the left panel only ;
+// the overview shows the situation (status, team, modules) and leads to the tab where each thing is handled.
 
 // ─── Tabs definition ────────────────────────────────
 const tabs = computed(() => [
@@ -558,54 +559,6 @@ const tabs = computed(() => [
                   </VCard>
                 </VCol>
               </VRow>
-              <VCard
-                class="mb-6"
-                data-test="pc-summary"
-              >
-                <VCardItem>
-                  <VCardTitle>{{ t('platformCompanySummary.identityTitle') }}</VCardTitle>
-                </VCardItem>
-                <VList density="compact">
-                  <VListItem
-                    prepend-icon="tabler-briefcase"
-                    :title="t('platformCompanySummary.jobdomain')"
-                    :subtitle="(company.jobdomains || []).map(j => j.label).join(', ') || company.jobdomain_key || '—'"
-                  />
-                  <VListItem
-                    prepend-icon="tabler-receipt"
-                    :title="t('platformCompanySummary.subscription')"
-                    :subtitle="plan?.name || company.plan_key || '—'"
-                  >
-                    <template
-                      v-if="canViewAll"
-                      #append
-                    >
-                      <VBtn
-                        size="small"
-                        variant="text"
-                        @click="activeTab = 'billing'"
-                      >
-                        {{ t('platformCompanySummary.open') }}
-                      </VBtn>
-                    </template>
-                  </VListItem>
-                  <VListItem
-                    prepend-icon="tabler-user-star"
-                    :title="t('platformCompanySummary.owner')"
-                    :subtitle="owner ? `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || owner.email : '—'"
-                  />
-                  <VListItem
-                    prepend-icon="tabler-world"
-                    :title="t('platformCompanySummary.market')"
-                    :subtitle="company.market_key || '—'"
-                  />
-                  <VListItem
-                    prepend-icon="tabler-calendar"
-                    :title="t('platformCompanySummary.created')"
-                    :subtitle="company.created_at ? new Date(company.created_at).toLocaleDateString(locale) : '—'"
-                  />
-                </VList>
-              </VCard>
               <VCard data-test="pc-active-modules">
                 <VCardItem>
                   <VCardTitle>{{ t('platformCompanySummary.activeModules', { n: activeModulesList.length }) }}</VCardTitle>
@@ -675,17 +628,6 @@ const tabs = computed(() => [
                         :model-value="company.legal_status_key || '—'"
                         :label="t('platformCompanyDetail.legalStatus')"
                         disabled
-                      />
-                    </VCol>
-                    <VCol cols="12" md="6">
-                      <AppSelect
-                        v-model="planForm.plan_key"
-                        :items="companiesStore.plans"
-                        item-title="name"
-                        item-value="key"
-                        :label="t('companies.plan')"
-                        :loading="actionLoading"
-                        @update:model-value="requestPlanChange"
                       />
                     </VCol>
                     <VCol cols="12" md="6">
@@ -847,6 +789,35 @@ const tabs = computed(() => [
 
             <!-- ─── Billing ───────────────────────── -->
             <VWindowItem value="billing">
+              <!-- ADR-842 (M5) — the commercial decision sits next to the subscription it changes (was in « Configuration ») -->
+              <VCard
+                v-if="canManage"
+                flat
+                border
+                class="mb-6"
+                data-testid="company-plan-change"
+              >
+                <VCardItem>
+                  <VCardTitle class="text-subtitle-1 font-weight-medium">
+                    {{ t('platformCompanyDetail.planChange.title') }}
+                  </VCardTitle>
+                  <VCardSubtitle class="text-wrap">
+                    {{ t('platformCompanyDetail.planChange.hint') }}
+                  </VCardSubtitle>
+                </VCardItem>
+                <VCardText>
+                  <AppSelect
+                    v-model="planForm.plan_key"
+                    :items="companiesStore.plans"
+                    item-title="name"
+                    item-value="key"
+                    :label="t('companies.plan')"
+                    :loading="actionLoading"
+                    style="max-inline-size: 320px;"
+                    @update:model-value="requestPlanChange"
+                  />
+                </VCardText>
+              </VCard>
               <CompanyBillingTab
                 :billing="billingData"
                 :loading="billingLoading"

@@ -1427,7 +1427,30 @@
     "confirmReset": "Reset changes?",
     "confirmResetDesc": "All your unsaved changes will be lost.",
     "confirmResetBtn": "Reset",
-    "noMessages": "No messages yet"
+    "noMessages": "No messages yet",
+    "groups": {
+      "overview": {
+        "title": "Overview",
+        "hint": "Billing indicators, alerts and recent activity."
+      },
+      "subscriptions": {
+        "title": "Subscriptions",
+        "hint": "Company contracts, renewals and subscriptions whose price must be checked."
+      },
+      "invoicing": {
+        "title": "Invoices & payments",
+        "hint": "Issued invoices, collections, direct debits, dunning, credit notes and wallets."
+      },
+      "offers": {
+        "title": "Commercial offers",
+        "hint": "Promotions and coupons. Plans are managed in the Catalogue.",
+        "plansLink": "Manage plans in the Catalogue"
+      },
+      "control": {
+        "title": "Control & monitoring",
+        "hint": "Anomalies, reconciliation, technical health of billing and accounting (read and diagnosis)."
+      }
+    }
   },
   "orgPreset": {
     "title": "Suggested organization",
@@ -2317,8 +2340,8 @@
     "noCompanies": "No companies found.",
     "noSearchResults": "No companies match your search criteria.",
     "searchPlaceholder": "Search by name or slug…",
-    "filterByStatus": "Filter by status",
-    "filterByPlan": "Filter by plan",
+    "filterByStatus": "Status",
+    "filterByPlan": "Plan",
     "allStatuses": "All statuses",
     "allPlans": "All plans",
     "suspended": "Suspended",
@@ -2326,14 +2349,14 @@
     "mrr": "Recurring / month (excl. tax)",
     "lastActivity": "Last Activity",
     "openTickets": "Open Tickets",
-    "filterByHealth": "Filter by health",
+    "filterByHealth": "Health",
     "healthHealthy": "Healthy",
     "healthAttention": "Attention",
     "healthAtRisk": "At Risk",
     "segmentAll": "All",
     "segmentAtRisk": "At Risk",
     "segmentHighValue": "High Value",
-    "segmentTrialEnding": "Trial Ending",
+    "segmentTrialEnding": "Trial ending soon",
     "stats": {
       "total": "Total Companies",
       "active": "Active",
@@ -2341,7 +2364,12 @@
       "mrr": "Monthly recurring revenue (MRR, excl. tax)",
       "atRisk": "At Risk"
     },
-    "mrrTrial": "Trial"
+    "mrrTrial": "Trial",
+    "actions": {
+      "suspend": "Suspend the company",
+      "reactivate": "Reactivate the company",
+      "open": "Open the record"
+    }
   },
   "companyPlan": {
     "pendingApproval": "Pending Approval",
@@ -3163,7 +3191,11 @@
     "role": "Roles",
     "searchPlaceholder": "Search users…",
     "filterByRole": "Filter by role",
-    "filterByStatus": "Filter by status"
+    "filterByStatus": "Filter by status",
+    "actions": {
+      "delete": "Delete the operator",
+      "open": "Open the record"
+    }
   },
   "platformAccess": {
     "title": "Access Management"
@@ -3599,7 +3631,7 @@
     "country": "Country",
     "profileUpdated": "Company profile updated.",
     "profileUpdateFailed": "Failed to update profile.",
-    "overview": "Overview",
+    "overview": "Summary",
     "modules": "Modules",
     "jobDomain": "Job Domain",
     "noJobDomain": "No job domain assigned",
@@ -3643,7 +3675,7 @@
       "owner": "Business Owner"
     },
     "billing": {
-      "tab": "Billing",
+      "tab": "Subscription & billing",
       "subscription": "Subscription",
       "interval": "Interval",
       "periodEnd": "Period End",
@@ -3762,7 +3794,11 @@
       "reason": "Reason",
       "apply": "Apply"
     },
-    "walletAdjustFailed": "Failed to adjust wallet."
+    "walletAdjustFailed": "Failed to adjust wallet.",
+    "planChange": {
+      "title": "Change plan",
+      "hint": "Pick the new plan: a priced preview (proration, effective date, interval kept) is shown before anything is confirmed."
+    }
   },
   "platformCompanyUsers": {
     "title": "Company Users",
@@ -12016,7 +12052,7 @@
     "usedByAll": "Needed by"
   },
   "platformCompanySummary": {
-    "configuration": "Configuration",
+    "configuration": "Identity & addresses",
     "identityTitle": "The company",
     "jobdomain": "Business",
     "subscription": "Subscription",
