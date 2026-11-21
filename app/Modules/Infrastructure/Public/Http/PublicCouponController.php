@@ -20,6 +20,7 @@ class PublicCouponController
             'code' => 'required|string|max:50',
             'plan_key' => 'required|string',
             'subtotal_cents' => 'sometimes|integer|min:0',
+            'billing_interval' => 'sometimes|nullable|in:monthly,yearly', // ADR-851 : cycle-restricted codes previewed correctly
         ]);
 
         // For public validation (no company yet), we create a temporary stub
@@ -28,6 +29,7 @@ class PublicCouponController
             $validated['code'],
             new \App\Core\Models\Company(), // empty stub for public validation
             $validated['plan_key'],
+            $validated['billing_interval'] ?? null,
             subtotalCents: $validated['subtotal_cents'] ?? 0,
         );
 

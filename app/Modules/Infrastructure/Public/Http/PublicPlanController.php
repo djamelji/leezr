@@ -2,7 +2,6 @@
 
 namespace App\Modules\Infrastructure\Public\Http;
 
-use App\Core\Billing\BillingCoupon;
 use App\Core\Billing\PaymentPolicy;
 use App\Core\Billing\PlatformBillingPolicy;
 use App\Core\Billing\PricingEngine;
@@ -122,12 +121,12 @@ class PublicPlanController extends Controller
             'addon_keys.*' => ['string'],
         ]);
 
+        // ADR-851 : the price shown before confirmation uses the SAME rule as the registration itself
+        // (CouponService::validate — active, period, limits, plan, billing cycle ; code case-insensitive)
         $coupon = null;
         if (! empty($data['coupon_code'])) {
-            $coupon = BillingCoupon::where('code', $data['coupon_code'])->first();
-            if ($coupon && ! $coupon->isUsable()) {
-                $coupon = null;
-            }
+            $check = app(\App\Modules\Core\Billing\Services\CouponService::class)->validate($data['coupon_code'], new \App\Core\Models\Company(), $data['plan_key'], $data['interval']);
+            $coupon = $check['valid'] ? $check['coupon'] : null;
         }
 
         $marketLocale = \App\Core\Markets\Market::where('key', $data['market_key'])->value('locale') ?? 'fr-FR';

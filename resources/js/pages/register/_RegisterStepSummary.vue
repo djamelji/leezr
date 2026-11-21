@@ -72,6 +72,7 @@ const applyCoupon = async () => {
       body: {
         code: couponCode.value.trim(),
         plan_key: props.selectedPlanData?.key || '',
+        'billing_interval': props.annualToggle ? 'yearly' : 'monthly', // ADR-851 : cycle-restricted codes
         subtotal_cents: props.totalMonthlyPrice,
       },
     })

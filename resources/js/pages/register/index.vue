@@ -430,8 +430,9 @@ const handleRegister = async () => {
       if (Object.keys(errors.value).some(key => key.startsWith('dynamic_fields.') || key === 'company_name'))
         currentStep.value = 3
 
-      // Show a friendly summary instead of Laravel's generic "(and N more errors)"
-      errorMessage.value = t('register.pleaseCorrectErrors')
+      // Show a friendly summary instead of Laravel's generic "(and N more errors)" — ADR-851 : a promo code refused by
+      // the server keeps the person on the summary with the server's reason
+      errorMessage.value = errors.value.coupon_code ? errors.value.coupon_code[0] : t('register.pleaseCorrectErrors')
     }
     else {
       errorMessage.value = error?.data?.message || t('auth.registrationFailed')

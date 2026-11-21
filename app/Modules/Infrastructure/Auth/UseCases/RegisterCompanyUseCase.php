@@ -55,7 +55,20 @@ class RegisterCompanyUseCase
 
         $hasTrial = ! $hasUsedTrial && ($plan?->trial_days ?? 0) > 0;
 
-        $result = DB::transaction(function () use ($data, $checkedFields, $planKey, $plan, $isFree, $hasTrial, $interval) {
+        // ADR-851 : a promotional code is checked BEFORE anything is created, by the SAME engine as the public preview
+        // and the company side (CouponService::validate : active, period, usage limits, plan, billing cycle, first
+        // purchase — a company being created has no usage and no subscription yet). An invalid code is refused
+        // explicitly (422, with its reason) : never silently dropped.
+        $preCoupon = null;
+        if ($data->couponCode) {
+            $check = app(CouponService::class)->validate($data->couponCode, new \App\Core\Models\Company(), $planKey, $interval);
+            if (! $check['valid']) {
+                throw ValidationException::withMessages(['coupon_code' => [__('coupon.'.$check['error'])]]);
+            }
+            $preCoupon = $check['coupon'];
+        }
+
+        $result = DB::transaction(function () use ($data, $checkedFields, $planKey, $plan, $isFree, $hasTrial, $interval, $preCoupon) {
             $user = User::create([
                 'first_name' => $data->firstName,
                 'last_name' => $data->lastName,
@@ -124,23 +137,20 @@ class RegisterCompanyUseCase
             }
             // Paid no-trial: subscription created by createCheckout() after transaction
 
-            // ADR-320: Validate and attach coupon to subscription
-            $validatedCoupon = null;
-            if ($data->couponCode) {
-                $couponService = app(CouponService::class);
-                $result = $couponService->validate($data->couponCode, $company, $planKey, $interval);
-
-                if ($result['valid']) {
-                    $validatedCoupon = $result['coupon'];
-                    $sub = Subscription::where('company_id', $company->id)->where('is_current', 1)->first();
-
-                    if ($sub) {
-                        $durationMonths = $validatedCoupon->duration_months;
-                        $sub->update([
-                            'coupon_id' => $validatedCoupon->id,
-                            'coupon_months_remaining' => $durationMonths === 0 ? null : ($durationMonths ?? 1),
-                        ]);
-                    }
+            // ADR-320 / ADR-851 : attach the PRE-VALIDATED coupon (re-checked under a row lock : the last remaining use of
+            // a limited code cannot be taken twice) — re-validating here failed « first purchase » codes, since the
+            // subscription had just been created.
+            if ($preCoupon) {
+                $locked = BillingCoupon::whereKey($preCoupon->id)->lockForUpdate()->first();
+                if (! $locked || ! $locked->isUsable()) {
+                    throw ValidationException::withMessages(['coupon_code' => [__('coupon.coupon_exhausted')]]);
+                }
+                $sub = Subscription::where('company_id', $company->id)->where('is_current', 1)->first();
+                if ($sub) {
+                    $sub->update([
+                        'coupon_id' => $locked->id,
+                        'coupon_months_remaining' => $locked->duration_months === 0 ? null : ($locked->duration_months ?? 1),
+                    ]);
                 }
             }
 
@@ -201,23 +211,16 @@ class RegisterCompanyUseCase
                 );
             }
 
-            // ADR-320: Attach coupon to paid no-trial subscription (created by createCheckout)
-            if (! $hasTrial && $data->couponCode) {
-                $couponService = app(CouponService::class);
-                $couponResult = $couponService->validate($data->couponCode, $result->company, $planKey, $interval);
-
-                if ($couponResult['valid']) {
-                    $sub = Subscription::where('company_id', $result->company->id)
-                        ->where('is_current', 1)
-                        ->first();
-
-                    if ($sub) {
-                        $durationMonths = $couponResult['coupon']->duration_months;
-                        $sub->update([
-                            'coupon_id' => $couponResult['coupon']->id,
-                            'coupon_months_remaining' => $durationMonths === 0 ? null : ($durationMonths ?? 1),
-                        ]);
-                    }
+            // ADR-320 / ADR-851 : createCheckout may create a NEW current subscription (paid plan without trial, or a trial
+            // that requires a payment method) : the pre-validated coupon is attached to the CURRENT subscription — before,
+            // it stayed on the superseded one and was lost. Never re-validated against the company just created.
+            if ($preCoupon) {
+                $sub = Subscription::where('company_id', $result->company->id)->where('is_current', 1)->first();
+                if ($sub && ! $sub->coupon_id) {
+                    $sub->update([
+                        'coupon_id' => $preCoupon->id,
+                        'coupon_months_remaining' => $preCoupon->duration_months === 0 ? null : ($preCoupon->duration_months ?? 1),
+                    ]);
                 }
             }
         }
