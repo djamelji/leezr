@@ -19,7 +19,6 @@ use App\Core\Fields\FieldDefinition;
 use App\Core\Fields\FieldResolverService;
 use App\Core\Models\Company;
 use App\Core\Modules\ModuleCatalogReadModel;
-use App\Core\Plans\Plan;
 use App\Core\Plans\PlanRegistry;
 use App\Core\Support\SupportTicket;
 use Illuminate\Http\JsonResponse;
@@ -32,7 +31,6 @@ class CompanyController
         $query = Company::withCount('memberships')
             ->addSelect([
                 'companies.*',
-                'mrr_cents' => Plan::selectRaw('price_monthly')->whereColumn('plans.key', 'companies.plan_key')->where('is_active', true)->limit(1),
                 'last_activity_at' => CompanyAuditLog::selectRaw('MAX(created_at)')->whereColumn('company_audit_logs.company_id', 'companies.id'),
                 'open_tickets_count' => SupportTicket::selectRaw('COUNT(*)')->whereColumn('support_tickets.company_id', 'companies.id')->where('status', 'open'),
                 'overdue_invoices_count' => Invoice::selectRaw('COUNT(*)')->whereColumn('invoices.company_id', 'companies.id')->where('status', 'overdue'),
@@ -72,13 +70,19 @@ class CompanyController
 
         $companies = $query->paginate(20);
         $calculator = new CompanyHealthScoreCalculator;
-        $items = collect($companies->items())->map(function ($company) use ($calculator) {
+        // ADR-841 : the companies list uses THE Billing MRR definition (was : public monthly price of the plan of every
+        // active company — trials, companies without subscription and yearly plans included, add-ons and contracts ignored).
+        // Financial figures only for operators allowed to read Billing (same right as /billing/metrics) — ADR-841.
+        $finance = (bool) $request->user('platform')?->hasPermission('view_billing');
+        $portfolio = $finance ? app(\App\Core\Billing\BillingMetricsCalculationService::class)->recurringPortfolio() : null;
+        $items = collect($companies->items())->map(function ($company) use ($calculator, $portfolio) {
             $score = $calculator->calculate($company);
 
             $company->health_score = $score;
             $company->health_label = CompanyHealthScoreCalculator::label($score);
             $company->health_color = CompanyHealthScoreCalculator::color($score);
-            $company->mrr = ($company->mrr_cents ?? 0) / 100;
+            $company->mrr = $portfolio ? ($portfolio['companies'][$company->id]['monthly'] ?? 0) / 100 : null;
+            $company->mrr_currency = $portfolio['companies'][$company->id]['currency'] ?? null;
 
             return $company;
         });
@@ -89,12 +93,11 @@ class CompanyController
 
         $totalActive = Company::where('status', 'active')->count();
         $totalSuspended = Company::where('status', 'suspended')->count();
-        $totalMrrCents = Plan::join('companies', 'plans.key', '=', 'companies.plan_key')->where('plans.is_active', true)->where('companies.status', 'active')->sum('plans.price_monthly');
         $atRiskCount = Company::whereRaw('(SELECT COUNT(*) FROM invoices WHERE invoices.company_id = companies.id AND invoices.status = ?) > 0', ['overdue'])->count();
 
         return response()->json([
             'data' => $items, 'current_page' => $companies->currentPage(), 'last_page' => $companies->lastPage(), 'total' => $companies->total(),
-            'stats' => ['total_active' => $totalActive, 'total_suspended' => $totalSuspended, 'total' => $totalActive + $totalSuspended, 'total_mrr' => $totalMrrCents / 100, 'at_risk_count' => $atRiskCount],
+            'stats' => ['total_active' => $totalActive, 'total_suspended' => $totalSuspended, 'total' => $totalActive + $totalSuspended, 'total_mrr' => $portfolio ? $portfolio['mrr'] / 100 : null, 'mrr_currency' => $portfolio['currency'] ?? null, 'mrr_multi_currency' => $portfolio['multi_currency'] ?? false, 'mrr_computed_at' => $portfolio['computed_at'] ?? null, 'trialing' => $portfolio['trialing_subscriptions'] ?? null, 'at_risk_count' => $atRiskCount],
         ]);
     }
 

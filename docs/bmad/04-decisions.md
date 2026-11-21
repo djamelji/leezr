@@ -29636,3 +29636,19 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 3. **UXC-07** : Réglages Workforce sans `workforce.manage` = page de lecture (bandeau, champs verrouillés via `VForm readonly` et le mode lecture existant des tables de règles, aucune commande d'écriture ; Contrats / Signature : commandes masquées sans leur droit). Aucune permission de rôle modifiée.
 
 **Tests.** `Adr840PendingAccessAndReadOnlySettingsTest` (5) ; `Adr825DriverRoleRemediationTest` (existant : simulation, application, personnalisation, restauration, droits de livraison jamais retirés) ; recette navigateur avant 2/2, après 4/4.
+
+## ADR-841 — Leezr 4.2 M4 : une seule définition du revenu récurrent, indicateurs financiers explicites
+
+**Date** : 2026-11-21 — **Statut** : livré local (commit non poussé) — **Origine** : UXP-08 / FUN-08 (174 € / 261 €). Rapport : `docs/bmad/leezr-4-2-audit/m4/README.md`.
+
+**Contexte.** Trois calculs de MRR coexistaient : la liste des sociétés additionnait le prix **public** du plan de chaque société active (essais et sociétés sans abonnement compris, prix contractés et options ignorés) = 261 € ; la Facturation et le tableau de bord additionnaient le prix contracté des abonnements facturés, **sans** les options, tout en ajoutant à l'ARR les options de toutes les sociétés (ARR ≠ 12 × MRR) = 174 € ; le widget « MRR » recevait toujours `null`. Par ailleurs, quatre widgets multipliaient par 100 des montants déjà en centimes (facturé du mois, ratio de remboursement, listes de paiements / factures / avoirs).
+
+**Décision.**
+1. **MRR** = `BillingMetricsCalculationService::recurringPortfolio()` (service Billing existant, pas de second moteur) : abonnements courants `active` / `past_due` ; prix contracté (ADR-587) + options actives − remise récurrente du coupon (règle `CouponService`, identique à `PricingEngine` / `billing:renew`) ; annuel ÷ 12 ; HT ; par devise ; sans écriture (pas d'`ensureWallet`). Exclus : essais, sans abonnement, résiliés, changements programmés non effectifs, proratas, taxes, portefeuille. **ARR = 12 × MRR.** Utilisé par la Facturation, la série du tableau de bord, le jeu de données des KPI (widget MRR), la liste et le total des sociétés.
+2. **Facturé / encaissé / reste dû / remboursé** restent issus du grand livre (`REVENUE` HT, `CASH`, `AR` TTC, `REFUND`), jamais égalisés au MRR ; affichage en centimes par une règle unique (`utils/ledgerAmount.js`).
+3. **Libellés** : « Revenu récurrent mensuel (MRR, HT) », « Facturé ce mois (HT) » (plus « chiffre d'affaires » pour autre chose que du facturé), « Encaissements (TTC) », « Reste à encaisser (TTC) » ; aide « i » (`AppMetricHelp`, VTooltip) sur chaque indicateur ; `computed_at` dans les jeux mis en cache.
+4. **RBAC** : montants financiers de la liste des sociétés seulement avec `view_billing` (API comprise) ; catalogue des plans chargé seulement avec `manage_plans`.
+
+**Tests.** `Adr841FinancialIndicatorsTest` (6, montants attendus calculés à la main : mensuel, annuel, essai, coupon + option, en retard, résilié, sans abonnement, changement programmé non compté, changement immédiat compté une fois sans prorata, facturé / encaissé / reste dû / remboursé, RBAC API, isolation Company) ; `tests/js/ledger-amount.test.mjs` (4) ; recette navigateur 3/3 avec attendus SQL indépendants.
+
+**Conséquences.** Le MRR affiché change de valeur sur la Facturation et le tableau de bord (options incluses, options hors facturation exclues) et sur la liste (prix contractés). Historique MRR toujours reconstruit (ADR-747) ; règle `REVENUE` proratisée en cas de crédit portefeuille signalée, non modifiée.

@@ -1295,14 +1295,14 @@
       "period7d": "7 derniers jours",
       "period30d": "30 derniers jours",
       "period90d": "90 derniers jours",
-      "revenueTrend": "Tendance du chiffre d'affaires",
-      "revenueTrendDesc": "Graphique de tendance quotidienne du CA",
+      "revenueTrend": "Facturé par jour (HT)",
+      "revenueTrendDesc": "Montant HT des factures émises chaque jour (pas les encaissements).",
       "refundRatio": "Taux de remboursement",
-      "refundRatioDesc": "Ratio remboursements / chiffre d'affaires",
-      "arOutstanding": "Créances clients",
-      "arOutstandingDesc": "Solde net impayé sur l'ensemble des factures.",
+      "refundRatioDesc": "Remboursements rapportés au montant facturé HT de la période.",
+      "arOutstanding": "Reste à encaisser (TTC)",
+      "arOutstandingDesc": "Factures émises non encore payées, toutes périodes confondues.",
       "noData": "Aucune donnée disponible",
-      "revenue": "Chiffre d'affaires",
+      "revenue": "Facturé (HT)",
       "refunds": "Remboursements",
       "lastPayments": "Derniers paiements",
       "lastPaymentsDesc": "Paiements les plus récents reçus",
@@ -1310,31 +1310,31 @@
       "lastInvoicesDesc": "Factures les plus récentes émises",
       "lastRefunds": "Derniers remboursements",
       "lastRefundsDesc": "Avoirs les plus récents émis",
-      "revenueMtd": "Chiffre d'affaires du mois",
-      "revenueMtdDesc": "Chiffre d'affaires du mois en cours",
-      "mrr": "Revenu mensuel récurrent (MRR)",
-      "mrrDesc": "Revenu mensuel récurrent",
+      "revenueMtd": "Facturé ce mois (HT)",
+      "revenueMtdDesc": "Factures émises depuis le 1er du mois, HT — ce n'est pas l'encaissé.",
+      "mrr": "Revenu récurrent mensuel (MRR, HT)",
+      "mrrDesc": "Abonnements facturés : plan + options − remises récurrentes, par mois.",
       "failedPayments7d": "Paiements échoués (7 derniers jours)",
       "failedPayments7dDesc": "Paiements échoués sur les 7 derniers jours",
       "pendingDunning": "Relances en attente",
       "pendingDunningDesc": "Factures en retard en attente de recouvrement",
       "topFailureReasons": "Causes d'échec principales",
       "topFailureReasonsDesc": "Raisons d'échec de paiement les plus fréquentes",
-      "cashflowTrend": "Tendance de trésorerie",
-      "cashflowTrendDesc": "Tendance quotidienne de trésorerie des paiements reçus"
+      "cashflowTrend": "Encaissements par jour (TTC)",
+      "cashflowTrendDesc": "Paiements reçus chaque jour."
     },
     "metrics": {
       "title": "Indicateurs financiers",
-      "activeSubscriptions": "Abonnements actifs",
+      "activeSubscriptions": "Abonnements facturés",
       "trialing": "En essai",
-      "addonRevenue": "Revenus addons",
-      "addonRevenueHT": "Revenus addons (HT)",
+      "addonRevenue": "dont options",
+      "addonRevenueHT": "dont options (HT / mois)",
       "blockedRenewals": "Renouvellements bloqués",
       "churn": "Taux de churn",
       "trialConversion": "Conversion essai",
       "noData": "Aucune donnée disponible",
-      "mrrHT": "MRR (HT)",
-      "arrHT": "ARR (HT)"
+      "mrrHT": "Revenu récurrent mensuel (MRR, HT)",
+      "arrHT": "Revenu récurrent annuel (ARR, HT)"
     },
     "searchInvoices": "Rechercher par n° facture ou entreprise...",
     "dateFrom": "Date début",
@@ -2323,7 +2323,7 @@
     "allPlans": "Tous les abonnements",
     "suspended": "Suspendue",
     "health": "Santé",
-    "mrr": "MRR",
+    "mrr": "Récurrent / mois (HT)",
     "lastActivity": "Dernière activité",
     "openTickets": "Tickets ouverts",
     "filterByHealth": "Filtrer par santé",
@@ -2338,9 +2338,10 @@
       "total": "Entreprises totales",
       "active": "Actives",
       "suspended": "Suspendues",
-      "mrr": "MRR total",
+      "mrr": "Revenu récurrent mensuel (MRR, HT)",
       "atRisk": "À risque"
-    }
+    },
+    "mrrTrial": "Essai"
   },
   "companyPlan": {
     "pendingApproval": "En attente d'approbation",
@@ -12403,5 +12404,17 @@
       "title": "Fonctionnalité non disponible",
       "message": "Cette fonctionnalité n'est pas proposée pour votre entreprise."
     }
+  },
+  "metricHelp": {
+    "aria": "Ce que compte « {name} »",
+    "ariaGeneric": "Ce que compte cet indicateur",
+    "mrr": "Revenu récurrent mensuel, HT : pour chaque abonnement facturé (actif ou en retard de paiement), prix contracté du plan + options actives − remises récurrentes ; un abonnement annuel compte pour 1/12. Exclus : essais, entreprises sans abonnement, résiliations, changements de plan programmés non encore effectifs, proratas ponctuels, taxes. Ce n'est ni le facturé ni l'encaissé.",
+    "arr": "MRR × 12 : projection annuelle du revenu récurrent, HT.",
+    "activeSubscriptions": "Abonnements facturés en cours (actifs + {pastDue} en retard de paiement). Les essais sont comptés à part.",
+    "trialing": "Abonnements en période d'essai : aucun revenu tant que l'essai n'est pas converti.",
+    "addons": "Part du MRR provenant des options (add-ons) des abonnements facturés, HT par mois.",
+    "invoiced": "Total HT des factures émises sur la période (grand livre). Une facture impayée y figure ; ce n'est pas l'encaissé.",
+    "collected": "Paiements effectivement reçus (TTC).",
+    "outstanding": "Factures émises non encore payées, toutes périodes confondues (TTC)."
   }
 }

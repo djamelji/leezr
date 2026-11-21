@@ -40,13 +40,16 @@ class PlatformCommercialSeriesService
 
         // Abonnements actifs chargés UNE fois (recalcul in-memory par bucket).
         $plans = Plan::all()->keyBy('key');
-        $subs = Subscription::where('is_current', 1)
-            ->whereIn('status', ['active', 'past_due'])
-            ->get(['plan_key', 'interval', 'plan_price_cents', 'created_at'])
-            ->map(fn ($s) => (object) [
-                'created_at' => $s->created_at,
-                'amount' => $this->metrics->subscriptionMonthlyAmount($s, $plans),
-            ]);
+        // ADR-841 : the SAME per-subscription definition as the Billing MRR (plan + add-ons − recurring coupon)
+        $raw = Subscription::where('is_current', 1)
+            ->whereIn('status', BillingMetricsCalculationService::RECURRING_STATUSES)
+            ->with(['company.market', 'coupon'])
+            ->get();
+        $addons = \App\Core\Billing\CompanyAddonSubscription::active()->whereIn('company_id', $raw->pluck('company_id')->unique())->get()->groupBy('company_id');
+        $subs = $raw->map(fn ($s) => (object) [
+            'created_at' => $s->created_at,
+            'amount' => $this->metrics->recurringForSubscription($s, $plans, $addons->get($s->company_id, collect()))['monthly'],
+        ]);
         $firstSubAt = $subs->min('created_at');
 
         $cur = $this->buckets($period, $anchorDate);
@@ -74,6 +77,7 @@ class PlatformCommercialSeriesService
         $kpis = [
             'mrr' => $mrrNow,
             'arr' => $mrrNow * 12,
+            'computed_at' => $now->toIso8601String(),
             'active_subscriptions' => $subs->count(),
             'trialing_subscriptions' => $trials,
         ];

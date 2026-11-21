@@ -1,4 +1,5 @@
 <script setup>
+import AppMetricHelp from '@/components/app/AppMetricHelp.vue'
 import ApexChartRevenueTrend from '../../../../ui/presets/charts/apex-chart/ApexChartRevenueTrend.vue'
 import { usePlatformPaymentsStore } from '@/modules/platform-admin/billing/billing.store'
 import { formatMoney } from '@/utils/money'
@@ -71,11 +72,12 @@ const kpiCards = computed(() => {
   const currency = m.currency || 'EUR'
 
   return [
-    { title: t('platformBilling.metrics.mrrHT'), value: formatMoney(m.mrr, { currency }), icon: 'tabler-trending-up', color: 'primary' },
-    { title: t('platformBilling.metrics.arrHT'), value: formatMoney(m.arr, { currency }), icon: 'tabler-chart-bar', color: 'success' },
-    { title: t('platformBilling.metrics.activeSubscriptions'), value: m.active_subscriptions, icon: 'tabler-receipt', color: 'info' },
-    { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning' },
-    { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency }), icon: 'tabler-puzzle', color: 'secondary' },
+    // ADR-841 — one MRR definition (plan + add-ons − recurring coupons, billed subscriptions, HT) ; ARR = MRR × 12
+    { title: t('platformBilling.metrics.mrrHT'), value: formatMoney(m.mrr, { currency }), icon: 'tabler-trending-up', color: 'primary', help: t('metricHelp.mrr'), testid: 'kpi-mrr' },
+    { title: t('platformBilling.metrics.arrHT'), value: formatMoney(m.arr, { currency }), icon: 'tabler-chart-bar', color: 'success', help: t('metricHelp.arr'), testid: 'kpi-arr' },
+    { title: t('platformBilling.metrics.activeSubscriptions'), value: m.active_subscriptions /* active + past_due already */, icon: 'tabler-receipt', color: 'info', help: t('metricHelp.activeSubscriptions', { pastDue: m.past_due_subscriptions ?? 0 }), testid: 'kpi-active' },
+    { title: t('platformBilling.metrics.trialing'), value: m.trialing_subscriptions, icon: 'tabler-clock', color: 'warning', help: t('metricHelp.trialing'), testid: 'kpi-trialing' },
+    { title: t('platformBilling.metrics.addonRevenueHT'), value: formatMoney(m.addon_mrr, { currency }), icon: 'tabler-puzzle', color: 'secondary', help: t('metricHelp.addons'), testid: 'kpi-addons' },
     { title: t('platformBilling.metrics.blockedRenewals'), value: m.blocked_renewals ?? 0, icon: 'tabler-lock-exclamation', color: (m.blocked_renewals ?? 0) > 0 ? 'warning' : 'success' },
     { title: t('platformBilling.metrics.churn'), value: `${(m.churn_rate * 100).toFixed(1)}%`, icon: 'tabler-arrow-down-right', color: m.churn_rate > 0.05 ? 'error' : 'success' },
     { title: t('platformBilling.metrics.trialConversion'), value: m.trial_conversion_rate != null ? `${(m.trial_conversion_rate * 100).toFixed(1)}%` : '—', icon: 'tabler-user-check', color: 'primary' },
@@ -452,7 +454,15 @@ const refreshLabel = computed(() => {
                   <h4 class="text-h5 font-weight-bold">
                     {{ card.value }}
                   </h4>
-                  <span class="text-body-2 text-disabled">{{ card.title }}</span>
+                  <span
+                    class="text-body-2 text-disabled"
+                    :data-testid="card.testid"
+                  >{{ card.title }}</span>
+                  <AppMetricHelp
+                    v-if="card.help"
+                    :text="card.help"
+                    :label="card.title"
+                  />
                 </div>
               </VCard>
             </VCol>

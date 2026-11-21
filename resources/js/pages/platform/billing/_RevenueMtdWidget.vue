@@ -1,5 +1,6 @@
 <script setup>
 import { formatMoney } from '@/utils/money'
+import { ledgerAmountDisplay } from '@/utils/ledgerAmount'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -20,9 +21,10 @@ const iconSize = computed(() => density.value === 'S' ? 16 : density.value === '
 const formattedAmount = computed(() => {
   if (!props.data) return '—'
   const cur = props.data.currency
-  if (!cur || cur === 'MULTI') return (props.data.revenue || 0).toFixed(2)
 
-  return formatMoney(Math.round((props.data.revenue || 0) * 100), { currency: cur })
+  // ADR-841 (M4) — the ledger datasets are integer CENTS (same fix as ADR-582 on the AR / trend widgets) : no × 100
+
+  return ledgerAmountDisplay(props.data.revenue || 0, cur, formatMoney)
 })
 
 const kpiFontStyle = computed(() => {

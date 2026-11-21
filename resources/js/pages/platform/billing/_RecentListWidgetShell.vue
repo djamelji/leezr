@@ -1,5 +1,6 @@
 <script setup>
 import { formatMoney } from '@/utils/money'
+import { ledgerAmountDisplay } from '@/utils/ledgerAmount'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -36,10 +37,9 @@ function formatDate(iso) {
 }
 
 function formatAmount(amount, currency) {
-  if (amount == null) return '—'
-  if (!currency || currency === 'MULTI') return amount.toFixed(2)
+  // ADR-841 (M4) — the ledger datasets are integer CENTS (same fix as ADR-582 on the AR / trend widgets) : no × 100
 
-  return formatMoney(Math.round(amount * 100), { currency })
+  return ledgerAmountDisplay(amount, currency, formatMoney)
 }
 </script>
 

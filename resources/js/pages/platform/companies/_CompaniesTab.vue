@@ -1,4 +1,6 @@
 <script setup>
+import AppMetricHelp from '@/components/app/AppMetricHelp.vue'
+
 /**
  * Companies Tab — ADR-440: Company Intelligence (health score + MRR + segments)
  * ADR-446: Moved from supervision/ to companies/
@@ -18,6 +20,8 @@ const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
 const platformAuth = usePlatformAuthStore()
 const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
+// ADR-841 — financial figures (MRR) only with view_billing : the API omits them otherwise
+const canSeeFinance = computed(() => platformAuth.hasPermission('view_billing'))
 const isLoading = ref(true)
 const actionLoading = ref(null)
 
@@ -104,7 +108,9 @@ onMounted(async () => {
   try {
     await Promise.all([
       companiesStore.fetchCompanies(1),
-      companiesStore.fetchPlans(),
+
+      // ADR-841 — the plan catalogue (GET /plans) needs manage_plans : no avoidable 403, names fall back to the key
+      platformAuth.hasPermission('manage_plans') ? companiesStore.fetchPlans().catch(() => null) : null,
     ])
   }
   finally {
@@ -117,7 +123,7 @@ const headers = computed(() => [
   { title: t('common.name'), key: 'name' },
   { title: t('common.slug'), key: 'slug' },
   { title: t('companies.health'), key: 'health_score', align: 'center', width: '130px' },
-  { title: t('companies.mrr'), key: 'mrr', align: 'end', width: '110px' },
+  ...(canSeeFinance.value ? [{ title: t('companies.mrr'), key: 'mrr', align: 'end', width: '130px', sortable: false }] : []),
   { title: t('common.status'), key: 'status', align: 'center', width: '120px' },
   { title: t('Plan'), key: 'plan_key', align: 'center', width: '160px', sortable: false },
   { title: t('companies.members'), key: 'memberships_count', align: 'center', width: '90px' },
@@ -202,7 +208,7 @@ const reactivate = async company => {
 }
 
 // plan name for the read-only column (the catalogue may be unavailable without manage_plans : fall back to the key)
-const planName = key => companiesStore.plans.find(p => p.key === key)?.name || key || '\u2014'
+const planName = key => companiesStore.plans.find(p => p.key === key)?.name || (key ? key.charAt(0).toUpperCase() + key.slice(1) : '\u2014')
 
 const fmtDate = dateStr => {
   if (!dateStr)
@@ -233,10 +239,14 @@ const kpiCards = computed(() => [
     icon: 'tabler-ban',
   },
   {
+    // ADR-841 — the SAME MRR as the dashboard and Billing (was : public price of every active company's plan)
     title: t('companies.stats.mrr'),
-    value: formatMoney(companiesStore.stats.total_mrr * 100),
+    value: formatMoney(Math.round(companiesStore.stats.total_mrr * 100), { currency: companiesStore.stats.mrr_currency || 'EUR' }),
     color: 'info',
-    icon: 'tabler-currency-dollar',
+    icon: 'tabler-repeat',
+    help: t('metricHelp.mrr'),
+    testid: 'companies-total-mrr',
+    finance: true,
   },
   {
     title: t('companies.stats.atRisk'),
@@ -244,7 +254,7 @@ const kpiCards = computed(() => [
     color: 'warning',
     icon: 'tabler-alert-triangle',
   },
-])
+].filter(card => !card.finance || canSeeFinance.value))
 
 const segmentChips = computed(() => [
   {
@@ -302,7 +312,15 @@ const segmentChips = computed(() => [
               <h4 class="text-h5 font-weight-bold">
                 {{ card.value }}
               </h4>
-              <span class="text-body-2 text-disabled">{{ card.title }}</span>
+              <span
+                class="text-body-2 text-disabled"
+                :data-testid="card.testid"
+              >{{ card.title }}</span>
+              <AppMetricHelp
+                v-if="card.help"
+                :text="card.help"
+                :label="card.title"
+              />
             </VCard>
           </VCol>
         </VRow>
@@ -468,8 +486,12 @@ const segmentChips = computed(() => [
 
         <!-- MRR column (formatted currency) -->
         <template #item.mrr="{ item }">
-          <span class="font-weight-medium">
-            {{ item.mrr > 0 ? formatMoney(item.mrr * 100) : '\u2014' }}
+          <!-- ADR-841 : recurring amount of a BILLED subscription ; a trial shows « Essai », never an amount -->
+          <span
+            class="font-weight-medium"
+            :data-testid="`company-mrr-${item.id}`"
+          >
+            {{ item.mrr > 0 ? formatMoney(Math.round(item.mrr * 100), { currency: item.mrr_currency || 'EUR' }) : (item.current_sub_status === 'trialing' ? t('companies.mrrTrial') : '\u2014') }}
           </span>
         </template>
 

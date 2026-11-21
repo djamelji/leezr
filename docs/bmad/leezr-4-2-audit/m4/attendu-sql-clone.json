@@ -1,0 +1,19 @@
+{
+    "database": "leezr_audit842",
+    "mrr_cents": 36283,
+    "arr_cents": 435396,
+    "addons_cents": 12300,
+    "revenue_month_cents": 130326,
+    "trialing": 2,
+    "per_company": {
+        "1": 2900,
+        "6": 8600,
+        "7": 2900,
+        "8": 2900,
+        "9": 2900,
+        "11": 2900,
+        "58": 900,
+        "101": 5700,
+        "106": 6583
+    }
+}

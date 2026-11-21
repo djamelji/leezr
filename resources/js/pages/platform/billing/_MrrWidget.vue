@@ -1,4 +1,7 @@
 <script setup>
+import { formatMoney } from '@/utils/money'
+import { ledgerAmountDisplay } from '@/utils/ledgerAmount'
+
 const props = defineProps({
   data: { type: Object, default: null },
   loading: { type: Boolean, default: false },
@@ -14,6 +17,9 @@ const avatarSize = computed(() => density.value === 'S' ? 28 : density.value ===
 const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
 
 const notSupported = computed(() => props.data?.meta?.not_supported === true)
+
+// ADR-841 — the dataset now carries the shared MRR (integer cents, HT, like the other ledger KPIs) : shown as money
+const amount = computed(() => ledgerAmountDisplay(Number(props.data?.data) || 0, props.data?.currency || 'EUR', formatMoney))
 </script>
 
 <template>
@@ -53,7 +59,7 @@ const notSupported = computed(() => props.data?.meta?.not_supported === true)
       </div>
       <template v-else>
         <div class="widget-kpi font-weight-bold text-primary">
-          {{ data.data }}
+          {{ amount }}
         </div>
         <div class="widget-subtext text-medium-emphasis">
           {{ t('platformBilling.widgets.mrrDesc') }}

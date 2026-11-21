@@ -359,12 +359,18 @@ class PlatformBillingWidgetsReadService
 
         $outstanding = (float) $arResult->total_debit - (float) $arResult->total_credit;
 
+        // ADR-841 : the MRR KPI is the shared Billing definition (was always null : the « MRR » widget showed nothing)
+        $portfolio = app(\App\Core\Billing\BillingMetricsCalculationService::class)->recurringPortfolio();
+        $mrrCents = $scope === 'company' && $companyId ? ($portfolio['companies'][$companyId]['monthly'] ?? 0) : $portfolio['mrr'];
+
         return [
-            'revenue' => $revenue,
-            'refunds' => $refunds,
-            'outstanding' => $outstanding,
+            // all amounts : integer CENTS (ledger)
+            'revenue' => $revenue,      // invoiced HT (ledger REVENUE at issue) over the period
+            'refunds' => $refunds,      // refunded (ledger REFUND) over the period
+            'outstanding' => $outstanding, // still due (ledger AR), all periods
             'currency' => $currency,
-            'mrr' => null,
+            'mrr' => $mrrCents, // integer cents, like every amount of this dataset
+            'computed_at' => now()->toIso8601String(),
         ];
     }
 

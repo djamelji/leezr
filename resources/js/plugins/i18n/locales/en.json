@@ -1296,14 +1296,14 @@
       "period7d": "Last 7 days",
       "period30d": "Last 30 days",
       "period90d": "Last 90 days",
-      "revenueTrend": "Revenue Trend",
-      "revenueTrendDesc": "Daily revenue trend chart",
+      "revenueTrend": "Invoiced per day (excl. tax)",
+      "revenueTrendDesc": "Excl.-tax amount of the invoices issued each day (not collections).",
       "refundRatio": "Refund Ratio",
-      "refundRatioDesc": "Refund to revenue ratio",
-      "arOutstanding": "Accounts Receivable",
-      "arOutstandingDesc": "Net outstanding balance across all invoices.",
+      "refundRatioDesc": "Refunds relative to the excl.-tax invoiced amount of the period.",
+      "arOutstanding": "Still to collect (incl. tax)",
+      "arOutstandingDesc": "Issued invoices not yet paid, all periods.",
       "noData": "No data available",
-      "revenue": "Revenue",
+      "revenue": "Invoiced (excl. tax)",
       "refunds": "Refunds",
       "lastPayments": "Last Payments",
       "lastPaymentsDesc": "Most recent payments received",
@@ -1311,31 +1311,31 @@
       "lastInvoicesDesc": "Most recent invoices issued",
       "lastRefunds": "Last Refunds",
       "lastRefundsDesc": "Most recent credit notes issued",
-      "revenueMtd": "Revenue this month",
-      "revenueMtdDesc": "Month-to-date revenue",
-      "mrr": "MRR",
-      "mrrDesc": "Monthly recurring revenue",
+      "revenueMtd": "Invoiced this month (excl. tax)",
+      "revenueMtdDesc": "Invoices issued since the 1st of the month, excl. tax — not collected revenue.",
+      "mrr": "Monthly recurring revenue (MRR, excl. tax)",
+      "mrrDesc": "Billed subscriptions: plan + add-ons − recurring discounts, per month.",
       "failedPayments7d": "Failed Payments (7d)",
       "failedPayments7dDesc": "Failed payments in the last 7 days",
       "pendingDunning": "Pending Dunning",
       "pendingDunningDesc": "Overdue invoices pending collection",
       "topFailureReasons": "Top Failure Reasons",
       "topFailureReasonsDesc": "Most common payment failure reasons",
-      "cashflowTrend": "Cashflow Trend",
-      "cashflowTrendDesc": "Daily cashflow trend from received payments"
+      "cashflowTrend": "Collections per day (incl. tax)",
+      "cashflowTrendDesc": "Payments received each day."
     },
     "metrics": {
       "title": "Financial Metrics",
-      "activeSubscriptions": "Active Subscriptions",
+      "activeSubscriptions": "Billed subscriptions",
       "trialing": "Trialing",
-      "addonRevenue": "Addon Revenue",
-      "addonRevenueHT": "Addon Revenue (excl. tax)",
+      "addonRevenue": "of which add-ons",
+      "addonRevenueHT": "of which add-ons (excl. tax / month)",
       "blockedRenewals": "Blocked renewals",
       "churn": "Churn Rate",
       "trialConversion": "Trial Conversion",
       "noData": "No data available",
-      "mrrHT": "MRR (excl. tax)",
-      "arrHT": "ARR (excl. tax)"
+      "mrrHT": "Monthly recurring revenue (MRR, excl. tax)",
+      "arrHT": "Annual recurring revenue (ARR, excl. tax)"
     },
     "searchInvoices": "Search by invoice # or company...",
     "dateFrom": "From date",
@@ -2323,7 +2323,7 @@
     "allPlans": "All plans",
     "suspended": "Suspended",
     "health": "Health",
-    "mrr": "MRR",
+    "mrr": "Recurring / month (excl. tax)",
     "lastActivity": "Last Activity",
     "openTickets": "Open Tickets",
     "filterByHealth": "Filter by health",
@@ -2338,9 +2338,10 @@
       "total": "Total Companies",
       "active": "Active",
       "suspended": "Suspended",
-      "mrr": "Total MRR",
+      "mrr": "Monthly recurring revenue (MRR, excl. tax)",
       "atRisk": "At Risk"
-    }
+    },
+    "mrrTrial": "Trial"
   },
   "companyPlan": {
     "pendingApproval": "Pending Approval",
@@ -12386,5 +12387,17 @@
       "title": "Feature not available",
       "message": "This feature is not offered for your company."
     }
+  },
+  "metricHelp": {
+    "aria": "What « {name} » counts",
+    "ariaGeneric": "What this indicator counts",
+    "mrr": "Monthly recurring revenue, excl. tax: for each billed subscription (active or past due), contracted plan price + active add-ons − recurring discounts; a yearly subscription counts for 1/12. Excluded: trials, companies without a subscription, cancellations, scheduled plan changes not yet effective, one-off prorations, taxes. It is neither invoiced nor collected revenue.",
+    "arr": "MRR × 12: annual projection of recurring revenue, excl. tax.",
+    "activeSubscriptions": "Billed subscriptions in progress (active + {pastDue} past due). Trials are counted apart.",
+    "trialing": "Subscriptions in trial: no revenue until the trial converts.",
+    "addons": "Part of the MRR coming from add-ons of billed subscriptions, excl. tax per month.",
+    "invoiced": "Total excl. tax of the invoices issued over the period (ledger). An unpaid invoice is included; this is not collected revenue.",
+    "collected": "Payments actually received (incl. tax).",
+    "outstanding": "Issued invoices not yet paid, all periods (incl. tax)."
   }
 }

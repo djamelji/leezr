@@ -1,5 +1,6 @@
 <script setup>
 import { formatMoney } from '@/utils/money'
+import { ledgerAmountDisplay } from '@/utils/ledgerAmount'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -25,16 +26,16 @@ const ratioColor = computed(() => {
 
 const formattedRevenue = computed(() => {
   if (!props.data) return '—'
-  if (props.data.currency === 'MULTI') return props.data.revenue.toFixed(2)
 
-  return formatMoney(Math.round(props.data.revenue * 100), { currency: props.data.currency || 'EUR' })
+  // ADR-841 (M4) — the ledger datasets are integer CENTS (same fix as ADR-582 on the AR / trend widgets) : no × 100
+
+  return ledgerAmountDisplay(props.data.revenue, props.data.currency || 'EUR', formatMoney)
 })
 
 const formattedRefunds = computed(() => {
   if (!props.data) return '—'
-  if (props.data.currency === 'MULTI') return props.data.refunds.toFixed(2)
 
-  return formatMoney(Math.round(props.data.refunds * 100), { currency: props.data.currency || 'EUR' })
+  return ledgerAmountDisplay(props.data.refunds, props.data.currency || 'EUR', formatMoney)
 })
 </script>
 

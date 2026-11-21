@@ -1,0 +1,17 @@
+DB leezr
+   1 Leezr Logistics              active    pro       sub=active    monthly contracted=2900   | list= 2900 billing= 2900 
+   2 Trial Logistics              active    pro       sub=trialing  monthly contracted=2900   | list= 2900 billing=    0 <
+   4 NW                           active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+   5 Beta Services                active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+   6 [RECETTE] Overdue Provisiona active    starter   sub=active    monthly contracted=2900   | list=    0 billing= 2900 <
+   7 [RECETTE] Healthy Paid       active    starter   sub=active    monthly contracted=2900   | list=    0 billing= 2900 <
+   8 [RECETTE] Overdue Failed     active    starter   sub=past_due  monthly contracted=2900   | list=    0 billing= 2900 <
+   9 [RECETTE] Financial Artifact active    starter   sub=active    monthly contracted=2900   | list=    0 billing= 2900 <
+  11 [RECETTE] Leezr Logistics (a active    starter   sub=active    monthly contracted=2900   | list=    0 billing= 2900 <
+  31 [M6E LOAD] 5 collaborateurs  active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+  32 [M6E LOAD] 25 collaborateurs active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+  33 [M6E LOAD] 50 collaborateurs active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+  34 [M6E LOAD] 100 collaborateur active    pro       sub=-         -       contracted=       | list= 2900 billing=    0 <
+ 105 Recette 834 Transports Ficti active    pro       sub=trialing  monthly contracted=2900   | list= 2900 billing=    0 <
+TOTAL list=26100 billing(base)=17400 addons=38200
+(ligne « service » retirée : calculée avec l ancienne définition)

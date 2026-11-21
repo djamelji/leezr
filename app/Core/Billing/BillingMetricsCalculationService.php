@@ -3,6 +3,7 @@
 namespace App\Core\Billing;
 
 use App\Core\Plans\Plan;
+use App\Modules\Core\Billing\Services\CouponService;
 use Illuminate\Support\Collection;
 
 /**
@@ -12,10 +13,92 @@ use Illuminate\Support\Collection;
  */
 class BillingMetricsCalculationService
 {
-    public function calculate(): array
+    /**
+     * ADR-841 (Leezr 4.2 M4) — THE recurring revenue definition, shared by every Platform screen
+     * (dashboard, billing, companies list, company record, exports).
+     *
+     * MRR = Σ over CURRENT subscriptions whose status is billed (active, past_due) of the monthly-normalised
+     * amount the renewal invoice bills, HT : contracted plan price (ADR-587 snapshot) + active add-ons − the
+     * recurring coupon discount (CouponService, same rule as PricingEngine / billing:renew). Yearly amounts / 12.
+     * Excluded : trials, pending, suspended, cancelled, companies without a subscription, scheduled plan changes
+     * (not effective until executed), one-off prorations, wallet movements, taxes. Per currency (no FX).
+     * ARR = MRR × 12. Invoiced, collected, refunded and outstanding amounts come from the ledger, not from here.
+     */
+    public const RECURRING_STATUSES = ['active', 'past_due'];
+
+    /** @return array<string, mixed> */
+    public function recurringPortfolio(): array
     {
         try {
-            $activeSubscriptions = Subscription::whereIn('status', ['active', 'past_due'])
+            $subs = Subscription::where('is_current', 1)->whereIn('status', self::RECURRING_STATUSES)
+                ->with(['company.market', 'coupon'])->get();
+            $plans = Plan::all()->keyBy('key');
+            $addons = CompanyAddonSubscription::active()->whereIn('company_id', $subs->pluck('company_id')->unique())->get()->groupBy('company_id');
+            $trialing = Subscription::where('is_current', 1)->where('status', 'trialing')->count();
+        } catch (\Throwable) {
+            $subs = collect();
+            $plans = collect();
+            $addons = collect();
+            $trialing = 0;
+        }
+
+        $out = ['mrr' => 0, 'mrr_plans' => 0, 'mrr_addons' => 0, 'mrr_discounts' => 0, 'past_due_mrr' => 0,
+            'by_currency' => [], 'companies' => [], 'active_subscriptions' => 0, 'past_due_subscriptions' => 0,
+            'trialing_subscriptions' => $trialing, 'currency' => config('billing.reporting_currency', 'EUR'),
+            'computed_at' => now()->toIso8601String()];
+
+        foreach ($subs as $sub) {
+            $r = $this->recurringForSubscription($sub, $plans, $addons->get($sub->company_id, collect()));
+            $out['mrr'] += $r['monthly'];
+            $out['mrr_plans'] += $r['plan'];
+            $out['mrr_addons'] += $r['addons'];
+            $out['mrr_discounts'] += $r['discount'];
+            $out['by_currency'][$r['currency']] = ($out['by_currency'][$r['currency']] ?? 0) + $r['monthly'];
+            $out['companies'][$sub->company_id] = $r + ['status' => $sub->status, 'interval' => $sub->interval];
+            if ($sub->status === 'past_due') {
+                $out['past_due_mrr'] += $r['monthly'];
+                $out['past_due_subscriptions']++;
+            } else {
+                $out['active_subscriptions']++;
+            }
+        }
+        $out['arr'] = $out['mrr'] * 12;
+        $out['multi_currency'] = count($out['by_currency']) > 1;
+
+        return $out;
+    }
+
+    /**
+     * Monthly-normalised recurring amount (cents, HT) of ONE subscription, as the renewal bills it.
+     *
+     * @return array{plan:int, addons:int, discount:int, monthly:int, currency:string}
+     */
+    public function recurringForSubscription(Subscription $sub, Collection $plans, Collection $addons): array
+    {
+        $months = $sub->interval === 'yearly' ? 12 : 1;
+        $plan = $this->subscriptionMonthlyAmount($sub, $plans);
+        $addonMonthly = (int) $addons->sum(fn ($a) => $a->interval === 'yearly' ? (int) round($a->amount_cents / 12) : (int) $a->amount_cents);
+
+        $discount = 0;
+        $coupon = $sub->relationLoaded('coupon') ? $sub->coupon : ($sub->coupon_id ? BillingCoupon::find($sub->coupon_id) : null);
+        if ($coupon && $coupon->isUsable() && ($sub->coupon_months_remaining === null || $sub->coupon_months_remaining > 0)) {
+            // same rule as PricingEngine::forCurrentPeriod : the coupon applies to the period subtotal
+            $periodDiscount = app(CouponService::class)->calculateDiscount($coupon, ($plan + $addonMonthly) * $months);
+            $discount = (int) round($periodDiscount / $months);
+        }
+
+        $currency = strtoupper($sub->company?->market?->currency ?? config('billing.reporting_currency', 'EUR'));
+
+        return ['plan' => $plan, 'addons' => $addonMonthly, 'discount' => $discount,
+            'monthly' => max(0, $plan + $addonMonthly - $discount), 'currency' => $currency];
+    }
+
+    public function calculate(): array
+    {
+        $portfolio = $this->recurringPortfolio();
+
+        try {
+            $activeSubscriptions = Subscription::whereIn('status', self::RECURRING_STATUSES)
                 ->where('is_current', 1)
                 ->get();
 
@@ -33,16 +116,13 @@ class BillingMetricsCalculationService
             $plans = collect();
         }
 
-        $mrr = $this->computeMrr($activeSubscriptions, $plans);
-        $mrrByCurrency = $this->computeMrrByCurrency($activeSubscriptions, $plans);
-
-        try {
-            $addonMrr = (int) CompanyAddonSubscription::active()->sum('amount_cents');
-        } catch (\Throwable) {
-            $addonMrr = 0;
-        }
-
-        $arr = ($mrr + $addonMrr) * 12;
+        // ADR-841 : one definition — plan + add-ons of BILLED subscriptions − recurring coupons ; ARR = MRR × 12.
+        // (Before : MRR = plans only, add-ons of every company — trials and companies without subscription
+        // included — added to the ARR only, so ARR ≠ 12 × MRR.)
+        $mrr = $portfolio['mrr'];
+        $mrrByCurrency = $portfolio['by_currency'];
+        $addonMrr = $portfolio['mrr_addons'];
+        $arr = $portfolio['arr'];
 
         try {
             $cancelledLast30 = Subscription::where('status', 'cancelled')
@@ -69,6 +149,12 @@ class BillingMetricsCalculationService
 
         return [
             'mrr' => $mrr,
+            'mrr_plans' => $portfolio['mrr_plans'],
+            'mrr_discounts' => $portfolio['mrr_discounts'],
+            'past_due_mrr' => $portfolio['past_due_mrr'],
+            'past_due_subscriptions' => $portfolio['past_due_subscriptions'],
+            'multi_currency' => $portfolio['multi_currency'],
+            'computed_at' => $portfolio['computed_at'],
             'arr' => $arr,
             'blocked_renewals' => $blockedRenewals,
             'mrr_previous_month' => $mrrPreviousMonth,
@@ -151,15 +237,17 @@ class BillingMetricsCalculationService
             $labels[] = $monthEnd->format('Y-m');
 
             $subs = Subscription::where('is_current', 1)
-                ->whereIn('status', ['active', 'past_due'])
+                ->whereIn('status', self::RECURRING_STATUSES)
                 ->where('created_at', '<=', $monthEnd)
-                ->get(['plan_key', 'interval', 'plan_price_cents']);
+                ->with('coupon')
+                ->get();
+            $addons = CompanyAddonSubscription::active()->whereIn('company_id', $subs->pluck('company_id')->unique())->get()->groupBy('company_id');
 
             $monthMrr = 0;
 
             foreach ($subs as $sub) {
-                // ADR-591: use the contracted snapshot (fallback to catalog for legacy rows).
-                $monthMrr += $this->subscriptionMonthlyAmount($sub, $plans);
+                // ADR-841 : same definition as the current MRR (reconstructed from today's subscriptions — ADR-747 bias)
+                $monthMrr += $this->recurringForSubscription($sub, $plans, $addons->get($sub->company_id, collect()))['monthly'];
             }
 
             $series[] = $monthMrr;
