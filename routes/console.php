@@ -163,6 +163,14 @@ Schedule::command('onboarding:expire')->cron('15 * * * *')->withoutOverlapping()
     ->onSuccess(SI::onSuccess('onboarding:expire'))
     ->onFailure(SI::onFailure('onboarding:expire'));
 
+// ADR-845 (M8) — expired company data export archives deleted (rows kept as trace) — daily, idempotent.
+Schedule::command('company-exports:prune')->cron('30 3 * * *')->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/scheduler/company-exports-prune.log'))
+    ->when(SI::enabled('company-exports:prune'))
+    ->before(SI::before('company-exports:prune'))
+    ->onSuccess(SI::onSuccess('company-exports:prune'))
+    ->onFailure(SI::onFailure('company-exports:prune'));
+
 // Recovery of quarantined deposits (worker down / engine unavailable) — fail-closed, idempotent.
 Schedule::command('onboarding:scan-uploads')->everyTenMinutes()->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/scheduler/onboarding-scan-uploads.log'))

@@ -1,0 +1,141 @@
+{
+  "format_version": 1,
+  "company": {
+    "id": 106,
+    "name": "Audit 842 Services at4f8"
+  },
+  "generated_at": "2026-11-21T18:57:38+00:00",
+  "requested_by_user_id": 183,
+  "timezone": "Europe/Paris",
+  "encoding": "CSV UTF-8 with BOM, separator « ; », durations in minutes, amounts in the invoice currency",
+  "files": [
+    {
+      "path": "company.json",
+      "format": "json",
+      "rows": 1,
+      "description": "Identité, adresse, offre et modules actifs de l'entreprise"
+    },
+    {
+      "path": "members.csv",
+      "format": "csv",
+      "rows": 4,
+      "description": "Utilisateurs rattachés et leur accès"
+    },
+    {
+      "path": "workforce/employees.csv",
+      "format": "csv",
+      "rows": 3,
+      "description": "Collaborateurs (fiche RH sans rémunération ni identifiant national)"
+    },
+    {
+      "path": "workforce/contracts.csv",
+      "format": "csv",
+      "rows": 0,
+      "description": "Contrats de travail (métadonnées ; les documents signés sont dans documents/)"
+    },
+    {
+      "path": "workforce/time/entries_2026.csv",
+      "format": "csv",
+      "rows": 2,
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      },
+      "description": "Pointages"
+    },
+    {
+      "path": "workforce/time/breaks_2026.csv",
+      "format": "csv",
+      "rows": 1,
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      },
+      "description": "Pauses"
+    },
+    {
+      "path": "workforce/time/daily_2026.csv",
+      "format": "csv",
+      "rows": 2,
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      },
+      "description": "Prévu / réalisé (feuilles de temps)"
+    },
+    {
+      "path": "workforce/time/planning_2026.csv",
+      "format": "csv",
+      "rows": 1,
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      },
+      "description": "Planning"
+    },
+    {
+      "path": "workforce/time/leaves_2026.csv",
+      "format": "csv",
+      "rows": 2,
+      "period": {
+        "from": "2026-01-01",
+        "to": "2026-12-31"
+      },
+      "description": "Absences et congés"
+    },
+    {
+      "path": "logistics/shipments.csv",
+      "format": "csv",
+      "rows": 0,
+      "description": "Expéditions et livraisons"
+    },
+    {
+      "path": "billing/invoices.csv",
+      "format": "csv",
+      "rows": 4,
+      "description": "Factures émises par Leezr"
+    },
+    {
+      "path": "billing/subscriptions.csv",
+      "format": "csv",
+      "rows": 1,
+      "description": "Historique des abonnements"
+    },
+    {
+      "path": "audit/company_audit_log.csv",
+      "format": "csv",
+      "rows": 125,
+      "description": "Journal d'audit de l'entreprise"
+    },
+    {
+      "path": "documents/index.csv",
+      "format": "csv",
+      "rows": 0,
+      "description": "Index des documents (inclus, manquants ou hors budget de taille)"
+    }
+  ],
+  "exclusions": [
+    {
+      "what": "passwords, two-factor secrets, sessions, API tokens",
+      "reason": "security secrets — never exported"
+    },
+    {
+      "what": "IP addresses and user agents of the audit log",
+      "reason": "technical connection data of individual users"
+    },
+    {
+      "what": "previous versions of documents",
+      "reason": "only the current version of each document is exported"
+    },
+    {
+      "what": "social declarations (DSN) files",
+      "reason": "available from Payroll › DSN, filed with the authorities"
+    },
+    {
+      "what": "files still in antivirus quarantine",
+      "reason": "not verified"
+    }
+  ],
+  "errors": [],
+  "retention_policy": null
+}

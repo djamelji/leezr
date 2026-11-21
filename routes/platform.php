@@ -135,6 +135,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::get('/companies/{id}/wallet-history', [CompanyBillingAdminController::class, 'walletHistory']);
             Route::get('/companies/{id}/payment-methods', [CompanySubscriptionAdminController::class, 'paymentMethods']);
             Route::get('/companies/{id}/subscription/cancel-preview', [CompanySubscriptionAdminController::class, 'cancelPreview']);
+            Route::get('/companies/{id}/lifecycle', [\App\Modules\Core\DataExport\Http\PlatformCompanyLifecycleController::class, 'show']); // ADR-845
         });
 
         // ADR-834 — record + start of service : global right, or `create_companies` on the companies the operator created
@@ -162,6 +163,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
             Route::delete('/companies/{id}/payment-methods/{pmId}', [CompanySubscriptionAdminController::class, 'deletePaymentMethod']);
             Route::put('/companies/{id}/subscription/cancel', [CompanySubscriptionAdminController::class, 'cancelSubscription']);
             Route::put('/companies/{id}/subscription/undo-cancel', [CompanySubscriptionAdminController::class, 'undoCancelSubscription']);
+            Route::post('/companies/{id}/data-exports/{exportId}/revoke', [\App\Modules\Core\DataExport\Http\PlatformCompanyLifecycleController::class, 'revoke'])->whereNumber('exportId'); // ADR-845
             Route::put('/companies/{id}/subscription/extend-trial', [CompanySubscriptionAdminController::class, 'extendTrial']);
             Route::post('/companies/{id}/payment-methods/setup-intent', [CompanySubscriptionAdminController::class, 'createSetupIntent']);
             Route::post('/companies/{id}/payment-methods/confirm', [CompanySubscriptionAdminController::class, 'confirmPaymentMethod']);

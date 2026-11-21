@@ -163,16 +163,12 @@ class CompanySubscriptionAdminController
     {
         $company = Company::findOrFail($id);
 
-        $subscription = Subscription::where('company_id', $company->id)
-            ->where('cancel_at_period_end', true)
-            ->latest()
-            ->first();
+        // ADR-845 (M8) — same rule as the Company side (SubscriptionCanceller::undoScheduled)
+        $subscription = \App\Core\Billing\SubscriptionCanceller::undoScheduled($company);
 
         if (! $subscription) {
             return response()->json(['message' => 'No pending cancellation.'], 422);
         }
-
-        $subscription->update(['cancel_at_period_end' => false]);
 
         app(AuditLogger::class)->logPlatform(AuditAction::CANCEL_REQUESTED, 'company', (string) $company->id, [
             'diffBefore' => ['cancel_at_period_end' => true], 'diffAfter' => ['cancel_at_period_end' => false], 'metadata' => ['action' => 'undo_cancel'],

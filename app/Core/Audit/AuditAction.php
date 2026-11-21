@@ -65,6 +65,14 @@ final class AuditAction
 
     // ADR-844 (M7) — personal workforce data exported (filters and volume only)
     public const WORKFORCE_TIME_EXPORTED = 'workforce.time_exported';
+
+    // ADR-845 (M8) — company end of relationship
+    public const COMPANY_DATA_EXPORT_REQUESTED = 'company_export.requested';
+    public const COMPANY_DATA_EXPORT_READY = 'company_export.ready';
+    public const COMPANY_DATA_EXPORT_FAILED = 'company_export.failed';
+    public const COMPANY_DATA_EXPORT_DOWNLOADED = 'company_export.downloaded';
+    public const COMPANY_DATA_EXPORT_REVOKED = 'company_export.revoked';
+    public const CANCEL_UNDONE = 'subscription.cancel_undone';
     public const USER_AVATAR_UPDATED = 'user.avatar_updated';
 
     // ─── Platform users ──────────────────────────────────

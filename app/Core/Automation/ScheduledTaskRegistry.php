@@ -229,6 +229,15 @@ class ScheduledTaskRegistry
             'expected_interval_minutes' => 60,
         ],
         // ADR-796.1 — dossiers d'intégration : expiration constatée, reprise des analyses, rétention (simulation)
+        // ADR-845 — company data export archives : expiry
+        'company-exports:prune' => [
+            'command' => 'company-exports:prune',
+            'description' => 'automations.tasks.companyExportsPrune',
+            'category' => 'system',
+            'frequency' => 'daily',
+            'cron' => '30 3 * * *',
+            'expected_interval_minutes' => 1440,
+        ],
         'onboarding:expire' => [
             'command' => 'onboarding:expire',
             'description' => 'automations.tasks.onboardingExpire',

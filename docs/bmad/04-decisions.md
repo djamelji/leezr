@@ -29687,3 +29687,37 @@ Preuves : concurrence MySQL réelle (6 processus, même clé, clone `leezr_recip
 4. Interface : bouton « Exporter » dans l'en-tête commun de l'espace Planning & temps (pas de nouvelle rubrique), boîte de dialogue filtres → aperçu → téléchargement ; en-têtes et statuts dans la langue de l'interface.
 
 **Tests.** `Adr844WorkforceTimeExportTest` (6, valeurs attendues écrites à la main : fuseau, période, pauses, prévu/réalisé, validation, heures sup., planning + site, absences approuvées / en attente / brouillon exclu, un collaborateur, périmètre manager, droit refusé, autre société, journal sans contenu, bornes, aucune colonne sensible) ; `tests/js/time-export.test.mjs` (4) ; recette navigateur 3/3 avec téléchargements réels relus.
+
+---
+
+## ADR-845 — Leezr 4.2 M8 : fin de relation, export complet des données, résiliation réversible (FUN-01 / FUN-02)
+
+**Date** : 2026-11-21 · **Statut** : livré DEV local · **Mission** : Leezr 4.2 M8
+
+**Contexte.** La résiliation existait (Billing), sans explication des effets sur les données, sans annulation côté Company, sans export complet et sans supervision Platform. Aucune politique de conservation par pays, aucun archivage, aucune suppression définitive.
+
+**Décision.**
+1. **Pas de nouveau statut persistant.** La situation est calculée par `CompanyLifecycleReadModel` à partir de trois sources existantes :
+   - l'abonnement : none, trial, active, pending_payment, payment_overdue, cancellation_scheduled, ended ;
+   - `companies.status` : active ou suspended ;
+   - les exports et la politique de conservation, celle-ci prise dans `config/company_lifecycle.php`, vide (aucune durée légale inventée).
+2. **Export complet** : une table `company_data_exports` (statuts pending → running → ready | failed → expired | revoked). La tâche `BuildCompanyDataExportJob` tourne sur la file existante, en une seule tentative. `CompanyDataExportBuilder` produit un ZIP sur le disque privé contenant un CSV par jeu de données, les exports M7 réutilisés via `TimeExportService::writeCsv`, la version courante des documents dans un budget de taille, et `manifest.json` (fichiers, lignes, périodes, exclusions, erreurs partielles). Les secrets, adresses IP et données d'autres sociétés ne sont jamais exportés.
+3. **Droits** : propriétaire seulement, avec ressaisie du mot de passe, à l'intérieur du groupe Facturation (`billing.manage`). Aucune nouvelle permission. Une préparation à la fois, sous verrou de la société, puis un délai entre deux demandes, et des limiteurs nommés. Téléchargement authentifié et journalisé, refusé en 410 après expiration (7 jours) ou révocation. Purge quotidienne du fichier par `company-exports:prune` ; la ligne reste comme trace.
+4. **Annulation de résiliation** : `SubscriptionCanceller::undoScheduled` devient la règle unique, utilisée par Company (nouvelle route `POST /billing/subscription/undo-cancel`) et par Platform (ancienne logique en ligne remplacée). Le calcul Billing n'est pas modifié.
+5. **Mode restreint** : `EnsureBusinessAccess` autorise `api/company/data-exports` pour qu'une société dont l'abonnement est terminé puisse récupérer ses données. Les lectures étaient déjà permises.
+6. **Interface** :
+   - Company : onglet « Données et fin de contrat » dans Abonnement & factures ;
+   - Platform : carte de supervision dans l'onglet facturation de la fiche (révocation sur `manage_companies`) et segment « Fin de contrat » dans la liste Entreprises.
+7. **Journal** : `company_export.requested`, `ready`, `failed`, `downloaded`, `revoked` et `subscription.cancel_undone`, libellés FR/EN.
+
+**Non fait, par décision** :
+- suppression définitive : désactivée, elle demande une décision séparée, documentée et testée ;
+- statut « archivée » ;
+- durées de conservation légales.
+
+Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/README.md` §5.
+
+**Conséquences.**
+- `Adr845CompanyLifecycleTest` : 8 tests.
+- Recette navigateur M8 : 2 tests, rejouable, l'archive réellement téléchargée est lue.
+- Une société résiliée garde la lecture et l'export.

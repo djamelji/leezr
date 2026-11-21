@@ -1983,7 +1983,8 @@
       "invoices": "Invoices",
       "payments": "Payments",
       "wallet": "Wallet",
-      "activity": "Activity"
+      "activity": "Activity",
+      "closure": "Data & end of contract"
     },
     "overview": {
       "currentPlan": "Current Plan",
@@ -2369,7 +2370,8 @@
       "suspend": "Suspend the company",
       "reactivate": "Reactivate the company",
       "open": "Open the record"
-    }
+    },
+    "segmentEnding": "Ending contract"
   },
   "companyPlan": {
     "pendingApproval": "Pending Approval",
@@ -5989,7 +5991,8 @@
         "paid_now": "Subscription paid now",
         "plan_change_cancelled": "Plan change cancelled",
         "plan_change_executed": "Plan change applied",
-        "plan_change_requested": "Plan change requested"
+        "plan_change_requested": "Plan change requested",
+        "cancel_undone": "Cancellation undone"
       },
       "theme": {
         "visibility_updated": "Theme visibility updated"
@@ -6056,6 +6059,13 @@
       },
       "workforce": {
         "time_exported": "Time / absence export"
+      },
+      "company_export": {
+        "requested": "Full data export requested",
+        "ready": "Full data export ready",
+        "failed": "Full data export failed",
+        "downloaded": "Full data export downloaded",
+        "revoked": "Full data export revoked"
       }
     },
     "actionCode": "Technical code"
@@ -7074,7 +7084,8 @@
       "onboardingExpire": "Onboarding files expiry",
       "onboardingScanUploads": "Analysis of quarantined deposits",
       "onboardingRetention": "Onboarding files retention (dry run)",
-      "referralsPurge": "Referral: anonymise closed referrals after the retention period"
+      "referralsPurge": "Referral: anonymise closed referrals after the retention period",
+      "companyExportsPrune": "Delete expired export archives"
     },
     "categories": {
       "documents": "Documents",
@@ -12551,5 +12562,100 @@
       "hours": "Hours",
       "reviewed_at": "Decided on"
     }
+  },
+  "companyClosure": {
+    "loadError": "Your subscription situation could not be loaded.",
+    "genericError": "The operation failed. Try again or contact support.",
+    "subscription": {
+      "title": "Your subscription",
+      "plan": "Plan",
+      "periodEnd": "End of the current period",
+      "endsOn": "Subscription ends on",
+      "trialEnds": "Trial ends"
+    },
+    "interval": {
+      "monthly": "monthly",
+      "yearly": "yearly",
+      "undefined": "—"
+    },
+    "states": {
+      "active": "Active",
+      "trial": "Trial",
+      "pending_payment": "Awaiting payment",
+      "payment_overdue": "Payment overdue",
+      "cancellation_scheduled": "Cancellation scheduled",
+      "ended": "Subscription ended",
+      "none": "No subscription"
+    },
+    "effects": {
+      "title": "If you cancel",
+      "date": "Cancellation takes effect according to the billing rules (at the end of the current period, on {date}, unless the preview says otherwise).",
+      "access": "Your access is not cut by the cancellation: you can keep viewing and exporting your data.",
+      "data": "Your data is not deleted: invoices, contracts, payslips and documents are kept.",
+      "retentionUndefined": "The retention period after the end of the contract is not defined yet for your country: nothing is deleted automatically.",
+      "retentionDefined": "Data is kept according to your country's retention policy."
+    },
+    "cancel": {
+      "button": "Cancel the subscription",
+      "undo": "Undo the cancellation",
+      "done": "The cancellation is recorded. You can undo it until it takes effect.",
+      "undone": "The cancellation is undone: your subscription continues."
+    },
+    "obligations": {
+      "title": "Things to check",
+      "hint": "What is still open does not block the cancellation, but should be settled.",
+      "unpaid": "{n} invoice(s) to pay ({amount})",
+      "noUnpaid": "No invoice pending",
+      "payroll": "{n} payroll run(s) computed or validated, not exported yet",
+      "noPayroll": "No payroll in progress",
+      "exportReady": "A full export of your data is available",
+      "exportAdvised": "We advise you to download a full export of your data"
+    },
+    "export": {
+      "title": "Full export of your data",
+      "hint": "A ZIP archive: your company, users, employees, contracts, time, absences, deliveries, invoices, activity log and documents, with a « manifest » file describing each file and what is not included.",
+      "request": "Prepare a full export",
+      "ownerOnly": "The full data export is reserved to the company owner.",
+      "requestedAt": "Requested on",
+      "status": "Status",
+      "content": "Content",
+      "expiresAt": "Available until",
+      "download": "Download",
+      "none": "No export requested yet.",
+      "files": "{n} file(s)",
+      "partial": "Incomplete: {parts}",
+      "requested": "Your export is being prepared. You will get an e-mail when it is ready.",
+      "expiredLink": "This link expired or was revoked: prepare a new export.",
+      "confirmTitle": "Confirm your identity",
+      "confirmText": "The export contains personal data of your employees. Enter your password to start it.",
+      "password": "Password",
+      "confirm": "Start the export",
+      "statuses": {
+        "pending": "Pending",
+        "running": "Being prepared",
+        "ready": "Ready",
+        "failed": "Failed",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "tooMany": "Too many attempts: try again in a few minutes."
+    }
+  },
+  "platformLifecycle": {
+    "title": "End of contract & data",
+    "hint": "Commercial state, access, open items and full exports requested by the company. The archive itself is never reachable from Platform.",
+    "commercial": "Subscription",
+    "operational": "Access",
+    "operationalStates": {
+      "active": "active",
+      "suspended": "suspended"
+    },
+    "retention": "Retention",
+    "retentionDefined": "policy defined",
+    "retentionUndefined": "not defined (nothing deleted)",
+    "obligations": "{n} unpaid invoice(s) ({amount}) · {p} open payroll run(s)",
+    "periodEnd": "period ends {date}",
+    "downloads": "Downloads",
+    "revoke": "Revoke the link"
   }
 }

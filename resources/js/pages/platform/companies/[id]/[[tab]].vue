@@ -13,6 +13,7 @@ import { useAppToast } from '@/composables/useAppToast'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import CompanyBioPanel from '../_CompanyBioPanel.vue'
 import CompanyBillingTab from '../_CompanyBillingTab.vue'
+import CompanyLifecycleCard from '../_CompanyLifecycleCard.vue'
 import CompanyMembersTab from '../_CompanyMembersTab.vue'
 import CompanyActivityTab from '../_CompanyActivityTab.vue'
 import CompanyOnboardingTab from '../_CompanyOnboardingTab.vue'
@@ -824,6 +825,10 @@ const tabs = computed(() => [
                 :company-id="company.id"
                 @adjust-wallet="openWalletDialog"
                 @refresh="refreshBilling"
+              />
+              <CompanyLifecycleCard
+                class="mt-6"
+                :company-id="company.id"
               />
             </VWindowItem>
 

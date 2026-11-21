@@ -44,6 +44,7 @@ class EnsureBusinessAccess
         'api/dashboard/widgets', // widget data resolution (read-like POST)
         'api/notifications',     // mark read / dismiss (UX)
         'api/2fa',               // security
+        'api/company/data-exports', // ADR-845 : retrieving one's data after the end of the subscription
         'api/theme',             // theme preference (UX)
     ];
 

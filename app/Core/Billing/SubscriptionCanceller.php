@@ -96,4 +96,27 @@ class SubscriptionCanceller
             ];
         });
     }
+
+    /**
+     * ADR-845 (M8) — undo a SCHEDULED cancellation (cancel_at_period_end) while the period is still running.
+     * Single rule for Company and Platform (was inline in CompanySubscriptionAdminController). An immediate
+     * cancellation (status already cancelled) cannot be undone here : a new subscription is needed.
+     */
+    public static function undoScheduled(Company $company): ?Subscription
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($company) {
+            $subscription = Subscription::where('company_id', $company->id)
+                ->where('cancel_at_period_end', true)
+                ->whereIn('status', ['active', 'trialing', 'past_due'])
+                ->lockForUpdate()
+                ->latest()
+                ->first();
+            if (! $subscription) {
+                return null;
+            }
+            $subscription->update(['cancel_at_period_end' => false]);
+
+            return $subscription->fresh();
+        });
+    }
 }

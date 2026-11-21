@@ -110,19 +110,33 @@ class TimeExportService
 
         return new StreamedResponse(function () use ($query, $dataset, $columns) {
             $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM (Excel)
-            fputcsv($out, $columns, ';');
-            $query->chunk(500, function ($models) use ($out, $dataset) {
-                foreach ($models as $m) {
-                    fputcsv($out, $this->row($dataset, $m), ';');
-                }
-            });
+            $this->writeCsv($out, $dataset, $columns, $query);
             fclose($out);
         }, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$name.'"',
             'Cache-Control' => 'no-store',
         ]);
+    }
+
+    /**
+     * ADR-845 (M8) — the same CSV writer for the period export (bounded query) and the full company archive
+     * (unbounded, chunked). Returns the number of rows written.
+     */
+    public function writeCsv($out, string $dataset, array $columns, ?Builder $query = null): int
+    {
+        $query ??= $this->query($dataset);
+        fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM (Excel)
+        fputcsv($out, $columns, ';');
+        $rows = 0;
+        $query->chunk(500, function ($models) use ($out, $dataset, &$rows) {
+            foreach ($models as $m) {
+                fputcsv($out, $this->row($dataset, $m), ';');
+                $rows++;
+            }
+        });
+
+        return $rows;
     }
 
     // ── queries ───────────────────────────────────────────────────────────────────────────────────────────

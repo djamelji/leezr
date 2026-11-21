@@ -35,6 +35,7 @@
 | M5 (ADR-842) | `43dbb42f` | **UXP-05** (Facturation 15 onglets → 5 groupes, adresses conservées), **UXP-06** (fiche entreprise sans doublon ; changement d'offre dans « Abonnement et facturation »), **UXP-09**, **UXP-10**, **UXP-12**, **UXP-14** ; UXP-11 sur les listes Entreprises / Utilisateurs | UXP-13 (Catalogue : modèles de contrat, marchés), UXP-11 ailleurs (`IconBtn` @core), UXP-15, UXP-02 |
 | M6 (ADR-843) | `2fe468dd` | **UXC-04** (menu Personnes, une action « Ajouter » à deux choix, vocabulaire d'accès unique, nom manquant), **UXC-06** (requalifié + garde FR), **UXC-08**, **UXC-09** (accueil) ; livraison chauffeur en un geste de moins | FUN-11 (rôles en anglais, décision C4), bouton `@core` des tiroirs, FUN-06 (export temps / absences) |
 | M7 (ADR-844) | `a0c7d74e` | **FUN-06** (temps / absences) : export pointages, pauses, prévu/réalisé (feuilles de temps), planning, absences — aperçu, CSV, permissions et journal | XLSX (aucune bibliothèque), export des expéditions (FUN-06 « 3 ») |
+| M8 (ADR-845) | _à venir_ | **FUN-01 / FUN-02** : page « Données et fin de contrat », export complet ZIP + manifeste (propriétaire, mot de passe, expiration, révocation, purge), annulation de résiliation côté Company, supervision Platform + segment « Fin de contrat » | durées de conservation par marché, suppression définitive, archivage, export pendant suspension (décisions D-M8-1→8) |
 | M0 | — | — | **Incident SEC-01/02/03 toujours ouvert (propriétaire)** |
 
 ## Regroupements obligatoires (à faire ensemble)

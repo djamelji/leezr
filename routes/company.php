@@ -164,6 +164,12 @@ Route::middleware(['company.access:use-module,core.billing', 'company.access:use
         ->middleware('company.access:manage-structure');
     Route::put('/billing/subscription/cancel', [SubscriptionMutationController::class, 'cancel'])
         ->middleware('company.access:manage-structure');
+    // ADR-845 (Leezr 4.2 M8) — end of relationship : state, undo a scheduled cancellation, full data export (owner only)
+    Route::get('/company/lifecycle', [\App\Modules\Core\DataExport\Http\CompanyLifecycleController::class, 'show']);
+    Route::post('/billing/subscription/undo-cancel', [\App\Modules\Core\DataExport\Http\CompanyLifecycleController::class, 'undoCancel'])
+        ->middleware('company.access:manage-structure');
+    Route::post('/company/data-exports', [\App\Modules\Core\DataExport\Http\CompanyLifecycleController::class, 'requestExport'])->middleware('throttle:5,10,company-data-export');
+    Route::get('/company/data-exports/{id}/download', [\App\Modules\Core\DataExport\Http\CompanyLifecycleController::class, 'download'])->whereNumber('id')->middleware('throttle:10,1,company-data-export-download');
     Route::post('/billing/pay-now', [SubscriptionMutationController::class, 'payNow'])
         ->middleware('company.access:manage-structure');
     Route::put('/billing/subscription/billing-day', [SubscriptionMutationController::class, 'setBillingDay'])

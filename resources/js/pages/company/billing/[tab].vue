@@ -3,6 +3,7 @@ import BillingInvoices from './_BillingInvoices.vue'
 import BillingOverview from './_BillingOverview.vue'
 import BillingPaymentMethods from './_BillingPaymentMethods.vue'
 import BillingTimeline from './_BillingTimeline.vue'
+import BillingClosure from './_BillingClosure.vue'
 
 const BillingPlan = defineAsyncComponent(() => import('./_BillingPlan.vue'))
 
@@ -29,6 +30,7 @@ const tabs = computed(() => [
   { title: t('companyBilling.tabs.invoices'), icon: 'tabler-file-invoice', tab: 'invoices' },
   { title: t('companyBilling.tabs.paymentMethods'), icon: 'tabler-credit-card-pay', tab: 'payment-methods' },
   { title: t('companyBilling.tabs.activity'), icon: 'tabler-history', tab: 'activity' },
+  { title: t('companyBilling.tabs.closure'), icon: 'tabler-file-zip', tab: 'closure' }, // ADR-845 (M8)
 ])
 
 const currentTabTitle = computed(() => {
@@ -97,6 +99,10 @@ const currentTabTitle = computed(() => {
 
       <VWindowItem value="activity">
         <BillingTimeline />
+      </VWindowItem>
+
+      <VWindowItem value="closure">
+        <BillingClosure />
       </VWindowItem>
     </VWindow>
   </div>

@@ -64,6 +64,7 @@ class CompanyController
                         ->where('trial_ends_at', '<=', now()->addDays(7))
                         ->where('trial_ends_at', '>', now());
                 }),
+                'ending' => $query->where(fn ($q) => $q->whereHas('subscriptions', fn ($s) => $s->where('is_current', 1)->where('cancel_at_period_end', true))->orWhereExists(fn ($e) => $e->from('company_data_exports')->whereColumn('company_data_exports.company_id', 'companies.id')->whereIn('status', ['pending', 'running', 'ready']))), // ADR-845
                 default => null,
             };
         }

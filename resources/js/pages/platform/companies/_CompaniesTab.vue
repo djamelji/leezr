@@ -283,6 +283,12 @@ const segmentChips = computed(() => [
     color: 'warning',
     icon: 'tabler-clock',
   },
+  {
+    label: t('companies.segmentEnding'), // ADR-845 : scheduled cancellation or export in progress / available
+    value: 'ending',
+    color: 'secondary',
+    icon: 'tabler-door-exit',
+  },
 ])
 </script>
 

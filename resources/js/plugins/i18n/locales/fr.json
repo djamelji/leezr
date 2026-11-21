@@ -1983,7 +1983,8 @@
       "invoices": "Factures",
       "payments": "Paiements",
       "wallet": "Portefeuille",
-      "activity": "Activité"
+      "activity": "Activité",
+      "closure": "Données et fin de contrat"
     },
     "overview": {
       "currentPlan": "Plan actuel",
@@ -2370,7 +2371,8 @@
       "suspend": "Suspendre l'entreprise",
       "reactivate": "Réactiver l'entreprise",
       "open": "Ouvrir la fiche"
-    }
+    },
+    "segmentEnding": "Fin de contrat"
   },
   "companyPlan": {
     "pendingApproval": "En attente d'approbation",
@@ -5990,7 +5992,8 @@
         "paid_now": "Abonnement payé immédiatement",
         "plan_change_cancelled": "Changement d’offre annulé",
         "plan_change_executed": "Changement d’offre appliqué",
-        "plan_change_requested": "Changement d’offre demandé"
+        "plan_change_requested": "Changement d’offre demandé",
+        "cancel_undone": "Résiliation annulée"
       },
       "theme": {
         "visibility_updated": "Visibilité du thème modifiée"
@@ -6057,6 +6060,13 @@
       },
       "workforce": {
         "time_exported": "Export des temps / absences"
+      },
+      "company_export": {
+        "requested": "Export complet des données demandé",
+        "ready": "Export complet des données prêt",
+        "failed": "Échec de l'export complet des données",
+        "downloaded": "Export complet des données téléchargé",
+        "revoked": "Export complet des données révoqué"
       }
     },
     "actionCode": "Code technique"
@@ -7075,7 +7085,8 @@
       "onboardingExpire": "Expiration des dossiers d’intégration",
       "onboardingScanUploads": "Analyse des dépôts en quarantaine",
       "onboardingRetention": "Conservation des dossiers d’intégration (simulation)",
-      "referralsPurge": "Parrainage : anonymise les parrainages clos après la durée de conservation"
+      "referralsPurge": "Parrainage : anonymise les parrainages clos après la durée de conservation",
+      "companyExportsPrune": "Suppression des archives d'export expirées"
     },
     "categories": {
       "documents": "Documents",
@@ -12569,5 +12580,100 @@
       "hours": "Heures",
       "reviewed_at": "Décision le"
     }
+  },
+  "companyClosure": {
+    "loadError": "Impossible de charger la situation de votre abonnement.",
+    "genericError": "L'opération n'a pas abouti. Réessayez ou contactez le support.",
+    "subscription": {
+      "title": "Votre abonnement",
+      "plan": "Offre",
+      "periodEnd": "Fin de la période en cours",
+      "endsOn": "Fin de l'abonnement le",
+      "trialEnds": "Fin de l'essai"
+    },
+    "interval": {
+      "monthly": "mensuel",
+      "yearly": "annuel",
+      "undefined": "—"
+    },
+    "states": {
+      "active": "Actif",
+      "trial": "En essai",
+      "pending_payment": "En attente de paiement",
+      "payment_overdue": "Paiement en retard",
+      "cancellation_scheduled": "Résiliation programmée",
+      "ended": "Abonnement terminé",
+      "none": "Aucun abonnement"
+    },
+    "effects": {
+      "title": "Si vous résiliez",
+      "date": "La résiliation prend effet selon les règles de facturation (à la fin de la période en cours, le {date}, sauf règle contraire affichée dans l'aperçu).",
+      "access": "Vos accès ne sont pas coupés par la résiliation : vous pouvez continuer à consulter et exporter vos données.",
+      "data": "Vos données ne sont pas supprimées : factures, contrats, bulletins et documents restent conservés.",
+      "retentionUndefined": "La durée de conservation après la fin du contrat n'est pas encore définie pour votre pays : aucune suppression automatique n'est faite.",
+      "retentionDefined": "Les données sont conservées selon la politique de conservation de votre pays."
+    },
+    "cancel": {
+      "button": "Résilier l'abonnement",
+      "undo": "Annuler la résiliation",
+      "done": "La résiliation est enregistrée. Vous pouvez l'annuler jusqu'à sa date d'effet.",
+      "undone": "La résiliation est annulée : votre abonnement continue."
+    },
+    "obligations": {
+      "title": "Points à vérifier",
+      "hint": "Ce qui reste ouvert ne bloque pas la résiliation, mais mérite d'être réglé.",
+      "unpaid": "{n} facture(s) à régler ({amount})",
+      "noUnpaid": "Aucune facture en attente",
+      "payroll": "{n} paie(s) calculée(s) ou validée(s) non encore exportée(s)",
+      "noPayroll": "Aucune paie en cours",
+      "exportReady": "Un export complet de vos données est disponible",
+      "exportAdvised": "Nous vous conseillons de télécharger un export complet de vos données"
+    },
+    "export": {
+      "title": "Export complet de vos données",
+      "hint": "Une archive ZIP : votre entreprise, vos utilisateurs, collaborateurs, contrats, temps, absences, livraisons, factures, journal d'activité et documents, avec un fichier « manifest » qui décrit chaque fichier et ce qui n'est pas inclus.",
+      "request": "Préparer un export complet",
+      "ownerOnly": "L'export complet des données est réservé au propriétaire de l'entreprise.",
+      "requestedAt": "Demandé le",
+      "status": "État",
+      "content": "Contenu",
+      "expiresAt": "Disponible jusqu'au",
+      "download": "Télécharger",
+      "none": "Aucun export demandé pour le moment.",
+      "files": "{n} fichier(s)",
+      "partial": "Incomplet : {parts}",
+      "requested": "Votre export est en préparation. Vous recevrez un e-mail quand il sera prêt.",
+      "expiredLink": "Ce lien a expiré ou a été révoqué : préparez un nouvel export.",
+      "confirmTitle": "Confirmer votre identité",
+      "confirmText": "L'export contient des données personnelles de vos collaborateurs. Saisissez votre mot de passe pour le lancer.",
+      "password": "Mot de passe",
+      "confirm": "Lancer l'export",
+      "statuses": {
+        "pending": "En attente",
+        "running": "En préparation",
+        "ready": "Prêt",
+        "failed": "Échec",
+        "expired": "Expiré",
+        "revoked": "Révoqué"
+      },
+      "tooMany": "Trop de tentatives : réessayez dans quelques minutes."
+    }
+  },
+  "platformLifecycle": {
+    "title": "Fin de contrat et données",
+    "hint": "État commercial, accès, points ouverts et exports complets demandés par l'entreprise. L'archive elle-même n'est jamais accessible depuis Platform.",
+    "commercial": "Abonnement",
+    "operational": "Accès",
+    "operationalStates": {
+      "active": "actif",
+      "suspended": "suspendu"
+    },
+    "retention": "Conservation",
+    "retentionDefined": "politique définie",
+    "retentionUndefined": "non définie (aucune suppression)",
+    "obligations": "{n} facture(s) impayée(s) ({amount}) · {p} paie(s) ouverte(s)",
+    "periodEnd": "fin de période {date}",
+    "downloads": "Téléchargements",
+    "revoke": "Révoquer le lien"
   }
 }

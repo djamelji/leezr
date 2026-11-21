@@ -1,0 +1,113 @@
+# Leezr 4.2 — M8 : fin de relation, export complet, résiliation (ADR-845)
+
+Périmètre : FUN-01 (procédure de clôture et conservation), FUN-02 (export complet à la demande), supervision Platform.
+Travail local sur `dev`, recette sur le clone marqué `leezr_audit842`, société fictive 106 seulement. Aucun push, aucun déploiement, aucune donnée supprimée.
+
+## 1. Ce qui existait (audit)
+
+| Mécanisme | Existant avant M8 | Réutilisé tel quel |
+|---|---|---|
+| Résiliation | `SubscriptionCanceller::cancel` (immédiate ou fin de période selon la politique Billing), aperçu `cancel-preview` | oui |
+| Annulation d'une résiliation programmée | Platform uniquement, logique dans le contrôleur | logique **déplacée** dans `SubscriptionCanceller::undoScheduled`, appelée par Company et Platform |
+| Fin d'abonnement | `billing:renew` passe l'abonnement à `cancelled` ; la société reste active ; mode restreint `EnsureBusinessAccess` (lecture permise, écritures métier bloquées en 402) | oui, une entrée ajoutée à la liste blanche : `api/company/data-exports` |
+| Suspension | `companies.status = suspended` (Platform), tout est bloqué côté Company | oui |
+| Exports | export salariés, export temps M7 (`TimeExportService`) | M7 réutilisé à l'identique (`writeCsv`) |
+| Archivage, suppression définitive, conservation par pays | **inexistants** | non créés (voir §5) |
+
+## 2. Parcours avant / après
+
+**Avant** : la société pouvait résilier depuis l'onglet Vue d'ensemble, sans voir ce que la résiliation implique pour ses données. Elle ne pouvait ni annuler cette résiliation ni récupérer ses données en une fois. Platform ne voyait rien de cela.
+
+**Après**, avec un onglet « Données et fin de contrat » dans Abonnement & factures (adresse `/company/billing/closure`) :
+
+1. **Abonnement** : état (Actif, En essai, Résiliation programmée, Abonnement terminé…), offre, date de fin.
+2. **Effets et dates** : date d'effet ; accès maintenu ; données non supprimées ; conservation « non définie pour votre pays, aucune suppression automatique ».
+3. **Export** : bouton « Préparer un export complet ». L'export est réservé au propriétaire et demande la saisie du mot de passe ; l'archive est construite en tâche de fond ; un e-mail est envoyé quand elle est prête ; elle se télécharge depuis l'application, connecté.
+4. **Points à vérifier** : factures impayées (avec lien), paies calculées ou validées non exportées, export disponible ou conseillé. Ces points informent sans bloquer.
+5. **Confirmation** : boîte de résiliation existante (aperçu, puis confirmation).
+6. **Transitions** : effet immédiat ou fin de période, selon la politique Billing existante.
+7. **Personnes informées** :
+   - e-mail « export prêt » au demandeur ;
+   - les e-mails Billing existants de résiliation ne sont pas modifiés.
+8. **Journal** :
+   - `company_export.requested`, `company_export.ready`, `company_export.failed`, `company_export.downloaded`, `company_export.revoked` ;
+   - `subscription.cancel_undone` ;
+   - plus les entrées Billing existantes.
+9. **Supervision Platform** :
+   - carte « Fin de contrat et données » dans l'onglet facturation de la fiche entreprise : état commercial, accès, conservation, points ouverts, exports (état, téléchargements, expiration) ;
+   - révocation d'un lien (`manage_companies`) ;
+   - segment « Fin de contrat » dans la liste Entreprises : résiliation programmée, ou export en cours ou disponible.
+
+Annulation : le bouton « Annuler la résiliation » est visible tant que la résiliation programmée n'a pas pris effet. Après une résiliation immédiate, il faut un nouvel abonnement.
+
+## 3. Données exportées / non exportées
+
+**Archive ZIP** (CSV UTF-8 avec BOM, séparateur `;`, un fichier `manifest.json`). Exemple réel : `exemple-export.zip`, `exemple-manifest.json`.
+
+| Fichier | Contenu |
+|---|---|
+| `company.json` | identité, adresse, SIRET/NAF, marché, offre, modules actifs |
+| `members.csv` | utilisateurs rattachés, rôle, état d'accès |
+| `workforce/employees.csv` | fiche RH (matricule, nom, contact, statut, dates, service, poste) |
+| `workforce/contracts.csv` | métadonnées des contrats |
+| `workforce/time/{entries,breaks,daily,planning,leaves}_{année}.csv` | exports M7, toute l'historique, un fichier par année |
+| `logistics/shipments.csv` | expéditions |
+| `billing/invoices.csv`, `billing/subscriptions.csv` | factures Leezr, historique des abonnements |
+| `audit/company_audit_log.csv` | journal d'audit (date, action, auteur, objet, gravité) |
+| `documents/…` + `documents/index.csv` | version courante des documents du personnel, documents société, documents générés, bulletins publiés non révoqués |
+
+**Jamais exportés** (listés dans `manifest.exclusions`) :
+- mots de passe, secrets de double authentification, sessions, jetons d'API ;
+- adresses IP et navigateurs du journal ;
+- versions antérieures des documents ;
+- fichiers DSN ;
+- fichiers en quarantaine antivirus ;
+- données d'une autre société.
+
+Documents au-delà du budget de taille (500 Mo par défaut) : listés en `over_size_budget` dans l'index et signalés dans les exclusions, jamais omis silencieusement.
+
+**Échec partiel** : un jeu de données en erreur n'empêche pas l'archive d'être produite. Le manifeste le signale (`errors: [{part, reason}]`) et la page l'affiche (« Incomplet : … »).
+
+## 4. Contrôles de sécurité
+
+- **Droit** : propriétaire de l'entreprise seulement, à l'intérieur du groupe Facturation (`billing.manage`), donc deux contrôles. Aucune nouvelle permission RBAC.
+- **Identité** : ressaisie du mot de passe pour chaque demande ; limiteur de 5 demandes par 10 minutes, message traduit en cas d'excès.
+- **Concurrence** : une seule préparation à la fois par société, sous verrou de ligne sur la société ; puis un délai de 10 minutes entre deux demandes.
+- **Isolement** :
+  - toutes les requêtes filtrent `company_id` ;
+  - téléchargement d'un export d'une autre société : 404 ;
+  - le chemin de stockage n'est jamais renvoyé ;
+  - Platform ne peut pas télécharger l'archive.
+- **Téléchargement** :
+  - authentifié, aucun lien public, `Cache-Control: no-store` ;
+  - compteur et journal à chaque téléchargement ;
+  - limiteur de 10 par minute.
+- **Expiration** : 7 jours (`COMPANY_EXPORT_TTL_DAYS`), puis 410. La tâche planifiée `company-exports:prune` (quotidienne, 03:30, inscrite au registre des automatisations) supprime le fichier d'archive et garde la ligne comme trace.
+- **Révocation** depuis Platform : le fichier est supprimé et le lien passe en 410.
+- **Tâche** : `BuildCompanyDataExportJob` tourne sur la file existante, en une seule tentative ; un échec passe l'export en « échec » et le journalise. Billing async n'est pas touché.
+
+## 5. Décisions juridiques et commerciales à valider
+
+| # | Décision | État actuel |
+|---|---|---|
+| D-M8-1 | Durées de conservation par marché (factures, bulletins, contrats, journal) | `config/company_lifecycle.retention.markets` **vide** ; aucune durée légale inventée ; rien n'est supprimé |
+| D-M8-2 | Suppression définitive des données d'une société | **non implémentée**, nécessite une décision séparée, documentée et testée |
+| D-M8-3 | Statut « archivée » | non supporté par le modèle ; non créé (pas de besoin démontré) |
+| D-M8-4 | Qui peut exporter : propriétaire seul, ou un droit délégable | propriétaire seul |
+| D-M8-5 | Durée de disponibilité de l'archive | 7 jours, réglable |
+| D-M8-6 | Export pendant une suspension | impossible aujourd'hui (la suspension bloque tout) ; le support doit intervenir |
+| D-M8-7 | Budget de taille d'une archive et procédure de complément | 500 Mo, complément sur demande au support |
+| D-M8-8 | Accès après fin d'abonnement | lecture et export maintenus, sans limite de durée tant que D-M8-1 n'est pas tranchée |
+
+## 6. Tests
+
+- **Backend** : `tests/Feature/Adr845CompanyLifecycleTest.php`, 8 tests :
+  - états issus des données existantes ;
+  - contenu de l'archive lu fichier par fichier, avec isolement et absence de secrets ;
+  - propriétaire seul, mot de passe, export unique et délai entre deux demandes ;
+  - téléchargement réservé, limité dans le temps et cantonné à la société, expiration puis purge sans perte de données ;
+  - échec partiel ;
+  - résiliation programmée puis annulée, et supervision Platform (lecture, segment, révocation sur droit) ;
+  - résiliation immédiate : accès, export et factures conservés ;
+  - export volumineux (budget de documents).
+- **Recette navigateur** : `tests/e2e/audit842-m8-recipe.spec.js`, 2 tests, rejouable (fixture `scripts/audit842-m8-fixture.php`). L'archive réellement téléchargée est ouverte (`unzip`) et lue. Captures `apres-*.jpg`.
