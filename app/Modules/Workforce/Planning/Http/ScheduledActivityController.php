@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  */
 class ScheduledActivityController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\PlanningScope; // ADR-848 : guardScope was a third copy of the planning perimeter
+
     /** Liste par shift (?shift_id=) ou par salarié+jour (?employee_id=&date=). Scope manager sur la lecture. */
     public function index(Request $request): JsonResponse
     {
@@ -71,7 +73,7 @@ class ScheduledActivityController extends Controller
 
         $companyId = $request->attributes->get('company_id');
         $shift = Shift::withoutGlobalScopes()->where('company_id', $companyId)->findOrFail($validated['shift_id']);
-        if ($deny = $this->guardScope($request, $shift->employee_id)) {
+        if ($deny = $this->guardShiftScope($request, $shift->employee_id)) {
             return $deny;
         }
 
@@ -116,12 +118,12 @@ class ScheduledActivityController extends Controller
         unset($validated['expected_updated_at']);
 
         // Scope sur l'employé source ET, en cas de réaffectation, sur l'employé cible.
-        if ($deny = $this->guardScope($request, $activity->employee_id)) {
+        if ($deny = $this->guardShiftScope($request, $activity->employee_id)) {
             return $deny;
         }
         if (! empty($validated['shift_id'])) {
             $target = Shift::withoutGlobalScopes()->where('company_id', $activity->company_id)->findOrFail($validated['shift_id']);
-            if ($deny = $this->guardScope($request, $target->employee_id)) {
+            if ($deny = $this->guardShiftScope($request, $target->employee_id)) {
                 return $deny;
             }
         }
@@ -141,7 +143,7 @@ class ScheduledActivityController extends Controller
     {
         $activity = ScheduledActivity::withoutGlobalScopes()
             ->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
-        if ($deny = $this->guardScope($request, $activity->employee_id)) {
+        if ($deny = $this->guardShiftScope($request, $activity->employee_id)) {
             return $deny;
         }
 
@@ -155,7 +157,7 @@ class ScheduledActivityController extends Controller
     {
         $activity = ScheduledActivity::withoutGlobalScopes()
             ->where('company_id', $request->attributes->get('company_id'))->with('shift')->findOrFail($id);
-        if ($deny = $this->guardScope($request, $activity->employee_id)) {
+        if ($deny = $this->guardShiftScope($request, $activity->employee_id)) {
             return $deny;
         }
 
@@ -174,7 +176,7 @@ class ScheduledActivityController extends Controller
         $validated = $request->validate(['start_at' => 'nullable|date']);
         $activity = ScheduledActivity::withoutGlobalScopes()
             ->where('company_id', $request->attributes->get('company_id'))->findOrFail($id);
-        if ($deny = $this->guardScope($request, $activity->employee_id)) {
+        if ($deny = $this->guardShiftScope($request, $activity->employee_id)) {
             return $deny;
         }
 
@@ -209,18 +211,4 @@ class ScheduledActivityController extends Controller
         }
     }
 
-    /** Scope manager : null si hors périmètre → 403. */
-    private function guardScope(Request $request, int $employeeId): ?JsonResponse
-    {
-        $viewAll = WorkforceAccess::hasViewAll($request, 'planning'); // ADR-817 : périmètre d'ÉCRITURE (view_all n'y entre pas)
-        if ($viewAll) {
-            return null;
-        }
-        $visible = WorkforceAccess::visibleEmployeeIds($request, 'employee');
-        if ($visible !== null && ! in_array($employeeId, $visible, true)) {
-            return response()->json(['message' => 'Collaborateur hors de votre périmètre de gestion.'], 403);
-        }
-
-        return null;
-    }
 }

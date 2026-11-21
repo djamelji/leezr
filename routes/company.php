@@ -907,35 +907,35 @@ Route::prefix('workforce/planning')->middleware('company.access:use-module,workf
     Route::delete('activities/{id}', [\App\Modules\Workforce\Planning\Http\ScheduledActivityController::class, 'destroy'])->middleware($perm('workforce.planning_manage'));
 
     // Shifts
-    Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'week'])->middleware($perm('workforce.planning_view'));
-    Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'calendar'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/week', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'week'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/calendar', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'calendar'])->middleware($perm('workforce.planning_view'));
     // W-G4A : tableau Planning (shifts + absences + conflits) + comparaison prévu/réalisé.
-    Route::get('shifts/board', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'board'])->middleware($perm('workforce.planning_view'));
-    Route::get('shifts/comparison', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'comparison'])->middleware($perm('workforce.planning_view'));
-    Route::get('shifts/availability', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'availability'])->middleware($perm('workforce.planning_manage')); // W-G4B
-    Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/board', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'board'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/comparison', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'comparison'])->middleware($perm('workforce.planning_view'));
+    Route::get('shifts/availability', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'availability'])->middleware($perm('workforce.planning_manage')); // W-G4B
+    Route::get('shifts/statistics', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'statistics'])->middleware($perm('workforce.planning_view'));
     // ADR-719 — prévisualisation sureffectif (lecture) avant affectation.
     Route::post('shifts/overstaffing-preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'overstaffingPreview'])->middleware($perm('workforce.planning_view'));
     // ADR-720 — application groupée de modèle : prévisualisation (view) + commit atomique (manage).
-    Route::post('shifts/bulk-template/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplatePreview'])->middleware($perm('workforce.planning_view'));
-    Route::post('shifts/bulk-template', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkApplyTemplate'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/bulk-template/preview', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'bulkApplyTemplatePreview'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/bulk-template', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'bulkApplyTemplate'])->middleware($perm('workforce.planning_manage'));
     // ADR-722 — annuler / rétablir (commandes inverses persistées, validées serveur).
-    Route::post('operations/{id}/undo', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'undoOperation'])->middleware($perm('workforce.planning_manage'));
-    Route::post('operations/{id}/redo', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'redoOperation'])->middleware($perm('workforce.planning_manage'));
+    Route::post('operations/{id}/undo', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'undoOperation'])->middleware($perm('workforce.planning_manage'));
+    Route::post('operations/{id}/redo', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'redoOperation'])->middleware($perm('workforce.planning_manage'));
     // ADR-721 — copie de shifts (menu/journée) + copie de semaine : prévisualisation (view) + commit (manage).
-    Route::post('shifts/copy/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyPreview'])->middleware($perm('workforce.planning_view'));
-    Route::post('shifts/copy', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copy'])->middleware($perm('workforce.planning_manage'));
-    Route::post('shifts/copy-week/preview', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyWeekPreview'])->middleware($perm('workforce.planning_view'));
-    Route::post('shifts/copy-week/apply', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyWeekApply'])->middleware($perm('workforce.planning_manage'));
-    Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'index'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/copy/preview', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'copyPreview'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/copy', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'copy'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/copy-week/preview', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'copyWeekPreview'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/copy-week/apply', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'copyWeekApply'])->middleware($perm('workforce.planning_manage'));
+    Route::get('shifts', [\App\Modules\Workforce\Planning\Http\ShiftQueryController::class, 'index'])->middleware($perm('workforce.planning_view'));
     Route::post('shifts', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'store'])->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/publish', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'publish'])->middleware($perm('workforce.planning_publish'));
     Route::post('shifts/bulk', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'bulkCreate'])->middleware($perm('workforce.planning_manage'));
-    Route::post('shifts/copy-week', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'copyWeek'])->middleware($perm('workforce.planning_manage'));
-    Route::post('shifts/{id}/duplicate', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'duplicate'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/copy-week', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'copyWeek'])->middleware($perm('workforce.planning_manage'));
+    Route::post('shifts/{id}/duplicate', [\App\Modules\Workforce\Planning\Http\ShiftOperationController::class, 'duplicate'])->middleware($perm('workforce.planning_manage'));
     // ADR-717 — remplacement guidé (candidats en lecture ; création+publication du remplacement).
-    Route::get('shifts/{id}/replacement-candidates', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replacementCandidates'])->middleware($perm('workforce.planning_view'));
-    Route::post('shifts/{id}/replace', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'replace'])->middleware($perm('workforce.planning_publish'));
+    Route::get('shifts/{id}/replacement-candidates', [\App\Modules\Workforce\Planning\Http\ShiftReplacementController::class, 'replacementCandidates'])->middleware($perm('workforce.planning_view'));
+    Route::post('shifts/{id}/replace', [\App\Modules\Workforce\Planning\Http\ShiftReplacementController::class, 'replace'])->middleware($perm('workforce.planning_publish'));
     Route::put('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'update'])->whereNumber('id')->middleware($perm('workforce.planning_manage')); // ADR-822 : id non numérique = 404, plus 500
     Route::delete('shifts/{id}', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'destroy'])->whereNumber('id')->middleware($perm('workforce.planning_manage'));
     Route::post('shifts/{id}/cancel', [\App\Modules\Workforce\Planning\Http\ShiftController::class, 'cancel'])->middleware($perm('workforce.planning_manage'));

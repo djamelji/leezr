@@ -245,4 +245,38 @@ class CopyShiftsUseCase
         // Nettoyage des clés internes pour la sortie preview (on garde _source/_delta seulement en commit).
         return [$classified, $prospects];
     }
+
+    /**
+     * ADR-848 — operations of a WEEK copy, moved verbatim from ShiftController::buildWeekOps : every non-cancelled shift
+     * of the chosen employees (or department / site) in the source week → same employee, date + delta days. Relative
+     * positions kept whatever the company's first weekday ; published targets are never overwritten (commit rule).
+     */
+    public function weekOperations(int $companyId, string $fromWeekStart, string $toWeekStart, ?array $employeeIds, ?int $departmentId, ?int $workLocationId): array
+    {
+        $from = \Illuminate\Support\Carbon::parse($fromWeekStart)->startOfDay();
+        $to = \Illuminate\Support\Carbon::parse($toWeekStart)->startOfDay();
+        $delta = $from->diffInDays($to, false); // positions relatives conservées quel que soit le 1er jour
+
+        $q = \App\Core\Workforce\Shift::withoutGlobalScopes()->where('company_id', $companyId)->notCancelled()
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $from->copy()->addDays(6)->toDateString());
+        if (! empty($employeeIds)) {
+            $q->whereIn('employee_id', $employeeIds);
+        }
+        if ($workLocationId !== null) {
+            $q->where('work_location_id', $workLocationId);
+        }
+        if ($departmentId !== null) {
+            $deptEmp = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('department_id', $departmentId)->pluck('id');
+            $q->whereIn('employee_id', $deptEmp);
+        }
+
+        $ops = $q->get()->map(fn (\App\Core\Workforce\Shift $s) => [
+            'source_shift_id' => $s->id,
+            'target_employee_id' => $s->employee_id,
+            'target_date' => \Illuminate\Support\Carbon::parse($s->date->toDateString())->addDays($delta)->toDateString(),
+        ])->all();
+
+        return $ops;
+    }
 }

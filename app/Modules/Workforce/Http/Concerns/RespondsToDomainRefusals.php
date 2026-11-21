@@ -18,4 +18,16 @@ trait RespondsToDomainRefusals
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
+
+    /** Planning variant : an overstaffing that needs a confirmation answers 422 with its payload (ADR-719). */
+    protected function planningDomain(callable $fn, int $status = 200): JsonResponse
+    {
+        try {
+            return response()->json($fn(), $status);
+        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
+            return response()->json($e->toPayload(), 422);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
 }

@@ -13,6 +13,19 @@ use Illuminate\Support\Collection;
 class PlanningOperationRecorder
 {
     /** Opération « création » : annuler = supprimer les brouillons créés ; rétablir = réexécuter l'intention. */
+    /**
+     * ADR-848 — one reversible operation for a multi-shift result (ADR-722) : when shifts were created, record them and
+     * add `operation_id` to the result. Was written in every bulk planning action (copy, bulk template, week template).
+     */
+    public function attachCreated(array $result, int $companyId, ?int $userId, string $type, array $intent): array
+    {
+        if (! empty($result['created'])) {
+            $result['operation_id'] = $this->recordCreated($companyId, $userId, $type, $result['created'], $intent)->id;
+        }
+
+        return $result;
+    }
+
     public function recordCreated(int $companyId, ?int $userId, string $type, array $createdShiftIds, array $intent): PlanningOperation
     {
         return PlanningOperation::create([

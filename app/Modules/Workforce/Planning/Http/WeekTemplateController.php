@@ -8,7 +8,6 @@ use App\Core\Workforce\Shift;
 use App\Core\Workforce\WeekTemplate;
 use App\Core\Workforce\WeekTemplateLine;
 use App\Http\Controllers\Controller;
-use App\Modules\Workforce\Security\WorkforceAccess;
 use App\Modules\Workforce\UseCases\ApplyWeekTemplateUseCase;
 use App\Modules\Workforce\UseCases\WeekTemplateEditor;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +20,9 @@ use Illuminate\Http\Request;
  */
 class WeekTemplateController extends Controller
 {
+    use \App\Modules\Workforce\Http\Concerns\PlanningScope; // ADR-848 : same write perimeter as the shift controllers
+    use \App\Modules\Workforce\Http\Concerns\RespondsToDomainRefusals;
+
     public function index(Request $request): JsonResponse
     {
         return response()->json(
@@ -80,13 +82,9 @@ class WeekTemplateController extends Controller
     public function preview(Request $request, int $id): JsonResponse
     {
         $request->validate(['target_date' => 'required|date']);
-        try {
-            return response()->json(app(ApplyWeekTemplateUseCase::class)->preview(
+        return $this->domain(fn () => app(ApplyWeekTemplateUseCase::class)->preview(
                 $request->attributes->get('company_id'), $id, $request->input('target_date'), $this->planningScope($request),
             ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     public function apply(Request $request, int $id): JsonResponse
@@ -99,28 +97,16 @@ class WeekTemplateController extends Controller
             'overstaffing_ack' => 'nullable|string',
             'overstaffing_reason' => 'nullable|string|max:500',
         ]);
-        try {
-            $companyId = $request->attributes->get('company_id');
-            $result = app(ApplyWeekTemplateUseCase::class)->commit(
-                $companyId, $id, $validated['target_date'],
-                $validated['assignments'] ?? [], $this->planningScope($request),
-                $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, $request->user()?->id,
-            );
-            // UNE opération réversible (apply_week_template) : undo = suppression atomique des brouillons créés.
-            if (! empty($result['created'])) {
-                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
-                    $companyId, $request->user()?->id, 'apply_week_template', $result['created'],
-                    ['week_template_id' => $id, 'target_date' => $validated['target_date'], 'assignments' => $validated['assignments'] ?? []],
-                );
-                $result['operation_id'] = $op->id;
-            }
+        $companyId = $request->attributes->get('company_id');
 
-            return response()->json($result, 201);
-        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
-            return response()->json($e->toPayload(), 422);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        // UNE opération réversible (apply_week_template) : undo = suppression atomique des brouillons créés.
+        return $this->planningDomain(fn () => app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->attachCreated(
+            app(ApplyWeekTemplateUseCase::class)->commit(
+                $companyId, $id, $validated['target_date'], $validated['assignments'] ?? [], $this->planningScope($request),
+                $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, $request->user()?->id,
+            ),
+            $companyId, $request->user()?->id, 'apply_week_template', ['week_template_id' => $id, 'target_date' => $validated['target_date'], 'assignments' => $validated['assignments'] ?? []],
+        ), 201);
     }
 
     /** M4 (ADR-727) — prévisualisation d'une RÉPÉTITION multi-semaines (cumulative, dry-run). */
@@ -134,14 +120,10 @@ class WeekTemplateController extends Controller
             'assignments.*.line_id' => 'required|integer',
             'assignments.*.employee_id' => 'required|integer',
         ]);
-        try {
-            return response()->json(app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->preview(
+        return $this->domain(fn () => app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->preview(
                 $request->attributes->get('company_id'), $id, $validated['first_week_date'], $validated['horizon'],
                 $validated['assignments'] ?? [], $this->planningScope($request), $request->user()?->id,
             ));
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 
     /** M4 (ADR-727) — application ATOMIQUE GLOBALE d'une répétition ; UNE opération réversible. */
@@ -157,28 +139,17 @@ class WeekTemplateController extends Controller
             'overstaffing_ack' => 'nullable|string',
             'overstaffing_reason' => 'nullable|string|max:500',
         ]);
-        try {
-            $companyId = $request->attributes->get('company_id');
-            $result = app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->commit(
-                $companyId, $id, $validated['first_week_date'], $validated['horizon'],
-                $validated['assignments'] ?? [], $this->planningScope($request),
-                $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, $request->user()?->id,
-            );
-            // UNE intention utilisateur = UNE opération réversible (même si exécutée en plusieurs semaines).
-            if (! empty($result['created'])) {
-                $op = app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->recordCreated(
-                    $companyId, $request->user()?->id, 'repeat_week_template', $result['created'],
-                    ['week_template_id' => $id, 'first_week_date' => $validated['first_week_date'], 'horizon' => $validated['horizon'], 'assignments' => $validated['assignments'] ?? []],
-                );
-                $result['operation_id'] = $op->id;
-            }
+        $companyId = $request->attributes->get('company_id');
 
-            return response()->json($result, 201);
-        } catch (\App\Modules\Workforce\Exceptions\OverstaffingConfirmationRequired $e) {
-            return response()->json($e->toPayload(), 422);
-        } catch (\DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        // UNE intention utilisateur = UNE opération réversible (même si exécutée en plusieurs semaines).
+        return $this->planningDomain(fn () => app(\App\Modules\Workforce\Services\PlanningOperationRecorder::class)->attachCreated(
+            app(\App\Modules\Workforce\UseCases\RepeatWeekTemplateUseCase::class)->commit(
+                $companyId, $id, $validated['first_week_date'], $validated['horizon'], $validated['assignments'] ?? [], $this->planningScope($request),
+                $validated['overstaffing_ack'] ?? null, $validated['overstaffing_reason'] ?? null, $request->user()?->id,
+            ),
+            $companyId, $request->user()?->id, 'repeat_week_template',
+            ['week_template_id' => $id, 'first_week_date' => $validated['first_week_date'], 'horizon' => $validated['horizon'], 'assignments' => $validated['assignments'] ?? []],
+        ), 201);
     }
 
     /** Capture une semaine existante en semaine type NOMINATIVE (références figées : jour, modèle, salarié). */
@@ -211,12 +182,6 @@ class WeekTemplateController extends Controller
 
     // ── helpers ──
 
-    private function planningScope(Request $request): ?array
-    {
-        $viewAll = WorkforceAccess::hasViewAll($request, 'planning'); // ADR-817 : périmètre d'ÉCRITURE (view_all n'y entre pas)
-
-        return $viewAll ? null : WorkforceAccess::visibleEmployeeIds($request, 'employee');
-    }
 
     private function validatePayload(Request $request, bool $creating = true): array
     {
