@@ -197,6 +197,42 @@ final class FieldRuleMigrationPlanner
         return $out;
     }
 
+    /**
+     * ADR-860 (L7) — module-wide obligations vs the function really exercised (read only, nothing changed).
+     * A field required by an ACTIVE module (`required_by_modules`) is required from everyone today ; when the same
+     * definition also carries a function tag (`tags`, e.g. `driving`), the function-based scope already exists :
+     * people whose access role carries that tag (`required_tags`) or whose position explicitly requires the field.
+     *
+     * @return list<array{code: string, modules: list<string>, tags: list<string>, everyone: int, by_function: int, released: int}>
+     */
+    public static function moduleWideObligations(Company $company): array
+    {
+        $sources = FieldObligationSources::forCompany($company);
+        $defs = FieldDefinition::where('scope', FieldDefinition::SCOPE_COMPANY_USER)->whereNull('company_id')->get()->keyBy('code');
+        $employees = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('status', '!=', 'terminated')->get(['id', 'user_id', 'job_role_id']);
+        $roleTags = Membership::where('company_id', $company->id)->with('companyRole:id,required_tags')->get()
+            ->mapWithKeys(fn ($m) => [$m->user_id => (array) ($m->companyRole?->required_tags ?? [])])->all();
+        $resolver = \App\Core\Requirements\EffectiveRequirementResolver::forCompany($company);
+        $out = [];
+        foreach ($sources as $code => $o) {
+            if (! $o['modules'] || ! isset($defs[$code])) {
+                continue;
+            }
+            $tags = (array) ($defs[$code]->validation_rules['tags'] ?? []);
+            $byFunction = 0;
+            foreach ($employees as $e) {
+                $tagged = $e->user_id && array_intersect($tags, $roleTags[$e->user_id] ?? []) !== [];
+                $req = $resolver->resolveFor(\App\Core\Requirements\EffectiveRequirementResolver::subjectFromEmployee($e, null))['field:'.$defs[$code]->id] ?? null;
+                $positioned = $req && $req['required'] && ($req['retained']['source'] ?? null) === 'company';
+                $byFunction += ($tagged || $positioned) ? 1 : 0;
+            }
+            $out[] = ['code' => $code, 'modules' => $o['modules'], 'tags' => $tags, 'everyone' => $employees->count(), 'by_function' => $byFunction,
+                'released' => $employees->count() - $byFunction];
+        }
+
+        return $out;
+    }
+
     private static function why(array $o): array
     {
         return array_values(array_filter([

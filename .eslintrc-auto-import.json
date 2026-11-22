@@ -432,6 +432,7 @@
     "passedSteps": true,
     "trafficSource": true,
     "useRegistrationFunnel": true,
-    "useCountUp": true
+    "useCountUp": true,
+    "unlabeledIconButtons": true
   }
 }

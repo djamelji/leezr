@@ -175,20 +175,20 @@ test('7-8 Héritage expliqué et ancienne configuration (société fictive 101)'
   await expect(page.locator('[data-test="catalog-inheritance"]')).toContainText('Comment un champ devient obligatoire')
 
   // the old drawer's global obligation is shown with its origin, the redundant one shows both origins
-  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).toContainText('Toute la société')
+  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).toContainText('Saisie obligatoire (tous)')
   await expect(page.locator('[data-test="catalog-obligation-hire_date"]')).toContainText('Votre métier')
-  await expect(page.locator('[data-test="catalog-obligation-hire_date"]')).toContainText('Toute la société')
+  await expect(page.locator('[data-test="catalog-obligation-hire_date"]')).toContainText('Saisie obligatoire (tous)')
   await shot(page, '7-heritage')
 
   // the company-wide rule can be withdrawn and set back from the ONE place it lives now
   await page.locator('[data-test="catalog-actions-nationality"]').click()
   await page.locator('[data-test="catalog-require-all-nationality"]').click()
   await page.waitForLoadState('networkidle')
-  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).not.toContainText('Toute la société')
+  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).not.toContainText('Saisie obligatoire (tous)')
   await page.locator('[data-test="catalog-actions-nationality"]').click()
   await page.locator('[data-test="catalog-require-all-nationality"]').click()
   await page.waitForLoadState('networkidle')
-  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).toContainText('Toute la société')
+  await expect(page.locator('[data-test="catalog-obligation-nationality"]')).toContainText('Saisie obligatoire (tous)')
 
   // People has no « Outils » anymore ; « Configurer les champs » leads here
   await page.goto('/company/people', { waitUntil: 'networkidle' })

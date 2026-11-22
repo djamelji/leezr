@@ -10495,7 +10495,7 @@
     "subtitle": "What you expect from your team members, by position.",
     "parallelNotice": "Configuration in preparation: it is saved but has no effect yet on files, document requests, compliance or reminders. Current rules still apply.",
     "position": "Position",
-    "everyone": "All team members",
+    "everyone": "File of all employees",
     "peopleCount": "{n} team member(s), {a} without account",
     "fields": "Information",
     "documents": "Documents",
@@ -13155,23 +13155,23 @@
       "edit": "Edit the field",
       "edited": "Field updated.",
       "editHint": "Values already entered are kept.",
-      "requireAll": "Make it required for the whole company",
-      "unrequireAll": "Stop requiring it from the whole company",
-      "requireAllHint": "Everyone, whatever their position",
-      "requiredAll": "This field is now required for the whole company.",
-      "requiredAllOff": "This field is no longer required from the whole company.",
+      "requireAll": "Make entry required for everyone",
+      "unrequireAll": "Stop requiring entry from everyone",
+      "requireAllHint": "Blocks saving a person's file while the field is empty",
+      "requiredAll": "Entry is now required for everyone.",
+      "requiredAllOff": "Entry of this field is no longer required for everyone.",
       "hiddenFor": "Hidden for {n} role | Hidden for {n} roles",
       "src": {
         "platform": "Leezr (catalogue)",
         "jobdomain": "Your business",
-        "company": "Whole company",
+        "company": "Required on entry (everyone)",
         "roles": "{n} role (legacy) | {n} roles (legacy)"
       },
       "hint": {
         "platform": "Required everywhere: set by Leezr in the global catalogue.",
         "module": "Required by this module while it is active (set by Leezr).",
         "jobdomain": "Recommended as required for your business (set by Leezr).",
-        "company": "Set here: required for everyone in the company.",
+        "company": "Required on entry: nobody's file can be saved without this field. Set here.",
         "roles": "Legacy rule per access role ({roles}) — editable in Roles & permissions.",
         "position": "Required for this position — editable on the position page.",
         "hidden": "Hidden in the form for: {roles}. Check that this is intended."
@@ -13183,7 +13183,7 @@
         "jobdomain": "Your business",
         "jobdomainHint": "Fields recommended by your activity (JobDomain).",
         "company": "Your company",
-        "companyHint": "Here: fields offered, and those required from everyone.",
+        "companyHint": "Here: fields offered, and those required on entry for everyone.",
         "position": "The position",
         "positionHint": "On each position: information and documents required for that job.",
         "rolesNote": "Your company still applies legacy obligations per access role: they are shown below and edited in Roles & permissions."
@@ -13206,8 +13206,8 @@
       "more": "More actions for {module}"
     },
     "everyoneScope": {
-      "text": "« All employees » applies to the file: completeness, onboarding and requested documents. To also make an item required in every person's form, set it in ",
-      "link": "Catalogue › Fields (required for the whole company)."
+      "text": "« Requested in the file »: the item counts for completeness, onboarding and requested documents, without blocking a file from being saved. To make it required on entry in every file: ",
+      "link": "Catalogue › Fields (required on entry)."
     },
     "file": {
       "toCollect": "{n} to collect | {n} to collect",

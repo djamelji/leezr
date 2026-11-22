@@ -1,0 +1,135 @@
+{
+ "generated_at": "2026-11-22T12:58:53+00:00",
+ "database": "leezr_audit842 (marked recipe clone)",
+ "note": "simulation only — nothing changed",
+ "companies": [
+  {
+   "company_id": 1,
+   "name": "Leezr Logistics",
+   "authority": "role",
+   "module_wide": [
+    {
+     "code": "license_number",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 72,
+     "by_function": 12,
+     "released": 60
+    },
+    {
+     "code": "license_category",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 72,
+     "by_function": 12,
+     "released": 60
+    },
+    {
+     "code": "license_expiry",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 72,
+     "by_function": 12,
+     "released": 60
+    },
+    {
+     "code": "vehicle_type",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 72,
+     "by_function": 12,
+     "released": 60
+    }
+   ]
+  },
+  {
+   "company_id": 2,
+   "name": "Trial Logistics",
+   "authority": "role",
+   "module_wide": [
+    {
+     "code": "license_number",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 0,
+     "by_function": 0,
+     "released": 0
+    },
+    {
+     "code": "license_category",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 0,
+     "by_function": 0,
+     "released": 0
+    },
+    {
+     "code": "license_expiry",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 0,
+     "by_function": 0,
+     "released": 0
+    },
+    {
+     "code": "vehicle_type",
+     "modules": [
+      "logistics_fleet"
+     ],
+     "tags": [
+      "driving"
+     ],
+     "everyone": 0,
+     "by_function": 0,
+     "released": 0
+    },
+    {
+     "code": "geographic_zone",
+     "modules": [
+      "logistics_tracking"
+     ],
+     "tags": [
+      "dispatching"
+     ],
+     "everyone": 0,
+     "by_function": 0,
+     "released": 0
+    }
+   ]
+  },
+  {
+   "company_id": 101,
+   "name": "E2E Recette 8091 433828",
+   "authority": "role",
+   "module_wide": []
+  }
+ ]
+}

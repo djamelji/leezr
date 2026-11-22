@@ -10496,7 +10496,7 @@
     "subtitle": "Ce que vous attendez de vos collaborateurs, selon leur poste.",
     "parallelNotice": "Configuration en préparation : elle est enregistrée mais n'a pas encore d'effet sur les fiches, les demandes de documents, la conformité ni les rappels. Les règles actuelles restent appliquées.",
     "position": "Poste",
-    "everyone": "Tous les collaborateurs",
+    "everyone": "Dossier de tous les collaborateurs",
     "peopleCount": "{n} collaborateur(s), dont {a} sans compte",
     "fields": "Informations",
     "documents": "Documents",
@@ -13173,23 +13173,23 @@
       "edit": "Modifier le champ",
       "edited": "Champ modifié.",
       "editHint": "Les valeurs déjà saisies sont conservées.",
-      "requireAll": "Rendre obligatoire pour toute la société",
-      "unrequireAll": "Ne plus l'exiger de toute la société",
-      "requireAllHint": "Toutes les personnes, quel que soit leur poste",
-      "requiredAll": "Champ désormais obligatoire pour toute la société.",
-      "requiredAllOff": "Ce champ n'est plus exigé de toute la société.",
+      "requireAll": "Rendre la saisie obligatoire pour tout le monde",
+      "unrequireAll": "Ne plus rendre la saisie obligatoire pour tout le monde",
+      "requireAllHint": "Bloque l'enregistrement d'une fiche tant que le champ est vide",
+      "requiredAll": "Saisie désormais obligatoire pour tout le monde.",
+      "requiredAllOff": "La saisie de ce champ n'est plus obligatoire pour tout le monde.",
       "hiddenFor": "Masqué pour {n} rôle | Masqué pour {n} rôles",
       "src": {
         "platform": "Leezr (catalogue)",
         "jobdomain": "Votre métier",
-        "company": "Toute la société",
+        "company": "Saisie obligatoire (tous)",
         "roles": "{n} rôle (historique) | {n} rôles (historique)"
       },
       "hint": {
         "platform": "Obligatoire partout : réglé par Leezr dans le catalogue global.",
         "module": "Exigé par ce module tant qu'il est actif (réglé par Leezr).",
         "jobdomain": "Recommandé comme obligatoire pour votre métier (réglé par Leezr).",
-        "company": "Réglé ici : obligatoire pour toutes les personnes de la société.",
+        "company": "Obligatoire à la saisie : la fiche de chaque personne ne peut pas être enregistrée sans ce champ. Réglé ici.",
         "roles": "Règle historique par rôle d'accès ({roles}) — modifiable dans Rôles & autorisations.",
         "position": "Exigé pour ce poste — modifiable sur la fiche du poste.",
         "hidden": "Masqué dans le formulaire pour : {roles}. Vérifiez que c'est voulu."
@@ -13201,7 +13201,7 @@
         "jobdomain": "Votre métier",
         "jobdomainHint": "Champs recommandés par votre activité (JobDomain).",
         "company": "Votre société",
-        "companyHint": "Ici : champs proposés, et ceux obligatoires pour tout le monde.",
+        "companyHint": "Ici : champs proposés, et ceux obligatoires à la saisie pour tout le monde.",
         "position": "Le poste",
         "positionHint": "Sur chaque poste : informations et pièces exigées pour cette fonction.",
         "rolesNote": "Votre société applique encore des obligations historiques par rôle d'accès : elles sont indiquées ci-dessous et se modifient dans Rôles & autorisations."
@@ -13224,8 +13224,8 @@
       "more": "Plus d'actions pour {module}"
     },
     "everyoneScope": {
-      "text": "« Tous les collaborateurs » s'applique au dossier : complétude, intégration et pièces demandées. Pour qu'une information soit aussi obligatoire dans le formulaire de chaque fiche, réglez-la dans ",
-      "link": "Catalogue › Champs (obligatoire pour toute la société)."
+      "text": "« Demandé au dossier » : l'élément compte pour la complétude, l'intégration et les pièces demandées, sans bloquer l'enregistrement d'une fiche. Pour le rendre obligatoire à la saisie dans chaque fiche : ",
+      "link": "Catalogue › Champs (obligatoire à la saisie)."
     },
     "file": {
       "toCollect": "{n} à collecter | {n} à collecter",
