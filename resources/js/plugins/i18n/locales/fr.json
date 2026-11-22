@@ -441,7 +441,8 @@
     "copy": "Copier",
     "send": "Envoyer",
     "open": "Ouvrir",
-    "archive": "Archiver"
+    "archive": "Archiver",
+    "menu": "Menu"
   },
   "platformAccount": {
     "myAccount": "Mon compte",
@@ -13255,6 +13256,26 @@
         "tariff-review": "Revue des tarifs avant publication."
       },
       "family": "Facturation"
+    },
+    "settings": {
+      "family": "Paramètres",
+      "group": {
+        "identity": "Identité et apparence",
+        "security": "Sécurité et disponibilité",
+        "billing": "Facturation et notifications",
+        "international": "International",
+        "advanced": "Fonctions avancées"
+      },
+      "hint": {
+        "general": "Nom, logo et informations générales de la plateforme.",
+        "theme": "Couleurs, mise en page et apparence de l'interface pour tous les utilisateurs.",
+        "sessions": "Durée des sessions et règles de déconnexion.",
+        "maintenance": "Mode maintenance et message affiché aux utilisateurs.",
+        "billing": "Règles de facturation : taxes, échéances, relances et prestataire de paiement.",
+        "notifications": "Notifications envoyées par la plateforme et leurs canaux.",
+        "international": "Marchés, langues et traductions.",
+        "feature-flags": "Activation progressive de fonctions, par société ou pour tous."
+      }
     }
   }
 }

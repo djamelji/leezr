@@ -297,6 +297,7 @@ const selectAllModel = computed({
       <div class="d-flex align-center gap-2 px-4 py-2" style="min-height: 56px;">
         <!-- Mobile: hamburger -->
         <IconBtn
+          :aria-label="$t('common.menu')"
           v-if="$vuetify.display.smAndDown"
           data-test="email-mobile-menu"
           @click="isLeftSidebarOpen = !isLeftSidebarOpen"

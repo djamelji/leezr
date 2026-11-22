@@ -441,7 +441,8 @@
     "copy": "Copy",
     "send": "Send",
     "open": "Open",
-    "archive": "Archive"
+    "archive": "Archive",
+    "menu": "Menu"
   },
   "platformAccount": {
     "myAccount": "My Account",
@@ -13237,6 +13238,26 @@
         "tariff-review": "Tariff review before publication."
       },
       "family": "Billing"
+    },
+    "settings": {
+      "family": "Settings",
+      "group": {
+        "identity": "Identity and appearance",
+        "security": "Security and availability",
+        "billing": "Billing and notifications",
+        "international": "International",
+        "advanced": "Advanced features"
+      },
+      "hint": {
+        "general": "Name, logo and general information of the platform.",
+        "theme": "Colours, layout and look of the interface for every user.",
+        "sessions": "Session duration and sign-out rules.",
+        "maintenance": "Maintenance mode and the message shown to users.",
+        "billing": "Billing rules: taxes, due dates, reminders and payment provider.",
+        "notifications": "Notifications sent by the platform and their channels.",
+        "international": "Markets, languages and translations.",
+        "feature-flags": "Progressive activation of features, per company or for everyone."
+      }
     }
   }
 }

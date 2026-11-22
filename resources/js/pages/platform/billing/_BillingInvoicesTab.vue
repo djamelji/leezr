@@ -665,6 +665,7 @@ const bulkRetry = async () => {
           <VMenu>
             <template #activator="{ props }">
               <VBtn
+                :aria-label="$t('common.actions')"
                 v-bind="props"
                 icon="tabler-dots-vertical"
                 variant="text"

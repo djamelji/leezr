@@ -3312,6 +3312,7 @@ watch(activeTab, tab => {
                   <VMenu location="bottom end">
                     <template #activator="{ props: mp }">
                       <VBtn
+                        :aria-label="$t('common.actions')"
                         v-bind="mp"
                         icon
                         variant="tonal"

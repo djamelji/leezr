@@ -32,6 +32,7 @@ const canCustomizeTheme = computed(() => usePlatformAuthStore().hasPermission('m
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">
         <IconBtn
+          :aria-label="$t('common.menu')"
           id="vertical-nav-toggle-btn"
           class="ms-n3 d-lg-none"
           @click="toggleVerticalOverlayNavActive(true)"

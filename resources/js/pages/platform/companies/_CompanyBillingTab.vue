@@ -785,6 +785,7 @@ watch(() => props.billing, val => {
                 <VMenu>
                   <template #activator="{ props: menuProps }">
                     <VBtn
+                      :aria-label="$t('common.actions')"
                       icon
                       variant="text"
                       size="small"

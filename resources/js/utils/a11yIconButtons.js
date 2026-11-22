@@ -12,7 +12,8 @@ export function unlabeledIconButtons(source) {
     const iconOnly = tag === 'IconBtn' || /(^|\s)(:?icon)(=|\s|$)/.test(attrs) && !/(prepend|append)-icon/.test(attrs.replace(/(^|\s):?icon=/, ''))
     if (tag === 'VBtn' && !/(^|\s):?icon(=|\s|$)/.test(attrs)) continue
     if (!iconOnly) continue
-    if (/(^|\s)(:|v-bind:)?(aria-label|title)=/.test(attrs) || /v-bind="[^"]*"/.test(attrs)) continue
+    // a menu / tooltip activator (`v-bind="props"`) gets aria-haspopup / aria-describedby, never a NAME : it needs one too
+    if (/(^|\s)(:|v-bind:)?(aria-label|title)=/.test(attrs)) continue
     out.push({ index: m.index, line: source.slice(0, m.index).split('\n').length, tag: whole.slice(0, 80) })
   }
 

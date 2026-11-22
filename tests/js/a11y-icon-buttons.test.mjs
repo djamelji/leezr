@@ -9,6 +9,8 @@ import { unlabeledIconButtons } from '../../resources/js/utils/a11yIconButtons.j
 export const HARMONISED = [
   'resources/js/components/app/AppPageHeader.vue',
   'resources/js/pages/platform/billing/[tab].vue',
+  'resources/js/pages/platform/settings/[tab].vue',
+  'resources/js/layouts/components/PlatformLayoutWithVerticalNav.vue',
   'resources/js/pages/company/people/_PeopleSpace.vue',
   'resources/js/pages/company/people/_PeopleDirectory.vue',
   'resources/js/pages/company/people/_PersonPreview.vue',
@@ -20,7 +22,8 @@ test('the detector sees an unlabeled icon button and accepts a labeled one', () 
   assert.equal(unlabeledIconButtons('<VBtn icon="tabler-x" title="Fermer" />').length, 0)
   assert.equal(unlabeledIconButtons('<VBtn icon variant="text"><VIcon icon="tabler-x" /></VBtn>').length, 1)
   assert.equal(unlabeledIconButtons('<VBtn prepend-icon="tabler-plus">Ajouter</VBtn>').length, 0)
-  assert.equal(unlabeledIconButtons('<IconBtn v-bind="props" />').length, 0) // activator : named by its tooltip / menu
+  assert.equal(unlabeledIconButtons('<IconBtn v-bind="props" />').length, 1) // an activator gets no name from its menu
+  assert.equal(unlabeledIconButtons('<IconBtn v-bind="props" :aria-label="t(\'x\')" />').length, 0)
 })
 
 for (const f of HARMONISED) {

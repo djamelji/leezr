@@ -644,7 +644,7 @@ onMounted(() => {
             <template #mobile-append="{ item }">
               <VMenu v-if="can('workforce.time_manage') && CORRECTABLE_STATUSES.includes(item.status)" location="bottom end">
                 <template #activator="{ props: menuProps }">
-                  <VBtn v-bind="menuProps" icon="tabler-dots-vertical" variant="text" size="small" @click.stop />
+                  <VBtn :aria-label="$t('common.actions')" v-bind="menuProps" icon="tabler-dots-vertical" variant="text" size="small" @click.stop />
                 </template>
                 <VList density="compact">
                   <VListItem

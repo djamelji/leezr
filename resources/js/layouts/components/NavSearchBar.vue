@@ -165,7 +165,7 @@ const LazyAppBarSearch = defineAsyncComponent(() => import('@core/components/App
   >
     <!-- 👉 Search Trigger button -->
     <!-- close active tour while opening search bar using icon -->
-    <IconBtn @click="Shepherd.activeTour?.cancel()">
+    <IconBtn :aria-label="$t('common.search')" @click="Shepherd.activeTour?.cancel()">
       <VIcon icon="tabler-search" />
     </IconBtn>
 
