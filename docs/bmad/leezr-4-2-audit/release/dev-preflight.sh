@@ -8,7 +8,7 @@
 # read-only. No secret is printed: DB credentials go from shared/.env into a 600 temp file deleted on exit.
 set -euo pipefail
 APP=/var/www/clients/client1/web3; SHARED=$APP/shared; PHP=php8.4
-_env() { grep -E "^$1=" "$SHARED/.env" 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/[[:space:]]*#.*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/" -e 's/[[:space:]]*$//'; }
+_env() { grep -E "^$1=" "$SHARED/.env" 2>/dev/null | head -1 | cut -d= -f2- | sed -e 's/[[:space:]]*#.*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/" -e 's/[[:space:]]*$//' || true; }
 
 echo "== 1. flags (expected: absent or false)"
 for k in COMPANY_EXCEPTIONAL_EXPORT_ENABLED BILLING_ASYNC_QUEUES_ENABLED APP_ENV QUEUE_CONNECTION MAIL_MAILER; do
