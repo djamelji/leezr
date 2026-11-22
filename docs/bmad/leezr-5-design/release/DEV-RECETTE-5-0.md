@@ -56,3 +56,12 @@ Recette **non réalisée** : aucun compte Platform de recette n'existe sur DEV. 
 
 - **A1 à A4** : corrigés. Avant/après sur le clone, aux tailles qui révélaient chaque défaut : `captures/dev-recette/a864/`.
 - **Recette Platform** : les droits de lecture `view_jobdomains`, `view_modules` et `view_document_catalog` sont prêts, avec un profil de recette prouvé sur le clone (`captures/dev-recette/platform-ro/`). La procédure est dans [PLATFORM-RECIPE-ACCOUNT-DEV.md](PLATFORM-RECIPE-ACCOUNT-DEV.md).
+
+## Déploiement correctif ADR-863 sur DEV (2026-11-22)
+
+- **Sauvegarde préalable** : `pre-deploy_c1leezrdev_20261122T224328Z.sql.gz`, 201 tables, `gzip -t` OK, sha256 `04db9c9c0d54982a07aada53adc33cc1d7232393ee963b91b396fcc437289bf1`. Copie sur le poste : `~/leezr-backups/dev-pre-5-0-1-20261122/`, même empreinte. Script : `dev-backup.sh`.
+- **Déploiement** : `84bf8419` poussé sans force ; `origin/dev` n'avait pas divergé. GitHub Actions run 45079361945 en succès. Release servie : `releases/20261122224540_84bf841`, `/up` = 200.
+- **Permissions** : `view_document_catalog`, `view_jobdomains` et `view_modules` sont créées (49 au total). Elles sont attribuées à **0** rôle ; `admin` garde ses 45 droits et `super_admin` en a 0 (il passe par le contournement). Un seul compte Platform existe.
+- **Données** : SystemSync montre les 4 mêmes conflits, valeurs administrées préservées. Les sommes de contrôle des 14 tables historiques sont identiques, 0 migration est en attente, et le comportement Flotte historique est inchangé.
+- **Workers et journaux** : les 2 workers sont actifs, 0 job en attente ou en échec. Aucune erreur serveur depuis 22:00 UTC ; les erreurs du jour datent de 03:57 et 07:12.
+- **Correctifs visibles sur DEV** : contrôle en lecture seule avec les comptes fictifs, aux mêmes tailles que lors de la découverte des défauts (`captures/dev-recette/a864-dev/`). Pour A1 à A4 : 0 débordement, 0 libellé coupé, 0 élément hors écran, 0 erreur. Les expéditions s'affichent en cartes, 4 sur DEV.
