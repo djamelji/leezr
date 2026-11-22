@@ -18,6 +18,7 @@ use Database\Seeders\SystemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use App\Platform\RBAC\PlatformPermissionCatalog;
 use Tests\TestCase;
 
 /**
@@ -70,7 +71,7 @@ class Adr832SystemSyncTest extends TestCase
         $this->assertGreaterThan(0, PlatformModule::count());
         $this->assertSame([], SystemSync::conflicts(), 'a blank install has no conflict');
         $admin = PlatformRole::where('key', 'admin')->first();
-        $this->assertSame(PlatformPermission::count(), $admin->permissions()->count(), 'admin is offered every permission on a blank install');
+        $this->assertSame(PlatformPermission::count() - count(PlatformPermissionCatalog::EXPLICIT_GRANT_ONLY), $admin->permissions()->count(), 'admin is offered every permission on a blank install — except the explicit-only ones (ADR-852)');
         $this->assertGreaterThan(0, DB::table('system_sync_baselines')->count());
 
         $before = self::fingerprint(self::CATALOG);

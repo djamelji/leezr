@@ -41,7 +41,9 @@ class PlatformSeeder extends Seeder
 
         // ADR-832 — the admin role is OFFERED every catalog permission once (new permissions of a deployment
         // included) ; a permission an administrator removed from it in Platform is never re-imposed.
-        $byKey = PlatformPermission::pluck('id', 'key')->all();
+        // ADR-852 — EXCEPT the permissions decided « granted explicitly only » (two-operator procedures) : never offered
+        // automatically, even to admin (ADR-846 : exceptional company data export).
+        $byKey = array_diff_key(PlatformPermission::pluck('id', 'key')->all(), array_flip(\App\Platform\RBAC\PlatformPermissionCatalog::EXPLICIT_GRANT_ONLY));
         $attach = SystemSync::offerMembers('platform_role_permission', 'admin', array_keys($byKey),
             $admin->permissions()->pluck('platform_permissions.key')->all(), $freshPermissions, $admin->wasRecentlyCreated);
         if ($attach !== []) {

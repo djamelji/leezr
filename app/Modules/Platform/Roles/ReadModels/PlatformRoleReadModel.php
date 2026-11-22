@@ -90,8 +90,10 @@ class PlatformRoleReadModel
             return 'full_access';
         }
 
-        $count = $permissions->count();
-        $total = $allPermissions->count();
+        // ADR-852 — explicit-only permissions are not part of « every permission » (admin is never offered them).
+        $explicitOnly = \App\Platform\RBAC\PlatformPermissionCatalog::EXPLICIT_GRANT_ONLY;
+        $count = $permissions->whereNotIn('key', $explicitOnly)->count();
+        $total = $allPermissions->whereNotIn('key', $explicitOnly)->count();
 
         if ($count === 0) {
             return 'custom';

@@ -29894,3 +29894,32 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - **Migrations** M8 → M10 vérifiées sur une copie MySQL : aucune ligne modifiée, retour arrière exact.
 - **État de release** et préconditions DEV (P-1 à P-8) : `docs/bmad/leezr-4-2-audit/m10/README.md` §6.
 - **Aucun déploiement.**
+
+## ADR-851 — Leezr 4.2 : code promo de l'inscription publique réellement appliqué
+
+- **Date** : 2026-11-21
+- **Contexte** : le code saisi à l'inscription n'était pas envoyé par le SPA (`auth.register`). Côté serveur, il était revalidé *après* la création de l'abonnement, si bien qu'un code « premier achat » était toujours refusé. Il était aussi rattaché à un abonnement que `createCheckout` remplaçait. Enfin, l'aperçu public ne contrôlait ni l'offre ni la périodicité.
+- **Décision** :
+  - Même moteur partout (`CouponService::validate`) : aperçu, estimation et inscription.
+  - Le code est validé **avant** toute création et, en cas de refus, renvoie un 422 `coupon_code` avec le motif traduit.
+  - Pendant la transaction, la ligne du coupon est verrouillée (`lockForUpdate`) et `isUsable()` est revérifié, ce qui protège contre la double utilisation de la dernière occurrence.
+  - Le code est rattaché à l'abonnement **courant**, y compris après le checkout.
+  - Aucun abonnement existant n'est modifié, et le moteur Billing reste inchangé.
+- **Conséquences** :
+  - `Adr851RegistrationCouponTest` : 5 tests verts.
+  - Recette navigateur `audit842-promo-recipe` : 2/2, avec un code valide, un code inconnu et un code expiré.
+  - Commit `33bf7dfd`.
+
+## ADR-852 — Leezr 4.2 : préparation finale du déploiement DEV
+
+- **Date** : 2026-11-21
+- **Contexte** : sur un clone MariaDB 11.8 isolé, `system:sync` a attribué au rôle `admin` la nouvelle permission `exceptional_company_export`. Or ADR-846 la veut accordée **explicitement seulement** : c'est une procédure à deux opérateurs, coupée par défaut. La règle ADR-832, qui propose une fois au rôle admin toute permission du catalogue, la donnait automatiquement.
+- **Décision** :
+  - `PlatformPermissionCatalog::EXPLICIT_GRANT_ONLY = ['exceptional_company_export']` : ces permissions ne sont jamais proposées automatiquement, ni au déploiement ni à la synchronisation (`PlatformSeeder`).
+  - Le niveau d'accès « administration » d'un rôle (`PlatformRoleReadModel`) se calcule hors de ces permissions, pour que `admin` reste au niveau administration.
+  - Une attribution manuelle faite par un administrateur reste intacte.
+  - Le rapport de mise en production est `docs/bmad/LEEZR-4-2-DEV-RELEASE-READY.md`.
+- **Conséquences** :
+  - `Adr852ReleaseReadinessTest` est vert. Suite complète : 4893 passés, 0 échec. Le test ADR-832 « blank install » a été aligné sur la nouvelle exception explicite.
+  - Vérifié sur MariaDB : après retrait de l'attribution puis nouvelle synchronisation, aucun rôle ne détient la permission.
+  - Le déploiement reste soumis à une autorisation distincte (OP-4).

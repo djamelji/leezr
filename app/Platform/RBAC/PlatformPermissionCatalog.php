@@ -12,6 +12,12 @@ use App\Platform\Models\PlatformPermission;
 class PlatformPermissionCatalog
 {
     /**
+     * ADR-852 — permissions granted EXPLICITLY only (two-operator procedures, ADR-846) : never offered automatically
+     * to any role by the deployment sync, and not counted when deciding a role holds « every permission ».
+     */
+    public const EXPLICIT_GRANT_ONLY = ['exceptional_company_export'];
+
+    /**
      * All platform permissions, aggregated from module manifests.
      *
      * @return array<array{key: string, label: string, module_key: string, is_admin: bool}>
