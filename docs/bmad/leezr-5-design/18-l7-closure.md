@@ -108,3 +108,23 @@ Simulation en lecture seule sur le clone, société 1 (`fields:rules-audit --mod
 - Sur téléphone, les onglets de l'espace Documents défilent : le premier est coupé au bord de l'écran.
 - Dans la bande d'indicateurs, sur 390 px, les libellés longs sont tronqués (« Taux de conf… », « En attente de sign… »). Le nom complet reste disponible dans l'aide.
 - Les pages publiques (inscription, centre d'aide, signature, invitations) sont prévues pour un lot distinct.
+
+## 9. Finitions finales et décisions Flotte (addendum)
+
+- **Les quatre écarts du §8 sont fermés.**
+  - Titres d'onglet du navigateur :
+    - cockpit Platform : « Vue d'ensemble · Tableau de bord » ;
+    - accueil Company : « Accueil · société » ;
+    - Personnes : « Personnes · Équipe » ;
+    - fiche collaborateur : « nom · rubrique · Équipe ».
+  - Sur téléphone, Documents montre ses quatre vues entières, sans défilement.
+  - À 390 px, les libellés des bandes d'indicateurs sont entiers.
+  - La fiche collaborateur reprend l'en-tête V22.
+  - Vérifié par la recette `audit842-finish863` (3/3) ; galerie « après » recapturée.
+- **Décisions Flotte** : elles sont inscrites dans l'addendum de l'ADR-862. Le §6 ci-dessus reste le constat de départ.
+  - Livreur conduit par défaut, posé à la création du poste uniquement, sans écraser l'existant.
+  - Le responsable d'exploitation n'a aucune obligation automatique.
+  - Aucun collaborateur ne reçoit de poste automatiquement.
+  - Le conducteur occasionnel est déclaré sur sa fiche ; les livraisons ne sont qu'un indice.
+  - Aucune bascule de société.
+- **Préflight DEV** : [release/DEV-PREFLIGHT-5-0.md](release/DEV-PREFLIGHT-5-0.md).

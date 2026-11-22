@@ -30263,3 +30263,35 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
     - libellés tronqués de la bande d'indicateurs à 390 px ;
     - pages publiques (lot distinct).
   - Aucun push, aucun déploiement, aucune société historique modifiée. L8 n'est pas commencé.
+
+### ADR-862 · addendum (2026-11-22) — finitions finales et décisions produit Flotte
+
+- **Finitions** :
+  - Onglet du navigateur nommé sur :
+    - le cockpit Platform ;
+    - l'accueil Company ;
+    - Personnes ;
+    - la fiche collaborateur.
+  - Sur téléphone, Documents affiche ses quatre vues côte à côte avec des libellés courts entiers (`AppSectionNavigation`, champ `short`).
+  - À 390 px, les libellés des bandes d'indicateurs passent sur deux lignes au lieu d'être tronqués.
+  - La fiche collaborateur reprend l'en-tête V22 de Personnes. Ses fonctionnalités ne sont pas reconstruites.
+- **Décisions produit Flotte** (dans le moteur d'activité existant, sans nouvelle architecture) :
+  - **Livreur** conduit normalement :
+    - un élément de preset d'organisation peut porter `activities` ;
+    - elles sont posées sur le poste **à sa création seulement** ; un poste existant (ignoré, ou en conflit de titre) garde ce que la société a configuré ;
+    - le preset « dernier kilomètre » déclare la conduite sur Livreur.
+  - **Responsable d'exploitation** : aucune obligation automatique.
+  - **Collaborateurs sans poste** : aucune attribution automatique.
+  - **Conducteur occasionnel** :
+    - il est déclaré explicitement sur la personne (`workforce_employees.metadata.activities`) ;
+    - la déclaration se fait depuis la fiche collaborateur, avec le même droit que l'affectation du poste ;
+    - les livraisons des 90 derniers jours deviennent un **indice** (`FunctionActivity::hinted`, `to_declare` dans la simulation), jamais une source d'obligation.
+  - **Sociétés historiques** : aucune bascule de périmètre sans autorisation spécifique. Toutes restent sur `everyone`.
+- **Préflight DEV** : [DEV-PREFLIGHT-5-0.md](leezr-5-design/release/DEV-PREFLIGHT-5-0.md).
+  - Une sauvegarde vérifiée a été faite.
+  - La répétition sur une copie MariaDB des données DEV laisse les tables historiques identiques.
+  - `DOCUMENT_SCANNER` est absent de DEV.
+- **Compte Platform n° 1 de DEV** :
+  - le changement de mot de passe est laissé au propriétaire ([PLATFORM-1-DEV-PASSWORD.md](leezr-5-design/release/PLATFORM-1-DEV-PASSWORD.md)) ;
+  - la méthode de récupération doit être confirmée avant toute action ;
+  - le contrôle en lecture seule `platform1-check.sh` sert à vérifier le résultat.

@@ -207,16 +207,8 @@ class EmployeeController extends Controller
             'department_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_departments', 'id')->where('company_id', $companyId)],
             'job_role_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_job_roles', 'id')->where('company_id', $companyId)],
             'manager_id' => ['sometimes', 'nullable', 'integer', \Illuminate\Validation\Rule::exists('workforce_employees', 'id')->where('company_id', $companyId)->where(fn ($q) => $q->where('status', '!=', Employee::STATUS_TERMINATED)->orWhere('id', (int) $employee->manager_id))], // ADR-817 (D17) : non sorti, ou le responsable déjà affecté
-            // ADR-862 : activities this person exercises, declared explicitly (e.g. the occasional driver) — same right as the position
-            'activities' => 'sometimes|array',
-            'activities.*' => ['string', \Illuminate\Validation\Rule::in(\App\Core\Fields\TagDictionary::ACTIVITIES)],
-        ]);
-        if (array_key_exists('activities', $validated)) {
-            $employee->metadata = array_merge((array) ($employee->metadata ?? []), ['activities' => array_values(array_unique($validated['activities']))]);
-            $employee->save();
-            unset($validated['activities']);
-            \App\Core\Fields\FunctionActivity::flush((int) $companyId);
-        }
+        ] + \App\Modules\Workforce\Employees\Services\PersonActivities::rules()); // ADR-862 : activities declared on the person
+        $validated = \App\Modules\Workforce\Employees\Services\PersonActivities::apply($employee, $validated);
 
         \App\Core\Workforce\EmployeeNumbering::updateTracked($employee, $validated); // ADR-787 : historique du numéro
 
