@@ -14,7 +14,7 @@ import { useContainerWidth } from '@/composables/useContainerWidth'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
-  // [{ value, label, icon, disabled? }]
+  // [{ value, label, icon, short?, disabled? }] — `short` (ADR-862) : the phone label, whole, never truncated
   sections: { type: Array, required: true },
   modelValue: { type: [String, Number], default: null },
 })
@@ -91,7 +91,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
           :icon="s.icon"
           size="20"
         />
-        <span class="asn-mtab__label">{{ s.label }}</span>
+        <span class="asn-mtab__label">{{ s.short || s.label }}</span>
       </span>
     </VBtn>
 
@@ -143,7 +143,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
     min-block-size: 56px;
     block-size: 56px;
     min-inline-size: 0; // laisse le flex répartir sans débordement
-    padding-inline: 4px;
+    padding-inline: 1px; // ADR-862 : every pixel for the whole short label
     border-radius: 0;
     text-transform: none;
     letter-spacing: normal;
@@ -168,6 +168,7 @@ const overflowActive = computed(() => overflowSections.value.some(s => s.value =
     max-inline-size: 100%;
     overflow: hidden;
     font-size: 0.6875rem;
+    letter-spacing: -0.01em;
     line-height: 1.1;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -67,5 +67,11 @@ const cols = computed(() => Math.min(Math.max(props.items.length, 2), 5))
   .app-stat-strip__cell:nth-child(odd) { border-inline-start: 0; }
   .app-stat-strip__cell:nth-child(n+3) { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
   .app-stat-strip__cell { padding: 12px 14px; }
+  /* ADR-862 — on a phone the label wraps (two lines at most) instead of « Taux de conf… » ; the help stays at the end */
+  .app-stat-strip__label { align-items: flex-start; white-space: normal; line-height: 1.3; }
+  .app-stat-strip__text { overflow: visible; overflow-wrap: anywhere; }
+  .app-stat-strip__label :deep(.v-icon) { margin-block-start: 1px; flex-shrink: 0; }
+  /* an odd last cell spans the row (no lone half-cell) */
+  .app-stat-strip__cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 </style>

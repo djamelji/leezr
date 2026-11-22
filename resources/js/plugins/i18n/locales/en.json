@@ -4953,7 +4953,18 @@
     "documentsGeneratedHint": "Contracts, amendments and certificates produced by the company.",
     "requestMissing": "Request missing documents",
     "requestMissingDone": "{n} request(s) sent.",
-    "requestMissingNone": "No missing document to request."
+    "requestMissingNone": "No missing document to request.",
+    "file": {
+      "eyebrow": "Person record",
+      "noPosition": "No position"
+    },
+    "groupsShort": {
+      "overview": "Summary",
+      "profile": "Details",
+      "documents": "Docs",
+      "time": "Time",
+      "access": "Access"
+    }
   },
   "peopleList": {
     "title": "Team",
@@ -13277,7 +13288,11 @@
       "dispatching": "Operations / dispatching",
       "management": "Management",
       "saved": "Position activities saved",
-      "none": "No activity declared"
+      "none": "No activity declared",
+      "personTitle": "Activities this person exercises",
+      "personHint": "In addition to the position: e.g. a manager who drives now and then. The information a module asks for this activity (the licence for driving) is then asked from them. Recent deliveries are a hint, never an obligation.",
+      "personSaved": "Person activities saved",
+      "fromPosition": "declared by the position"
     },
     "ops": {
       "family": "Operations",
@@ -13444,7 +13459,18 @@
         },
         "emptyTitle": "No signature request",
         "emptyText": "The requests you send appear here with their progress."
+      },
+      "short": {
+        "todo": "To do",
+        "company": "Company",
+        "people": "Team",
+        "signatures": "Signatures"
       }
+    },
+    "tabTitle": {
+      "home": "Home",
+      "cockpit": "Dashboard",
+      "people": "Team"
     }
   }
 }

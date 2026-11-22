@@ -4954,7 +4954,18 @@
     "documentsGeneratedHint": "Contrats, avenants et attestations produits par l'entreprise.",
     "requestMissing": "Demander les pièces manquantes",
     "requestMissingDone": "{n} demande(s) envoyée(s).",
-    "requestMissingNone": "Aucune pièce manquante à demander."
+    "requestMissingNone": "Aucune pièce manquante à demander.",
+    "file": {
+      "eyebrow": "Fiche collaborateur",
+      "noPosition": "Poste non défini"
+    },
+    "groupsShort": {
+      "overview": "Synthèse",
+      "profile": "Infos",
+      "documents": "Docs",
+      "time": "Temps",
+      "access": "Accès"
+    }
   },
   "peopleList": {
     "title": "Équipe",
@@ -13295,7 +13306,11 @@
       "dispatching": "Exploitation / répartition",
       "management": "Encadrement",
       "saved": "Activités du poste enregistrées",
-      "none": "Aucune activité déclarée"
+      "none": "Aucune activité déclarée",
+      "personTitle": "Activités exercées par cette personne",
+      "personHint": "En plus de son poste : par exemple un responsable qui conduit de temps en temps. Les informations qu'un module demande pour cette activité (le permis pour la conduite) lui sont alors demandées. Les livraisons récentes sont un indice, jamais une obligation.",
+      "personSaved": "Activités de la personne enregistrées",
+      "fromPosition": "déclarée par son poste"
     },
     "ops": {
       "family": "Exploitation",
@@ -13462,7 +13477,18 @@
         },
         "emptyTitle": "Aucune demande de signature",
         "emptyText": "Les demandes que vous envoyez apparaissent ici avec leur avancement."
+      },
+      "short": {
+        "todo": "À traiter",
+        "company": "Entreprise",
+        "people": "Équipe",
+        "signatures": "Signatures"
       }
+    },
+    "tabTitle": {
+      "home": "Accueil",
+      "cockpit": "Tableau de bord",
+      "people": "Équipe"
     }
   }
 }

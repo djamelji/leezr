@@ -1,5 +1,7 @@
 <script setup>
 import AppPageHeader from '@/components/app/AppPageHeader.vue'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
+import { useDisplay } from 'vuetify'
 // ADR-766 (M7) — ESPACE DOCUMENTS UNIFIÉ : une seule entrée Documents. Accès par `anyPermission`
 // (gouvernance DMS `documents.view` OU registre RH `workforce_documents.view` OU signatures
 // `workforce_signature.view`). Chaque onglet reste gated par sa permission RÉELLE ; aucun élargissement.
@@ -72,6 +74,9 @@ const resolveLegacy = (tab, query) => ({
 }[tab] || tab)
 
 const activeTab = computed(() => route.params.tab)
+const { smAndDown } = useDisplay()
+const mobileViews = computed(() => mainViews.value.map(v => ({ value: v.tab, label: v.title, icon: v.icon,
+  short: `${t(`l7.docs.short.${v.tab}`, v.title)}${v.badge ? ` · ${v.badge}` : ''}` })))
 const currentTool = computed(() => toolViews.value.find(v => v.tab === activeTab.value) || null)
 
 watch(() => route.params.tab, tab => {
@@ -289,6 +294,15 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
         </VBtn>
         <span class="text-h6">{{ currentTool.title }}</span>
       </div>
+      <!-- ADR-862 — phone : the four views side by side, whole short labels (the tab bar scrolled and cut the first one) -->
+      <AppSectionNavigation
+        v-else-if="smAndDown"
+        :model-value="activeTab"
+        :sections="mobileViews"
+        class="mb-6"
+        data-test="documents-views-mobile"
+        @update:model-value="v => router.push({ name: 'company-documents-tab', params: { tab: v } })"
+      />
       <VTabs
         v-else
         :model-value="activeTab"

@@ -100,7 +100,7 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
   await settle(page)
   await page.getByRole('tab', { name: 'Informations & emploi' }).first().click() // ADR-777 : rubrique
   await expect(page).toHaveURL(/\/profile$/) // ADR-820 : rubrique dans le chemin
-  await page.locator('[data-test="person-back"]').click()
+  await page.locator('[data-test="page-back"], [data-test="person-back"]').first().click() // ADR-862 : the way back sits in the page header
   await expect(page, 'retour à la liste').toHaveURL(/\/company\/people$/, { timeout: 20000 })
 
   net.assertClean('routes (propriétaire)')

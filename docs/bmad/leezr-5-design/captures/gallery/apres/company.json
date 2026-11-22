@@ -8,7 +8,7 @@
   "file": "c-dashboard--desktop-clair.jpg",
   "url": "/home",
   "status": 200,
-  "title": "Leezr"
+  "title": "Accueil · Leezr Logistics · Leezr"
  },
  {
   "space": "company",
@@ -19,7 +19,7 @@
   "file": "c-people--desktop-clair.jpg",
   "url": "/company/people",
   "status": 200,
-  "title": "Leezr"
+  "title": "Personnes · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -30,7 +30,7 @@
   "file": "c-person--desktop-clair.jpg",
   "url": "/company/people/employee-3",
   "status": 200,
-  "title": "Leezr"
+  "title": "Bob Dupont · Vue d'ensemble · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -140,7 +140,7 @@
   "file": "c-dashboard--mobile-clair.jpg",
   "url": "/home",
   "status": 200,
-  "title": "Leezr"
+  "title": "Accueil · Leezr Logistics · Leezr"
  },
  {
   "space": "company",
@@ -151,7 +151,7 @@
   "file": "c-people--mobile-clair.jpg",
   "url": "/company/people",
   "status": 200,
-  "title": "Leezr"
+  "title": "Personnes · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -162,7 +162,7 @@
   "file": "c-person--mobile-clair.jpg",
   "url": "/company/people/employee-3",
   "status": 200,
-  "title": "Leezr"
+  "title": "Bob Dupont · Vue d'ensemble · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -272,7 +272,7 @@
   "file": "c-dashboard--desktop-sombre.jpg",
   "url": "/home",
   "status": 200,
-  "title": "Leezr"
+  "title": "Accueil · Leezr Logistics · Leezr"
  },
  {
   "space": "company",
@@ -283,7 +283,7 @@
   "file": "c-people--desktop-sombre.jpg",
   "url": "/company/people",
   "status": 200,
-  "title": "Leezr"
+  "title": "Personnes · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -294,7 +294,7 @@
   "file": "c-person--desktop-sombre.jpg",
   "url": "/company/people/employee-3",
   "status": 200,
-  "title": "Leezr"
+  "title": "Bob Dupont · Vue d'ensemble · Équipe · Leezr"
  },
  {
   "space": "company",
@@ -404,7 +404,7 @@
   "file": "c-dashboard--mobile-sombre.jpg",
   "url": "/home",
   "status": 200,
-  "title": "Leezr"
+  "title": "Accueil · Leezr Logistics · Leezr"
  },
  {
   "space": "company",
@@ -415,7 +415,7 @@
   "file": "c-people--mobile-sombre.jpg",
   "url": "/company/people",
   "status": 200,
-  "title": "Leezr"
+  "title": "Personnes · Équipe · Leezr"
  },
  {
   "space": "company",

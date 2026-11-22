@@ -8,7 +8,7 @@
   "file": "p-dashboard--desktop-clair.jpg",
   "url": "/platform/dashboard/overview",
   "status": 200,
-  "title": "Leezr"
+  "title": "Vue d'ensemble · Tableau de bord · Leezr"
  },
  {
   "space": "platform",
@@ -129,7 +129,7 @@
   "file": "p-dashboard--mobile-clair.jpg",
   "url": "/platform/dashboard/overview",
   "status": 200,
-  "title": "Leezr"
+  "title": "Vue d'ensemble · Tableau de bord · Leezr"
  },
  {
   "space": "platform",
@@ -250,7 +250,7 @@
   "file": "p-dashboard--desktop-sombre.jpg",
   "url": "/platform/dashboard/overview",
   "status": 200,
-  "title": "Leezr"
+  "title": "Vue d'ensemble · Tableau de bord · Leezr"
  },
  {
   "space": "platform",
@@ -371,6 +371,6 @@
   "file": "p-dashboard--mobile-sombre.jpg",
   "url": "/platform/dashboard/overview",
   "status": 200,
-  "title": "Leezr"
+  "title": "Vue d'ensemble · Tableau de bord · Leezr"
  }
 ]

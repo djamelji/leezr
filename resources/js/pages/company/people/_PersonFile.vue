@@ -7,6 +7,7 @@ import { displayLocale } from '@/utils/datetime'
 // sections et actions visibles viennent du serveur (`available_sections`, `can.*`).
 import { useRoute, useRouter } from 'vue-router'
 import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import ErrorState from '@/core/components/ErrorState.vue'
 import { usePersonStore } from '@/modules/company/people/person.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
@@ -86,7 +87,7 @@ const groups = computed(() => GROUPS
   .map(g => ({ ...g, sections: g.sections.filter(has) }))
   .filter(g => g.sections.length))
 const tabKeys = computed(() => groups.value.map(g => g.key))
-const tabSections = computed(() => groups.value.map(g => ({ value: g.key, label: t(`people.groups.${g.key}`), icon: g.icon })))
+const tabSections = computed(() => groups.value.map(g => ({ value: g.key, label: t(`people.groups.${g.key}`), short: t(`people.groupsShort.${g.key}`), icon: g.icon }))) // ADR-862 : whole short labels on a phone
 const currentGroup = computed(() => groups.value.find(g => g.key === currentTab.value) || null)
 const titled = computed(() => (currentGroup.value?.sections.length || 0) > 1)
 
@@ -296,6 +297,23 @@ const go = target => {
   if (target === 'create-hr') openHrLink('create')
   else openSection(target)
 }
+// ADR-862 — activities declared on the PERSON (the occasional driver) : explicit business declaration, same right as
+// editing the employment ; the position's own activities are shown, not editable here.
+const ACTIVITIES = ['driving', 'dispatching', 'management']
+const personActivities = computed(() => employee.value?.metadata?.activities || [])
+const savingActivity = ref(null)
+const togglePersonActivity = async (key, on) => {
+  savingActivity.value = key
+  try {
+    const next = on ? [...new Set([...personActivities.value, key])] : personActivities.value.filter(a => a !== key)
+    await $api(`/workforce/employees/${employee.value.id}`, { method: 'PUT', body: { activities: next } })
+    employee.value = { ...employee.value, metadata: { ...(employee.value.metadata || {}), activities: next } }
+    toast(t('l7.activity.personSaved'), 'success')
+  }
+  catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
+  finally { savingActivity.value = null }
+}
+watchEffect(() => { if (store.data) document.title = `${store.identity.display_name} · ${t(`people.groups.${currentTab.value}`, '')} · ${t('peopleList.title')} · Leezr`.replace(' ·  ·', ' ·') }) // ADR-862
 const goBack = () => (window.history.state?.back ? router.back() : router.push({ name: 'company-people' }))
 const onRemoved = () => router.push({ name: 'company-people' })
 const onHrLinked = newRef => { if (newRef) router.replace({ name: route.name, params: { ...route.params, personRef: newRef } }); else reload() }
@@ -318,7 +336,9 @@ const requestMissing = async () => {
 
 <template>
   <div>
+    <!-- loading / error : the way back stays reachable (the header below carries it once the file is loaded) -->
     <VBtn
+      v-if="!store.data"
       variant="text"
       size="small"
       prepend-icon="tabler-arrow-left"
@@ -357,86 +377,84 @@ const requestMissing = async () => {
     </VCard>
 
     <template v-else>
-      <!-- ═══ EN-TÊTE ═══ -->
-      <VCard
-        class="mb-5"
-        data-test="person-header"
-      >
-        <VCardText class="py-4">
-          <div class="d-flex align-center gap-3 flex-wrap">
-            <VAvatar
-              color="primary"
-              variant="tonal"
-              :size="$vuetify.display.smAndDown ? 48 : 64"
-            >
-              <VImg
-                v-if="store.identity.avatar"
-                :src="store.identity.avatar"
-              />
-              <span
-                v-else
-                class="font-weight-medium"
-              >{{ initials }}</span>
-            </VAvatar>
-            <div
-              class="flex-grow-1"
-              style="min-inline-size: 0;"
-            >
-              <div class="d-flex align-center gap-2 flex-wrap">
-                <h4 class="text-h5 text-sm-h4 font-weight-bold text-truncate mb-0">
-                  {{ store.identity.display_name }}
-                </h4>
-                <VChip
-                  :color="accountMeta.color"
-                  size="small"
-                  variant="tonal"
-                  label
-                  data-test="person-account-state"
-                >
-                  {{ accountMeta.label }}
-                </VChip>
-                <VChip
-                  v-if="store.account.is_owner"
-                  color="primary"
-                  size="small"
-                  variant="tonal"
-                  label
-                >
-                  {{ t('people.owner') }}
-                </VChip>
-                <VChip
-                  v-else-if="store.account.role"
-                  :color="store.account.role.is_administrative ? 'warning' : 'secondary'"
-                  size="small"
-                  variant="tonal"
-                  label
-                >
-                  {{ store.account.role.name }}
-                </VChip>
-              </div>
-              <div class="text-body-2 text-medium-emphasis mt-1 d-flex flex-wrap gap-x-4 gap-y-1">
-                <span v-if="store.identity.login_email"><VIcon
-                  icon="tabler-mail"
-                  size="14"
-                /> {{ store.identity.login_email }}</span>
-                <span v-if="store.employment?.position?.job_role"><VIcon
-                  icon="tabler-briefcase"
-                  size="14"
-                /> {{ store.employment.position.job_role }}</span>
-                <span v-if="store.employment?.position?.department"><VIcon
-                  icon="tabler-building"
-                  size="14"
-                /> {{ store.employment.position.department }}</span>
-                <span v-if="store.employment?.position?.manager"><VIcon
-                  icon="tabler-users"
-                  size="14"
-                /> {{ store.employment.position.manager }}</span>
-                <span v-if="store.employment?.identity?.status"><VIcon
-                  icon="tabler-id-badge"
-                  size="14"
-                /> {{ t(`people.empStatus.${store.employment.identity.status}`, store.employment.identity.status) }}</span>
-              </div>
+      <!-- ═══ EN-TÊTE ═══ ADR-862 : the V22 page header (as Personnes) — name as the page title, way back in the
+           eyebrow, state and role under it, actions on the right ; was a card with a large avatar. -->
+      <div data-test="person-header">
+        <AppPageHeader
+          :title="store.identity.display_name"
+          :eyebrow="t('people.file.eyebrow')"
+          :back="{ to: { name: 'company-people' }, label: t('peopleList.title') }"
+        >
+          <template #meta>
+            <div class="d-flex align-center gap-2 flex-wrap">
+              <VAvatar
+                color="primary"
+                variant="tonal"
+                size="32"
+              >
+                <VImg
+                  v-if="store.identity.avatar"
+                  :src="store.identity.avatar"
+                  :alt="store.identity.display_name"
+                />
+                <span
+                  v-else
+                  class="text-caption font-weight-medium"
+                  aria-hidden="true"
+                >{{ initials }}</span>
+              </VAvatar>
+              <VChip
+                :color="accountMeta.color"
+                size="small"
+                variant="tonal"
+                label
+                data-test="person-account-state"
+              >
+                {{ accountMeta.label }}
+              </VChip>
+              <VChip
+                v-if="store.account.is_owner"
+                color="primary"
+                size="small"
+                variant="tonal"
+                label
+              >
+                {{ t('people.owner') }}
+              </VChip>
+              <VChip
+                v-else-if="store.account.role"
+                :color="store.account.role.is_administrative ? 'warning' : 'secondary'"
+                size="small"
+                variant="tonal"
+                label
+              >
+                {{ store.account.role.name }}
+              </VChip>
             </div>
+            <div class="text-body-2 text-medium-emphasis mt-2 d-flex flex-wrap gap-x-4 gap-y-1">
+              <span v-if="store.identity.login_email"><VIcon
+                icon="tabler-mail"
+                size="14"
+              /> {{ store.identity.login_email }}</span>
+              <span><VIcon
+                icon="tabler-briefcase"
+                size="14"
+              /> {{ store.employment?.position?.job_role || t('people.file.noPosition') }}</span>
+              <span v-if="store.employment?.position?.department"><VIcon
+                icon="tabler-building"
+                size="14"
+              /> {{ store.employment.position.department }}</span>
+              <span v-if="store.employment?.position?.manager"><VIcon
+                icon="tabler-users"
+                size="14"
+              /> {{ store.employment.position.manager }}</span>
+              <span v-if="store.employment?.identity?.status"><VIcon
+                icon="tabler-id-badge"
+                size="14"
+              /> {{ t(`people.empStatus.${store.employment.identity.status}`, store.employment.identity.status) }}</span>
+            </div>
+          </template>
+          <template #actions>
             <div
               v-if="primaryAction || menuActions.length"
               class="d-flex align-center gap-2 flex-wrap"
@@ -487,9 +505,9 @@ const requestMissing = async () => {
                 </VMenu>
               </VBtn>
             </div>
-          </div>
-        </VCardText>
-      </VCard>
+          </template>
+        </AppPageHeader>
+      </div>
 
       <!-- ═══ NAVIGATION : cinq rubriques au plus (onglets desktop / barre mobile) ═══ -->
       <AppSectionNavigation
@@ -622,6 +640,31 @@ const requestMissing = async () => {
                     v-else
                     type="article"
                   />
+                  <!-- ADR-862 : activités déclarées sur la personne (conducteur occasionnel) -->
+                  <div
+                    v-if="employee && store.can.edit_hr"
+                    class="mt-6"
+                    data-test="person-activities"
+                  >
+                    <div class="text-body-1 font-weight-medium mb-1">
+                      {{ t('l7.activity.personTitle') }}
+                    </div>
+                    <p class="text-body-2 text-medium-emphasis mb-2">
+                      {{ t('l7.activity.personHint') }}
+                    </p>
+                    <VSwitch
+                      v-for="a in ACTIVITIES"
+                      :key="a"
+                      :model-value="personActivities.includes(a)"
+                      :label="t(`l7.activity.${a}`)"
+                      :loading="savingActivity === a"
+                      :disabled="!!savingActivity"
+                      density="compact"
+                      hide-details
+                      :data-test="`person-activity-${a}`"
+                      @update:model-value="v => togglePersonActivity(a, v)"
+                    />
+                  </div>
                   <!-- ADR-795 : informations complémentaires, avec ou sans compte -->
                   <EmployeeFields
                     v-if="store.employeeId"

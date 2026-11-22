@@ -33,6 +33,8 @@ const tabs = computed(() => [
   { title: t('platformDashboard.tabs.funnel'), icon: 'tabler-chart-funnel', tab: 'funnel', permission: 'view_usage_monitoring' },
 ].filter(item => !item.permission || platformAuth.hasPermission(item.permission)))
 
+// ADR-862 — « Vue d'ensemble · Tableau de bord · Leezr » (the cockpit had no tab name)
+watchEffect(() => { document.title = [tabs.value.find(x => x.tab === activeTab.value)?.title, t('l7.tabTitle.cockpit'), 'Leezr'].filter(Boolean).join(' · ') })
 const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab.value))
 </script>
 

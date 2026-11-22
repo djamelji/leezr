@@ -15,6 +15,10 @@ const clock = useWorkforceClockStore()
 
 // Gestion = l'espace de travail serveur (« dashboard ») : décidé par les droits de gestion du rôle.
 const hasManagement = computed(() => auth.workspace !== 'home')
+
+// ADR-862 — the browser tab says where the user is : « Accueil · <company> · Leezr »
+const { t } = useI18n()
+watchEffect(() => { document.title = [t('l7.tabTitle.home'), auth.currentCompany?.name, 'Leezr'].filter(Boolean).join(' · ') })
 </script>
 
 <template>

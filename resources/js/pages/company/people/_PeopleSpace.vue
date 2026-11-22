@@ -67,6 +67,8 @@ watch(tab, v => {
   // Changer de vue repart d'une URL propre (les filtres de la vue Gestion RH ne fuient pas ailleurs).
   if (route.name !== ROUTE[v]) router.replace({ name: ROUTE[v] })
 })
+// ADR-862 — « Personnes · Équipe · Leezr » (the tab name was the bare « Leezr »)
+watchEffect(() => { document.title = [{ people: t('peopleList.tabPeople'), hr: t('peopleList.tabHr'), roles: t('peopleList.tabRoles') }[tab.value] || t('l5.title'), t('l7.tabTitle.people'), 'Leezr'].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ') })
 watch(() => props.section, v => { if (v && v !== tab.value) tab.value = v })
 
 // ADR-858 (L5) — the « Personnes » view is the V22 directory (search, filters, synthesis, quick view) ; the old
