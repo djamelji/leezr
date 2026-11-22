@@ -175,7 +175,11 @@ export const setupGuards = router => {
   // Removing it in afterEach caused "blank page" because Vue partially mounts,
   // router navigates (afterEach fires), overlay disappears, but sub-components
   // still fail → user sees empty page for several seconds.
-  router.afterEach(() => {
+  router.afterEach((to, from) => {
+    // ADR-862 — a page that does not name the browser tab must not keep the previous page's name : back to « Leezr »,
+    // then the page (or its AppPageHeader) names it. Query-only changes (filters) keep the current name.
+    if (to.path !== from.path) document.title = 'Leezr'
+
     // Layout overlay stuck in visible state — dismiss at ALL breakpoints.
     // The VerticalNav watcher already handles intentional nav close on
     // route change, so this is purely a safety net for stuck overlays.

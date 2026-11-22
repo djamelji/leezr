@@ -46,11 +46,11 @@ const TERMS = ['employee', 'position', 'team', 'site']
 
 const id = computed(() => Number(route.params.id))
 const section = computed(() => (SECTIONS.some(s => s.key === route.params.tab) ? route.params.tab : 'general'))
-watchEffect(() => { if (profile.value) document.title = `${profile.value.identity.label} · ${t(`jobdomainSimple.section.${section.value}`)} · ${t('l7.catalog.family')} · Leezr` }) // ADR-861
 if (!SECTIONS.some(s => s.key === route.params.tab))
   router.replace({ name: 'platform-jobdomains-id-tab', params: { id: route.params.id, tab: LEGACY[route.params.tab] || 'general' } })
 
 const profile = ref(null)
+watchEffect(() => { if (profile.value) document.title = `${profile.value.identity.label} · ${t(`jobdomainSimple.section.${section.value}`)} · ${t('l7.catalog.family')} · Leezr` }) // ADR-861 ; ADR-862 : after `profile` (read before its declaration, the watcher died in the TDZ)
 const meta = ref(null)
 const orgFamilies = ref([])
 const loading = ref(true)

@@ -5,12 +5,22 @@
 // (where am I : « Facturation › Encaissements ») so that pages of one family never share the same bare title.
 // ADR-861 (L7.7) — detail pages : `back` ({ to, label }) puts the way back in the eyebrow line, `meta` slot carries the
 // status chips under the title (was : a bare arrow icon and a hand-made h4/h5 on every detail page).
-defineProps({
+const props = defineProps({
   title: { type: String, required: true },
   description: { type: String, default: '' },
   eyebrow: { type: String, default: '' },
   back: { type: Object, default: null },
 })
+
+// ADR-862 — default browser-tab name « title · eyebrow · Leezr » when the page itself names nothing (the router resets
+// it to « Leezr » on each new path). A page that names the tab (AppTabFamily, TimeSpaceHeader, records) keeps its name.
+const route = useRoute()
+let named = ''
+watch(() => [props.title, props.eyebrow, route.path], () => {
+  if (!props.title || (document.title !== 'Leezr' && document.title !== named)) return
+  named = [props.title, props.eyebrow, 'Leezr'].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · ')
+  document.title = named
+}, { immediate: true, flush: 'post' })
 </script>
 
 <template>

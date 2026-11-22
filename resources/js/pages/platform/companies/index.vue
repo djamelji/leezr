@@ -38,7 +38,7 @@ const tabs = computed(() => [
 // ADR-861 (L7.7) — the page says where the user is and what each view answers ; the main action (create) sits in the header
 const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
 const activeTitle = computed(() => tabs.value.find(x => x.value === currentTab.value)?.title || t('companies.title'))
-watchEffect(() => { document.title = `${activeTitle.value} · ${t('l7.companies.family')} · Leezr` })
+watchEffect(() => { document.title = [activeTitle.value, t('l7.companies.family'), 'Leezr'].filter((v, i, a) => a.indexOf(v) === i).join(' · ') }) // ADR-862 : no « Entreprises · Entreprises »
 
 watchEffect(() => {
   if (tabs.value.length && !tabs.value.some(tab => tab.value === currentTab.value))
