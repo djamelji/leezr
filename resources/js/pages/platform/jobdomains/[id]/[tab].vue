@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-821 — fiche MÉTIER simple, trois sections routées (ADR-475) :
 //   Métier (identité, vocabulaire, expérience facultative) · Modules (compatibles, au démarrage, recommandés —
 //   dépendances ajoutées automatiquement, droits commerciaux affichés) · Configuration initiale (bibliothèque de
@@ -45,6 +46,7 @@ const TERMS = ['employee', 'position', 'team', 'site']
 
 const id = computed(() => Number(route.params.id))
 const section = computed(() => (SECTIONS.some(s => s.key === route.params.tab) ? route.params.tab : 'general'))
+watchEffect(() => { if (profile.value) document.title = `${profile.value.identity.label} · ${t(`jobdomainSimple.section.${section.value}`)} · ${t('l7.catalog.family')} · Leezr` }) // ADR-861
 if (!SECTIONS.some(s => s.key === route.params.tab))
   router.replace({ name: 'platform-jobdomains-id-tab', params: { id: route.params.id, tab: LEGACY[route.params.tab] || 'general' } })
 
@@ -202,38 +204,33 @@ const advanced = ref(null)
     v-else-if="profile"
     data-test="jd-page"
   >
-    <div class="d-flex flex-wrap align-center gap-3 mb-6">
-      <div class="flex-grow-1">
-        <RouterLink
-          :to="{ name: 'platform-catalog-tab', params: { tab: 'jobdomains' } }"
-          class="text-body-2"
+    <AppPageHeader
+      :back="{ to: { name: 'platform-catalog-tab', params: { tab: 'jobdomains' } }, label: t('l7.catalog.family') }"
+      :eyebrow="t('l7.jobdomain.eyebrow')"
+      :title="profile.identity.label"
+      :description="t('jobdomainProfile.companies', { n: profile.compatibility.companies })"
+      data-test="jd-header"
+    >
+      <template #meta>
+        <VChip
+          :color="profile.identity.is_active ? 'success' : 'secondary'"
+          variant="tonal"
+          size="small"
+          label
         >
-          {{ t('jobdomainProfile.back') }}
-        </RouterLink>
-        <h4 class="text-h4 mt-1">
-          {{ profile.identity.label }}
-        </h4>
-        <div class="text-body-2 text-medium-emphasis">
-          {{ t('jobdomainProfile.companies', { n: profile.compatibility.companies }) }}
-        </div>
-      </div>
-      <VChip
-        :color="profile.identity.is_active ? 'success' : 'secondary'"
-        variant="tonal"
-        label
-      >
-        {{ profile.identity.is_active ? t('jobdomainProfile.active') : t('jobdomainProfile.inactive') }}
-      </VChip>
-      <VChip
-        v-if="profile.identity.signup_available"
-        color="primary"
-        variant="tonal"
-        label
-      >
-        {{ t('jobdomainExperience.openToSignup') }}
-      </VChip>
-    </div>
-
+          {{ profile.identity.is_active ? t('jobdomainProfile.active') : t('jobdomainProfile.inactive') }}
+        </VChip>
+        <VChip
+          v-if="profile.identity.signup_available"
+          color="primary"
+          variant="tonal"
+          size="small"
+          label
+        >
+          {{ t('jobdomainExperience.openToSignup') }}
+        </VChip>
+      </template>
+    </AppPageHeader>
     <VTabs
       :model-value="section"
       show-arrows

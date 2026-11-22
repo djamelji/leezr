@@ -1,4 +1,5 @@
 <script setup>
+import AppTabFamily from '@/components/app/AppTabFamily.vue'
 import EmailInboxTab from '../email/_EmailInboxTab.vue'
 import EmailTemplatesTab from '../email/_EmailTemplatesTab.vue'
 import EmailOrchestrationTab from '../email/_EmailOrchestrationTab.vue'
@@ -35,39 +36,26 @@ const tabs = computed(() => [
   { title: t('platformMessaging.tabs.settings'), icon: 'tabler-settings', tab: 'settings' },
   { title: t('platformMessaging.tabs.notifications'), icon: 'tabler-bell', tab: 'notifications' },
 ])
+
+// ADR-861 (L7.7) — 7 tabs → 3 groups : what arrives, what Leezr sends, whether it is delivered
+const GROUPS = [
+  { key: 'inbox', icon: 'tabler-inbox', pages: ['inbox'] },
+  { key: 'content', icon: 'tabler-template', pages: ['templates', 'orchestration', 'notifications'] },
+  { key: 'delivery', icon: 'tabler-send', pages: ['logs', 'health', 'settings'] },
+]
+const groups = computed(() => GROUPS.map(g => ({ ...g, title: t(`l7.messaging.group.${g.key}`), items: g.pages.map(k => tabs.value.find(x => x.tab === k)).filter(Boolean) })))
 </script>
 
 <template>
   <div>
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('platformMessaging.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('platformMessaging.subtitle') }}
-        </p>
-      </div>
-    </div>
-
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
-        :to="{ name: 'platform-messaging-tab', params: { tab: item.tab } }"
-      >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-      </VTab>
-    </VTabs>
+    <AppTabFamily
+      :family="t('platformMessaging.title')"
+      :groups="groups"
+      route-name="platform-messaging-tab"
+      :active="activeTab"
+      hint-prefix="l7.messaging.hint"
+      test="messaging"
+    />
 
     <VWindow
       v-model="activeTab"

@@ -201,15 +201,7 @@ onMounted(() => {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ t('alerts.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ t('alerts.subtitle') }}
-        </p>
-      </div>
+    <div class="d-flex align-center justify-end mb-6">
       <VBtn
         variant="tonal"
         prepend-icon="tabler-refresh"

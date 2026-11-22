@@ -10,6 +10,7 @@ import MembersTab from './_MembersTab.vue'
 import CompanyLogsTab from './_CompanyLogsTab.vue'
 import MyCreatedCompanies from './_MyCreatedCompanies.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 
 definePage({
   meta: {
@@ -34,6 +35,11 @@ const tabs = computed(() => [
   { title: t('audit.companyTab'), icon: 'tabler-file-search', value: 'logs', permission: 'view_audit_logs' },
 ].filter(tab => platformAuth.hasPermission(tab.permission)))
 
+// ADR-861 (L7.7) — the page says where the user is and what each view answers ; the main action (create) sits in the header
+const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
+const activeTitle = computed(() => tabs.value.find(x => x.value === currentTab.value)?.title || t('companies.title'))
+watchEffect(() => { document.title = `${activeTitle.value} · ${t('l7.companies.family')} · Leezr` })
+
 watchEffect(() => {
   if (tabs.value.length && !tabs.value.some(tab => tab.value === currentTab.value))
     currentTab.value = tabs.value[0].value
@@ -44,9 +50,29 @@ watchEffect(() => {
   <MyCreatedCompanies v-if="!canViewAll" />
 
   <div v-else>
+    <AppPageHeader
+      :eyebrow="t('l7.companies.group')"
+      :title="activeTitle"
+      :description="t(`l7.companies.hint.${currentTab}`)"
+      data-test="companies-header"
+    >
+      <template
+        v-if="canCreateCompany && currentTab === 'companies'"
+        #actions
+      >
+        <VBtn
+          prepend-icon="tabler-plus"
+          :to="{ name: 'platform-companies-create' }"
+          data-testid="new-company"
+        >
+          {{ t('platformCompanyCreation.newCompany') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
     <VTabs
       v-model="currentTab"
       class="v-tabs-pill"
+      show-arrows
     >
       <VTab
         v-for="item in tabs"

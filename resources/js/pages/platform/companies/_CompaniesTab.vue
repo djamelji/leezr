@@ -19,7 +19,6 @@ const companiesStore = usePlatformCompaniesStore()
 const { toast } = useAppToast()
 const { confirm, ConfirmDialogComponent } = useConfirm()
 const platformAuth = usePlatformAuthStore()
-const canCreateCompany = computed(() => platformAuth.hasPermission('create_companies')) // ADR-834 : = POST /platform/companies
 // ADR-841 — financial figures (MRR) only with view_billing : the API omits them otherwise
 const canSeeFinance = computed(() => platformAuth.hasPermission('view_billing'))
 const canManageCompanies = computed(() => platformAuth.hasPermission('manage_companies'))
@@ -232,12 +231,14 @@ const kpiCards = computed(() => [
     title: t('companies.stats.active'),
     value: companiesStore.stats.total_active,
     color: 'success',
+    tone: 'success',
     icon: 'tabler-check',
   },
   {
     title: t('companies.stats.suspended'),
     value: companiesStore.stats.total_suspended,
     color: 'error',
+    tone: 'muted',
     icon: 'tabler-ban',
   },
   {
@@ -254,6 +255,7 @@ const kpiCards = computed(() => [
     title: t('companies.stats.atRisk'),
     value: companiesStore.stats.at_risk_count,
     color: 'warning',
+    tone: 'warning',
     icon: 'tabler-alert-triangle',
   },
 ].filter(card => !card.finance || canSeeFinance.value))
@@ -262,7 +264,7 @@ const segmentChips = computed(() => [
   {
     label: t('companies.segmentAll'),
     value: null,
-    color: 'default',
+    color: 'primary',
     icon: 'tabler-list',
   },
   {
@@ -294,65 +296,36 @@ const segmentChips = computed(() => [
 
 <template>
   <section>
-    <!-- KPI Cards -->
-    <VCard class="mb-6">
-      <VCardText>
-        <VRow class="card-grid card-grid-xs">
-          <VCol
-            v-for="card in kpiCards"
-            :key="card.title"
-            cols="6"
-            md
-          >
-            <VCard
-              flat
-              border
-              class="text-center pa-4"
-            >
-              <VAvatar
-                size="42"
-                variant="tonal"
-                :color="card.color"
-                class="mb-2"
-              >
-                <VIcon :icon="card.icon" />
-              </VAvatar>
-              <h4 class="text-h5 font-weight-bold">
-                {{ card.value }}
-              </h4>
-              <span
-                class="text-body-2 text-disabled"
-                :data-testid="card.testid"
-              >{{ card.title }}</span>
-              <AppMetricHelp
-                v-if="card.help"
-                :text="card.help"
-                :label="card.title"
-              />
-            </VCard>
-          </VCol>
-        </VRow>
-      </VCardText>
-    </VCard>
-
-    <!-- Segment Quick Filters -->
-    <div class="d-flex gap-2 flex-wrap mb-4">
-      <VChip
-        v-for="chip in segmentChips"
-        :key="chip.value"
-        :color="segmentFilter === chip.value ? chip.color : 'default'"
-        :variant="segmentFilter === chip.value ? 'elevated' : 'tonal'"
-        :prepend-icon="chip.icon"
-        label
-        class="cursor-pointer"
-        @click="toggleSegment(chip.value)"
-      >
-        {{ chip.label }}
-      </VChip>
-    </div>
+    <!-- ADR-861 (L7.7) : one indicator strip (was five tall cards) ; segments sit on the table they filter -->
+    <AppStatStrip
+      :items="kpiCards.map(c => ({ key: c.testid || c.icon, label: c.title, value: c.value, icon: c.icon, tone: c.tone, help: c.help, testid: c.testid }))"
+      class="mb-6"
+      data-test="companies-stats"
+    />
 
     <!-- Companies Table -->
     <VCard>
+      <VCardText
+        class="d-flex gap-2 flex-wrap pb-2"
+        data-test="companies-segments"
+      >
+        <VChip
+          v-for="chip in segmentChips"
+          :key="chip.value"
+          :color="segmentFilter === chip.value ? chip.color : undefined"
+          :variant="segmentFilter === chip.value ? 'flat' : 'outlined'"
+          :prepend-icon="chip.icon"
+          :aria-pressed="segmentFilter === chip.value"
+          label
+          role="button"
+          tabindex="0"
+          @click="toggleSegment(chip.value)"
+          @keydown.enter.prevent="toggleSegment(chip.value)"
+          @keydown.space.prevent="toggleSegment(chip.value)"
+        >
+          {{ chip.label }}
+        </VChip>
+      </VCardText>
       <!-- Preset pattern: filter bar -->
       <VCardText class="d-flex flex-wrap gap-4">
         <div class="d-flex gap-2 align-center">
@@ -413,15 +386,7 @@ const segmentChips = computed(() => [
             style="inline-size: 12rem;"
           />
 
-          <!-- ADR-834 : creation wizard, only for operators allowed to create -->
-          <VBtn
-            v-if="canCreateCompany"
-            prepend-icon="tabler-plus"
-            :to="{ name: 'platform-companies-create' }"
-            data-testid="new-company"
-          >
-            {{ t('platformCompanyCreation.newCompany') }}
-          </VBtn>
+
         </div>
       </VCardText>
 

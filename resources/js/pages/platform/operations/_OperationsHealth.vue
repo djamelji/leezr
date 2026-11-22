@@ -107,15 +107,7 @@ onMounted(load)
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('systemHealth.title') }}
-        </h4>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          {{ t('systemHealth.subtitle') }}
-        </p>
-      </div>
+    <div class="d-flex align-center justify-end mb-6">
       <VBtn
         variant="tonal"
         size="small"

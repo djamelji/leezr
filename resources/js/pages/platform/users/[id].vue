@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import DynamicFormRenderer from '@/core/components/DynamicFormRenderer.vue'
 import { usePlatformUsersStore } from '@/modules/platform-admin/users/users.store'
 import { usePlatformRolesStore } from '@/modules/platform-admin/roles/roles.store'
@@ -199,54 +200,45 @@ const handleSetPassword = async () => {
     setPasswordLoading.value = false
   }
 }
+
+// ADR-861 (L7.7) — one browser-tab title per detail page
+watchEffect(() => { if (baseFields.value?.display_name) document.title = `${baseFields.value.display_name} · ${t('l7.access.family')} · Leezr` })
 </script>
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="d-flex align-center gap-x-4 mb-6">
-      <VBtn
-        :aria-label="$t('common.back')"
-        icon
-        variant="text"
-        size="small"
-        @click="router.push('/platform/access/users')"
+    <!-- ADR-861 (L7.7) : shared page header (way back, identity chips) -->
+    <AppPageHeader
+      :back="{ to: '/platform/access/users', label: t('l7.access.family') }"
+      :eyebrow="t('l7.user.eyebrow')"
+      :title="baseFields.display_name || t('l7.user.eyebrow')"
+      :description="baseFields.email || ''"
+      data-test="pu-header"
+    >
+      <template
+        v-if="!isLoading && baseFields.id"
+        #meta
       >
-        <VIcon icon="tabler-arrow-left" />
-      </VBtn>
-
-      <template v-if="!isLoading && baseFields.id">
-        <VAvatar
-          size="48"
-          :color="isSuperAdmin ? 'error' : 'secondary'"
+        <VChip
+          v-for="role in baseFields.roles"
+          :key="role.key"
+          :color="role.key === 'super_admin' ? 'error' : 'primary'"
+          size="small"
           variant="tonal"
+          label
         >
-          <span class="text-lg">{{ baseFields.first_name?.charAt(0)?.toUpperCase() }}</span>
-        </VAvatar>
-        <div>
-          <h5 class="text-h5">
-            {{ baseFields.display_name }}
-          </h5>
-          <div class="d-flex align-center gap-2">
-            <span class="text-body-2 text-disabled">{{ baseFields.email }}</span>
-            <VChip
-              v-for="role in baseFields.roles"
-              :key="role.key"
-              :color="role.key === 'super_admin' ? 'error' : 'primary'"
-              size="x-small"
-            >
-              {{ role.name }}
-            </VChip>
-            <VChip
-              :color="baseFields.status === 'active' ? 'success' : 'warning'"
-              size="x-small"
-            >
-              {{ baseFields.status === 'active' ? t('common.active') : t('members.invitedStatus') }}
-            </VChip>
-          </div>
-        </div>
+          {{ role.name }}
+        </VChip>
+        <VChip
+          :color="baseFields.status === 'active' ? 'success' : 'warning'"
+          size="small"
+          variant="tonal"
+          label
+        >
+          {{ baseFields.status === 'active' ? t('common.active') : t('members.invitedStatus') }}
+        </VChip>
       </template>
-    </div>
+    </AppPageHeader>
 
     <!-- Loading -->
     <VProgressLinear

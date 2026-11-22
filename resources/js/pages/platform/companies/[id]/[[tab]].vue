@@ -1,5 +1,6 @@
 <script setup>
 import AppAccessState from '@/components/app/AppAccessState.vue'
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 /**
  * ADR-268: Company 360° Admin View
  *
@@ -454,7 +455,10 @@ const summaryStats = computed(() => [
     value: t(`platformCompanySummary.status.${company.value?.status || 'active'}`), label: t('platformCompanyDetail.companyStatus') },
   { key: 'members', icon: 'tabler-users', color: 'primary', value: company.value?.memberships_count ?? 0, label: t('platformCompanySummary.members') },
   { key: 'modules', icon: 'tabler-puzzle', color: 'info', value: activeModulesList.value.length, label: t('platformCompanySummary.modules') },
+  { key: 'plan', icon: 'tabler-crown', color: 'secondary', value: plan.value?.name || '—', label: t('l7.companies.plan') }, // ADR-861 : a full strip
 ])
+// ADR-861 (L7.7) — the header names the company and its context ; one browser-tab title per company and tab
+const headerContext = computed(() => [company.value?.slug, company.value?.jobdomain?.label || company.value?.jobdomain_key, company.value?.market_key].filter(Boolean).join(' · '))
 // ADR-842 (M5, UXP-06) — identity (activity, plan, owner, market, creation date) lives in the left panel only ;
 // the overview shows the situation (status, team, modules) and leads to the tab where each thing is handled.
 
@@ -468,6 +472,9 @@ const tabs = computed(() => [
   { value: 'members', icon: 'tabler-users', title: t('platformCompanyDetail.members.tab') },
   { value: 'activity', icon: 'tabler-history', title: t('platformCompanyDetail.activity.tab') },
 ].filter(tab => tabAllowed(tab.value)))
+watchEffect(() => {
+  if (company.value) document.title = [company.value.name, tabs.value.find(x => x.value === activeTab.value)?.title, t('l7.companies.family'), 'Leezr'].filter(Boolean).join(' · ')
+})
 </script>
 
 <template>
@@ -487,17 +494,31 @@ const tabs = computed(() => [
     />
 
     <template v-else-if="company">
-      <!-- Back button -->
-      <div class="mb-4">
-        <VBtn
-          variant="text"
-          size="small"
-          to="/platform/companies"
+      <AppPageHeader
+        :back="{ to: '/platform/companies', label: t('l7.companies.family') }"
+        :eyebrow="t('l7.companies.detail')"
+        :title="company.name"
+        :description="headerContext"
+        data-test="company-detail-header"
+      >
+
+      </AppPageHeader>
+
+      <!-- ADR-861 : tabs span the page (7 tabs no longer squeezed into the right column) -->
+      <VTabs
+        v-model="activeTab"
+        class="v-tabs-pill mb-6"
+        show-arrows
+        data-test="company-detail-tabs"
+      >
+        <VTab
+          v-for="tab in tabs"
+          :key="tab.value"
+          :value="tab.value"
         >
-          <VIcon icon="tabler-arrow-left" class="me-1" />
-          {{ t('platformCompanyDetail.backToList') }}
-        </VBtn>
-      </div>
+          {{ tab.title }}
+        </VTab>
+      </VTabs>
 
       <!-- 360° Layout: Bio Panel (left) + Tabs (right) -->
       <VRow>
@@ -519,47 +540,14 @@ const tabs = computed(() => [
 
         <!-- Right: Tabbed Content -->
         <VCol cols="12" md="7" lg="8">
-          <VTabs v-model="activeTab" class="v-tabs-pill">
-            <VTab
-              v-for="tab in tabs"
-              :key="tab.value"
-              :value="tab.value"
-            >
-              <VIcon :icon="tab.icon" class="me-1" />
-              <span>{{ tab.title }}</span>
-            </VTab>
-          </VTabs>
-
-          <VWindow v-model="activeTab" class="mt-6 disable-tab-transition" :touch="false">
+          <VWindow v-model="activeTab" class="disable-tab-transition" :touch="false">
             <!-- ─── Synthèse (ADR-821) ──────────────── -->
             <VWindowItem value="overview">
-              <VRow class="card-grid card-grid-xs mb-2">
-                <VCol
-                  v-for="k in summaryStats"
-                  :key="k.key"
-                  cols="6"
-                  md="3"
-                >
-                  <VCard :data-test="`pc-stat-${k.key}`">
-                    <VCardText class="d-flex align-center gap-3">
-                      <VAvatar
-                        :color="k.color"
-                        variant="tonal"
-                        rounded
-                        :icon="k.icon"
-                      />
-                      <div>
-                        <div class="text-h6">
-                          {{ k.value }}
-                        </div>
-                        <div class="text-body-2 text-medium-emphasis">
-                          {{ k.label }}
-                        </div>
-                      </div>
-                    </VCardText>
-                  </VCard>
-                </VCol>
-              </VRow>
+              <AppStatStrip
+                :items="summaryStats.map(k => ({ key: k.key, label: k.label, value: k.value, icon: k.icon, tone: k.key === 'status' ? k.color : 'muted', testid: `pc-stat-${k.key}` }))"
+                class="mb-6"
+                data-test="pc-stats"
+              />
               <VCard data-test="pc-active-modules">
                 <VCardItem>
                   <VCardTitle>{{ t('platformCompanySummary.activeModules', { n: activeModulesList.length }) }}</VCardTitle>

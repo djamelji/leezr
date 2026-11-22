@@ -137,15 +137,7 @@ onMounted(() => {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ t('automations.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ t('automations.subtitle') }}
-        </p>
-      </div>
+    <div class="d-flex align-center justify-end mb-6">
       <div class="d-flex align-center gap-3">
         <!-- Scheduler global health -->
         <VChip

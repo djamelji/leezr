@@ -1,4 +1,5 @@
 <script setup>
+import AppTabFamily from '@/components/app/AppTabFamily.vue'
 /**
  * Platform Access Management — Tabbed master page (Users + Roles)
  * Pattern: settings/[tab].vue
@@ -38,28 +39,21 @@ const activeTab = computed({
   },
   set: () => route.params.tab,
 })
+
+// ADR-861 (L7.7) — one family « Accès Platform » : who, with which rights, and the trace of what they did
+const groups = computed(() => [{ key: 'access', icon: 'tabler-user-shield', title: t('l7.access.family'), items: tabs.value }])
 </script>
 
 <template>
   <div>
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
-        :to="{ name: 'platform-access-tab', params: { tab: item.tab } }"
-      >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-      </VTab>
-    </VTabs>
+    <AppTabFamily
+      :family="t('l7.access.family')"
+      :groups="groups"
+      route-name="platform-access-tab"
+      :active="activeTab"
+      hint-prefix="l7.access.hint"
+      test="access"
+    />
 
     <VWindow
       v-model="activeTab"

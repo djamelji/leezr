@@ -13278,6 +13278,83 @@
       "management": "Management",
       "saved": "Position activities saved",
       "none": "No activity declared"
+    },
+    "ops": {
+      "family": "Operations",
+      "group": {
+        "supervision": "Supervision",
+        "security": "Security",
+        "consumption": "Consumption",
+        "automations": "Automations"
+      },
+      "hint": {
+        "realtime": "Live connections and real-time stream load, refreshed continuously.",
+        "security": "Open security alerts: suspicious sign-ins, refused access, accounts to check.",
+        "ai": "AI engine calls, cost and errors, per company and feature."
+      }
+    },
+    "catalog": {
+      "family": "Catalogue",
+      "group": {
+        "offer": "Offer",
+        "trades": "Trades",
+        "data": "Requested data"
+      },
+      "hint": {
+        "modules": "What Leezr offers companies: modules, dependencies and purchase conditions.",
+        "jobdomains": "Trades: what they assemble for a company that starts.",
+        "presets": "Ready-to-use templates published for the trades.",
+        "fields": "The information Leezr can ask about a person or a company.",
+        "documents": "The documents Leezr can request, check and renew."
+      }
+    },
+    "access": {
+      "family": "Platform access",
+      "hint": {
+        "users": "Members of the Leezr team and their role.",
+        "roles": "What each Platform role can see and do.",
+        "logs": "Who did what on the Platform, and when."
+      }
+    },
+    "messaging": {
+      "group": {
+        "inbox": "Inbox",
+        "content": "Sent content",
+        "delivery": "Deliverability"
+      },
+      "hint": {
+        "inbox": "Messages received by Leezr, grouped by conversation.",
+        "templates": "Email templates sent by Leezr, per language.",
+        "orchestration": "When and to whom each message is sent automatically.",
+        "notifications": "In-app notifications, per event.",
+        "logs": "Each send, its status and failure reason.",
+        "health": "Volumes, failures and sender reputation over 24 h and 7 days.",
+        "settings": "Sending and receiving servers, senders."
+      }
+    },
+    "companies": {
+      "family": "Companies",
+      "detail": "Company record",
+      "plan": "Plan",
+      "hint": {
+        "companies": "Every customer company: health, recurring revenue, subscription and status.",
+        "members": "Accounts of customer companies, across all companies.",
+        "logs": "What was done in customer companies, and by whom."
+      },
+      "group": "Customers"
+    },
+    "jobdomain": {
+      "eyebrow": "Trade"
+    },
+    "module": {
+      "eyebrow": "Module"
+    },
+    "plan": {
+      "eyebrow": "Plan",
+      "hint": "Price, included modules and terms of this plan; a price change goes through the tariff migration."
+    },
+    "user": {
+      "eyebrow": "Leezr team member"
     }
   }
 }

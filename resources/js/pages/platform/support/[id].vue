@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { usePlatformSupportStore } from '@/modules/platform-admin/support/support.store'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 import { formatDateTime } from '@/utils/datetime'
@@ -133,18 +134,20 @@ onMounted(async () => {
   ])
   scrollToBottom()
 })
+
+// ADR-861 (L7.7)
+watchEffect(() => { if (store.currentTicket) document.title = `#${store.currentTicket.id} · ${store.currentTicket.subject} · Leezr` })
 </script>
 
 <template>
   <div>
-    <VBtn
-      variant="text"
-      prepend-icon="tabler-arrow-left"
-      class="mb-4"
-      :to="{ name: 'platform-communications-tab', params: { tab: 'support' } }"
-    >
-      {{ t('support.backToTickets') }}
-    </VBtn>
+    <!-- ADR-861 (L7.7) : shared page header — the ticket subject is the page title -->
+    <AppPageHeader
+      :back="{ to: { name: 'platform-communications-tab', params: { tab: 'support' } }, label: t('support.backToTickets') }"
+      :title="store.currentTicket ? `#${store.currentTicket.id} — ${store.currentTicket.subject}` : t('support.backToTickets')"
+      :description="store.currentTicket?.company?.name || ''"
+      data-test="ticket-header"
+    />
 
     <VRow v-if="store.currentTicket">
       <!-- Ticket Info + Actions -->

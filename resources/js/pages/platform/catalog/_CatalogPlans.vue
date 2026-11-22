@@ -102,15 +102,7 @@ const navigateToPlan = key => {
 
 <template>
   <div>
-    <div class="d-flex justify-space-between align-center mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('plans.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('plans.subtitle') }}
-        </p>
-      </div>
+    <div class="d-flex justify-end align-center mb-6">
 
       <VBtn
         prepend-icon="tabler-plus"

@@ -13296,6 +13296,83 @@
       "management": "Encadrement",
       "saved": "Activités du poste enregistrées",
       "none": "Aucune activité déclarée"
+    },
+    "ops": {
+      "family": "Exploitation",
+      "group": {
+        "supervision": "Supervision",
+        "security": "Sécurité",
+        "consumption": "Consommation",
+        "automations": "Automatisations"
+      },
+      "hint": {
+        "realtime": "Connexions en direct et charge des flux temps réel, rafraîchies en continu.",
+        "security": "Alertes de sécurité ouvertes : connexions suspectes, accès refusés, comptes à vérifier.",
+        "ai": "Appels aux moteurs d'IA, coût et erreurs, par société et par fonction."
+      }
+    },
+    "catalog": {
+      "family": "Catalogue",
+      "group": {
+        "offer": "Offre",
+        "trades": "Métiers",
+        "data": "Données demandées"
+      },
+      "hint": {
+        "modules": "Ce que Leezr propose aux sociétés : modules, dépendances et conditions d'achat.",
+        "jobdomains": "Les métiers : ce qu'ils assemblent pour une société qui démarre.",
+        "presets": "Les modèles prêts à l'emploi publiés pour les métiers.",
+        "fields": "Les informations que Leezr peut demander sur une personne ou une société.",
+        "documents": "Les pièces que Leezr sait demander, vérifier et faire renouveler."
+      }
+    },
+    "access": {
+      "family": "Accès Platform",
+      "hint": {
+        "users": "Les membres de l'équipe Leezr et leur rôle.",
+        "roles": "Ce que chaque rôle Platform permet de voir et de faire.",
+        "logs": "Qui a fait quoi sur la Platform, et quand."
+      }
+    },
+    "messaging": {
+      "group": {
+        "inbox": "Réception",
+        "content": "Contenus envoyés",
+        "delivery": "Délivrabilité"
+      },
+      "hint": {
+        "inbox": "Les messages reçus par Leezr, regroupés par conversation.",
+        "templates": "Les modèles d'e-mails envoyés par Leezr, par langue.",
+        "orchestration": "Quand et à qui chaque message part automatiquement.",
+        "notifications": "Les notifications de l'application, par événement.",
+        "logs": "Chaque envoi, son statut et sa raison d'échec.",
+        "health": "Volumes, échecs et réputation d'envoi sur 24 h et 7 jours.",
+        "settings": "Serveurs d'envoi et de réception, expéditeurs."
+      }
+    },
+    "companies": {
+      "family": "Entreprises",
+      "detail": "Fiche entreprise",
+      "plan": "Offre",
+      "hint": {
+        "companies": "Toutes les sociétés clientes : santé, revenu récurrent, abonnement et statut.",
+        "members": "Les comptes des sociétés clientes, toutes sociétés confondues.",
+        "logs": "Ce qui a été fait dans les sociétés clientes, et par qui."
+      },
+      "group": "Clients"
+    },
+    "jobdomain": {
+      "eyebrow": "Métier"
+    },
+    "module": {
+      "eyebrow": "Module"
+    },
+    "plan": {
+      "eyebrow": "Offre",
+      "hint": "Prix, modules inclus et conditions de cette offre ; un changement de prix passe par la migration tarifaire."
+    },
+    "user": {
+      "eyebrow": "Membre de l'équipe Leezr"
     }
   }
 }

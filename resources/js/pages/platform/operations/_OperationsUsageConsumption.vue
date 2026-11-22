@@ -144,15 +144,7 @@ const aiPeriodOptions = ['24h', '7d', '30d']
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex flex-wrap align-center justify-space-between gap-4 mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('platformUsage.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('platformUsage.subtitle') }}
-        </p>
-      </div>
+    <div class="d-flex flex-wrap align-center justify-end gap-4 mb-6">
       <div class="d-flex gap-2 flex-wrap">
         <VChip v-if="canUsage" size="small" color="info" variant="tonal" prepend-icon="tabler-calendar-stats">
           {{ t('platformUsage.aggregatedDaily') }}

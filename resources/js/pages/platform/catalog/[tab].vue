@@ -6,6 +6,7 @@ import CatalogDocuments from '../documents/_CatalogDocuments.vue'
 import CatalogPlans from './_CatalogPlans.vue'
 import CatalogPresets from './_CatalogPresets.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import AppTabFamily from '@/components/app/AppTabFamily.vue'
 
 definePage({
   meta: {
@@ -42,28 +43,28 @@ const activeTab = computed({
   },
   set: val => router.replace({ name: 'platform-catalog-tab', params: { tab: val } }),
 })
+
+// ADR-861 (L7.7) — 6 tabs → 3 groups : what is sold, which trades, which data is asked
+const GROUPS = [
+  { key: 'offer', icon: 'tabler-puzzle', pages: ['modules', 'plans'] },
+  { key: 'trades', icon: 'tabler-briefcase', pages: ['jobdomains', 'presets'] },
+  { key: 'data', icon: 'tabler-forms', pages: ['fields', 'documents'] },
+]
+const groups = computed(() => GROUPS.map(g => ({ ...g, title: t(`l7.catalog.group.${g.key}`), items: g.pages.map(k => tabs.value.find(x => x.tab === k)).filter(Boolean) })))
+const hints = computed(() => ({ plans: t('plans.subtitle') }))
 </script>
 
 <template>
   <div>
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
-        :to="{ name: 'platform-catalog-tab', params: { tab: item.tab } }"
-      >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-      </VTab>
-    </VTabs>
+    <AppTabFamily
+      :family="t('l7.catalog.family')"
+      :groups="groups"
+      route-name="platform-catalog-tab"
+      :active="activeTab"
+      :hints="hints"
+      hint-prefix="l7.catalog.hint"
+      test="catalog"
+    />
 
     <VWindow
       v-model="activeTab"

@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { usePlatformPlansStore } from '@/modules/platform-admin/plans/plans.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { formatDate } from '@/utils/datetime'
@@ -262,31 +263,24 @@ const fmtDate = dateStr => {
 
   return formatDate(dateStr)
 }
+
+// ADR-861 (L7.7) — one browser-tab title per detail page
+watchEffect(() => { document.title = `${plansStore.currentPlan?.name || route.params.key} · ${t('l7.plan.eyebrow')} · ${t('l7.catalog.family')} · Leezr` })
 </script>
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="d-flex align-center gap-2 mb-6">
-      <VBtn
-        :aria-label="$t('common.back')"
-        icon
-        variant="text"
-        size="small"
-        @click="router.push({ name: 'platform-catalog-tab', params: { tab: 'plans' } })"
-      >
-        <VIcon icon="tabler-arrow-left" />
-      </VBtn>
-      <div>
-        <h4 class="text-h4">
-          {{ plansStore.currentPlan?.name || t('Plan') }}
-        </h4>
-        <p class="text-body-2 text-disabled mb-0">
-          {{ route.params.key }}
-        </p>
-      </div>
-    </div>
-
+    <AppPageHeader
+      :back="{ to: { name: 'platform-catalog-tab', params: { tab: 'plans' } }, label: t('l7.catalog.family') }"
+      :eyebrow="t('l7.plan.eyebrow')"
+      :title="plansStore.currentPlan?.name || t('l7.plan.eyebrow')"
+      :description="t('l7.plan.hint')"
+      data-test="plan-header"
+    >
+      <template #meta>
+        <code class="text-body-2">{{ route.params.key }}</code>
+      </template>
+    </AppPageHeader>
     <VSkeletonLoader
       v-if="isLoading"
       type="card, card, card"

@@ -7,6 +7,7 @@ import OperationsUsageConsumption from './_OperationsUsageConsumption.vue'
 import OperationsAutomations from './_OperationsAutomations.vue'
 import OperationsRealtime from './_OperationsRealtime.vue'
 import { usePlatformAuthStore } from '@/core/stores/platformAuth'
+import AppTabFamily from '@/components/app/AppTabFamily.vue'
 
 definePage({
   meta: {
@@ -48,28 +49,29 @@ const activeTab = computed({
   },
   set: val => router.replace({ name: 'platform-operations-tab', params: { tab: val } }),
 })
+
+// ADR-861 (L7.7) — 7 tabs at one level → 4 groups : what runs now, what threatens, what is consumed, what runs alone
+const GROUPS = [
+  { key: 'supervision', icon: 'tabler-heartbeat', pages: ['health', 'realtime', 'alerts'] },
+  { key: 'security', icon: 'tabler-shield-lock', pages: ['security'] },
+  { key: 'consumption', icon: 'tabler-gauge', pages: ['usage', 'ai'] },
+  { key: 'automations', icon: 'tabler-robot', pages: ['automations'] },
+]
+const groups = computed(() => GROUPS.map(g => ({ ...g, title: t(`l7.ops.group.${g.key}`), items: g.pages.map(k => tabs.value.find(x => x.tab === k)).filter(Boolean) })))
+const hints = computed(() => ({ health: t('systemHealth.subtitle'), alerts: t('alerts.subtitle'), automations: t('automations.subtitle'), usage: t('platformUsage.subtitle') }))
 </script>
 
 <template>
   <div>
-    <VTabs
-      v-model="activeTab"
-      class="v-tabs-pill"
-    >
-      <VTab
-        v-for="item in tabs"
-        :key="item.tab"
-        :value="item.tab"
-        :to="{ name: 'platform-operations-tab', params: { tab: item.tab } }"
-      >
-        <VIcon
-          size="20"
-          start
-          :icon="item.icon"
-        />
-        {{ item.title }}
-      </VTab>
-    </VTabs>
+    <AppTabFamily
+      :family="t('l7.ops.family')"
+      :groups="groups"
+      route-name="platform-operations-tab"
+      :active="activeTab"
+      :hints="hints"
+      hint-prefix="l7.ops.hint"
+      test="operations"
+    />
 
     <VWindow
       v-model="activeTab"

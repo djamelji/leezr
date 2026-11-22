@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { usePlatformSettingsStore } from '@/modules/platform-admin/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 
@@ -574,6 +575,9 @@ const planLabel = planKey => {
 
   return labels[planKey] || planKey
 }
+
+// ADR-861 (L7.7) — one browser-tab title per detail page
+watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`platformModuleSections.section.${section.value}`)} · ${t('l7.catalog.family')} · Leezr` })
 </script>
 
 <template>
@@ -587,68 +591,49 @@ const planLabel = planKey => {
     </VCard>
 
     <template v-else-if="mod">
-      <!-- Header -->
-      <VCard class="mb-6">
-        <VCardText class="d-flex align-center gap-4">
-          <VBtn
-            :aria-label="$t('common.back')"
-            icon
-            variant="text"
-            size="small"
-            :to="{ name: 'platform-catalog-tab', params: { tab: 'modules' } }"
-          >
-            <VIcon icon="tabler-arrow-left" />
-          </VBtn>
-
-          <VAvatar
-            size="48"
+      <!-- ADR-861 (L7.7) : shared page header — way back, identity chips, the global switch as the page action -->
+      <AppPageHeader
+        :back="{ to: { name: 'platform-catalog-tab', params: { tab: 'modules' } }, label: t('l7.catalog.family') }"
+        :eyebrow="t('l7.module.eyebrow')"
+        :title="mod.name"
+        data-test="pm-header"
+      >
+        <template #meta>
+          <code class="text-body-2 me-1">{{ mod.key }}</code>
+          <VChip
             :color="mod.type === 'core' ? 'primary' : 'info'"
-            variant="tonal"
+            size="x-small"
           >
-            <VIcon :icon="mod.icon_name || 'tabler-puzzle'" />
-          </VAvatar>
-
-          <div class="flex-grow-1">
-            <h5 class="text-h5">
-              {{ mod.name }}
-            </h5>
-            <div class="d-flex align-center gap-2 mt-1">
-              <code class="text-body-2">{{ mod.key }}</code>
-              <VChip
-                :color="mod.type === 'core' ? 'primary' : 'info'"
-                size="x-small"
-              >
-                {{ mod.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
-              </VChip>
-              <VChip
-                v-if="mod.min_plan"
-                color="warning"
-                size="x-small"
-              >
-                {{ t('platformModules.minPrefix', { plan: planLabel(mod.min_plan) }) }}
-              </VChip>
-              <VChip
-                :color="mod.is_enabled_globally ? 'success' : 'error'"
-                size="x-small"
-              >
-                {{ mod.is_enabled_globally ? t('platformModules.enabled') : t('platformModules.disabled') }}
-              </VChip>
-            </div>
-          </div>
-
-          <!-- Global toggle -->
+            {{ mod.type === 'core' ? t('platformModules.core') : t('platformModules.addon') }}
+          </VChip>
+          <VChip
+            v-if="mod.min_plan"
+            color="warning"
+            size="x-small"
+          >
+            {{ t('platformModules.minPrefix', { plan: planLabel(mod.min_plan) }) }}
+          </VChip>
+          <VChip
+            :color="mod.is_enabled_globally ? 'success' : 'error'"
+            size="x-small"
+          >
+            {{ mod.is_enabled_globally ? t('platformModules.enabled') : t('platformModules.disabled') }}
+          </VChip>
+        </template>
+        <template #actions>
           <div class="d-flex align-center gap-2">
             <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.global') }}</span>
             <VSwitch
               :model-value="mod.is_enabled_globally"
               :loading="togglingGlobal"
+              :aria-label="t('platformModules.global')"
               hide-details
               color="primary"
               @update:model-value="toggleGlobal"
             />
           </div>
-        </VCardText>
-      </VCard>
+        </template>
+      </AppPageHeader>
 
       <VTabs
         :model-value="section"
