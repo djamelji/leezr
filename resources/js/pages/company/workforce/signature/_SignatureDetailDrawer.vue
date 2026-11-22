@@ -131,6 +131,7 @@ const doRemind = async () => {
         {{ t('signature.detail.title') }}
       </h5>
       <VBtn
+        :aria-label="$t('common.close')"
         icon
         variant="text"
         size="small"

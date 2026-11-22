@@ -360,6 +360,7 @@ const formatSalary = (cents, currency) => {
           {{ $t('employees.contract.addContract') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

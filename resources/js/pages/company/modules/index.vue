@@ -1405,6 +1405,7 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
               </p>
             </div>
             <VBtn
+              :aria-label="$t('common.close')"
               icon
               variant="text"
               size="small"

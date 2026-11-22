@@ -140,6 +140,8 @@ onMounted(load)
             </td>
             <td class="text-end">
               <VBtn
+                :aria-label="$t('common.delete')"
+                :title="$t('common.delete')"
                 icon
                 variant="text"
                 size="small"

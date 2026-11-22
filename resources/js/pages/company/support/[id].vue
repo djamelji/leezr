@@ -230,6 +230,7 @@ const isMyMessage = msg => msg.sender_type === 'company_user' && msg.sender_id =
                   @keydown.enter.exact.prevent="sendMessage"
                 />
                 <VBtn
+                  :aria-label="$t('common.send')"
                   v-can="'support.create'"
                   color="primary"
                   icon="tabler-send"

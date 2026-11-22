@@ -409,6 +409,7 @@ function goToDeclaration(id) {
           {{ $t('dsn.exportDsn') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

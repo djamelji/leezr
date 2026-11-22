@@ -1217,6 +1217,7 @@ watch(activeTab, tab => {
             <template #item.actions="{ item }">
               <div class="d-flex gap-1">
                 <VBtn
+                  :aria-label="$t('common.edit')"
                   icon
                   variant="text"
                   size="x-small"
@@ -1235,6 +1236,8 @@ watch(activeTab, tab => {
                   />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   icon
                   variant="text"
                   size="x-small"

@@ -4328,6 +4328,7 @@ watch(activeTab, tab => {
                   />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.edit')"
                   icon
                   variant="text"
                   size="x-small"
@@ -4346,6 +4347,8 @@ watch(activeTab, tab => {
                   />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   icon
                   variant="text"
                   size="x-small"
@@ -4640,6 +4643,7 @@ watch(activeTab, tab => {
           {{ $t('planning.bulkCreate') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"
@@ -4738,6 +4742,7 @@ watch(activeTab, tab => {
           {{ isTemplateEditMode ? $t('planning.templates.editTemplate') : $t('planning.templates.newTemplate') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"
@@ -4867,6 +4872,8 @@ watch(activeTab, tab => {
                     style="inline-size: 120px;"
                   />
                   <VBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     icon
                     variant="text"
                     size="x-small"
@@ -4925,6 +4932,8 @@ watch(activeTab, tab => {
                     style="inline-size: 120px;"
                   />
                   <VBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     icon
                     variant="text"
                     size="x-small"
@@ -5059,7 +5068,7 @@ watch(activeTab, tab => {
         <h5 class="text-h5 flex-grow-1">
           {{ $t('planning.presets.title') }}
         </h5>
-        <VBtn icon variant="text" size="small" @click="presetLibraryOpen = false">
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="presetLibraryOpen = false">
           <VIcon icon="tabler-x" />
         </VBtn>
       </div>
@@ -5150,6 +5159,7 @@ watch(activeTab, tab => {
             @update:model-value="togglePreset(p)"
           />
           <VBtn
+            :aria-label="$t('common.edit')"
             v-can="'workforce.planning_manage'"
             icon
             variant="text"
@@ -5161,6 +5171,8 @@ watch(activeTab, tab => {
             <VIcon icon="tabler-edit" size="18" />
           </VBtn>
           <VBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             v-can="'workforce.planning_manage'"
             icon
             variant="text"
@@ -5184,7 +5196,7 @@ watch(activeTab, tab => {
         <VCardTitle class="d-flex align-center">
           {{ $t('planning.presets.use') }}
           <VSpacer />
-          <VBtn icon variant="text" size="small" @click="presetPickerOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="presetPickerOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </VCardTitle>
@@ -5236,7 +5248,7 @@ watch(activeTab, tab => {
         <h5 class="text-h5 flex-grow-1">
           {{ $t('planning.week.title') }}
         </h5>
-        <VBtn icon variant="text" size="small" @click="weekLibraryOpen = false">
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="weekLibraryOpen = false">
           <VIcon icon="tabler-x" />
         </VBtn>
       </div>
@@ -5271,10 +5283,10 @@ watch(activeTab, tab => {
           <VBtn size="small" color="primary" variant="tonal" :data-test="`week-apply-${w.id}`" @click="openWeekApply(w)">
             {{ $t('planning.week.apply') }}
           </VBtn>
-          <VBtn v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="primary" :data-test="`week-edit-${w.id}`" @click="editWeek(w)">
+          <VBtn :aria-label="$t('common.edit')" v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="primary" :data-test="`week-edit-${w.id}`" @click="editWeek(w)">
             <VIcon icon="tabler-edit" size="18" />
           </VBtn>
-          <VBtn v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="error" :data-test="`week-delete-${w.id}`" @click="removeWeek(w)">
+          <VBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" v-can="'workforce.planning_manage'" icon variant="text" size="x-small" color="error" :data-test="`week-delete-${w.id}`" @click="removeWeek(w)">
             <VIcon icon="tabler-trash" size="18" />
           </VBtn>
         </div>
@@ -5290,7 +5302,7 @@ watch(activeTab, tab => {
         <VCardTitle class="d-flex align-center">
           {{ weekForm.id ? $t('planning.week.edit') : $t('planning.week.new') }}
           <VSpacer />
-          <VBtn icon variant="text" size="small" @click="weekEditorOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="weekEditorOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </VCardTitle>
@@ -5317,10 +5329,10 @@ watch(activeTab, tab => {
             <AppSelect v-model="l.kind" :items="weekKindItems" :label="$t('planning.week.fields.kind')" density="compact" hide-details data-test="week-line-kind" style="min-inline-size: 130px;" />
             <AppSelect v-if="l.kind === 'nominative'" v-model="l.employee_id" :items="employeeItems" :label="$t('planning.week.fields.employee')" density="compact" hide-details data-test="week-line-employee" style="min-inline-size: 150px;" />
             <AppTextField v-else v-model.number="l.headcount" :label="$t('planning.week.fields.headcount')" type="number" min="1" density="compact" hide-details data-test="week-line-headcount" style="inline-size: 100px;" />
-            <VBtn icon variant="text" size="x-small" data-test="week-line-duplicate" @click="duplicateWeekLine(i)">
+            <VBtn :aria-label="$t('common.copy')" icon variant="text" size="x-small" data-test="week-line-duplicate" @click="duplicateWeekLine(i)">
               <VIcon icon="tabler-copy" size="16" />
             </VBtn>
-            <VBtn icon variant="text" size="x-small" color="error" data-test="week-line-remove" @click="removeWeekLine(i)">
+            <VBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" icon variant="text" size="x-small" color="error" data-test="week-line-remove" @click="removeWeekLine(i)">
               <VIcon icon="tabler-trash" size="16" />
             </VBtn>
           </div>
@@ -5346,7 +5358,7 @@ watch(activeTab, tab => {
         <VCardTitle class="d-flex align-center">
           {{ $t('planning.week.apply') }} — {{ weekApplyTarget.name }}
           <VSpacer />
-          <VBtn icon variant="text" size="small" @click="weekApplyOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="weekApplyOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </VCardTitle>
@@ -5531,7 +5543,7 @@ watch(activeTab, tab => {
           <VIcon icon="tabler-wand" class="me-2" />
           {{ $t('planning.prepare.title') }}
           <VSpacer />
-          <VBtn icon variant="text" size="small" @click="prepareOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="prepareOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </VCardTitle>
@@ -5646,7 +5658,7 @@ watch(activeTab, tab => {
         <VCardTitle class="d-flex align-center">
           {{ $t('planning.import.title') }}
           <VSpacer />
-          <VBtn icon variant="text" size="small" @click="importOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="importOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </VCardTitle>
@@ -5808,7 +5820,7 @@ watch(activeTab, tab => {
           <h5 class="text-h5">
             {{ $t('planning.copy.copyWeek') }}
           </h5>
-          <VBtn icon variant="text" size="small" @click="copyWeekOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="copyWeekOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </div>
@@ -6048,7 +6060,7 @@ watch(activeTab, tab => {
           <h5 class="text-h5">
             {{ $t('planning.replacement.title') }}
           </h5>
-          <VBtn icon variant="text" size="small" @click="replacementOpen = false">
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="replacementOpen = false">
             <VIcon icon="tabler-x" />
           </VBtn>
         </div>
@@ -6210,6 +6222,7 @@ watch(activeTab, tab => {
           {{ $t('planning.coverage.manage') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"
@@ -6302,6 +6315,7 @@ watch(activeTab, tab => {
                 {{ $t(`planning.coverage.priorities.${c.priority}`) }}
               </VChip>
               <VBtn
+                :aria-label="$t('common.edit')"
                 icon
                 variant="text"
                 size="x-small"
@@ -6313,6 +6327,8 @@ watch(activeTab, tab => {
                 />
               </VBtn>
               <VBtn
+                :aria-label="$t('common.delete')"
+                :title="$t('common.delete')"
                 icon
                 variant="text"
                 size="x-small"
@@ -6455,6 +6471,7 @@ watch(activeTab, tab => {
           {{ isLocationEditMode ? $t('planning.locations.editLocation') : $t('planning.locations.newLocation') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

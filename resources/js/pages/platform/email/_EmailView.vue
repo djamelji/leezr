@@ -190,6 +190,7 @@ watch(() => props.thread, () => {
       <!-- Header -->
       <div class="email-view-header d-flex align-center px-5 py-3">
         <IconBtn
+          :aria-label="$t('common.previous')"
           class="me-2"
           @click="handleClose"
         >
@@ -220,6 +221,7 @@ watch(() => props.thread, () => {
 
         <div class="d-flex align-center">
           <IconBtn
+            :aria-label="$t('common.previous')"
             :disabled="!props.threadMeta.hasPrevious"
             @click="$emit('navigated', 'previous')"
           >
@@ -230,6 +232,7 @@ watch(() => props.thread, () => {
           </IconBtn>
 
           <IconBtn
+            :aria-label="$t('common.next')"
             :disabled="!props.threadMeta.hasNext"
             @click="$emit('navigated', 'next')"
           >
@@ -246,7 +249,7 @@ watch(() => props.thread, () => {
       <!-- Action bar -->
       <div class="email-view-action-bar d-flex align-center text-medium-emphasis px-6 gap-x-1">
         <!-- Trash -->
-        <IconBtn @click="$emit('trash'); handleClose()">
+        <IconBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" @click="$emit('trash'); handleClose()">
           <VIcon
             icon="tabler-trash"
             size="22"
@@ -404,7 +407,7 @@ watch(() => props.thread, () => {
                 <div class="text-disabled text-sm">
                   {{ formatDate(msg.created_at || msg.sent_at) }}
                 </div>
-                <IconBtn size="x-small">
+                <IconBtn :aria-label="$t('common.actions')" size="x-small">
                   <VIcon
                     icon="tabler-dots-vertical"
                     size="18"

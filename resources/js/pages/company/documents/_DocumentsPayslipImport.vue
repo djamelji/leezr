@@ -276,6 +276,7 @@ onMounted(fetchBatches)
                       {{ c.name }}
                     </VBtn>
                     <VBtn
+                      :aria-label="$t('common.close')"
                       size="x-small"
                       variant="text"
                       color="error"

@@ -401,6 +401,7 @@ const feedbackRatio = item => {
               <template #item.actions="{ item }">
                 <div class="d-flex gap-1 justify-center">
                   <IconBtn
+                    :aria-label="$t('common.edit')"
                     size="small"
                     @click.stop="openEditTopicDrawer(item)"
                   >
@@ -410,6 +411,8 @@ const feedbackRatio = item => {
                     />
                   </IconBtn>
                   <IconBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     size="small"
                     color="error"
                     @click.stop="deleteTopic(item)"
@@ -485,6 +488,7 @@ const feedbackRatio = item => {
               <template #item.actions="{ item }">
                 <div class="d-flex gap-1 justify-center">
                   <IconBtn
+                    :aria-label="$t('common.edit')"
                     size="small"
                     @click.stop="openEditGroupDrawer(item)"
                   >
@@ -494,6 +498,8 @@ const feedbackRatio = item => {
                     />
                   </IconBtn>
                   <IconBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     size="small"
                     color="error"
                     @click.stop="deleteGroup(item)"
@@ -586,7 +592,7 @@ const feedbackRatio = item => {
           {{ isTopicEditMode ? t('documentation.editTopic') : t('documentation.newTopic') }}
         </h5>
         <VSpacer />
-        <IconBtn @click="isTopicDrawerOpen = false">
+        <IconBtn :aria-label="$t('common.close')" @click="isTopicDrawerOpen = false">
           <VIcon icon="tabler-x" />
         </IconBtn>
       </div>
@@ -670,7 +676,7 @@ const feedbackRatio = item => {
           {{ isGroupEditMode ? t('documentation.editGroup') : t('documentation.newGroup') }}
         </h5>
         <VSpacer />
-        <IconBtn @click="isGroupDrawerOpen = false">
+        <IconBtn :aria-label="$t('common.close')" @click="isGroupDrawerOpen = false">
           <VIcon icon="tabler-x" />
         </IconBtn>
       </div>

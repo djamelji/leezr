@@ -369,6 +369,7 @@ onMounted(fetchTemplates)
             </td>
             <td class="text-center">
               <VBtn
+                :aria-label="$t('common.edit')"
                 icon
                 variant="text"
                 size="small"
@@ -386,6 +387,7 @@ onMounted(fetchTemplates)
                 </VTooltip>
               </VBtn>
               <VBtn
+                :aria-label="$t('common.view')"
                 icon
                 variant="text"
                 size="small"
@@ -403,6 +405,7 @@ onMounted(fetchTemplates)
                 </VTooltip>
               </VBtn>
               <VBtn
+                :aria-label="$t('common.send')"
                 icon
                 variant="text"
                 size="small"
@@ -453,6 +456,7 @@ onMounted(fetchTemplates)
             {{ isCreating ? t('email.createTemplate') : editForm.name }}
           </h6>
           <IconBtn
+            :aria-label="$t('common.close')"
             size="small"
             @click="isDrawerOpen = false"
           >
@@ -638,6 +642,7 @@ onMounted(fetchTemplates)
               </VBtn>
             </VBtnToggle>
             <IconBtn
+              :aria-label="$t('common.close')"
               size="small"
               @click="isPreviewOpen = false"
             >

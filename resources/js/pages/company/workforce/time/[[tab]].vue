@@ -789,6 +789,8 @@ onMounted(() => {
                   />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   v-if="item.status === 'completed' || item.status === 'idle'"
                   v-can="'workforce.time_manage'"
                   icon
@@ -1020,6 +1022,7 @@ onMounted(() => {
               <div class="d-flex align-center gap-1">
                 <!-- Draft → Submit -->
                 <VBtn
+                  :aria-label="$t('common.send')"
                   v-if="item.status === 'draft'"
                   v-can="'workforce.time_manage'"
                   icon
@@ -1057,6 +1060,7 @@ onMounted(() => {
 
                 <!-- Submitted → Reject -->
                 <VBtn
+                  :aria-label="$t('common.close')"
                   v-if="item.status === 'submitted'"
                   v-can="'workforce.time_manage'"
                   icon
@@ -1094,6 +1098,7 @@ onMounted(() => {
 
                 <!-- Rejected → Reopen -->
                 <VBtn
+                  :aria-label="$t('common.refresh')"
                   v-if="item.status === 'rejected'"
                   v-can="'workforce.time_manage'"
                   icon
@@ -1113,6 +1118,7 @@ onMounted(() => {
 
                 <!-- View (always) -->
                 <VBtn
+                  :aria-label="$t('common.next')"
                   icon
                   variant="text"
                   size="small"
@@ -1169,6 +1175,7 @@ onMounted(() => {
           {{ $t('timeTracking.addEntry') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"
@@ -1310,6 +1317,7 @@ onMounted(() => {
           {{ $t('timesheets.generateTimesheet') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

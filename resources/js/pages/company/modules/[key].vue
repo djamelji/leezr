@@ -168,6 +168,7 @@ const displayStateChip = computed(() => {
       <VCard class="mb-4">
         <VCardText class="d-flex align-center gap-4">
           <VBtn
+            :aria-label="$t('common.back')"
             icon
             variant="text"
             size="small"

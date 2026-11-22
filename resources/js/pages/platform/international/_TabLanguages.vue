@@ -202,18 +202,23 @@ const handleDelete = async lang => {
 
         <template #item.actions="{ item }">
           <VBtn
+            :aria-label="$t('common.edit')"
             icon="tabler-edit"
             variant="text"
             size="small"
             @click="openEdit(item)"
           />
           <VBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             :icon="item.is_active ? 'tabler-eye-off' : 'tabler-eye'"
             variant="text"
             size="small"
             @click="handleToggleActive(item)"
           />
           <VBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             icon="tabler-trash"
             variant="text"
             size="small"

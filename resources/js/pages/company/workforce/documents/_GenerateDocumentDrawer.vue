@@ -104,6 +104,7 @@ const submitGenerate = async () => {
         {{ $t('workforceDocuments.drawer.title') }}
       </h5>
       <VBtn
+        :aria-label="$t('common.close')"
         icon
         variant="text"
         size="small"

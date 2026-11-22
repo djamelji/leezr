@@ -362,6 +362,7 @@ onMounted(async () => {
 
         <template #item.actions="{ item }">
           <VBtn
+            :aria-label="$t('common.edit')"
             icon
             variant="text"
             size="small"
@@ -370,6 +371,8 @@ onMounted(async () => {
             <VIcon icon="tabler-pencil" />
           </VBtn>
           <VBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             icon
             variant="text"
             size="small"
@@ -400,6 +403,7 @@ onMounted(async () => {
         <VCardTitle class="d-flex align-center justify-space-between">
           <span>{{ editingCoupon ? t('coupons.edit') : t('coupons.create') }}</span>
           <VBtn
+            :aria-label="$t('common.close')"
             icon
             variant="text"
             size="small"

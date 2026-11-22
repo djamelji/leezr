@@ -82,6 +82,7 @@ const diffKeys = log => {
       {{ t('platformCompanyDetail.activity.title') }}
       <VSpacer />
       <VBtn
+        :aria-label="$t('common.refresh')"
         icon
         variant="text"
         size="small"

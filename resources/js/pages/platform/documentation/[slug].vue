@@ -160,6 +160,7 @@ const goBack = () => {
     <!-- Header -->
     <div class="d-flex align-center gap-4 mb-6">
       <VBtn
+        :aria-label="$t('common.back')"
         icon
         variant="text"
         @click="goBack"
@@ -240,6 +241,7 @@ const goBack = () => {
           <template #item.actions="{ item }">
             <div class="d-flex gap-1 justify-center">
               <IconBtn
+                :aria-label="$t('common.edit')"
                 size="small"
                 @click="openEditDrawer(item)"
               >
@@ -249,6 +251,8 @@ const goBack = () => {
                 />
               </IconBtn>
               <IconBtn
+                :aria-label="$t('common.delete')"
+                :title="$t('common.delete')"
                 size="small"
                 color="error"
                 @click="deleteArticle(item)"
@@ -276,7 +280,7 @@ const goBack = () => {
           {{ isEditMode ? t('documentation.editArticle') : t('documentation.newArticle') }}
         </h5>
         <VSpacer />
-        <IconBtn @click="isDrawerOpen = false">
+        <IconBtn :aria-label="$t('common.close')" @click="isDrawerOpen = false">
           <VIcon icon="tabler-x" />
         </IconBtn>
       </div>

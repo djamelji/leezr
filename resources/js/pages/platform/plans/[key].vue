@@ -269,6 +269,7 @@ const fmtDate = dateStr => {
     <!-- Header -->
     <div class="d-flex align-center gap-2 mb-6">
       <VBtn
+        :aria-label="$t('common.back')"
         icon
         variant="text"
         size="small"
@@ -492,6 +493,7 @@ const fmtDate = dateStr => {
                 </IconBtn>
 
                 <IconBtn
+                  :aria-label="$t('common.close')"
                   size="small"
                   color="error"
                   @click="removeFeature(index)"

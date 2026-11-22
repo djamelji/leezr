@@ -158,6 +158,7 @@ const savePlan = async () => {
   <div>
     <div class="d-flex align-center gap-x-3 mb-6">
       <VBtn
+        :aria-label="$t('common.back')"
         icon
         variant="text"
         size="small"

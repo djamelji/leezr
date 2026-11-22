@@ -259,7 +259,7 @@ const deleteRole = async role => {
                 </div>
               </div>
 
-              <IconBtn @click.stop="openViewDrawer(role)">
+              <IconBtn :aria-label="$t('common.view')" @click.stop="openViewDrawer(role)">
                 <VIcon
                   icon="tabler-eye"
                   class="text-high-emphasis"

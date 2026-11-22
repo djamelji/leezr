@@ -452,6 +452,7 @@ onMounted(() => {
 
               <!-- Acknowledge -->
               <VBtn
+                :aria-label="$t('common.view')"
                 v-if="item.status === 'active'"
                 icon
                 size="small"
@@ -486,6 +487,7 @@ onMounted(() => {
 
               <!-- Dismiss -->
               <VBtn
+                :aria-label="$t('common.close')"
                 v-if="item.status === 'active'"
                 icon
                 size="small"
@@ -550,6 +552,7 @@ onMounted(() => {
           {{ t('incidents.timeline') }}
           <VSpacer />
           <VBtn
+            :aria-label="$t('common.close')"
             icon
             size="small"
             variant="text"

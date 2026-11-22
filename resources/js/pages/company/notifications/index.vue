@@ -206,7 +206,7 @@ function timeAgo(dateStr) {
                   hide-details
                   density="compact"
                 />
-                <IconBtn @click="fetchData">
+                <IconBtn :aria-label="$t('common.refresh')" @click="fetchData">
                   <VIcon icon="tabler-refresh" />
                 </IconBtn>
               </div>
@@ -308,6 +308,7 @@ function timeAgo(dateStr) {
                     </IconBtn>
 
                     <IconBtn
+                      :aria-label="$t('common.close')"
                       size="x-small"
                       @click.stop="store.dismiss(n.id)"
                     >

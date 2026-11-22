@@ -148,7 +148,7 @@ const submitCorrect = async () => {
         </div>
         <div class="d-flex align-center gap-2">
           <VChip :color="statusColor(r.status)" size="small" label>{{ t(`timeCockpit.status.${r.status}`, r.status) }}</VChip>
-          <VBtn icon variant="text" size="small" @click="isOpen = false"><VIcon icon="tabler-x" /></VBtn>
+          <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="isOpen = false"><VIcon icon="tabler-x" /></VBtn>
         </div>
       </div>
 

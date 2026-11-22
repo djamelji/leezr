@@ -211,7 +211,7 @@ const removeActivity = async a => { try { await store.deleteActivity(a.id); toas
             </div>
           </div>
         </div>
-        <VBtn icon variant="text" size="small" @click="emit('update:isDialogVisible', false)">
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="emit('update:isDialogVisible', false)">
           <VIcon icon="tabler-x" />
         </VBtn>
       </VCardText>

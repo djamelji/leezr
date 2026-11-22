@@ -327,6 +327,7 @@ const deleteRole = async role => {
         <template #item.actions="{ item }">
           <div class="d-flex gap-1 justify-center">
             <VBtn
+              :aria-label="$t('common.edit')"
               v-can="'roles.manage'"
               icon
               variant="text"
@@ -343,6 +344,7 @@ const deleteRole = async role => {
               </VTooltip>
             </VBtn>
             <VBtn
+              :aria-label="$t('common.copy')"
               v-can="'roles.manage'"
               icon
               variant="text"
@@ -359,6 +361,8 @@ const deleteRole = async role => {
               </VTooltip>
             </VBtn>
             <VBtn
+              :aria-label="$t('common.delete')"
+              :title="$t('common.delete')"
               v-if="!item.is_system"
               v-can="'roles.manage'"
               icon

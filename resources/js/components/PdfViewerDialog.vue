@@ -66,6 +66,7 @@ const save = () => { if (blob.value) downloadBlob(blob.value, props.filename) }
               {{ t('common.download') }}
             </VBtn>
             <VBtn
+              :aria-label="$t('common.close')"
               icon
               variant="text"
               size="small"

@@ -437,7 +437,11 @@
     "helpCenter": "Help center",
     "pageOf": "Page {page} / {total}",
     "more": "More",
-    "apply": "Apply"
+    "apply": "Apply",
+    "copy": "Copy",
+    "send": "Send",
+    "open": "Open",
+    "archive": "Archive"
   },
   "platformAccount": {
     "myAccount": "My Account",
@@ -13211,6 +13215,28 @@
       "missingList": "To fill in",
       "more": "and {n} more | and {n} more",
       "collecting": "Collection in progress"
+    }
+  },
+  "l7": {
+    "billing": {
+      "hint": {
+        "overview": "Overview of revenue, collections and points of attention.",
+        "subscriptions": "Company subscriptions: plan, period and state.",
+        "invoices": "Invoices issued to companies, their status and due date.",
+        "payments": "Payments received and payment attempts.",
+        "dunning": "Reminders for unpaid invoices and their progress.",
+        "scheduled-debits": "Upcoming scheduled debits.",
+        "credit-notes": "Credit notes issued and refunds.",
+        "coupons": "Promotion codes and their conditions.",
+        "wallets": "Companies' credit balances.",
+        "forensics": "Detailed history of billing events, to investigate.",
+        "governance": "Consistency checks and governance rules.",
+        "ledger": "Accounting ledger of billing entries.",
+        "recovery": "Recovery of billing incidents.",
+        "reconciliation": "Reconciliation between Leezr and the payment provider.",
+        "tariff-review": "Tariff review before publication."
+      },
+      "family": "Billing"
     }
   }
 }

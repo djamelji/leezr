@@ -483,6 +483,7 @@ onMounted(() => {
             </p>
           </div>
           <VBtn
+            :aria-label="$t('common.close')"
             icon
             size="small"
             variant="text"

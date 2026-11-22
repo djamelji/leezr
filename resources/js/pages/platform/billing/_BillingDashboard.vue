@@ -404,6 +404,7 @@ const refreshLabel = computed(() => {
               {{ refreshLabel }}
             </span>
             <VBtn
+              :aria-label="$t('common.refresh')"
               icon="tabler-refresh"
               size="small"
               variant="text"

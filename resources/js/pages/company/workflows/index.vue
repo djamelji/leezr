@@ -143,6 +143,8 @@ onMounted(() => {
 
           <template #item.actions="{ item }">
             <VBtn
+              :aria-label="$t('common.delete')"
+              :title="$t('common.delete')"
               v-can="'automations.manage'"
               icon
               size="small"

@@ -687,6 +687,7 @@ const goToBilling = () => {
           <VCard v-if="step === 'payment'">
             <VCardTitle class="d-flex align-center gap-2">
               <VBtn
+                :aria-label="$t('common.back')"
                 icon
                 variant="text"
                 size="small"

@@ -64,7 +64,7 @@ const close = () => emit('update:modelValue', false)
         <h5 class="text-h6 font-weight-bold mb-0">{{ $t('payroll.prep.panelTitle') }}</h5>
         <div class="text-body-2 text-medium-emphasis">{{ period }}</div>
       </div>
-      <VBtn icon variant="text" size="small" @click="close"><VIcon icon="tabler-x" /></VBtn>
+      <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="close"><VIcon icon="tabler-x" /></VBtn>
     </div>
     <VDivider />
 

@@ -466,6 +466,7 @@ watch(() => props.billing, val => {
                   {{ formatMoney(billing.wallet_balance ?? 0, { currency: billing.currency }) }}
                 </span>
                 <VBtn
+                  :aria-label="$t('common.add')"
                   icon
                   size="x-small"
                   variant="text"
@@ -528,10 +529,11 @@ watch(() => props.billing, val => {
               </div>
               <div class="d-flex align-center gap-1">
                 <code class="text-body-2">{{ billing.provider_customer_id }}</code>
-                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.provider_customer_id)">
+                <VBtn :aria-label="$t('common.copy')" icon size="x-small" variant="text" @click="copyToClipboard(billing.provider_customer_id)">
                   <VIcon icon="tabler-copy" size="14" />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.open')"
                   v-if="billing.provider_links?.customer_url"
                   icon
                   size="x-small"
@@ -553,10 +555,11 @@ watch(() => props.billing, val => {
               </div>
               <div class="d-flex align-center gap-1">
                 <code class="text-body-2">{{ billing.subscription.provider_subscription_id }}</code>
-                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.subscription.provider_subscription_id)">
+                <VBtn :aria-label="$t('common.copy')" icon size="x-small" variant="text" @click="copyToClipboard(billing.subscription.provider_subscription_id)">
                   <VIcon icon="tabler-copy" size="14" />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.open')"
                   v-if="billing.provider_links?.subscription_url"
                   icon
                   size="x-small"
@@ -705,10 +708,11 @@ watch(() => props.billing, val => {
               </div>
               <div class="d-flex align-center gap-1">
                 <code class="text-body-2 text-truncate" style="max-inline-size: 140px;">{{ billing.last_payment.provider_payment_id }}</code>
-                <VBtn icon size="x-small" variant="text" @click="copyToClipboard(billing.last_payment.provider_payment_id)">
+                <VBtn :aria-label="$t('common.copy')" icon size="x-small" variant="text" @click="copyToClipboard(billing.last_payment.provider_payment_id)">
                   <VIcon icon="tabler-copy" size="14" />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.open')"
                   v-if="billing.provider_links?.payment_url"
                   icon
                   size="x-small"
@@ -735,6 +739,7 @@ watch(() => props.billing, val => {
           </VChip>
           <VSpacer />
           <VBtn
+            :aria-label="$t('common.add')"
             v-if="!showAddCard"
             icon
             variant="text"

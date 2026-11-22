@@ -953,6 +953,7 @@ const submitRequest = async () => {
             <span class="text-body-1">{{ f.name }}</span>
             <span class="text-body-2 text-disabled">{{ formatFileSize(f.size) }}</span>
             <VBtn
+              :aria-label="$t('common.close')"
               icon
               variant="text"
               size="x-small"

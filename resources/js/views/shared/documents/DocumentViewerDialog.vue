@@ -189,7 +189,7 @@ defineExpose({ markApplied })
             </template>
           </div>
         </div>
-        <VBtn icon variant="text" size="small" @click="onClose">
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="onClose">
           <VIcon icon="tabler-x" />
         </VBtn>
       </div>

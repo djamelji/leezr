@@ -522,6 +522,8 @@ const executeDelete = async () => {
                     <template #activator="{ props: tp }">
                       <span v-bind="tp">
                         <IconBtn
+                          :aria-label="$t('common.delete')"
+                          :title="$t('common.delete')"
                           size="small"
                           color="error"
                           disabled

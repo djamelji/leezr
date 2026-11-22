@@ -374,6 +374,8 @@ const deleteFont = async (familyId, fontId) => {
                     </template>
                     <template #item.actions="{ item }">
                       <IconBtn
+                        :aria-label="$t('common.delete')"
+                        :title="$t('common.delete')"
                         size="small"
                         @click="deleteFont(selectedFamily.id, item.id)"
                       >

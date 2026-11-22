@@ -437,7 +437,11 @@
     "helpCenter": "Centre d'aide",
     "pageOf": "Page {page} / {total}",
     "more": "Plus",
-    "apply": "Appliquer"
+    "apply": "Appliquer",
+    "copy": "Copier",
+    "send": "Envoyer",
+    "open": "Ouvrir",
+    "archive": "Archiver"
   },
   "platformAccount": {
     "myAccount": "Mon compte",
@@ -13229,6 +13233,28 @@
       "missingList": "À renseigner",
       "more": "et {n} autre | et {n} autres",
       "collecting": "Collecte en cours"
+    }
+  },
+  "l7": {
+    "billing": {
+      "hint": {
+        "overview": "Vue d'ensemble des revenus, des encaissements et des points d'attention.",
+        "subscriptions": "Abonnements des sociétés : formule, période et état.",
+        "invoices": "Factures émises aux sociétés, leur statut et leur échéance.",
+        "payments": "Encaissements reçus et tentatives de paiement.",
+        "dunning": "Relances des factures impayées et leur avancement.",
+        "scheduled-debits": "Prélèvements programmés à venir.",
+        "credit-notes": "Avoirs émis et remboursements.",
+        "coupons": "Codes promotionnels et leurs conditions.",
+        "wallets": "Soldes de crédit des sociétés.",
+        "forensics": "Historique détaillé des événements de facturation, pour enquêter.",
+        "governance": "Contrôles de cohérence et règles de gouvernance.",
+        "ledger": "Grand livre comptable des écritures de facturation.",
+        "recovery": "Rattrapage des incidents de facturation.",
+        "reconciliation": "Rapprochement entre Leezr et le prestataire de paiement.",
+        "tariff-review": "Revue des tarifs avant publication."
+      },
+      "family": "Facturation"
     }
   }
 }

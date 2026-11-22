@@ -475,6 +475,7 @@ const goToRun = id => {
           {{ $t('payroll.newPeriod') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

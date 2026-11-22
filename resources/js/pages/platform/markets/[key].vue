@@ -227,6 +227,7 @@ const legalHeaders = [
     <!-- Back + Header -->
     <div class="d-flex align-center mb-6">
       <VBtn
+        :aria-label="$t('common.back')"
         icon="tabler-arrow-left"
         variant="text"
         class="me-2"
@@ -493,12 +494,15 @@ const legalHeaders = [
             </template>
             <template #item.actions="{ item }">
               <VBtn
+                :aria-label="$t('common.edit')"
                 icon="tabler-edit"
                 variant="text"
                 size="small"
                 @click="openEditLegal(item)"
               />
               <VBtn
+                :aria-label="$t('common.delete')"
+                :title="$t('common.delete')"
                 icon="tabler-trash"
                 variant="text"
                 size="small"
@@ -557,6 +561,7 @@ const legalHeaders = [
             </template>
             <template #item.actions="{ item }">
               <VBtn
+                :aria-label="$t('common.view')"
                 icon="tabler-eye"
                 variant="text"
                 size="small"

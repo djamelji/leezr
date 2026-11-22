@@ -248,7 +248,7 @@ const saveEdit = async () => {
     <VNavigationDrawer v-model="editOpen" temporary location="end" width="640">
       <div class="d-flex align-center pa-4">
         <h5 class="text-h5 flex-grow-1">{{ t('contractTpl.editTitle') }}</h5>
-        <VBtn icon variant="text" size="small" @click="editOpen = false"><VIcon icon="tabler-x" /></VBtn>
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="editOpen = false"><VIcon icon="tabler-x" /></VBtn>
       </div>
       <VDivider />
       <div class="pa-4">

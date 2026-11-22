@@ -236,7 +236,7 @@ const variantOf = a => a.variant || (a.primary ? 'elevated' : 'tonal')
       <VBtn v-if="primary" data-m="pi" icon :variant="variantOf(primary)" :size="size"><VIcon :icon="primary.icon" /></VBtn>
       <VBtn v-for="(a, i) in rest" :key="`mf-${a.id}`" :data-m="`rf-${i}`" variant="tonal" :size="size" :prepend-icon="a.icon">{{ a.label }}</VBtn>
       <VBtn data-m="ic" icon variant="tonal" :size="size"><VIcon icon="tabler-circle" /></VBtn>
-      <VBtn data-m="of" icon variant="text" :size="size"><VIcon icon="tabler-dots-vertical" /></VBtn>
+      <VBtn :aria-label="$t('common.actions')" data-m="of" icon variant="text" :size="size"><VIcon icon="tabler-dots-vertical" /></VBtn>
     </div>
   </div>
 </template>

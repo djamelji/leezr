@@ -134,8 +134,8 @@ const doDelete = async () => {
           <VIcon :icon="(item.is_active ?? item.enabled) ? 'tabler-circle-check' : 'tabler-circle-x'" :color="(item.is_active ?? item.enabled) ? 'success' : 'disabled'" size="20" />
         </template>
         <template #item.actions="{ item }">
-          <VBtn icon variant="text" size="small" @click="openEdit(item)"><VIcon icon="tabler-edit" size="18" /></VBtn>
-          <VBtn icon variant="text" size="small" color="error" @click="askDelete(item)"><VIcon icon="tabler-trash" size="18" /></VBtn>
+          <VBtn :aria-label="$t('common.edit')" icon variant="text" size="small" @click="openEdit(item)"><VIcon icon="tabler-edit" size="18" /></VBtn>
+          <VBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" icon variant="text" size="small" color="error" @click="askDelete(item)"><VIcon icon="tabler-trash" size="18" /></VBtn>
         </template>
         <template #no-data>
           <div class="text-center py-8 text-medium-emphasis">{{ $t('organization.locations.empty') }}</div>

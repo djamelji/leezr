@@ -311,6 +311,7 @@ watch(() => props.prefill, val => {
             @click="isMinimized = !isMinimized"
           />
           <IconBtn
+            :aria-label="$t('common.close')"
             size="small"
             icon="tabler-x"
             @click="handleClose"
@@ -453,6 +454,7 @@ watch(() => props.prefill, val => {
             <span class="text-caption text-disabled">({{ file.size }})</span>
             <VSpacer />
             <IconBtn
+              :aria-label="$t('common.close')"
               size="x-small"
               @click="removeFile(idx)"
             >
@@ -502,7 +504,7 @@ watch(() => props.prefill, val => {
             </VTooltip>
           </IconBtn>
 
-          <IconBtn size="small">
+          <IconBtn :aria-label="$t('common.actions')" size="small">
             <VIcon icon="tabler-dots-vertical" />
             <VTooltip
               activator="parent"
@@ -515,6 +517,8 @@ watch(() => props.prefill, val => {
           <VSpacer />
 
           <IconBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             size="small"
             @click="handleClose"
           >

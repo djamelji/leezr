@@ -89,6 +89,7 @@ const filteredMembers = computed(() => {
         style="max-inline-size: 140px;"
       />
       <VBtn
+        :aria-label="$t('common.refresh')"
         icon
         variant="text"
         size="small"

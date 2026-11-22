@@ -334,7 +334,7 @@ const submitCorrect = async () => {
         <h5 class="text-h5 flex-grow-1">
           {{ t('timeCockpit.correctTitle') }}
         </h5>
-        <VBtn icon variant="text" size="small" @click="correctOpen = false">
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="correctOpen = false">
           <VIcon icon="tabler-x" />
         </VBtn>
       </div>

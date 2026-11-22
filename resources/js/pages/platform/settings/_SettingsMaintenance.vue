@@ -187,7 +187,7 @@ const resetToDefaults = async () => {
             >
               <td>{{ ip }}</td>
               <td class="text-end">
-                <IconBtn @click="removeIp(index)">
+                <IconBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" @click="removeIp(index)">
                   <VIcon icon="tabler-trash" />
                 </IconBtn>
               </td>

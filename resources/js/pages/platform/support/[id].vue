@@ -440,6 +440,7 @@ onMounted(async () => {
                   @keydown.enter.exact.prevent="sendReply"
                 />
                 <VBtn
+                  :aria-label="$t('common.send')"
                   color="primary"
                   icon="tabler-send"
                   :loading="sending"
@@ -461,6 +462,7 @@ onMounted(async () => {
                   @keydown.enter.exact.prevent="sendNote"
                 />
                 <VBtn
+                  :aria-label="$t('common.send')"
                   color="warning"
                   icon="tabler-send"
                   :loading="sending"

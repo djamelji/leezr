@@ -112,7 +112,7 @@ watch(() => route.params.id, load)
   <div v-if="preset">
     <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-4">
       <div class="d-flex align-center gap-3">
-        <IconBtn @click="router.push('/platform/organization-presets')">
+        <IconBtn :aria-label="$t('common.back')" @click="router.push('/platform/organization-presets')">
           <VIcon icon="tabler-arrow-left" />
         </IconBtn>
         <div>
@@ -223,10 +223,13 @@ watch(() => route.params.id, load)
                   @click="moveDept(i, 1)"
                 ><VIcon icon="tabler-chevron-down" /></IconBtn>
                 <IconBtn
+                  :aria-label="$t('common.edit')"
                   size="x-small"
                   @click="openEditDept(d)"
                 ><VIcon icon="tabler-edit" /></IconBtn>
                 <IconBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   size="x-small"
                   @click="deleteDept(d)"
                 ><VIcon
@@ -287,10 +290,13 @@ watch(() => route.params.id, load)
               </div>
               <template v-if="!readOnly">
                 <IconBtn
+                  :aria-label="$t('common.edit')"
                   size="x-small"
                   @click="openEditRole(r)"
                 ><VIcon icon="tabler-edit" /></IconBtn>
                 <IconBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   size="x-small"
                   @click="deleteRole(r)"
                 ><VIcon

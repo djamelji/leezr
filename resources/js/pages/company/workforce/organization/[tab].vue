@@ -495,6 +495,7 @@ onMounted(() => {
                   class="d-flex gap-1"
                 >
                   <VBtn
+                    :aria-label="$t('common.edit')"
                     icon
                     variant="text"
                     size="x-small"
@@ -512,6 +513,8 @@ onMounted(() => {
                     />
                   </VBtn>
                   <VBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     icon
                     variant="text"
                     size="x-small"
@@ -724,6 +727,7 @@ onMounted(() => {
                   class="d-flex gap-1"
                 >
                   <VBtn
+                    :aria-label="$t('common.edit')"
                     icon
                     variant="text"
                     size="x-small"
@@ -741,6 +745,8 @@ onMounted(() => {
                     />
                   </VBtn>
                   <VBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     icon
                     variant="text"
                     size="x-small"
@@ -811,6 +817,7 @@ onMounted(() => {
           {{ deptEditId ? $t('organization.departments.edit') : $t('organization.departments.add') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"
@@ -887,6 +894,7 @@ onMounted(() => {
           {{ roleEditId ? $t('organization.roles.edit') : $t('organization.roles.add') }}
         </h5>
         <VBtn
+          :aria-label="$t('common.close')"
           icon
           variant="text"
           size="small"

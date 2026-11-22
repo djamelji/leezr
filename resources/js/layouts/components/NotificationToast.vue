@@ -134,6 +134,7 @@ watch(currentToast, toast => {
           </div>
 
           <IconBtn
+            :aria-label="$t('common.close')"
             size="x-small"
             class="flex-shrink-0"
             @click.stop="flyToBell"

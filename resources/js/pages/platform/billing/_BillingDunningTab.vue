@@ -342,6 +342,7 @@ onMounted(() => load())
         <template #item.actions="{ item }">
           <div class="d-flex gap-1 justify-center">
             <VBtn
+              :aria-label="$t('common.refresh')"
               v-if="item.status === 'overdue'"
               size="x-small"
               color="primary"

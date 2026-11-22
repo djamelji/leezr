@@ -197,6 +197,7 @@ const runPreview = async () => {
       <template #item.actions="{ item }">
         <div class="d-flex gap-1 justify-center">
           <VBtn
+            :aria-label="$t('common.edit')"
             icon
             size="small"
             variant="text"
@@ -205,6 +206,8 @@ const runPreview = async () => {
             <VIcon icon="tabler-pencil" />
           </VBtn>
           <VBtn
+            :aria-label="$t('common.delete')"
+            :title="$t('common.delete')"
             icon
             size="small"
             variant="text"

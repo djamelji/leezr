@@ -87,6 +87,7 @@ const handleClose = () => {
         {{ t('companyProfile.companyDocumentTypes') }}
       </h6>
       <VBtn
+        :aria-label="$t('common.close')"
         icon
         variant="text"
         size="small"

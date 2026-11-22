@@ -227,6 +227,7 @@ onMounted(async () => {
 
           <template #item.actions="{ item }">
             <VBtn
+              :aria-label="$t('common.view')"
               icon
               variant="text"
               size="small"

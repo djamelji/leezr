@@ -196,6 +196,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
       <div class="d-flex align-center gap-2 flex-wrap">
         <!-- Actions secondaires regroupées (évite 3 boutons concurrents) -->
         <VBtn
+          :aria-label="$t('common.actions')"
           v-if="can('workforce.export') || can('workforce.import')"
           icon
           variant="tonal"
@@ -418,7 +419,7 @@ const formatDate = d => d ? new Date(d).toLocaleDateString(locale.value) : '—'
         </template>
 
         <template #item.actions="{ item }">
-          <VBtn icon variant="text" size="small" @click.stop="goToEmployee(item.id)">
+          <VBtn :aria-label="$t('common.next')" icon variant="text" size="small" @click.stop="goToEmployee(item.id)">
             <VIcon icon="tabler-chevron-right" />
           </VBtn>
         </template>

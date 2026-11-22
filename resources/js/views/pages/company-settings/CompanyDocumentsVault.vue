@@ -242,6 +242,7 @@ const handleDelete = async code => {
         <td>
           <div class="d-flex gap-1 justify-end">
             <VBtn
+              :aria-label="$t('common.view')"
               v-if="doc.upload"
               icon
               variant="text"
@@ -275,6 +276,7 @@ const handleDelete = async code => {
               @change="openUploadDialog(doc, $event.target.files); $event.target.value = ''"
             >
             <VBtn
+              :aria-label="$t('common.download')"
               v-if="doc.upload"
               icon
               variant="text"
@@ -338,6 +340,7 @@ const handleDelete = async code => {
             <span class="text-body-1">{{ f.name }}</span>
             <span class="text-body-2 text-disabled">{{ formatFileSize(f.size) }}</span>
             <VBtn
+              :aria-label="$t('common.close')"
               icon
               variant="text"
               size="x-small"

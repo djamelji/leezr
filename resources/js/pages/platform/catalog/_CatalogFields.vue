@@ -388,6 +388,7 @@ const scopeColor = scope => {
             <template #item.actions="{ item }">
               <div class="d-flex gap-1 justify-center">
                 <VBtn
+                  :aria-label="$t('common.edit')"
                   icon
                   variant="text"
                   size="small"
@@ -396,6 +397,8 @@ const scopeColor = scope => {
                   <VIcon icon="tabler-pencil" />
                 </VBtn>
                 <VBtn
+                  :aria-label="$t('common.delete')"
+                  :title="$t('common.delete')"
                   v-if="!item.is_system"
                   icon
                   variant="text"

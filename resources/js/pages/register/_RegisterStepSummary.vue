@@ -411,6 +411,7 @@ defineExpose({
             {{ couponResult.coupon_name }}
           </VChip>
           <VBtn
+            :aria-label="$t('common.close')"
             icon
             variant="text"
             size="x-small"

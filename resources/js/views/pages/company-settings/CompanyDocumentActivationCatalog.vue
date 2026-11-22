@@ -330,6 +330,7 @@ const handleBatchSave = async () => {
           </td>
           <td class="d-flex align-center gap-1">
             <VBtn
+              :aria-label="$t('common.edit')"
               v-if="canEdit && doc.is_system === false"
               icon
               variant="text"
@@ -340,6 +341,8 @@ const handleBatchSave = async () => {
               <VIcon icon="tabler-pencil" />
             </VBtn>
             <VBtn
+              :aria-label="$t('common.delete')"
+              :title="$t('common.delete')"
               v-if="canEdit && doc.is_system === false && doc.usage_count === 0"
               icon
               variant="text"
@@ -350,6 +353,7 @@ const handleBatchSave = async () => {
               <VIcon icon="tabler-trash" />
             </VBtn>
             <VBtn
+              :aria-label="$t('common.archive')"
               v-else-if="canEdit && doc.is_system === false"
               icon
               variant="text"
@@ -374,6 +378,7 @@ const handleBatchSave = async () => {
       <DocumentScopeChip scope="company" />
       <VSpacer />
       <VBtn
+        :aria-label="$t('common.add')"
         v-if="canEdit"
         icon
         variant="tonal"
@@ -483,6 +488,7 @@ const handleBatchSave = async () => {
           </td>
           <td class="d-flex align-center gap-1">
             <VBtn
+              :aria-label="$t('common.edit')"
               v-if="canEdit && doc.is_system === false"
               icon
               variant="text"
@@ -493,6 +499,8 @@ const handleBatchSave = async () => {
               <VIcon icon="tabler-pencil" />
             </VBtn>
             <VBtn
+              :aria-label="$t('common.delete')"
+              :title="$t('common.delete')"
               v-if="canEdit && doc.is_system === false && doc.usage_count === 0"
               icon
               variant="text"
@@ -503,6 +511,7 @@ const handleBatchSave = async () => {
               <VIcon icon="tabler-trash" />
             </VBtn>
             <VBtn
+              :aria-label="$t('common.archive')"
               v-else-if="canEdit && doc.is_system === false"
               icon
               variant="text"

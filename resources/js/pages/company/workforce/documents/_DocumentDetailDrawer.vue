@@ -48,7 +48,7 @@ const hasSignatureRequest = computed(() => ['pending', 'signed', 'declined'].inc
             <div class="text-caption text-medium-emphasis">{{ subjectLabel(doc.subject_type) }}</div>
           </div>
         </div>
-        <VBtn icon variant="text" size="small" @click="isOpen = false"><VIcon icon="tabler-x" /></VBtn>
+        <VBtn :aria-label="$t('common.close')" icon variant="text" size="small" @click="isOpen = false"><VIcon icon="tabler-x" /></VBtn>
       </div>
 
       <div class="pa-4 flex-grow-1 overflow-y-auto">

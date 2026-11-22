@@ -136,6 +136,7 @@ const actionColor = a => ({ create: 'success', skip_duplicate: 'secondary', conf
         {{ t('employees.import.title') }}
       </h5>
       <VBtn
+        :aria-label="$t('common.close')"
         icon
         variant="text"
         size="small"

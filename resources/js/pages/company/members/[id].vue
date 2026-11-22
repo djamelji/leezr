@@ -193,6 +193,7 @@ const handleSetPassword = async () => {
     <!-- Header -->
     <div class="d-flex align-center gap-x-4 mb-6">
       <VBtn
+        :aria-label="$t('common.back')"
         icon
         variant="text"
         size="small"

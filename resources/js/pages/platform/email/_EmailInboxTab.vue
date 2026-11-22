@@ -320,6 +320,7 @@ const selectAllModel = computed({
         </VTextField>
 
         <IconBtn
+          :aria-label="$t('common.refresh')"
           :loading="isSyncing"
           @click="handleRefresh"
         >
@@ -383,7 +384,7 @@ const selectAllModel = computed({
             {{ selectedIds.size }}
           </span>
 
-          <IconBtn @click="handleBulkAction('trash')">
+          <IconBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" @click="handleBulkAction('trash')">
             <VIcon
               icon="tabler-trash"
               size="22"
@@ -621,7 +622,7 @@ const selectAllModel = computed({
                   size="22"
                 />
               </IconBtn>
-              <IconBtn @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('trash')">
+              <IconBtn :aria-label="$t('common.delete')" :title="$t('common.delete')" @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('trash')">
                 <VIcon
                   icon="tabler-trash"
                   size="22"

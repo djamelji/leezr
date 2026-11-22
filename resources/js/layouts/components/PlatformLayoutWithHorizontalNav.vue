@@ -21,7 +21,11 @@ const navItems = computed(() => {
 })
 
 // ADR-842 (M5, UXP-12) — the floating theme customizer is a template tool : reserved to manage_theme_settings
-const canCustomizeTheme = computed(() => usePlatformAuthStore().hasPermission('manage_theme_settings'))
+// ADR-860 (L7, 05 §4) — the floating customizer gear overlapped titles and tabs on every Platform page : it now lives
+// where theme settings are edited (Réglages › Thème), for the same permission. Nothing else changes.
+const customizerRoute = useRoute()
+const canCustomizeTheme = computed(() => usePlatformAuthStore().hasPermission('manage_theme_settings')
+  && customizerRoute.name === 'platform-settings-tab' && ['theme', 'typography'].includes(String(customizerRoute.params.tab)))
 </script>
 
 <template>

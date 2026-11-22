@@ -159,6 +159,7 @@ const formatAge = ms => {
               </VTooltip>
             </VBtn>
             <VBtn
+              :aria-label="$t('common.download')"
               icon
               size="x-small"
               variant="text"
@@ -176,6 +177,7 @@ const formatAge = ms => {
               </VTooltip>
             </VBtn>
             <VBtn
+              :aria-label="$t('common.close')"
               icon
               size="x-small"
               variant="text"

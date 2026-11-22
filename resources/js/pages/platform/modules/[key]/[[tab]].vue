@@ -591,6 +591,7 @@ const planLabel = planKey => {
       <VCard class="mb-6">
         <VCardText class="d-flex align-center gap-4">
           <VBtn
+            :aria-label="$t('common.back')"
             icon
             variant="text"
             size="small"
@@ -1473,6 +1474,7 @@ const planLabel = planKey => {
                         class="d-flex align-end"
                       >
                         <IconBtn
+                          :aria-label="$t('common.close')"
                           v-if="tiers.length > 1"
                           color="error"
                           @click="tiers.splice(i, 1)"

@@ -134,6 +134,7 @@ onMounted(async () => {
       <!-- Header -->
       <div class="d-flex align-center mb-4">
         <VBtn
+          :aria-label="$t('common.back')"
           icon
           variant="text"
           size="small"
@@ -319,6 +320,7 @@ onMounted(async () => {
             <VCardTitle class="d-flex align-center justify-space-between">
               <span>{{ t('workflows.executionLogs') }}</span>
               <VBtn
+                :aria-label="$t('common.refresh')"
                 variant="text"
                 size="small"
                 icon

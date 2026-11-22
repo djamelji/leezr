@@ -628,6 +628,8 @@ onMounted(async () => {
               >
                 <template #item.actions="{ item }">
                   <VBtn
+                    :aria-label="$t('common.delete')"
+                    :title="$t('common.delete')"
                     icon="tabler-trash"
                     variant="text"
                     size="small"

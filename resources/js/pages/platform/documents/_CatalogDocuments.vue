@@ -279,6 +279,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
               {{ t('common.manage') }}
             </VBtn>
             <VBtn
+              :aria-label="$t('common.archive')"
               v-if="!item.is_archived"
               icon
               variant="text"

@@ -90,6 +90,7 @@ const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: '
           <div class="d-flex align-center gap-2">
             <span class="text-caption text-medium-emphasis">{{ t('documents.replacedOn', { date: fmtDate(v.archived_at) }) }}</span>
             <VBtn
+              :aria-label="$t('common.download')"
               :href="`${versionsUrl}/${v.id}/download`"
               target="_blank"
               icon

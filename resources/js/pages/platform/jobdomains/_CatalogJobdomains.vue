@@ -140,6 +140,8 @@ onMounted(async () => {
               {{ t('platformJobdomains.manage') }}
             </VBtn>
             <VBtn
+              :aria-label="$t('common.delete')"
+              :title="$t('common.delete')"
               icon
               variant="text"
               size="small"
