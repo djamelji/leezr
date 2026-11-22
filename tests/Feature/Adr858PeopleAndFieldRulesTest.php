@@ -89,12 +89,15 @@ class Adr858PeopleAndFieldRulesTest extends TestCase
     {
         $this->employee();
         $res = $this->as($this->hrOnly)->getJson('/api/company/people?per_page=100')->assertOk()->json();
-        // an HR profile without access administration : no invitation / completeness figures, no account counts
+        // an HR profile without access administration : no invitation figure, no account counts ; since ADR-859 it reads
+        // the HR FILE completeness (labels and counts), never the account profile completeness
         $this->assertNull($res['summary']['invitations']);
-        $this->assertNull($res['summary']['incomplete']);
+        $this->assertIsInt($res['summary']['incomplete']);
         $this->assertNull($res['filter_counts']['access_state']);
         foreach ($res['data'] as $r) {
-            $this->assertNull($r['completeness'] ?? null);
+            if ($r['completeness'] ?? null) {
+                $this->assertSame('file', $r['completeness']['source']);
+            }
         }
     }
 

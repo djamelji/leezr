@@ -13196,5 +13196,21 @@
       "positionNeedsHint": "They will be asked in the person's file, not now.",
       "positionNoNeeds": "This position requires nothing beyond the company's rules."
     }
+  },
+  "l6": {
+    "modules": {
+      "more": "More actions for {module}"
+    },
+    "everyoneScope": {
+      "text": "« All employees » applies to the file: completeness, onboarding and requested documents. To also make an item required in every person's form, set it in ",
+      "link": "Catalogue › Fields (required for the whole company)."
+    },
+    "file": {
+      "toCollect": "{n} to collect | {n} to collect",
+      "toCollectHint": "Onboarding in progress: these items will be asked later.",
+      "missingList": "To fill in",
+      "more": "and {n} more | and {n} more",
+      "collecting": "Collection in progress"
+    }
   }
 }

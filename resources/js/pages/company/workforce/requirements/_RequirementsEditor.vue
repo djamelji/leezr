@@ -205,6 +205,24 @@ defineExpose({ load })
       >{{ t('requirementsCfg.peopleCount', { n: currentScope.people, a: currentScope.accountless }) }}</span>
     </div>
 
+    <!-- ADR-859 (L6) : two « everyone » settings exist — say what each one does (no data changed) -->
+    <VAlert
+      v-if="scope === 'all'"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+      data-test="requirements-everyone-scope"
+    >
+      {{ t('l6.everyoneScope.text') }}
+      <RouterLink
+        to="/company/catalogs/fields"
+        class="font-weight-medium"
+      >
+        {{ t('l6.everyoneScope.link') }}
+      </RouterLink>
+    </VAlert>
+
     <VProgressLinear
       v-if="loading"
       indeterminate

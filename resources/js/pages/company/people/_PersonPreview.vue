@@ -65,7 +65,7 @@ const steps = computed(() => {
 
 const stepsDone = computed(() => steps.value.filter(s => s.done).length)
 const completeness = computed(() => props.row?.completeness || null)
-const missing = computed(() => (completeness.value ? completeness.value.total - completeness.value.filled : null))
+const missing = computed(() => (completeness.value ? (completeness.value.missing_count ?? (completeness.value.total - completeness.value.filled)) : null)) // ADR-859 : « to collect » is not missing
 
 // authorised actions only — each opens the right tab of the full file
 const actions = computed(() => {
@@ -272,14 +272,46 @@ const actions = computed(() => {
         <div class="d-flex align-center gap-3">
           <VProgressCircular
             :model-value="(completeness.filled / completeness.total) * 100"
-            :color="completeness.complete ? 'success' : 'warning'"
+            :color="completeness.complete ? (completeness.to_collect ? 'info' : 'success') : 'warning'"
             size="44"
             width="5"
           >
             <span class="text-caption font-weight-bold">{{ completeness.filled }}/{{ completeness.total }}</span>
           </VProgressCircular>
           <div class="text-body-2">
-            {{ completeness.complete ? t('l5.preview.fileComplete') : t('l5.preview.fileMissing', { n: missing }, missing) }}
+            {{ completeness.complete ? (completeness.to_collect ? t('l6.file.collecting') : t('l5.preview.fileComplete')) : t('l5.preview.fileMissing', { n: missing }, missing) }}
+            <div
+              v-if="completeness.to_collect"
+              class="text-caption text-info"
+            >
+              {{ t('l6.file.toCollect', { n: completeness.to_collect }, completeness.to_collect) }} — {{ t('l6.file.toCollectHint') }}
+            </div>
+          </div>
+        </div>
+        <!-- ADR-859 : what is missing, by name (labels only — never a value) -->
+        <div
+          v-if="completeness.missing?.length"
+          class="lz-missing mt-3"
+          data-test="person-preview-missing-list"
+        >
+          <div class="text-caption text-medium-emphasis mb-1">
+            {{ t('l6.file.missingList') }}
+          </div>
+          <div class="d-flex flex-wrap gap-1">
+            <VChip
+              v-for="m in completeness.missing"
+              :key="m"
+              size="small"
+              label
+              variant="tonal"
+              color="warning"
+            >
+              {{ m }}
+            </VChip>
+            <span
+              v-if="missing > completeness.missing.length"
+              class="text-caption text-medium-emphasis align-self-center"
+            >{{ t('l6.file.more', { n: missing - completeness.missing.length }, missing - completeness.missing.length) }}</span>
           </div>
         </div>
       </section>

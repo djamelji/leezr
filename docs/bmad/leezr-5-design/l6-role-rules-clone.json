@@ -1,0 +1,1084 @@
+{
+ "generated_at": "2026-11-22T11:38:54+00:00",
+ "database": "leezr_audit842 (marked recipe clone)",
+ "note": "read only — nothing converted",
+ "companies": [
+  {
+   "company_id": 1,
+   "name": "Leezr Logistics",
+   "authority": "role",
+   "role_rules": [
+    {
+     "role": "Dispatcher",
+     "role_key": "dispatcher",
+     "members": 6,
+     "positions": {
+      "Livreur": 1,
+      "—": 4
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    },
+    {
+     "role": "Driver",
+     "role_key": "driver",
+     "members": 12,
+     "positions": {
+      "—": 6,
+      "Responsable d'exploitation": 6
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "birth_date",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "address",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    },
+    {
+     "role": "Manager",
+     "role_key": "manager",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Operations Manager",
+     "role_key": "ops_manager",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Propriétaire",
+     "role_key": "owner",
+     "members": 1,
+     "positions": {
+      "Responsable d'exploitation": 1
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "position_candidate"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "position_candidate"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "company_id": 2,
+   "name": "Trial Logistics",
+   "authority": "role",
+   "role_rules": [
+    {
+     "role": "Dispatcher",
+     "role_key": "dispatcher",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Driver",
+     "role_key": "driver",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "birth_date",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "address",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Manager",
+     "role_key": "manager",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Operations Manager",
+     "role_key": "ops_manager",
+     "members": 0,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "unused"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "unused"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "unused"
+      }
+     ]
+    },
+    {
+     "role": "Propriétaire",
+     "role_key": "owner",
+     "members": 1,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "company_id": 101,
+   "name": "E2E Recette 8091 433828",
+   "authority": "role",
+   "role_rules": [
+    {
+     "role": "Dispatcher",
+     "role_key": "dispatcher",
+     "members": 1,
+     "positions": {
+      "—": 1
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    },
+    {
+     "role": "Driver",
+     "role_key": "driver",
+     "members": 1,
+     "positions": {
+      "—": 1
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "birth_date",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "address",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "hire_date",
+       "kind": "required",
+       "class": "role_data"
+      }
+     ]
+    },
+    {
+     "role": "Manager",
+     "role_key": "manager",
+     "members": 1,
+     "positions": {
+      "—": 1
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    },
+    {
+     "role": "Operations Manager",
+     "role_key": "ops_manager",
+     "members": 1,
+     "positions": {
+      "—": 1
+     },
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_name",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "emergency_contact_phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "contract_type",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "social_security_number",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "iban",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    },
+    {
+     "role": "Propriétaire",
+     "role_key": "owner",
+     "members": 1,
+     "positions": [],
+     "rules": [
+      {
+       "code": "job_title",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "phone",
+       "kind": "required",
+       "class": "role_data"
+      },
+      {
+       "code": "license_number",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_category",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "license_expiry",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "adr_certified",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "vehicle_type",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "geographic_zone",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_schedule",
+       "kind": "hidden",
+       "class": "visibility"
+      },
+      {
+       "code": "work_mode",
+       "kind": "hidden",
+       "class": "visibility"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -30096,3 +30096,34 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - Société fictive 101 (fixture d'ancienne configuration) : 2 redondances retirées, comportement identique pour 5 comptes, retour arrière exact.
   - `Adr858PeopleAndFieldRulesTest` 6/6 ; `Adr802OneFunctionOnePathTest` mis à jour ; E2E `audit842-people858-recipe` 5/5 (12 points de recette) ; `m7-lot4-recette` mis à jour.
   - Livraison : `docs/bmad/leezr-5-design/14-l5-delivery.md` (limites au §7). Rapport d'audit du clone : `l5-fields-audit-clone.json`.
+
+## ADR-859 — Leezr 5.0 L6 : complétude des dossiers RH, règles par rôle analysées, interfaces redondantes
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - En L5, la complétude ne couvrait que les comptes de connexion (formulaire de profil), sans le poste ni les pièces. Un Employee sans compte n'était pas évalué.
+  - L'inventaire 05 listait des actions mal placées dans Modules, et deux réglages « tout le monde » coexistent.
+- **Décision** :
+  - **`PersonFileCompleteness`** (Core, lecture) évalue un Employee avec ou sans compte, sans jamais créer de compte.
+    - Obligations :
+      - les entrées du moteur de formulaires (`FieldObligationSources`, désormais avec les clés de rôle) ;
+      - les exigences de poste du registre : toutes en autorité « poste », seulement les décisions de la société en autorité « rôle » ;
+      - les pièces via `DocumentResolverService::subjectMap`.
+    - Présence : `EmployeeFieldStore::presence`, coffre documentaire et preuves de module.
+    - Données natives de la fiche (embauche, statut, contrat, poste) : comptées comme renseignées (PP2).
+    - Étapes : pendant l'intégration, un élément non dû à l'étape `hire` est « à collecter », pas manquant.
+  - **Liste Personnes** : complétude « dossier » pour les fiches visibles avec la facette RH (libellés et nombres, jamais de valeur) ; la synthèse « incomplets » couvre aussi la facette RH.
+  - **Écran** : colonne « Dossier » avec « à collecter », éléments manquants nommés dans l'aperçu.
+  - **Intégration** : ajout rapide incomplet permis ; le parcours d'embauche, déjà conforme, est inchangé (soumission refusée s'il manque un requis, validation, finalisation).
+  - **Règles par rôle** : `FieldRuleMigrationPlanner::roleRules` et `fields:rules-audit --roles` les classent en `visibility`, `role_data`, `position_candidate` (ambigu) ou `unused`. Lecture seule, aucune conversion.
+  - **Interfaces** :
+    - Modules : « Désactiver » dans le menu « ⋯ » (même confirmation), « Configuré » en vert avec une coche ;
+    - éditeur d'exigences : la portée « Tous les collaborateurs » est expliquée, avec un lien vers le catalogue ;
+    - alias historiques conservés et vérifiés ;
+    - laboratoires `devOnly` conservés (bancs de test E2E).
+  - **Sans changement** : moteur de champs, RBAC, Billing, onboarding, données ; aucune migration.
+- **Conséquences** :
+  - `Adr859PersonFileCompletenessTest` 6/6 ; E2E `audit842-files859-recipe` 5/5, dont l'embauche complète jusqu'à la finalisation (fixture `files859` : dossier complet sans compte dans la société fictive 101) ; `company-module-toggle` mis à jour ; non-régression L5, L3, L4, L1 24/24.
+  - PHPUnit 4920 réussis, 0 échec. Budget de requêtes de la liste Personnes porté à 50 : ensemble fixe de lectures groupées, constant avec la taille.
+  - Rapports de clone : `l6-role-rules-clone.json`.
+  - Livraison : `docs/bmad/leezr-5-design/15-l6-delivery.md` (limites au §7 : exigences « pour tous » du module flotte, deux réglages « tout le monde » distincts, règle ambiguë par rôle).

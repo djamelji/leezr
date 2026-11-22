@@ -24,13 +24,13 @@ use App\Core\Requirements\RequirementAuthority;
  */
 final class FieldObligationSources
 {
-    /** @return array<string, array{platform: bool, modules: list<string>, jobdomain: bool, company: bool, company_dormant: bool, roles: list<string>, hidden_for_roles: list<string>}> keyed by field code */
+    /** @return array<string, array{platform: bool, modules: list<string>, jobdomain: bool, company: bool, company_dormant: bool, roles: list<string>, role_keys: list<string>, hidden_for_roles: list<string>}> keyed by field code */
     public static function forCompany(Company $company): array
     {
         $explicitOnly = RequirementAuthority::isPosition($company->id);
         $activeModules = CompanyModule::where('company_id', $company->id)->where('is_enabled_for_company', true)->pluck('module_key')->all();
         $activations = FieldActivation::where('company_id', $company->id)->get()->keyBy('field_definition_id');
-        $roles = CompanyRole::where('company_id', $company->id)->whereNotNull('field_config')->get(['id', 'name', 'field_config']);
+        $roles = CompanyRole::where('company_id', $company->id)->whereNotNull('field_config')->get(['id', 'key', 'name', 'field_config']);
 
         $byRole = [];
         foreach ($roles as $role) {
@@ -40,8 +40,10 @@ final class FieldObligationSources
                 }
                 if (($entry['visible'] ?? true) === false) {
                     $byRole[$entry['code']]['hidden'][] = $role->name;
+                    $byRole[$entry['code']]['hidden_keys'][] = $role->key;
                 } elseif (! empty($entry['required'])) {
                     $byRole[$entry['code']]['required'][] = $role->name;
+                    $byRole[$entry['code']]['required_keys'][] = $role->key; // ADR-859 : the engine matches the role KEY
                 }
             }
         }
@@ -59,7 +61,9 @@ final class FieldObligationSources
                 'company' => (bool) ($a?->enabled && $a?->required_override),
                 'company_dormant' => (bool) ($a && ! $a->enabled && $a->required_override), // stored, but the field is not proposed
                 'roles' => $byRole[$d->code]['required'] ?? [],
+                'role_keys' => $byRole[$d->code]['required_keys'] ?? [],
                 'hidden_for_roles' => $byRole[$d->code]['hidden'] ?? [],
+                'hidden_role_keys' => $byRole[$d->code]['hidden_keys'] ?? [],
             ];
         }
 

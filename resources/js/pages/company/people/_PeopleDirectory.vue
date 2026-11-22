@@ -74,7 +74,7 @@ const activeFilters = computed(() => Object.entries(filters.value).filter(([k, v
 const clearFilters = () => { filters.value = { attention: null, employment_status: null, department: null, job_role: null, access_state: null }; search.value = '' }
 
 // ── columns by facet ──
-const hasCompleteness = computed(() => store.facets.account_details !== false && store.facets.access)
+const hasCompleteness = computed(() => (store.facets.account_details !== false && store.facets.access) || store.facets.hr) // ADR-859 : HR files too
 
 const headers = computed(() => [
   { title: t('l5.col.person'), key: 'name', sortable: true },
@@ -370,18 +370,25 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
           >
             <VProgressCircular
               :model-value="pct(item.completeness)"
-              :color="item.completeness.complete ? 'success' : 'warning'"
+              :color="item.completeness.complete ? (item.completeness.to_collect ? 'info' : 'success') : 'warning'"
               size="30"
               width="4"
             >
               <VIcon
-                v-if="item.completeness.complete"
+                v-if="item.completeness.complete && !item.completeness.to_collect"
                 icon="tabler-check"
                 size="14"
                 color="success"
               />
             </VProgressCircular>
-            <span class="text-caption">{{ item.completeness.filled }}/{{ item.completeness.total }}</span>
+            <span class="d-flex flex-column">
+              <span class="text-caption">{{ item.completeness.filled }}/{{ item.completeness.total }}</span>
+              <span
+                v-if="item.completeness.to_collect"
+                class="text-caption text-info"
+                :title="t('l6.file.toCollectHint')"
+              >{{ t('l6.file.toCollect', { n: item.completeness.to_collect }, item.completeness.to_collect) }}</span>
+            </span>
           </div>
           <span
             v-else

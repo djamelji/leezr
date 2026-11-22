@@ -13214,5 +13214,21 @@
       "positionNeedsHint": "Ces informations seront demandées dans son dossier, pas maintenant.",
       "positionNoNeeds": "Ce poste ne demande rien de plus que la société."
     }
+  },
+  "l6": {
+    "modules": {
+      "more": "Plus d'actions pour {module}"
+    },
+    "everyoneScope": {
+      "text": "« Tous les collaborateurs » s'applique au dossier : complétude, intégration et pièces demandées. Pour qu'une information soit aussi obligatoire dans le formulaire de chaque fiche, réglez-la dans ",
+      "link": "Catalogue › Champs (obligatoire pour toute la société)."
+    },
+    "file": {
+      "toCollect": "{n} à collecter | {n} à collecter",
+      "toCollectHint": "En cours d'intégration : ces éléments seront demandés plus tard.",
+      "missingList": "À renseigner",
+      "more": "et {n} autre | et {n} autres",
+      "collecting": "Collecte en cours"
+    }
   }
 }

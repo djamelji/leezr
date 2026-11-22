@@ -69,6 +69,7 @@ test('owner: activate an add-on module then deactivate it (persisted round-trip)
   await page.waitForTimeout(1200)
   await page.locator('[data-test="modules-filter-active"]').click()
   await page.waitForTimeout(800)
+  await page.locator(`[data-test="module-more-${KEY}"]`).click() // ADR-859 : « Désactiver » lives in the card's « ⋯ » menu
   await page.locator(`[data-test="module-deactivate-${KEY}"]`).click()
   // Deactivate dialog (shows proration preview for add-ons) → confirm → PUT disable.
   await clickAndExpectApi(page, { urlIncludes: `/modules/${KEY}/disable`, method: 'PUT' },

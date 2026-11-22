@@ -58,9 +58,19 @@ class PeopleListReadModel
             $employees = Employee::withoutGlobalScopes()->where('company_id', $company->id)
                 ->when($scope !== null, fn ($q) => $q->whereIn('id', $scope))
                 ->with(['department:id,name', 'jobRole:id,title', 'manager:id,first_name,last_name', 'currentContract:id,employee_id,contract_type,status'])->get(); // ADR-818 : responsable + contrat
+            // ADR-859 (L6) — completeness of the HR FILE for every visible employee, with or without an account (no
+            // account is ever created for it) : HR facet only ; labels and counts, never a value.
+            $roleKeys = Membership::where('company_id', $company->id)->whereIn('user_id', $employees->pluck('user_id')->filter())
+                ->with('companyRole:id,key')->get()->mapWithKeys(fn ($m) => [$m->user_id => $m->companyRole?->key])->all();
+            $files = \App\Core\Requirements\PersonFileCompleteness::forEmployees($company, $employees, $roleKeys);
             foreach ($employees as $e) {
                 $key = $e->user_id ? 'u'.$e->user_id : 'e'.$e->id;
                 $persons[$key] = array_merge($persons[$key] ?? self::emptyRow(), self::rowFromEmployee($e, $canAccess && $details, $persons[$key] ?? null));
+                if (isset($files[$e->id])) {
+                    $f = $files[$e->id];
+                    $persons[$key]['completeness'] = ['filled' => $f['filled'], 'total' => $f['total'], 'complete' => $f['complete'], 'source' => 'file',
+                        'to_collect' => $f['to_collect'], 'missing' => array_slice(array_column($f['missing'], 'label'), 0, 8), 'missing_count' => count($f['missing'])];
+                }
             }
         }
 
@@ -184,7 +194,7 @@ class PeopleListReadModel
             'active' => $count(fn ($r) => ($r['employment_status'] ?? null) === 'active'
                 || (($r['employment_status'] ?? null) === null && in_array($r['account_state'] ?? null, ['connected', 'active'], true))),
             'invitations' => $details ? $count(fn ($r) => in_array($r['account_state'] ?? null, self::INVITATION_STATES, true)) : null,
-            'incomplete' => $details ? $count(fn ($r) => ! empty($r['completeness']) && ! $r['completeness']['complete']) : null,
+            'incomplete' => ($details || $hr) ? $count(fn ($r) => ! empty($r['completeness']) && ! $r['completeness']['complete']) : null, // ADR-859 : HR files count too
             'preparatory' => $hr ? $count(fn ($r) => ($r['employment_status'] ?? null) === 'preparatory') : null,
             'to_act' => $count(fn ($r) => ($r['next_action'] ?? null) !== null),
         ];

@@ -760,11 +760,13 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
                 {{ t('companyModules.includedLocked') }}
               </VTooltip>
             </div>
+            <!-- ADR-859 (L6, 05 §4) : « configured » reads as done (green + check), never as a grey « disabled » -->
             <VChip
               v-if="mod.is_active && mod.setup_status"
               size="small"
               class="mt-2"
-              :color="mod.setup_status === 'ready' ? 'success' : (mod.setup_status === 'legacy' ? 'secondary' : 'warning')"
+              :prepend-icon="['ready', 'legacy'].includes(mod.setup_status) ? 'tabler-circle-check' : undefined"
+              :color="['ready', 'legacy'].includes(mod.setup_status) ? 'success' : 'warning'"
               :to="`/company/modules/${mod.key}`"
               :data-test="`module-setup-chip-${mod.key}`"
             >
@@ -792,17 +794,30 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
               >
                 {{ t('companyModules.configure') }}
               </VBtn>
-              <VBtn
+              <!-- ADR-859 (L6, 05 §4) : rare and heavy action → in the « ⋯ » menu, same confirmation dialog with its impact -->
+              <IconBtn
                 v-if="mod.display_state === 'active'"
-                variant="text"
-                color="error"
                 size="small"
                 :loading="togglingKey === mod.key"
-                :data-test="`module-deactivate-${mod.key}`"
-                @click="requestDeactivation(mod)"
+                :aria-label="t('l6.modules.more', { module: mod.name || mod.key })"
+                :data-test="`module-more-${mod.key}`"
               >
-                {{ t('companyModules.deactivate') }}
-              </VBtn>
+                <VIcon icon="tabler-dots-vertical" />
+                <VMenu
+                  activator="parent"
+                  location="bottom end"
+                >
+                  <VList density="compact">
+                    <VListItem
+                      prepend-icon="tabler-power"
+                      base-color="error"
+                      :title="t('companyModules.deactivate')"
+                      :data-test="`module-deactivate-${mod.key}`"
+                      @click="requestDeactivation(mod)"
+                    />
+                  </VList>
+                </VMenu>
+              </IconBtn>
               <VBtn
                 v-else-if="!mod.is_active && ['included', 'available'].includes(mod.display_state) && !isPreview(mod)"
                 color="primary"

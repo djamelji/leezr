@@ -281,7 +281,7 @@ class M7Lot4PerformanceTest extends TestCase
 
         // ── Absolute query budgets at 800 people (current values + headroom ; a regression must be deliberate). ──
         $budgets = [
-            'people.list' => 25, 'people.search' => 25, 'people.filter+sort' => 25, 'people.file' => 92, /* ADR-816 : +1 lecture d'autorisation (facette comptes ≠ annuaire), constante */ 'campaigns.preview' => 40, 'people.history' => 25,
+            'people.list' => 50, 'people.search' => 50, 'people.filter+sort' => 50, /* ADR-859 : + file completeness (fixed set of batch queries, constant with size) */ 'people.file' => 92, /* ADR-816 : +1 lecture d'autorisation (facette comptes ≠ annuaire), constante */ 'campaigns.preview' => 40, 'people.history' => 25,
             'people.payslips' => 25, 'members.directory' => 30, 'documents.vault' => 40, 'documents.activity' => 30, 'profile.space' => 25, 'self.payslips' => 20, 'self.documents' => 30,
             'documents.compliance' => 80, 'campaigns.list' => 20, 'payslip.batches' => 20, 'workforce.employees' => 25,
         ];
@@ -318,7 +318,7 @@ class M7Lot4PerformanceTest extends TestCase
         $m = $this->measure('people.list@3000', 3000, fn () => $this->api('/api/company/people?per_page=20'));
         $this->assertCount(20, $m['json']['data']);
         $this->assertSame(3000 + 300 + 1, $m['json']['total']);
-        $this->assertLessThanOrEqual(25, $m['queries'], 'still a constant number of queries');
+        $this->assertLessThanOrEqual(50, $m['queries'], 'still a constant number of queries'); // ADR-859 : file completeness = constant batch reads
         $this->assertLessThan(15_000, $m['bytes']);
         $this->assertLessThan(4000, $m['ms'], 'in-memory aggregation of 3 300 people');
 

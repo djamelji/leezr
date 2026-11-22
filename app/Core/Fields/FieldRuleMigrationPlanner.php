@@ -156,6 +156,47 @@ final class FieldRuleMigrationPlanner
         return $out;
     }
 
+    /**
+     * ADR-859 (L6) — what the historical per-role rules really are, from their real usage (read only, never converted) :
+     *   visibility         : `visible:false` — decides who SEES a field (a software-access concern, stays on the role)
+     *   role_data          : `required` on a role whose members hold several positions (or none) — data the ROLE needs
+     *   position_candidate : `required` on a role whose members all hold ONE position — may be a need of that position ;
+     *                        AMBIGUOUS : shown with its impact, converted only by an explicit company decision
+     *   unused             : rule on a role nobody holds
+     *
+     * @return list<array{role: string, role_key: string, members: int, positions: array<string, int>, rules: list<array{code: string, kind: string, class: string}>}>
+     */
+    public static function roleRules(Company $company): array
+    {
+        $out = [];
+        $roles = CompanyRole::where('company_id', $company->id)->whereNotNull('field_config')->get(['id', 'key', 'name', 'field_config']);
+        foreach ($roles as $role) {
+            $config = array_values(array_filter((array) $role->field_config, fn ($e) => is_array($e) && ! empty($e['code'])
+                && (($e['visible'] ?? true) === false || ! empty($e['required']))));
+            if ($config === []) {
+                continue;
+            }
+            $userIds = Membership::where('company_id', $company->id)->where('company_role_id', $role->id)->pluck('user_id');
+            $positions = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->whereIn('user_id', $userIds)
+                ->with('jobRole:id,title')->get()->groupBy(fn ($e) => $e->jobRole?->title ?? '—')->map->count()->all();
+            $withPosition = array_diff_key($positions, ['—' => 0]);
+            $rules = [];
+            foreach ($config as $e) {
+                $hidden = ($e['visible'] ?? true) === false;
+                $class = match (true) {
+                    $userIds->isEmpty() => 'unused',
+                    $hidden => 'visibility',
+                    count($withPosition) === 1 && ! isset($positions['—']) => 'position_candidate',
+                    default => 'role_data',
+                };
+                $rules[] = ['code' => $e['code'], 'kind' => $hidden ? 'hidden' : 'required', 'class' => $class];
+            }
+            $out[] = ['role' => $role->name, 'role_key' => $role->key, 'members' => $userIds->count(), 'positions' => $positions, 'rules' => $rules];
+        }
+
+        return $out;
+    }
+
     private static function why(array $o): array
     {
         return array_values(array_filter([

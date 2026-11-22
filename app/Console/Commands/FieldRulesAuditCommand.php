@@ -18,7 +18,7 @@ use Illuminate\Console\Command;
  */
 class FieldRulesAuditCommand extends Command
 {
-    protected $signature = 'fields:rules-audit {--company=* : company ids (default: all)} {--apply : apply the redundant clean-up (clone only)} {--rollback= : restore a backup file (clone only)} {--out= : JSON report / backup file}';
+    protected $signature = 'fields:rules-audit {--company=* : company ids (default: all)} {--apply : apply the redundant clean-up (clone only)} {--rollback= : restore a backup file (clone only)} {--out= : JSON report / backup file} {--roles : add the per-role rules analysis (read only)}';
 
     protected $description = 'ADR-858 — audit (and, on a recipe clone, reversibly migrate) the stored person-field rules';
 
@@ -59,6 +59,7 @@ class FieldRulesAuditCommand extends Command
                 'findings' => $plan['findings'], 'accounts' => $persons,
                 'migration' => $run ? ['changed' => $run['changed'], 'identical_behaviour' => $run['identical'], 'applied' => $run['applied']] : null,
                 'backup' => $run && $run['applied'] ? $run['backup'] : null,
+                'role_rules' => $this->option('roles') ? FieldRuleMigrationPlanner::roleRules($company) : null, // ADR-859
             ];
             $rows[] = [$company->id, mb_strimwidth($company->name, 0, 24, '…'), $plan['authority'], $persons,
                 json_encode($plan['counts']), $run ? ($run['changed'].' / '.($run['identical'] ? 'identical' : 'DIFFERS')) : '—', $run && $run['applied'] ? 'yes' : 'no'];

@@ -10,7 +10,8 @@
 | **L4 · Widgets premium** | **livré en local** : bibliothèque unifiée (tuile KPI, liste, tendance sur les composants L0), bornes par famille avec refus expliqué, états erreur/vide/chargement, « Disposition recommandée » Company, filtrage de la disposition Company à l'écriture ; restant : [12 §6](12-l4-delivery.md) | ADR-856, [11](11-widget-catalog.md), [12](12-l4-delivery.md) |
 | **L3 · Accueil Company V22** | **livré en local** : en-tête de situation réelle, À traiter, actions en tuiles, composition par modules actifs (Logistique en tête), accueil chauffeur et salarié, mise en service sur la checklist existante ; restant : [13 §9](13-l3-delivery.md) | ADR-857, [13](13-l3-delivery.md) |
 | **L5 · Personnes** | **livré en local** : page Personnes V22 (synthèse réelle, filtres avec compteurs, dossier, prochaine étape, aperçu rapide, mobile), « Outils → Champs » retiré au profit d'une interface par responsabilité, audit et migration réversible des règles de champs ; restant : [14 §7](14-l5-delivery.md) | ADR-858, [14](14-l5-delivery.md) |
-| L6 → L8 | inchangés | — |
+| **L6 · Dossiers et interfaces redondantes** | **livré en local** : complétude des dossiers RH pour tous les collaborateurs (avec ou sans compte, poste, pièces, étape), règles par rôle analysées sans conversion, Modules (désactiver dans « ⋯ », « Configuré » vert), deux réglages « tout le monde » expliqués, alias vérifiés ; restant : [15 §7](15-l6-delivery.md) | ADR-859, [15](15-l6-delivery.md) |
+| L7 → L8 | inchangés (L7 : harmonisation globale) | — |
 
 > **Rien de ceci n'est lancé.** Chaque lot démarre sur une validation explicite (« GO L… »).
 >
