@@ -87,6 +87,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ADR-861 — the Shipments module proves who drives (deliveries assigned) ; read by the Core FunctionActivity
+        \App\Core\Fields\FunctionActivity::provide(\App\Core\Fields\TagDictionary::DRIVING, \App\Modules\Logistics\Shipments\ShipmentsDrivingEvidence::class);
+
         // ADR-833 — the retired webhook/deploy.sh pipeline (releases/YYYYMMDD_HHMMSS) may not run any artisan command.
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Console\Events\CommandStarting::class, fn ($event) => \App\Core\System\DeploymentGuard::assertNotLegacyRelease(base_path(), (string) $event->command));
 

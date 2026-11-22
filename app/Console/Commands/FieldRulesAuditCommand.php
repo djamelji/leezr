@@ -13,18 +13,19 @@ use Illuminate\Console\Command;
  *   fields:rules-audit [--company=*] [--out=report.json]      read only : plan + simulated migration (rolled back)
  *   fields:rules-audit --apply --out=backup.json [--company=*] writes, MARKED recipe clone only ; keeps a backup
  *   fields:rules-audit --rollback=backup.json                   restores a backup, MARKED recipe clone only
+ *   fields:rules-audit --function-scope=on|off --company=*      ADR-861 activity scope of module fields, MARKED clone only
  *
  * A company is migrated only when every account keeps exactly the same required and missing fields.
  */
 class FieldRulesAuditCommand extends Command
 {
-    protected $signature = 'fields:rules-audit {--company=* : company ids (default: all)} {--apply : apply the redundant clean-up (clone only)} {--rollback= : restore a backup file (clone only)} {--out= : JSON report / backup file} {--roles : add the per-role rules analysis (read only)} {--module-wide : simulate function-based scope of module-wide obligations (read only)}';
+    protected $signature = 'fields:rules-audit {--company=* : company ids (default: all)} {--apply : apply the redundant clean-up (clone only)} {--rollback= : restore a backup file (clone only)} {--out= : JSON report / backup file} {--roles : add the per-role rules analysis (read only)} {--module-wide : simulate function-based scope of module-wide obligations (read only)} {--function-scope= : on|off — switch the activity scope of module fields (clone only, ADR-861)}';
 
     protected $description = 'ADR-858 — audit (and, on a recipe clone, reversibly migrate) the stored person-field rules';
 
     public function handle(RecipeDatabaseGuard $guard): int
     {
-        $writes = $this->option('apply') || $this->option('rollback');
+        $writes = $this->option('apply') || $this->option('rollback') || $this->option('function-scope');
         if ($writes) {
             $verdict = $guard->assess($this->getName());
             if (! $verdict['allowed']) {
@@ -32,6 +33,21 @@ class FieldRulesAuditCommand extends Command
 
                 return self::FAILURE;
             }
+        }
+
+        if ($switch = $this->option('function-scope')) {
+            $ids = array_map('intval', (array) $this->option('company'));
+            if (! $ids || ! in_array($switch, ['on', 'off'], true)) {
+                $this->error('--function-scope=on|off needs explicit --company ids');
+
+                return self::FAILURE;
+            }
+            foreach ($ids as $id) {
+                $previous = \App\Core\Fields\FunctionActivity::setScope($id, $switch === 'on' ? \App\Core\Fields\FunctionActivity::SCOPE_FUNCTION : \App\Core\Fields\FunctionActivity::SCOPE_EVERYONE);
+                $this->info("company $id : module_obligation_scope ".($previous ?? 'null').' → '.($switch === 'on' ? 'function' : 'everyone'));
+            }
+
+            return self::SUCCESS;
         }
 
         if ($file = $this->option('rollback')) {

@@ -73,6 +73,12 @@ final class PersonFileCompleteness
         $resolver = EffectiveRequirementResolver::forCompany($company);
         $counts = fn (?array $req) => $req && $req['required'] && ($position || ($req['retained']['source'] ?? null) === 'company');
         $locale = \App\Core\Fields\FieldResolverService::requestLocale();
+        $roleTagMap = null;
+        $roleTags = function (string $key) use ($company, &$roleTagMap) {
+            $roleTagMap ??= \App\Company\RBAC\CompanyRole::where('company_id', $company->id)->get(['key', 'required_tags'])->pluck('required_tags', 'key')->all();
+
+            return (array) ($roleTagMap[$key] ?? []);
+        };
 
         // documents : one decision per (role, position) pair — memoised
         $docMaps = [];
@@ -91,6 +97,7 @@ final class PersonFileCompleteness
         $out = [];
         foreach ($employees as $e) {
             $roleKey = $e->user_id ? ($roleKeyByUser[$e->user_id] ?? null) : null;
+            $activities = null; // ADR-861 : resolved lazily, only when a module field is scoped by function
             $positionReq = $resolver->resolveFor(EffectiveRequirementResolver::subjectFromEmployee($e, $e->currentContract?->contract_type));
             $preparatory = method_exists($e, 'isPreparatory') && $e->isPreparatory();
             $deferrable = fn (?string $stage) => $preparatory && $stage !== 'hire';
@@ -103,7 +110,9 @@ final class PersonFileCompleteness
             foreach ($defs as $def) {
                 $o = $sources[$def->code] ?? null;
                 $req = $positionReq['field:'.$def->id] ?? null;
-                $byEngine = $o && ($o['platform'] || $o['modules'] || $o['jobdomain'] || $o['company'] || ($roleKey !== null && in_array($roleKey, $o['role_keys'] ?? [], true)));
+                $byModule = $o && $o['modules'] && (! $o['modules_for'] || array_intersect($o['modules_for'],
+                    $activities ??= \App\Core\Fields\FunctionActivity::tagsForEmployee($company->id, $e, $roleKey ? $roleTags($roleKey) : null)));
+                $byEngine = $o && ($o['platform'] || $byModule || $o['jobdomain'] || $o['company'] || ($roleKey !== null && in_array($roleKey, $o['role_keys'] ?? [], true)));
                 $byPosition = $counts($req);
                 if ($roleKey !== null && in_array($roleKey, $o['hidden_role_keys'] ?? [], true) && ! $byPosition) {
                     continue; // the form drops a field hidden for the account's role : not asked, not counted

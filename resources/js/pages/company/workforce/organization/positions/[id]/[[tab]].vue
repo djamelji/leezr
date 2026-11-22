@@ -49,6 +49,21 @@ const startEdit = async () => {
   }
   editing.value = true
 }
+// ADR-861 : activities exercised in the position (scope the fields a module asks for them — e.g. the Fleet licence)
+const ACTIVITIES = ['driving', 'dispatching', 'management']
+const activities = computed(() => position.value?.metadata?.activities || [])
+const savingActivity = ref(null)
+const toggleActivity = async (key, on) => {
+  savingActivity.value = key
+  try {
+    const next = on ? [...new Set([...activities.value, key])] : activities.value.filter(a => a !== key)
+    await $api(`/workforce/job-roles/${id.value}`, { method: 'PUT', body: { activities: next } })
+    toast(t('l7.activity.saved'), 'success')
+    await loadPosition()
+  }
+  catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
+  finally { savingActivity.value = null }
+}
 const saveInfo = async () => {
   savingInfo.value = true
   try {
@@ -303,6 +318,47 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
                     v-else
                     class="text-disabled"
                   >{{ t('positions.noDescription') }}</span>
+                </VCardText>
+                <VDivider />
+                <VCardText data-test="position-activities">
+                  <div class="text-body-2 font-weight-medium mb-1">
+                    {{ t('l7.activity.title') }}
+                  </div>
+                  <p class="text-body-2 text-medium-emphasis mb-2">
+                    {{ t('l7.activity.hint') }}
+                  </p>
+                  <template v-if="canEditInfo">
+                    <VSwitch
+                      v-for="a in ACTIVITIES"
+                      :key="a"
+                      :model-value="activities.includes(a)"
+                      :label="t(`l7.activity.${a}`)"
+                      :loading="savingActivity === a"
+                      :disabled="!!savingActivity"
+                      density="compact"
+                      hide-details
+                      :data-test="`position-activity-${a}`"
+                      @update:model-value="v => toggleActivity(a, v)"
+                    />
+                  </template>
+                  <div
+                    v-else
+                    class="d-flex flex-wrap gap-2"
+                  >
+                    <VChip
+                      v-for="a in activities"
+                      :key="a"
+                      size="small"
+                      color="primary"
+                      variant="tonal"
+                    >
+                      {{ t(`l7.activity.${a}`) }}
+                    </VChip>
+                    <span
+                      v-if="!activities.length"
+                      class="text-disabled text-body-2"
+                    >{{ t('l7.activity.none') }}</span>
+                  </div>
                 </VCardText>
               </VCard>
             </VCol>

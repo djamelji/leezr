@@ -1,0 +1,315 @@
+{
+  "adr": "ADR-861",
+  "clone": "leezr_audit842",
+  "company_id": 1,
+  "rule": "module fields with an activity tag are asked only from people who exercise it: position declares it, deliveries prove it, or (role authority) the access role requires it; explicit company rules unchanged",
+  "step_1_no_position_declared": [
+    {
+      "code": "license_number",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 12,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 0,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 64,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 0,
+          "released": 54
+        },
+        "with_account": {
+          "kept": 12,
+          "released": 10
+        }
+      }
+    },
+    {
+      "code": "license_category",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 12,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 0,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 64,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 0,
+          "released": 54
+        },
+        "with_account": {
+          "kept": 12,
+          "released": 10
+        }
+      }
+    },
+    {
+      "code": "license_expiry",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 12,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 0,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 64,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 0,
+          "released": 54
+        },
+        "with_account": {
+          "kept": 12,
+          "released": 10
+        }
+      }
+    },
+    {
+      "code": "vehicle_type",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 12,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 0,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 64,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 0,
+          "released": 54
+        },
+        "with_account": {
+          "kept": 12,
+          "released": 10
+        }
+      }
+    }
+  ],
+  "step_2_position_Livreur_declares_driving": [
+    {
+      "code": "license_number",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 31,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 19,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 45,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 18,
+          "released": 36
+        },
+        "with_account": {
+          "kept": 13,
+          "released": 9
+        }
+      }
+    },
+    {
+      "code": "license_category",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 31,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 19,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 45,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 18,
+          "released": 36
+        },
+        "with_account": {
+          "kept": 13,
+          "released": 9
+        }
+      }
+    },
+    {
+      "code": "license_expiry",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 31,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 19,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 45,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 18,
+          "released": 36
+        },
+        "with_account": {
+          "kept": 13,
+          "released": 9
+        }
+      }
+    },
+    {
+      "code": "vehicle_type",
+      "modules": [
+        "logistics_fleet"
+      ],
+      "tags": [
+        "driving"
+      ],
+      "everyone": 76,
+      "positions_to_review": [
+        {
+          "job_role_id": 1,
+          "holders": 7,
+          "holders_without_account": 0,
+          "holders_with_signal": 6
+        }
+      ],
+      "by_function": 31,
+      "kept_by": {
+        "company": 0,
+        "role_rule": 0,
+        "position": 19,
+        "evidence": 2,
+        "role": 10
+      },
+      "released": 45,
+      "newly_required": 0,
+      "people": {
+        "without_account": {
+          "kept": 18,
+          "released": 36
+        },
+        "with_account": {
+          "kept": 13,
+          "released": 9
+        }
+      }
+    }
+  ],
+  "not_applied": "DEV and historical companies keep module_obligation_scope = NULL (everyone). Applying needs a separate GO."
+}

@@ -207,30 +207,65 @@ final class FieldRuleMigrationPlanner
      */
     public static function moduleWideObligations(Company $company): array
     {
+        // ADR-861 : simulates the FUNCTION scope (FunctionActivity) person by person — read only. A field stays required
+        // for a person when the company asked it explicitly (everyone / that role) or the person exercises the activity.
         $sources = FieldObligationSources::forCompany($company);
         $defs = FieldDefinition::where('scope', FieldDefinition::SCOPE_COMPANY_USER)->whereNull('company_id')->get()->keyBy('code');
         $employees = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('status', '!=', 'terminated')->get(['id', 'user_id', 'job_role_id']);
-        $roleTags = Membership::where('company_id', $company->id)->with('companyRole:id,required_tags')->get()
-            ->mapWithKeys(fn ($m) => [$m->user_id => (array) ($m->companyRole?->required_tags ?? [])])->all();
-        $resolver = \App\Core\Requirements\EffectiveRequirementResolver::forCompany($company);
-        $out = [];
-        foreach ($sources as $code => $o) {
-            if (! $o['modules'] || ! isset($defs[$code])) {
-                continue;
-            }
-            $tags = (array) ($defs[$code]->validation_rules['tags'] ?? []);
-            $byFunction = 0;
-            foreach ($employees as $e) {
-                $tagged = $e->user_id && array_intersect($tags, $roleTags[$e->user_id] ?? []) !== [];
-                $req = $resolver->resolveFor(\App\Core\Requirements\EffectiveRequirementResolver::subjectFromEmployee($e, null))['field:'.$defs[$code]->id] ?? null;
-                $positioned = $req && $req['required'] && ($req['retained']['source'] ?? null) === 'company';
-                $byFunction += ($tagged || $positioned) ? 1 : 0;
-            }
-            $out[] = ['code' => $code, 'modules' => $o['modules'], 'tags' => $tags, 'everyone' => $employees->count(), 'by_function' => $byFunction,
-                'released' => $employees->count() - $byFunction];
-        }
+        $members = Membership::where('company_id', $company->id)->with('companyRole:id,key,required_tags')->get()->keyBy('user_id');
 
-        return $out;
+        return FunctionActivity::simulate($company->id, function () use ($company, $sources, $defs, $employees, $members) {
+            $out = [];
+            foreach ($sources as $code => $o) {
+                if (! $o['modules'] || ! isset($defs[$code])) {
+                    continue;
+                }
+                $tags = (array) ($defs[$code]->validation_rules['tags'] ?? []);
+                $kept = ['company' => 0, 'role_rule' => 0, 'position' => 0, 'evidence' => 0, 'role' => 0];
+                $people = ['without_account' => ['kept' => 0, 'released' => 0], 'with_account' => ['kept' => 0, 'released' => 0]];
+                $released = 0;
+                foreach ($employees as $e) {
+                    $role = $e->user_id ? $members->get($e->user_id)?->companyRole : null;
+                    $reasons = [];
+                    if ($o['platform'] || $o['company']) {
+                        $reasons[] = 'company';
+                    } elseif ($role && in_array($role->key, $o['role_keys'] ?? [], true)) {
+                        $reasons[] = 'role_rule';
+                    } else {
+                        foreach ($tags as $tag) {
+                            $reasons = array_merge($reasons, FunctionActivity::reasons($company->id, $e->user_id ? (int) $e->user_id : null, $e->job_role_id ? (int) $e->job_role_id : null, $tag, (array) ($role?->required_tags ?? [])));
+                        }
+                    }
+                    $bucket = $e->user_id ? 'with_account' : 'without_account';
+                    if ($reasons) {
+                        $kept[$reasons[0]]++;
+                        $people[$bucket]['kept']++;
+                    } else {
+                        $released++;
+                        $people[$bucket]['released']++;
+                    }
+                }
+                // positions the company should review BEFORE switching : a holder already drives (role / deliveries) but the
+                // position does not declare it — never declared automatically (a title is not a proof)
+                $review = [];
+                foreach ($employees->groupBy('job_role_id') as $jobRoleId => $holders) {
+                    if (! $jobRoleId) {
+                        continue;
+                    }
+                    $driving = $holders->filter(fn ($e) => $e->user_id && array_intersect($tags, FunctionActivity::tagsForUser($company->id, (int) $e->user_id, (array) ($members->get($e->user_id)?->companyRole?->required_tags ?? []))))->count();
+                    $declared = (bool) array_intersect($tags, FunctionActivity::tagsForEmployee($company->id, $holders->first()));
+                    if ($driving && ! $declared) {
+                        $review[] = ['job_role_id' => (int) $jobRoleId, 'holders' => $holders->count(), 'holders_without_account' => $holders->whereNull('user_id')->count(), 'holders_with_signal' => $driving];
+                    }
+                }
+                $out[] = ['code' => $code, 'modules' => $o['modules'], 'tags' => $tags, 'everyone' => $employees->count(), 'positions_to_review' => $review,
+                    'by_function' => $employees->count() - $released, 'kept_by' => $kept, 'released' => $released,
+                    'newly_required' => 0, // narrowing only : nobody becomes required who was not before
+                    'people' => $people];
+            }
+
+            return $out;
+        });
     }
 
     private static function why(array $o): array

@@ -110,6 +110,15 @@ class FieldResolverService
                 ->first();
             $roleRequiredTags = $role?->required_tags;
         }
+        // ADR-861 : the person's activities (position, module evidence, role tags) when the company scopes module fields by function
+        $functionTags = null;
+        if ($companyId !== null && ! empty($mandatoryContext['function_scoped'])) {
+            $functionTags = match (true) {
+                $model instanceof \App\Core\Models\User => FunctionActivity::tagsForUser($companyId, (int) $model->getKey(), $roleRequiredTags),
+                $model instanceof \App\Core\Workforce\Employee => FunctionActivity::tagsForEmployee($companyId, $model, $roleRequiredTags),
+                default => null,
+            };
+        }
 
         // Assemble in memory
         $result = [];
@@ -123,7 +132,7 @@ class FieldResolverService
             $fieldValue = $values->get($defId);
             $rawValue = $fieldValue?->value;
 
-            $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags);
+            $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags, $functionTags);
 
             $isRequired = $activation->required_override
                 || ($definition->validation_rules['required'] ?? false)

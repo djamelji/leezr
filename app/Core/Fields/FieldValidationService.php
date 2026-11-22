@@ -18,7 +18,7 @@ class FieldValidationService
      *
      * @return array<string, array<string>>
      */
-    public static function rules(string $scope, ?int $companyId = null, ?string $roleKey = null, ?string $marketKey = null, ?string $category = null): array
+    public static function rules(string $scope, ?int $companyId = null, ?string $roleKey = null, ?string $marketKey = null, ?string $category = null, ?array $functionTags = null): array
     {
         $definitions = FieldDefinition::where('scope', $scope)
             ->where(fn ($q) => $q->whereNull('company_id')
@@ -80,7 +80,7 @@ class FieldValidationService
 
             $fieldRules = ['sometimes'];
 
-            $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags);
+            $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags, $functionTags);
 
             $isRequired = $activation->required_override
                 || ($definition->validation_rules['required'] ?? false)
@@ -122,7 +122,7 @@ class FieldValidationService
                 if ($config && isset($config['required'])) {
                     // ADR-169: mandatory fields cannot be downgraded by role config
                     $definition = $definitions->first(fn ($d) => $d->code === $code);
-                    $mandatory = $definition ? MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags) : false;
+                    $mandatory = $definition ? MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags, $functionTags) : false;
                     $effectiveRequired = $mandatory || $config['required'];
 
                     $ruleValue = array_map(function ($r) use ($effectiveRequired) {

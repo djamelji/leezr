@@ -13193,7 +13193,8 @@
         "company": "Obligatoire à la saisie : la fiche de chaque personne ne peut pas être enregistrée sans ce champ. Réglé ici.",
         "roles": "Règle historique par rôle d'accès ({roles}) — modifiable dans Rôles & autorisations.",
         "position": "Exigé pour ce poste — modifiable sur la fiche du poste.",
-        "hidden": "Masqué dans le formulaire pour : {roles}. Vérifiez que c'est voulu."
+        "hidden": "Masqué dans le formulaire pour : {roles}. Vérifiez que c'est voulu.",
+        "moduleFor": "Exigé par ce module seulement pour les personnes qui exercent : {activities} (poste, livraisons ou rôle)."
       },
       "inherit": {
         "title": "Comment un champ devient obligatoire",
@@ -13286,6 +13287,15 @@
       "team": "Équipe",
       "workforce": "Temps et planning",
       "billing": "Facturation"
+    },
+    "activity": {
+      "title": "Activités exercées dans ce poste",
+      "hint": "Les informations qu'un module demande pour une activité (par exemple le permis pour la conduite) sont demandées aux titulaires de ce poste, avec ou sans compte Leezr.",
+      "driving": "Conduite de véhicule",
+      "dispatching": "Exploitation / répartition",
+      "management": "Encadrement",
+      "saved": "Activités du poste enregistrées",
+      "none": "Aucune activité déclarée"
     }
   }
 }

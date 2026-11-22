@@ -13175,7 +13175,8 @@
         "company": "Required on entry: nobody's file can be saved without this field. Set here.",
         "roles": "Legacy rule per access role ({roles}) — editable in Roles & permissions.",
         "position": "Required for this position — editable on the position page.",
-        "hidden": "Hidden in the form for: {roles}. Check that this is intended."
+        "hidden": "Hidden in the form for: {roles}. Check that this is intended.",
+        "moduleFor": "Required by this module only for people who exercise: {activities} (position, deliveries or role)."
       },
       "inherit": {
         "title": "How a field becomes required",
@@ -13268,6 +13269,15 @@
       "team": "Team",
       "workforce": "Time and planning",
       "billing": "Billing"
+    },
+    "activity": {
+      "title": "Activities in this position",
+      "hint": "What a module asks for an activity (e.g. the licence for driving) is asked from the holders of this position, with or without a Leezr account.",
+      "driving": "Driving a vehicle",
+      "dispatching": "Operations / dispatching",
+      "management": "Management",
+      "saved": "Position activities saved",
+      "none": "No activity declared"
     }
   }
 }

@@ -28,6 +28,7 @@ class UpdateMemberRequest extends FormRequest
 
         // ADR-164: Resolve roleKey for role-aware validation
         $roleKey = null;
+        $functionTags = null; // ADR-861
         if ($company) {
             if ($this->has('company_role_id') && $this->company_role_id) {
                 $role = CompanyRole::where('company_id', $company->id)->find($this->company_role_id);
@@ -37,12 +38,17 @@ class UpdateMemberRequest extends FormRequest
                 $membership = $company->memberships()->with('companyRole')->find($membershipId);
                 $roleKey = $membership?->companyRole?->key;
             }
+            $memberUserId = $company->memberships()->whereKey($this->route('id'))->value('user_id');
+            if ($memberUserId && \App\Core\Fields\FunctionActivity::isFunctionScoped($company->id)) {
+                $roleTags = $roleKey ? CompanyRole::where('company_id', $company->id)->where('key', $roleKey)->value('required_tags') : null;
+                $functionTags = \App\Core\Fields\FunctionActivity::tagsForUser($company->id, (int) $memberUserId, is_string($roleTags) ? (json_decode($roleTags, true) ?: null) : $roleTags);
+            }
         }
 
         // ANO-012: an update is partial by nature. Only validate dynamic fields actually
         // submitted, so a focused edit (e.g. changing the role) is never blocked by
         // required-but-untouched fields the user did not include in this request.
-        $dynamicRules = FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id, $roleKey, $company?->market_key);
+        $dynamicRules = FieldValidationService::rules(FieldDefinition::SCOPE_COMPANY_USER, $company?->id, $roleKey, $company?->market_key, functionTags: $functionTags);
         $submitted = $this->input('dynamic_fields', []);
         $submitted = is_array($submitted) ? $submitted : [];
 

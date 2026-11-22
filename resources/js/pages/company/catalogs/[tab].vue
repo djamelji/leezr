@@ -170,7 +170,9 @@ const obligationChips = item => {
   const o = item.obligation || {}
   const out = []
   if (o.platform) out.push({ key: 'platform', tone: 'secondary', text: t('l5.catalog.src.platform'), hint: t('l5.catalog.hint.platform') })
-  for (const m of o.modules || []) out.push({ key: `m-${m}`, tone: 'primary', text: moduleName(m, m), hint: t('l5.catalog.hint.module') })
+  // ADR-861 : a module field scoped by activity is asked only from who exercises it (position, deliveries, role)
+  const forWhom = (o.modules_for || []).map(a => t(`l7.activity.${a}`)).join(', ')
+  for (const m of o.modules || []) out.push({ key: `m-${m}`, tone: 'primary', text: forWhom ? `${moduleName(m, m)} · ${forWhom}` : moduleName(m, m), hint: forWhom ? t('l5.catalog.hint.moduleFor', { activities: forWhom }) : t('l5.catalog.hint.module') })
   if (o.jobdomain) out.push({ key: 'jobdomain', tone: 'info', text: t('l5.catalog.src.jobdomain'), hint: t('l5.catalog.hint.jobdomain') })
   if (o.company) out.push({ key: 'company', tone: 'warning', text: t('l5.catalog.src.company'), hint: t('l5.catalog.hint.company') })
   if (o.roles?.length) out.push({ key: 'roles', tone: 'secondary', outlined: true, text: t('l5.catalog.src.roles', { n: o.roles.length }, o.roles.length), hint: t('l5.catalog.hint.roles', { roles: o.roles.join(', ') }) })

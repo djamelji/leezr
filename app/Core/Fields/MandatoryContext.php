@@ -38,12 +38,19 @@ class MandatoryContext
             // ADR-820 : société au modèle cible (autorité « poste ») — ni le métier ni le rôle d'accès ne rendent
             // un champ obligatoire ; seuls les modules actifs (besoin déclaré) et les exigences configurées le font.
             'explicit_only' => \App\Core\Requirements\RequirementAuthority::isPosition($companyId),
+            // ADR-861 : a module requires its ACTIVITY fields (required_by_modules + tags) only from who exercises it
+            'function_scoped' => FunctionActivity::isFunctionScoped($companyId),
+            'company_id' => $companyId,
         ];
 
         return static::$cache[$companyId];
     }
 
-    public static function isMandatory(FieldDefinition $definition, array $context, ?array $roleRequiredTags = null): bool
+    /**
+     * @param  ?array  $functionTags  ADR-861 — the person's activity tags (FunctionActivity) when the caller knows the person ;
+     *                               null = person unknown → the access role's tags (ROLE authority) or nothing (POSITION authority)
+     */
+    public static function isMandatory(FieldDefinition $definition, array $context, ?array $roleRequiredTags = null, ?array $functionTags = null): bool
     {
         $rules = $definition->validation_rules ?? [];
 
@@ -56,7 +63,13 @@ class MandatoryContext
 
         if (!empty($rules['required_by_modules'])
             && !empty(array_intersect($rules['required_by_modules'], $context['active_modules']))) {
-            return true;
+            if (empty($context['function_scoped']) || empty($rules['tags'])) {
+                return true; // historical : the active module requires the field from everyone
+            }
+            $who = $functionTags ?? ($explicitOnly ? [] : (array) $roleRequiredTags);
+            if (!empty(array_intersect($rules['tags'], $who))) {
+                return true;
+            }
         }
 
         // ADR-170 Phase 4: Tag-based mandatory (sole role-based mechanism)
@@ -72,5 +85,6 @@ class MandatoryContext
     public static function flush(): void
     {
         static::$cache = [];
+        FunctionActivity::flush();
     }
 }

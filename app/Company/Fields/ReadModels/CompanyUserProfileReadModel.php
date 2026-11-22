@@ -175,6 +175,7 @@ class CompanyUserProfileReadModel
             // Build field list considering role overrides
             $role = $roleKey ? ($rolesByKey[$roleKey] ?? null) : null;
             $roleRequiredTags = $role?->required_tags;
+            $functionTags = ! empty($mandatoryContext['function_scoped']) ? \App\Core\Fields\FunctionActivity::tagsForUser($company->id, (int) $userId, $roleRequiredTags) : null; // ADR-861
             $configByCode = ($role && $role->field_config !== null)
                 ? collect($role->field_config)->keyBy('code')
                 : null;
@@ -198,7 +199,7 @@ class CompanyUserProfileReadModel
                 }
 
                 // Compute required
-                $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags);
+                $mandatory = MandatoryContext::isMandatory($definition, $mandatoryContext, $roleRequiredTags, $functionTags);
                 $isRequired = $activation->required_override
                     || ($definition->validation_rules['required'] ?? false)
                     || $mandatory;

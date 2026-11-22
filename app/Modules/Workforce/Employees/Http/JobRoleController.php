@@ -65,9 +65,17 @@ class JobRoleController extends Controller
             'level' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:1000',
             'default_hourly_rate_cents' => 'nullable|integer|min:0',
+            // ADR-861 : activities exercised in this position (e.g. driving) — scope the fields a module requires for them
+            'activities' => 'sometimes|array',
+            'activities.*' => ['string', \Illuminate\Validation\Rule::in([\App\Core\Fields\TagDictionary::DRIVING, \App\Core\Fields\TagDictionary::DISPATCHING, \App\Core\Fields\TagDictionary::MANAGEMENT])],
         ]);
+        if (array_key_exists('activities', $validated)) {
+            $validated['metadata'] = array_merge((array) ($role->metadata ?? []), ['activities' => array_values(array_unique($validated['activities']))]);
+            unset($validated['activities']);
+        }
 
         $role = app(UpdateJobRoleUseCase::class)->execute($role, $validated);
+        \App\Core\Fields\FunctionActivity::flush((int) $companyId);
 
         return response()->json($role->load('department:id,name'));
     }

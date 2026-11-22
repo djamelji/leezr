@@ -28,6 +28,7 @@ final class FieldObligationSources
     public static function forCompany(Company $company): array
     {
         $explicitOnly = RequirementAuthority::isPosition($company->id);
+        $functionScoped = FunctionActivity::isFunctionScoped($company->id); // ADR-861
         $activeModules = CompanyModule::where('company_id', $company->id)->where('is_enabled_for_company', true)->pluck('module_key')->all();
         $activations = FieldActivation::where('company_id', $company->id)->get()->keyBy('field_definition_id');
         $roles = CompanyRole::where('company_id', $company->id)->whereNotNull('field_config')->get(['id', 'key', 'name', 'field_config']);
@@ -56,7 +57,9 @@ final class FieldObligationSources
             $a = $activations->get($d->id);
             $out[$d->code] = [
                 'platform' => (bool) ($rules['required'] ?? false),
-                'modules' => array_values(array_intersect($rules['required_by_modules'] ?? [], $activeModules)),
+                'modules' => $mods = array_values(array_intersect($rules['required_by_modules'] ?? [], $activeModules)),
+                // ADR-861 : non-empty = the module requires it only from people who exercise one of these activities
+                'modules_for' => $functionScoped && $mods && ! empty($rules['tags']) ? array_values((array) $rules['tags']) : [],
                 'jobdomain' => ! $explicitOnly && $company->jobdomain_key && in_array($company->jobdomain_key, $rules['required_by_jobdomains'] ?? [], true),
                 'company' => (bool) ($a?->enabled && $a?->required_override),
                 'company_dormant' => (bool) ($a && ! $a->enabled && $a->required_override), // stored, but the field is not proposed
