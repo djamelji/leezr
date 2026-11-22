@@ -111,7 +111,10 @@ const billingTo = { name: 'platform-billing-tab', params: { tab: 'overview' } }
         >
           <div class="cr-kpi cr-kpi--main">
             <span class="cr-kpi__label">{{ t('cockpit.revenue.mrr') }}</span>
-            <span class="cr-kpi__value">{{ money(d.mrr, cur) }}</span>
+            <span
+              class="cr-kpi__value"
+              data-test="cockpit-mrr"
+            >{{ money(d.mrr, cur) }}</span>
             <span
               v-if="delta !== null"
               class="cr-kpi__delta"
@@ -130,7 +133,10 @@ const billingTo = { name: 'platform-billing-tab', params: { tab: 'overview' } }
             v-if="mode !== 'compact'"
             class="cr-kpi"
           >
-            <span class="cr-kpi__label">{{ t('cockpit.revenue.active') }}</span><span class="cr-kpi__value cr-kpi__value--sm">{{ d.active_subscriptions ?? '—' }}</span>
+            <span class="cr-kpi__label">{{ t('cockpit.revenue.active') }}</span><span
+              class="cr-kpi__value cr-kpi__value--sm"
+              data-test="cockpit-active-subscriptions"
+            >{{ d.active_subscriptions ?? '—' }}</span>
           </div>
           <div
             v-if="mode !== 'compact'"

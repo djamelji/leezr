@@ -90,6 +90,12 @@ class AppServiceProvider extends ServiceProvider
         // ADR-861 — the Shipments module proves who drives (deliveries assigned) ; read by the Core FunctionActivity
         \App\Core\Fields\FunctionActivity::provide(\App\Core\Fields\TagDictionary::DRIVING, \App\Modules\Logistics\Shipments\ShipmentsDrivingEvidence::class);
 
+        // ADR-862 — the cached public theme is forgotten as soon as one of its sources changes
+        foreach ([\App\Platform\Models\PlatformSetting::class, \App\Platform\Models\PlatformFontFamily::class, \App\Platform\Models\PlatformFont::class] as $source) {
+            $source::saved(fn () => \Illuminate\Support\Facades\Cache::forget(\App\Modules\Infrastructure\Public\Http\PublicThemeController::CACHE_KEY));
+            $source::deleted(fn () => \Illuminate\Support\Facades\Cache::forget(\App\Modules\Infrastructure\Public\Http\PublicThemeController::CACHE_KEY));
+        }
+
         // ADR-833 — the retired webhook/deploy.sh pipeline (releases/YYYYMMDD_HHMMSS) may not run any artisan command.
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Console\Events\CommandStarting::class, fn ($event) => \App\Core\System\DeploymentGuard::assertNotLegacyRelease(base_path(), (string) $event->command));
 

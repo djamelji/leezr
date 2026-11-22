@@ -27,7 +27,8 @@ function watch(page) {
 }
 
 const open = async (page, path) => { await page.goto(path, { waitUntil: 'networkidle' }); await page.waitForTimeout(1500) }
-const cardValue = (page, testid) => page.getByTestId(testid).locator('xpath=ancestor::*[contains(@class,"v-card")][1]').locator('h4').first()
+// a KPI card (h4) or, since L7.7 (ADR-861), a cell of the shared stat strip : the value next to the labelled testid
+const cardValue = (page, testid) => page.getByTestId(testid).locator('xpath=ancestor::*[contains(@class,"app-stat-strip__cell") or contains(@class,"v-card")][1]').locator('.app-stat-strip__value, h4').first()
 
 
 test.beforeAll(() => {
@@ -54,21 +55,20 @@ test('M4-A super-admin : un seul MRR sur le tableau de bord, la Facturation et l
   await expect(page.locator('.v-overlay__content').filter({ hasText: 'Exclus : essais' }).first()).toBeVisible()
   await shot(page, 'A1-facturation-mrr-aide')
 
-  // Dashboard
+  // Dashboard — the V35 cockpit (ADR-855) ; same business checks as M4 (ADR-841), anchored on stable hooks (ADR-862)
   await open(page, '/platform/dashboard/overview')
   const body = await page.locator('.layout-page-content').innerText()
-  // the commercial widget rounds to the euro (presentation only) : 362,83 € → « 363 € »
-  const label = page.locator('span', { hasText: /^revenu mensuel \(MRR, HT\)$/ }).first()
-  await expect(label).toBeVisible()
-  const raw = await label.locator('xpath=preceding-sibling::span[1]').innerText()
-  const shown = raw.includes(',') ? cents(raw) : cents(raw) * 100
-  expect(shown, 'Dashboard MRR = the same MRR (rounded to the euro)').toBe(raw.includes(',') ? EXPECTED.mrr_cents : Math.round(EXPECTED.mrr_cents / 100) * 100)
-  const mtd = body.match(/Facturé ce mois \(HT\)\s*(\d[\d \u00a0\u202f]*,\d{2})[ \u00a0\u202f]*€/)
-  expect(mtd, 'the invoiced-this-month widget is on the dashboard').not.toBeNull()
-  expect(cents(mtd[1]), 'invoiced this month = ledger (no × 100)').toBe(EXPECTED.revenue_month_cents)
+  // the cockpit rounds to the euro (presentation only) : 362,83 € → « 363 € »
+  const euros = text => Math.round(cents(text) / (text.includes(',') ? 100 : 1)) * 100
+  const mrrShown = await page.locator('[data-test="cockpit-mrr"]').innerText()
+  expect(euros(mrrShown), 'Dashboard MRR = the same MRR (rounded to the euro)').toBe(Math.round(EXPECTED.mrr_cents / 100) * 100)
+  const mtd = page.locator('[data-test="cockpit-invoiced-mtd"]')
+  await expect(mtd, 'the invoiced-this-month tile is on the dashboard').toContainText('Facturé ce mois (HT)')
+  await expect(mtd, 'invoiced, never « collected » (ADR-862)').not.toContainText('Encaiss')
+  await expect.poll(async () => euros(await mtd.locator('.app-kpi__value').innerText()), { message: 'invoiced this month = ledger (no × 100), rounded to the euro' })
+    .toBe(Math.round(EXPECTED.revenue_month_cents / 100) * 100) // the tile counts up : read the settled value
   expect(body).not.toContain("Chiffre d'affaires du mois")
-  const subsLabel = page.locator('span', { hasText: /^abonnement\(s\) actif\(s\)$/ }).first()
-  const subsShown = Number(await subsLabel.locator('xpath=preceding-sibling::span[1]').innerText())
+  const subsShown = Number(await page.locator('[data-test="cockpit-active-subscriptions"]').innerText())
   expect(subsShown, 'same subscription count on the dashboard and in Billing').toBe(activeBilling)
   await shot(page, 'A2-tableau-de-bord')
 

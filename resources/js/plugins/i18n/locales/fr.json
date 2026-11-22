@@ -12947,8 +12947,8 @@
       "context": "{c} critique(s) · {h} élevée(s) · {m} moyenne(s)"
     },
     "collected": {
-      "label": "Encaissé ce mois",
-      "context": "Paiements reçus depuis le 1er",
+      "label": "Facturé ce mois (HT)",
+      "context": "Factures émises depuis le 1er — ce n'est pas l'encaissé",
       "multi": "Plusieurs devises : voir Facturation"
     },
     "failed": {

@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { loginCompany } from './helpers.js'
-import { prepare } from './recipe-fixtures'
+import { fixtureJson, prepare, runFixture } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 5.0 HR files recipe only (AUDIT_PASSWORD_FILE)')
 test.use({ locale: 'fr-FR' })
@@ -201,10 +201,17 @@ test('Embauche complète jusqu’à l’intégration finalisée', async ({ page,
     await cand.getByRole('button', { name: 'Vérifier' }).click()
     await cand.waitForTimeout(1200)
   }
+  const scanSince = Math.floor(Date.now() / 1000)
   for (const up of await cand.locator('[data-test^="onboarding-doc-"] input[type="file"]').all()) {
     await up.setInputFiles({ name: 'piece-recette.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') })
     await cand.waitForTimeout(1500)
   }
+  // ADR-862 — precondition stated, not assumed : the deposits were analysed by the SIMULATED antivirus of the recipe
+  // server (scripts/audit842-serve.sh). Any other engine, or a deposit left in quarantine, is a wrong environment.
+  const scan = fixtureJson(runFixture('scan859', process.env.AUDIT_PASSWORD_FILE, String(scanSince)))
+  expect(scan.uploads, 'deposits recorded').toBeGreaterThan(0)
+  expect(scan.engines, 'recipe server = scripts/audit842-serve.sh (DOCUMENT_SCANNER=simulated)').toEqual(['simulated'])
+  expect(scan.statuses).not.toContain('quarantined')
   await cand.reload()
   await cand.waitForTimeout(1500)
   await cand.locator('[data-test="onboarding-submit"]').click()

@@ -318,9 +318,11 @@ class PlatformBillingWidgetsReadService
      */
     public static function kpisDataset(string $scope, ?int $companyId, Carbon $from, Carbon $to): array
     {
-        // Cache global KPIs for 10 minutes (ADR-312)
+        // Cache global KPIs for 10 minutes (ADR-312). ADR-862 : the key carries the ledger's last entry id, so an invoice
+        // issued a minute ago is counted at once (the cache saved the sums, it served a stale « invoiced this month »).
+        // The ledger is append-only : a new entry = a new id ; one indexed MAX(id) replaces three sums.
         if ($scope === 'global') {
-            $cacheKey = 'billing_widgets:kpis_global:'.md5($from->toDateString().$to->toDateString());
+            $cacheKey = 'billing_widgets:kpis_global:'.md5($from->toDateString().$to->toDateString().'|'.(int) LedgerEntry::max('id'));
 
             return Cache::remember($cacheKey, 600, fn () => static::kpisDatasetRaw($scope, $companyId, $from, $to));
         }
