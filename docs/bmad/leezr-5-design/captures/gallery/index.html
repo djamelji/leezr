@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leezr 5.0 · revue visuelle</title>
+<style>
+:root {
+  --bg: #f6f6f9; --surface: #ffffff; --ink: #2f2b3d; --muted: #6d6b77; --line: #e6e5ea;
+  --accent: #7367f0; --accent-soft: #ebe9fd; --before: #a8aaae; --after: #28c76f;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #1e1f2b; --surface: #2a2b3a; --ink: #e7e6f0; --muted: #a3a2b3; --line: #3a3b4c; --accent-soft: #35345a; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #1e1f2b; --surface: #2a2b3a; --ink: #e7e6f0; --muted: #a3a2b3; --line: #3a3b4c; --accent-soft: #35345a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1500px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+h1 { font-size: 18px; margin: 0 12px 0 0; letter-spacing: -.01em; }
+h1 small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; color: var(--ink); padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.seg button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.label { font-size: 12px; color: var(--muted); margin-right: 6px; }
+main { max-width: 1500px; margin: 0 auto; padding: 8px 16px 64px; display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
+nav { position: sticky; top: 84px; align-self: start; font-size: 14px; max-height: calc(100vh - 100px); overflow: auto; }
+nav h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 18px 0 6px; }
+nav a { display: block; padding: 4px 8px; border-radius: 6px; color: var(--ink); text-decoration: none; }
+nav a:hover { background: var(--accent-soft); }
+.intro { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin: 20px 0 8px; color: var(--muted); font-size: 14px; }
+.intro b { color: var(--ink); }
+.space-title { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); margin: 36px 0 4px; }
+.family { font-size: 22px; margin: 0 0 12px; letter-spacing: -.01em; }
+article { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 22px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; margin-bottom: 8px; }
+.meta code { font-size: 12px; color: var(--muted); }
+.note { margin: 0 0 14px; font-size: 14px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pair.mobile { grid-template-columns: repeat(2, minmax(0, 390px)); justify-content: start; }
+figure { margin: 0; }
+figcaption { font-size: 12px; font-weight: 600; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+figcaption .dot { width: 8px; height: 8px; border-radius: 50%; }
+figure img { width: 100%; display: block; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+.slider { position: relative; max-width: 1100px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.slider.mobile { max-width: 390px; }
+.slider img { display: block; width: 100%; }
+.slider .top { position: absolute; inset: 0; clip-path: inset(0 50% 0 0); }
+.slider input { position: absolute; inset: auto 0 10px; width: 80%; margin: 0 10%; accent-color: var(--accent); }
+.slider .tag { position: absolute; top: 8px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: #fff; }
+.missing { color: var(--muted); font-size: 13px; padding: 20px; border: 1px dashed var(--line); border-radius: 8px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } nav { display: none; } .pair, .pair.mobile { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Leezr 5.0 · revue visuelle<small>Avant (Leezr 4.2) / après (L7 clôturé), mêmes données et mêmes dimensions</small></h1>
+    <div><span class="label">Espace</span><span class="seg" id="space"></span></div>
+    <div><span class="label">Format</span><span class="seg" id="variant"></span></div>
+    <div><span class="label">Comparer</span><span class="seg" id="mode"></span></div>
+    <div><span class="label">Page</span><span class="seg" id="theme"></span></div>
+  </div>
+</header>
+<main>
+  <nav id="nav" aria-label="Familles"></nav>
+  <div>
+    <div class="intro">
+      <b>Comment ces captures ont été faites.</b> Même clone de recette marqué (<code>leezr_audit842</code>, données de test, aucune donnée de production), mêmes comptes (admin Platform, propriétaire Company), même script (<code>tests/e2e/audit842-gallery862.spec.js</code>), même fenêtre : 1440 × 900 sur desktop, 390 × 844 sur mobile. Toutes les captures sont prises en haut de page.
+      <b>Avant</b> = Leezr 4.2 (commit <code>753d5372</code>, la veille de L0) servi depuis un worktree ; seul écart volontaire : la limite des deux appels publics de démarrage y est relevée, pour que la capture ne tombe pas sur le défaut 429 corrigé en L7.11. Sans cela, les pages « avant » auraient pu s'afficher en anglais et en dollars.
+      <b>Après</b> = build courant (L7.13). Le mode sombre est montré sur desktop pour toutes les pages, et sur mobile pour un échantillon.
+    </div>
+    <div id="content"></div>
+  </div>
+</main>
+<script>
+const DATA = {"pages": [{"id": "p-dashboard", "space": "platform", "family": "Dashboard V35", "path": "/platform/dashboard/overview", "url": "/platform/dashboard/overview", "title": "Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre", "mobile-sombre"], "note": "Cockpit V35 : salutation et « À traiter » en tête, tuiles KPI homogènes, santé en panneau sombre. « Facturé ce mois (HT) » garde son sens (corrigé en L7.12, le libellé L1 disait « Encaissé »)."}, {"id": "p-companies", "space": "platform", "family": "Entreprises", "path": "/platform/companies", "url": "/platform/companies", "title": "Entreprises · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Action « Nouvelle société » dans l’en-tête, une bande de 5 indicateurs à la place de 5 grandes cartes, segments sur la table."}, {"id": "p-company", "space": "platform", "family": "Fiche Company", "path": "/platform/companies/1", "url": "/platform/companies/1", "title": "Leezr Logistics · Synthèse · Entreprises · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Nom et contexte en titre, retour vers la liste, 7 onglets sur toute la largeur sans flèches, bande d’indicateurs."}, {"id": "p-jobdomains", "space": "platform", "family": "JobDomains", "path": "/platform/catalog/jobdomains", "url": "/platform/catalog/jobdomains", "title": "Domaines d'activité · Catalogue · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Catalogue regroupé (Offre · Métiers · Données demandées), une phrase par page."}, {"id": "p-jobdomain", "space": "platform", "family": "JobDomains", "path": "/platform/jobdomains/1", "url": "/platform/jobdomains/1/general", "title": "Logistique · Métier · Catalogue · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "En-tête avec retour vers le Catalogue et pastilles d’état."}, {"id": "p-modules", "space": "platform", "family": "Modules", "path": "/platform/catalog/modules", "url": "/platform/catalog/modules", "title": "Modules · Catalogue · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Même famille Catalogue, groupes nommés."}, {"id": "p-module", "space": "platform", "family": "Modules", "path": "/platform/modules/logistics_fleet", "url": "/platform/modules/logistics_fleet", "title": "Fleet Management · Général · Catalogue · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "En-tête avec retour ; l’interrupteur global devient l’action de la page."}, {"id": "p-billing", "space": "platform", "family": "Facturation", "path": "/platform/billing/overview", "url": "/platform/billing/overview", "title": "Tableau de bord · Facturation · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Facturation en 5 groupes, en-tête commun (L7 partiel)."}, {"id": "p-access", "space": "platform", "family": "Accès Platform", "path": "/platform/access/users", "url": "/platform/access/users", "title": "Utilisateurs plateforme · Accès Platform · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Famille « Accès Platform », une phrase par page, tiroirs avec fermeture nommée."}, {"id": "p-operations", "space": "platform", "family": "Exploitation", "path": "/platform/operations/health", "url": "/platform/operations/health", "title": "Santé système · Exploitation · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "7 onglets rangés en 4 groupes, titres internes en double retirés."}, {"id": "p-catalog", "space": "platform", "family": "Catalogue", "path": "/platform/catalog/plans", "url": "/platform/catalog/plans", "title": "Plans · Catalogue · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Groupes nommés, titres internes en double retirés."}, {"id": "c-dashboard", "space": "company", "family": "Dashboard V22", "path": "/dashboard", "url": "/home", "title": "Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre", "mobile-sombre"], "note": "Accueil V22 : situation prouvée en tête, actions par module, « Moi » ensuite."}, {"id": "c-people", "space": "company", "family": "Personnes", "path": "/company/people", "url": "/company/people", "title": "Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre", "mobile-sombre"], "note": "Annuaire V22 avec aperçu, complétude du dossier par personne."}, {"id": "c-person", "space": "company", "family": "Fiche collaborateur", "path": "/company/people/user-3", "url": "/company/people/employee-3", "title": "Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Peu de changement visible : la fiche était déjà refondue (L5/L6) ; seuls les noms des boutons et la complétude ont bougé."}, {"id": "c-planning", "space": "company", "family": "Planning", "path": "/company/workforce/planning", "url": "/company/workforce/planning", "title": "Planning · Planning & temps · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre", "mobile-sombre"], "note": "Titre propre « Planning » sous « Planning & temps » ; 3 actions d’en-tête au lieu de 5 (Exporter et Préférences dans « ⋯ »)."}, {"id": "c-time", "space": "company", "family": "Pointage", "path": "/company/workforce/time", "url": "/company/workforce/time", "title": "Temps & pointages · Planning & temps · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Titre propre, filtres alignés, libellés à la place des indications grisées."}, {"id": "c-leave", "space": "company", "family": "Congés", "path": "/company/workforce/leave", "url": "/company/workforce/leave", "title": "Absences · Planning & temps · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Navigation identique à Temps ; liste tactile sur téléphone."}, {"id": "c-documents", "space": "company", "family": "Documents", "path": "/company/documents/todo", "url": "/company/documents/todo", "title": "Documents · Documents et signatures · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre", "mobile-sombre"], "note": "En-tête commun ; « À traiter » d’abord."}, {"id": "c-documents-compliance", "space": "company", "family": "Documents", "path": "/company/documents/compliance", "url": "/company/documents/compliance", "title": "Documents · Documents et signatures · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Bande d’indicateurs, progression par type, export près des données, liste sur téléphone (le tableau était coupé)."}, {"id": "c-documents-templates", "space": "company", "family": "Documents", "path": "/company/documents/templates", "url": "/company/documents/templates", "title": "Documents · Documents et signatures · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Type en clair (CDI), une action visible par modèle et les autres dans un menu nommé, avertissement juridique sans bandeau."}, {"id": "c-documents-signatures", "space": "company", "family": "Documents", "path": "/company/documents/signatures", "url": "/company/documents/signatures", "title": "Documents · Documents et signatures · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "Supervision en mots simples, prestataire en clair, « Nouvelle demande » près de la recherche, liste tactile."}, {"id": "c-payroll", "space": "company", "family": "Préparation de la paie", "path": "/company/workforce/payroll", "url": "/company/workforce/payroll", "title": "Paie & déclarations · Paie · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "En-tête commun (L7.10)."}, {"id": "c-shipments", "space": "company", "family": "Expéditions", "path": "/company/shipments", "url": "/company/shipments", "title": "Expéditions · Logistique · Leezr", "before_title": "Leezr", "variants": ["desktop-clair", "mobile-clair", "desktop-sombre"], "note": "En-tête commun ; liste des expéditions."}], "variants": [["desktop-clair", "Desktop · clair"], ["mobile-clair", "Mobile · clair"], ["desktop-sombre", "Desktop · sombre"], ["mobile-sombre", "Mobile · sombre"]]}
+const SPACES = [['all', 'Tous'], ['platform', 'Platform'], ['company', 'Company']]
+const MODES = [['side', 'Côte à côte'], ['slider', 'Curseur']]
+const THEMES = [['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']]
+const state = { space: 'all', variant: 'desktop-clair', mode: 'side', theme: 'auto' }
+try { Object.assign(state, JSON.parse(localStorage.getItem('gallery862') || '{}')) } catch (e) {}
+const save = () => { try { localStorage.setItem('gallery862', JSON.stringify(state)) } catch (e) {} }
+
+function seg(id, items, key) {
+  const el = document.getElementById(id)
+  el.innerHTML = ''
+  for (const [v, label] of items) {
+    const b = document.createElement('button')
+    b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', String(state[key] === v))
+    b.onclick = () => { state[key] = v; save(); render() }
+    el.appendChild(b)
+  }
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+function figure(set, p, v) {
+  const src = `${set}/${p.id}--${v}.jpg`
+  const label = set === 'avant' ? 'Avant · Leezr 4.2' : 'Après · Leezr 5.0 L7'
+  const color = set === 'avant' ? 'var(--before)' : 'var(--after)'
+  return `<figure><figcaption><span class="dot" style="background:${color}"></span>${label}</figcaption><a href="${src}" target="_blank" rel="noopener"><img loading="lazy" src="${src}" alt="${esc(label)} — ${esc(p.family)} (${esc(v)})" onerror="this.closest('figure').innerHTML='<div class=missing>Capture absente pour ce format.</div>'"></a></figure>`
+}
+function slider(p, v) {
+  const mobile = v.startsWith('mobile')
+  return `<div class="slider ${mobile ? 'mobile' : ''}"><img src="apres/${p.id}--${v}.jpg" alt="Après"><div class="top"><img src="avant/${p.id}--${v}.jpg" alt="Avant"></div>
+    <span class="tag" style="left:8px;background:var(--before)">Avant</span><span class="tag" style="right:8px;background:var(--after)">Après</span>
+    <input type="range" min="0" max="100" value="50" aria-label="Position du curseur avant / après" oninput="this.parentNode.querySelector('.top').style.clipPath='inset(0 '+(100-this.value)+'% 0 0)'"></div>`
+}
+
+function render() {
+  document.documentElement.toggleAttribute('data-theme', state.theme !== 'auto')
+  if (state.theme !== 'auto') document.documentElement.setAttribute('data-theme', state.theme)
+  seg('space', SPACES, 'space'); seg('variant', DATA.variants, 'variant'); seg('mode', MODES, 'mode'); seg('theme', THEMES, 'theme')
+  const pages = DATA.pages.filter(p => state.space === 'all' || p.space === state.space)
+  let html = '', nav = '', lastSpace = '', lastFamily = ''
+  for (const p of pages) {
+    if (p.space !== lastSpace) { html += `<div class="space-title">${p.space === 'platform' ? 'Platform' : 'Company'}</div>`; nav += `<h2>${p.space === 'platform' ? 'Platform' : 'Company'}</h2>`; lastSpace = p.space; lastFamily = '' }
+    if (p.family !== lastFamily) { html += `<h2 class="family" id="f-${p.id}">${esc(p.family)}</h2>`; nav += `<a href="#f-${p.id}">${esc(p.family)}</a>`; lastFamily = p.family }
+    const v = p.variants.includes(state.variant) ? state.variant : (state.variant.startsWith('mobile') ? 'mobile-clair' : 'desktop-clair')
+    const body = state.mode === 'slider' ? slider(p, v) : `<div class="pair ${v.startsWith('mobile') ? 'mobile' : ''}">${figure('avant', p, v)}${figure('apres', p, v)}</div>`
+    const fallback = v !== state.variant ? `<span class="label">(format « ${esc(state.variant)} » non capturé pour cette page : ${esc(v)})</span>` : ''
+    html += `<article id="${p.id}"><div class="meta"><strong>${esc(p.title.replace(/ · Leezr$/, ''))}</strong><code>${esc(p.url)}</code>${fallback}</div><p class="note">${esc(p.note)}</p>${body}</article>`
+  }
+  document.getElementById('content').innerHTML = html
+  document.getElementById('nav').innerHTML = nav
+}
+render()
+</script>
+</body>
+</html>
