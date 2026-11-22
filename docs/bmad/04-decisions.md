@@ -30127,3 +30127,30 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - PHPUnit 4920 réussis, 0 échec. Budget de requêtes de la liste Personnes porté à 50 : ensemble fixe de lectures groupées, constant avec la taille.
   - Rapports de clone : `l6-role-rules-clone.json`.
   - Livraison : `docs/bmad/leezr-5-design/15-l6-delivery.md` (limites au §7 : exigences « pour tous » du module flotte, deux réglages « tout le monde » distincts, règle ambiguë par rôle).
+
+## ADR-860 — Leezr 5.0 L7 (partiel) : en-tête unique, Facturation et Paramètres situés et groupés, accessibilité des boutons-icônes, points métier Flotte et « tout le monde »
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - Les pages semblaient venir de plusieurs générations de Leezr : titres faits à la main, 15 pages de Facturation au même titre, 8 onglets de Paramètres à un seul niveau.
+  - L'engrenage du thème chevauchait les onglets, et des boutons-icônes n'avaient pas de nom accessible.
+  - Deux points hérités de L6 restaient ouverts : le permis exigé de tous via le module Flotte, et deux réglages « tout le monde » aux effets différents.
+- **Décision** (5 sous-lots, commits séparés) :
+  - **L7.1 · Fondations**
+    - `AppPageHeader` devient l'en-tête unique : typographie V22/V35, `eyebrow` pour le fil « famille › section ».
+    - L'engrenage `TheCustomizer` n'est monté que sur Paramètres › Thème, avec la même permission.
+    - Standard : tout bouton-icône, activateur de menu compris, porte un `aria-label` ou un `title`. Le détecteur `unlabeledIconButtons` est protégé par un test ; 184 boutons ont été nommés d'après une icône sans ambiguïté.
+  - **L7.2 · Facturation Platform** : fil, titre de la page, une phrase par page, titres d'onglet du navigateur distincts ; le bandeau de groupe est supprimé.
+  - **L7.3 · Points métier**
+    - `fields:rules-audit --module-wide` simule l'obligation liée à la fonction (étiquette de rôle, exigence de poste) face à l'obligation de module. La proposition n'est pas appliquée : elle touche toutes les sociétés.
+    - Terminologie : « Obligatoire à la saisie » (catalogue) et « Demandé au dossier » (registre). Libellés seulement, aucune règle fusionnée.
+  - **L7.4 · Paramètres Platform** : 5 groupes puis leurs pages ; mêmes adresses et mêmes permissions.
+  - **L7.5 · Company** : 7 écrans représentatifs passent sur `AppPageHeader`. Leurs actions et leurs gardes sont inchangées.
+  - **Sans changement** : permissions, moteurs, données, Vuexy (`@core`, `@layouts`).
+- **Conséquences** :
+  - E2E `audit842-harmony860-recipe` 4/4 ; `m5` mis à jour ; `Adr860ModuleWideObligationTest` 1/1 ; JS 64/64.
+  - Budgets de performance inchangés hors Personnes (L6).
+  - **Familles restantes** (`16-l7-delivery.md` §2) :
+    - Platform : Entreprises, JobDomains, Modules, Utilisateurs, Exploitation et support, Catalogue, Plans ;
+    - Company : Workforce, planning et pointage ; Absences ;
+    - 65 boutons-icônes sans nom, aux icônes ambiguës.

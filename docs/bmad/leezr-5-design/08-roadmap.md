@@ -11,7 +11,8 @@
 | **L3 · Accueil Company V22** | **livré en local** : en-tête de situation réelle, À traiter, actions en tuiles, composition par modules actifs (Logistique en tête), accueil chauffeur et salarié, mise en service sur la checklist existante ; restant : [13 §9](13-l3-delivery.md) | ADR-857, [13](13-l3-delivery.md) |
 | **L5 · Personnes** | **livré en local** : page Personnes V22 (synthèse réelle, filtres avec compteurs, dossier, prochaine étape, aperçu rapide, mobile), « Outils → Champs » retiré au profit d'une interface par responsabilité, audit et migration réversible des règles de champs ; restant : [14 §7](14-l5-delivery.md) | ADR-858, [14](14-l5-delivery.md) |
 | **L6 · Dossiers et interfaces redondantes** | **livré en local** : complétude des dossiers RH pour tous les collaborateurs (avec ou sans compte, poste, pièces, étape), règles par rôle analysées sans conversion, Modules (désactiver dans « ⋯ », « Configuré » vert), deux réglages « tout le monde » expliqués, alias vérifiés ; restant : [15 §7](15-l6-delivery.md) | ADR-859, [15](15-l6-delivery.md) |
-| L7 → L8 | inchangés (L7 : harmonisation globale) | — |
+| **L7 · Harmonisation** | **partiel (local)** : en-tête de page unique et fil de contexte, engrenage du thème à sa place, standard d'accessibilité (184 boutons nommés), Facturation et Paramètres Platform titrés et groupés, 7 familles Company sur l'en-tête commun, Flotte simulée, terminologie « saisie / dossier » ; **familles restantes** : [16 §2](16-l7-delivery.md) | ADR-860, [16](16-l7-delivery.md) |
+| L8 | inchangé | — |
 
 > **Rien de ceci n'est lancé.** Chaque lot démarre sur une validation explicite (« GO L… »).
 >
