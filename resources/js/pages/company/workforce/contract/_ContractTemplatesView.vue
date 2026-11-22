@@ -6,6 +6,8 @@ import { useContractStore } from '@/modules/company/workforce/contract.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import ContractEditor from './_ContractEditor.vue'
+import { useDisplay } from 'vuetify'
+import AppEmptyState from '@/components/app/AppEmptyState.vue'
 
 // ADR-802 — vue embarquée par l'espace Documents (`/company/documents/templates`) ; l'ancienne route redirige.
 
@@ -29,9 +31,34 @@ onMounted(async () => { load(); variables.value = await store.fetchVariables().c
 
 const sourceColor = s => (s === 'company' ? 'primary' : 'secondary')
 const statusColor = s => ({ draft: 'warning', published: 'success', archived: 'secondary' }[s] || 'secondary')
-const legalColor = s => (s === 'validated' ? 'success' : 'warning')
 
 const busyId = ref(null)
+
+// ADR-862 (L7 closure) — the contract type in words (« CDI », not « cdi ») ; one visible action per template, the others
+// in a named menu (was up to four buttons of different weights per line) ; a list on a phone.
+const { xs } = useDisplay()
+const typeLabel = code => (code ? t(`employees.contractTypes.${code}`, String(code).toUpperCase()) : '—')
+const canManage = computed(() => can('workforce_contract.manage_templates'))
+const actionsOf = tpl => {
+  if (!canManage.value) return { main: null, more: [] }
+  if (tpl.source === 'platform') return { main: { key: 'duplicate', icon: 'tabler-copy', label: t('contractTpl.duplicate'), run: () => onDuplicate(tpl) }, more: [] }
+  if (tpl.status === 'draft') return {
+    main: { key: 'publish', icon: 'tabler-circle-check', color: 'success', label: t('contractTpl.publish'), run: () => onPublish(tpl) },
+    more: [
+      { key: 'edit', icon: 'tabler-edit', label: t('common.edit'), run: () => openEdit(tpl) },
+      { key: 'archive', icon: 'tabler-archive', label: t('contractTpl.archive'), run: () => onArchive(tpl), danger: true },
+    ],
+  }
+  if (tpl.status === 'published') return {
+    main: { key: 'version', icon: 'tabler-versions', label: t('contractTpl.newVersion'), run: () => onNewVersion(tpl) },
+    more: [
+      ...(!tpl.is_default ? [{ key: 'default', icon: 'tabler-star', label: t('contractTpl.setDefault'), run: () => onSetDefault(tpl) }] : []),
+      { key: 'archive', icon: 'tabler-archive', label: t('contractTpl.archive'), run: () => onArchive(tpl), danger: true },
+    ],
+  }
+
+  return { main: null, more: [] }
+}
 const act = async (fn, id, okMsg) => {
   busyId.value = id
   try { await fn(); toast(okMsg, 'success'); await load() }
@@ -106,136 +133,195 @@ const saveEdit = async () => {
       </p>
     </div>
 
-    <VAlert
-      type="info"
-      variant="tonal"
-      density="compact"
-      class="mb-4"
-    >
-      {{ t('contractTpl.legalDisclaimer') }}
-    </VAlert>
-
-    <VCard>
-      <VCardText v-if="loading" class="text-center py-8">
-        <VProgressCircular indeterminate color="primary" />
+    <VCard data-test="contract-templates">
+      <VCardItem>
+        <VCardTitle>{{ t('l7.docs.templates.title') }}</VCardTitle>
+        <VCardSubtitle class="text-wrap">
+          <VIcon
+            icon="tabler-info-circle"
+            size="16"
+            class="me-1"
+          />{{ t('l7.docs.templates.hint') }}
+        </VCardSubtitle>
+      </VCardItem>
+      <VCardText
+        v-if="loading"
+        class="text-center py-8"
+      >
+        <VProgressCircular
+          indeterminate
+          color="primary"
+        />
       </VCardText>
+      <AppEmptyState
+        v-else-if="!store.templates.length"
+        compact
+        icon="tabler-file-text"
+        :title="t('l7.docs.templates.emptyTitle')"
+        :text="t('l7.docs.templates.emptyText')"
+      />
       <template v-else>
-        <VTable class="text-no-wrap">
+        <VList
+          v-if="xs"
+          class="py-0"
+        >
+          <template
+            v-for="(tpl, i) in store.templates"
+            :key="tpl.id"
+          >
+            <VDivider v-if="i" />
+            <VListItem class="py-3">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium text-truncate">
+                  <VIcon
+                    v-if="tpl.is_default"
+                    icon="tabler-star-filled"
+                    color="primary"
+                    size="14"
+                    class="me-1"
+                    :aria-label="t('contractTpl.default')"
+                  />{{ tpl.name }}
+                </span>
+                <VChip
+                  :color="statusColor(tpl.status)"
+                  size="small"
+                  label
+                  variant="tonal"
+                >
+                  {{ t('contractTpl.status.' + tpl.status, tpl.status) }}
+                </VChip>
+              </div>
+              <div class="text-body-2 text-medium-emphasis mt-1">
+                {{ t('l7.docs.templates.meta', { type: typeLabel(tpl.contract_type), version: tpl.version }) }} · {{ t('contractTpl.source.' + tpl.source) }} · {{ t('contractTpl.legal.' + tpl.legal_status, tpl.legal_status) }}
+              </div>
+              <div
+                v-if="actionsOf(tpl).main"
+                class="d-flex flex-wrap gap-2 mt-2"
+              >
+                <VBtn
+                  size="small"
+                  variant="tonal"
+                  :color="actionsOf(tpl).main.color || 'primary'"
+                  :prepend-icon="actionsOf(tpl).main.icon"
+                  :loading="busyId === tpl.id"
+                  @click="actionsOf(tpl).main.run()"
+                >
+                  {{ actionsOf(tpl).main.label }}
+                </VBtn>
+                <VBtn
+                  v-for="a in actionsOf(tpl).more"
+                  :key="a.key"
+                  size="small"
+                  variant="text"
+                  :color="a.danger ? 'error' : 'default'"
+                  @click="a.run()"
+                >
+                  {{ a.label }}
+                </VBtn>
+              </div>
+            </VListItem>
+          </template>
+        </VList>
+
+        <VTable
+          v-else
+          class="text-no-wrap"
+        >
           <thead>
             <tr>
               <th>{{ t('contractTpl.col.name') }}</th>
               <th>{{ t('contractTpl.col.type') }}</th>
               <th>{{ t('contractTpl.col.source') }}</th>
-              <th>{{ t('contractTpl.col.version') }}</th>
               <th>{{ t('contractTpl.col.status') }}</th>
               <th>{{ t('contractTpl.col.legal') }}</th>
               <th />
             </tr>
           </thead>
           <tbody>
-            <tr v-for="tpl in store.templates" :key="tpl.id">
-              <td class="font-weight-medium">
-                {{ tpl.name }}
-              </td>
-              <td>{{ tpl.contract_type || '—' }}</td>
+            <tr
+              v-for="tpl in store.templates"
+              :key="tpl.id"
+              :class="{ 'text-disabled': tpl.status === 'archived' }"
+            >
               <td>
-                <VChip :color="sourceColor(tpl.source)" size="x-small" variant="tonal">
+                <span class="font-weight-medium">{{ tpl.name }}</span>
+                <span class="text-medium-emphasis ms-2">v{{ tpl.version }}</span>
+                <VChip
+                  v-if="tpl.is_default"
+                  size="x-small"
+                  color="primary"
+                  variant="tonal"
+                  prepend-icon="tabler-star-filled"
+                  class="ms-2"
+                >
+                  {{ t('contractTpl.default') }}
+                </VChip>
+              </td>
+              <td>{{ typeLabel(tpl.contract_type) }}</td>
+              <td>
+                <VChip
+                  :color="sourceColor(tpl.source)"
+                  size="small"
+                  label
+                  variant="tonal"
+                >
                   {{ t('contractTpl.source.' + tpl.source) }}
                 </VChip>
               </td>
-              <td>v{{ tpl.version }}</td>
               <td>
-                <VChip :color="statusColor(tpl.status)" size="x-small" variant="tonal">
+                <VChip
+                  :color="statusColor(tpl.status)"
+                  size="small"
+                  label
+                  variant="tonal"
+                >
                   {{ t('contractTpl.status.' + tpl.status, tpl.status) }}
                 </VChip>
               </td>
-              <td>
-                <VChip :color="legalColor(tpl.legal_status)" size="x-small" variant="tonal">
-                  {{ t('contractTpl.legal.' + tpl.legal_status, tpl.legal_status) }}
-                </VChip>
+              <td class="text-body-2 text-medium-emphasis">
+                {{ t('contractTpl.legal.' + tpl.legal_status, tpl.legal_status) }}
               </td>
               <td>
-                <div class="d-flex gap-1 justify-end">
+                <div class="d-flex gap-1 justify-end align-center">
                   <VBtn
-                    v-if="tpl.source === 'platform' && can('workforce_contract.manage_templates')"
-                    size="x-small"
+                    v-if="actionsOf(tpl).main"
+                    size="small"
                     variant="tonal"
-                    prepend-icon="tabler-copy"
+                    :color="actionsOf(tpl).main.color || 'primary'"
+                    :prepend-icon="actionsOf(tpl).main.icon"
                     :loading="busyId === tpl.id"
-                    @click="onDuplicate(tpl)"
+                    :data-test="`tpl-${actionsOf(tpl).main.key}-${tpl.id}`"
+                    @click="actionsOf(tpl).main.run()"
                   >
-                    {{ t('contractTpl.duplicate') }}
+                    {{ actionsOf(tpl).main.label }}
                   </VBtn>
-                  <template v-if="tpl.source === 'company' && can('workforce_contract.manage_templates')">
-                    <VBtn
-                      v-if="tpl.status === 'draft'"
-                      size="x-small"
-                      variant="tonal"
-                      prepend-icon="tabler-edit"
-                      @click="openEdit(tpl)"
-                    >
-                      {{ t('common.edit') }}
-                    </VBtn>
-                    <VBtn
-                      v-if="tpl.status === 'draft'"
-                      size="x-small"
-                      color="success"
-                      variant="tonal"
-                      prepend-icon="tabler-circle-check"
-                      :loading="busyId === tpl.id"
-                      @click="onPublish(tpl)"
-                    >
-                      {{ t('contractTpl.publish') }}
-                    </VBtn>
-                    <VBtn
-                      v-if="tpl.status === 'published'"
-                      size="x-small"
-                      variant="tonal"
-                      prepend-icon="tabler-versions"
-                      :loading="busyId === tpl.id"
-                      @click="onNewVersion(tpl)"
-                    >
-                      {{ t('contractTpl.newVersion') }}
-                    </VBtn>
-                    <VBtn
-                      v-if="tpl.status === 'published' && !tpl.is_default"
-                      size="x-small"
-                      variant="tonal"
-                      color="primary"
-                      prepend-icon="tabler-star"
-                      :loading="busyId === tpl.id"
-                      @click="onSetDefault(tpl)"
-                    >
-                      {{ t('contractTpl.setDefault') }}
-                    </VBtn>
-                    <VChip
-                      v-if="tpl.is_default"
-                      size="x-small"
-                      color="primary"
-                      variant="tonal"
-                      prepend-icon="tabler-star-filled"
-                    >
-                      {{ t('contractTpl.default') }}
-                    </VChip>
-                    <VBtn
-                      v-if="tpl.status !== 'archived'"
-                      size="x-small"
-                      variant="text"
-                      color="error"
-                      :loading="busyId === tpl.id"
-                      @click="onArchive(tpl)"
-                    >
-                      {{ t('contractTpl.archive') }}
-                    </VBtn>
-                  </template>
+                  <VMenu v-if="actionsOf(tpl).more.length">
+                    <template #activator="{ props: menu }">
+                      <IconBtn
+                        v-bind="menu"
+                        :aria-label="t('l7.docs.templates.more', { name: tpl.name })"
+                        :data-test="`tpl-more-${tpl.id}`"
+                      >
+                        <VIcon icon="tabler-dots-vertical" />
+                      </IconBtn>
+                    </template>
+                    <VList density="compact">
+                      <VListItem
+                        v-for="a in actionsOf(tpl).more"
+                        :key="a.key"
+                        :prepend-icon="a.icon"
+                        :base-color="a.danger ? 'error' : undefined"
+                        @click="a.run()"
+                      >
+                        {{ a.label }}
+                      </VListItem>
+                    </VList>
+                  </VMenu>
                 </div>
               </td>
             </tr>
           </tbody>
         </VTable>
-        <div v-if="!store.templates.length" class="text-center text-disabled py-8">
-          {{ t('contractTpl.empty') }}
-        </div>
       </template>
     </VCard>
 

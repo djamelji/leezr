@@ -13402,6 +13402,49 @@
       "correctEntry": "Correct the entry",
       "approveTimesheet": "Approve the timesheet",
       "lockTimesheet": "Lock the timesheet"
+    },
+    "docs": {
+      "compliance": {
+        "rate": "Compliance rate",
+        "rateHelp": "Share of requested documents that are present and valid, people and company together.",
+        "valid": "Compliant",
+        "missing": "Missing",
+        "renew": "To renew",
+        "renewHelp": "{expiring} expiring soon · {expired} expired",
+        "inProgress": "In progress",
+        "inProgressHelp": "{review} under review · {requested} requested · {rejected} rejected",
+        "byType": "By document type",
+        "byTypeHint": "What is missing or expiring, type by type.",
+        "scopePerson": "Per person",
+        "scopeCompany": "Company",
+        "present": "none compliant out of {total} | {valid} compliant out of {total} | {valid} compliant out of {total}",
+        "line": "{missing} missing · {renew} to renew",
+        "exportCsv": "Export (CSV)",
+        "filter": "Show",
+        "emptyFilter": "No document type in this state."
+      },
+      "templates": {
+        "title": "Contract templates",
+        "hint": "Examples not legally validated: Leezr does not guarantee their compliance, adapt them to your situation.",
+        "more": "More actions on template “{name}”",
+        "emptyTitle": "No contract template",
+        "emptyText": "Duplicate a standard template to adapt it to your company.",
+        "meta": "{type} · v{version}"
+      },
+      "signatures": {
+        "pending": "Awaiting signature",
+        "expired": "Expired",
+        "failed": "Failed",
+        "reconcile": "To reconcile",
+        "reconcileHelp": "Signatures completed at the provider whose state must be reconciled in Leezr.",
+        "certs": "Certificates issued",
+        "certsHelp": "{revoked} revoked · {preps} expired preparations",
+        "provider": {
+          "internal": "Leezr (internal)"
+        },
+        "emptyTitle": "No signature request",
+        "emptyText": "The requests you send appear here with their progress."
+      }
     }
   }
 }

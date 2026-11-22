@@ -7,6 +7,9 @@ import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import SignatureWizard from './_SignatureWizard.vue'
 import SignatureDetailDrawer from './_SignatureDetailDrawer.vue'
+import { useDisplay } from 'vuetify'
+import AppEmptyState from '@/components/app/AppEmptyState.vue'
+import AppStatStrip from '@/components/app/AppStatStrip.vue'
 
 // PRODUCT-UX-2 (LOT A) — `embedded` : masque l'en-tête de page quand la vue est montée comme
 // onglet de l'espace Documents unifié (évite les doublons de titre). Logique 100 % réutilisée.
@@ -59,7 +62,13 @@ watch(currentTab, load)
 watchDebounced(search, load, { debounce: 350 })
 onMounted(load)
 
-const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString() : '—')
+const { locale } = useI18n()
+const fmtDate = iso => (iso ? new Date(iso).toLocaleDateString(locale.value, { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
+
+// ADR-862 (L7 closure) — the provider in words (« Leezr (interne) », not « internal ») ; the new-request action sits
+// with the search when the view is embedded (no lone button row) ; the supervision reads as a strip of indicators.
+const { xs } = useDisplay()
+const providerLabel = p => t(`l7.docs.signatures.provider.${p}`, String(p || '—'))
 
 // Détail
 const detailId = ref(null)
@@ -73,6 +82,18 @@ const onCreated = () => { wizardOpen.value = false; toast(t('signature.toasts.cr
 // W-SIGNATURE-12 — supervision opérationnelle (métriques agrégées, lecture seule, gated view_evidence)
 const supervision = ref(null)
 const canSupervise = computed(() => can('workforce_signature.view_evidence'))
+const supervisionStats = computed(() => {
+  const s = supervision.value
+  if (!s) return []
+
+  return [
+    { key: 'pending', label: t('l7.docs.signatures.pending'), value: s.requests.pending, icon: 'tabler-clock', tone: s.requests.pending ? 'warning' : 'muted' },
+    { key: 'expired', label: t('l7.docs.signatures.expired'), value: s.requests.expired, icon: 'tabler-clock-off', tone: 'muted' },
+    { key: 'failed', label: t('l7.docs.signatures.failed'), value: s.requests.failed, icon: 'tabler-alert-triangle', tone: s.requests.failed ? 'error' : 'muted' },
+    { key: 'reconcile', label: t('l7.docs.signatures.reconcile'), value: s.operational.needs_reconciliation, icon: 'tabler-arrows-exchange', tone: s.operational.needs_reconciliation ? 'error' : 'success', help: t('l7.docs.signatures.reconcileHelp') },
+    { key: 'certs', label: t('l7.docs.signatures.certs'), value: s.certificates.issued, icon: 'tabler-certificate', tone: 'info', help: t('l7.docs.signatures.certsHelp', { revoked: s.certificates.revoked, preps: s.operational.expired_preparations }) },
+  ]
+})
 onMounted(async () => {
   if (canSupervise.value) {
     try { supervision.value = await store.fetchSupervision() } catch { /* non bloquant */ }
@@ -82,8 +103,11 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="d-flex flex-wrap justify-space-between align-center gap-4 mb-6">
-      <div v-if="!embedded">
+    <div
+      v-if="!embedded"
+      class="d-flex flex-wrap justify-space-between align-center gap-4 mb-6"
+    >
+      <div>
         <h4 class="text-h4 font-weight-bold">
           {{ t('signature.title') }}
         </h4>
@@ -91,7 +115,6 @@ onMounted(async () => {
           {{ t('signature.subtitle') }}
         </p>
       </div>
-      <VSpacer v-else />
       <VBtn
         v-if="can('workforce_signature.request')"
         prepend-icon="tabler-plus"
@@ -102,34 +125,12 @@ onMounted(async () => {
     </div>
 
     <!-- W-SIGNATURE-12 — supervision opérationnelle (agrégée, non sensible) -->
-    <VCard v-if="canSupervise && supervision" class="mb-4">
-      <VCardText class="d-flex flex-wrap align-center gap-2">
-        <span class="text-caption font-weight-medium me-2">{{ t('signature.supervision.title') }}</span>
-        <VChip size="small" color="warning" variant="tonal" label>
-          {{ t('signature.supervision.pending') }}: {{ supervision.requests.pending }}
-        </VChip>
-        <VChip size="small" color="secondary" variant="tonal" label>
-          {{ t('signature.supervision.expired') }}: {{ supervision.requests.expired }}
-        </VChip>
-        <VChip size="small" color="error" variant="tonal" label>
-          {{ t('signature.supervision.failed') }}: {{ supervision.requests.failed }}
-        </VChip>
-        <VChip
-          size="small"
-          :color="supervision.operational.needs_reconciliation ? 'error' : 'success'"
-          variant="tonal"
-          label
-        >
-          {{ t('signature.supervision.reconcile') }}: {{ supervision.operational.needs_reconciliation }}
-        </VChip>
-        <VChip size="small" color="secondary" variant="tonal" label>
-          {{ t('signature.supervision.expiredPreps') }}: {{ supervision.operational.expired_preparations }}
-        </VChip>
-        <VChip size="small" color="info" variant="tonal" label>
-          {{ t('signature.supervision.certs') }}: {{ supervision.certificates.issued }} / {{ supervision.certificates.revoked }}
-        </VChip>
-      </VCardText>
-    </VCard>
+    <AppStatStrip
+      v-if="canSupervise && supervision"
+      :items="supervisionStats"
+      class="mb-6"
+      data-test="signature-supervision"
+    />
 
     <VCard>
       <VTabs
@@ -147,17 +148,69 @@ onMounted(async () => {
       </VTabs>
 
       <VCardText>
-        <AppTextField
-          v-model="search"
-          :placeholder="t('signature.searchPlaceholder')"
-          prepend-inner-icon="tabler-search"
-          density="compact"
-          clearable
-          style="max-inline-size: 320px;"
-          class="mb-4"
-        />
+        <div class="d-flex flex-wrap align-center gap-3 mb-4">
+          <AppTextField
+            v-model="search"
+            :placeholder="t('signature.searchPlaceholder')"
+            :aria-label="t('signature.searchPlaceholder')"
+            prepend-inner-icon="tabler-search"
+            density="compact"
+            clearable
+            style="max-inline-size: 320px; min-inline-size: 200px;"
+          />
+          <VSpacer />
+          <VBtn
+            v-if="embedded && can('workforce_signature.request')"
+            prepend-icon="tabler-plus"
+            data-test="signature-new"
+            @click="wizardOpen = true"
+          >
+            {{ t('signature.actions.new') }}
+          </VBtn>
+        </div>
 
+        <!-- phone : one line per request (document, state, signers, date) ; touch opens the detail -->
+        <template v-if="xs">
+          <AppEmptyState
+            v-if="!store.loading && !store.items.length"
+            compact
+            icon="tabler-signature"
+            :title="t('l7.docs.signatures.emptyTitle')"
+            :text="t('l7.docs.signatures.emptyText')"
+          />
+          <VList
+            v-else
+            class="py-0 mx-n4"
+            data-test="signature-list"
+          >
+            <template
+              v-for="(item, i) in store.items"
+              :key="item.id"
+            >
+              <VDivider v-if="i" />
+              <VListItem
+                class="py-3"
+                @click="openDetail(item.id)"
+              >
+                <div class="d-flex align-center justify-space-between gap-2">
+                  <span class="font-weight-medium text-truncate">{{ item.document_label || t('signature.unknownDocument') }}</span>
+                  <VChip
+                    :color="statusColor(item.status)"
+                    size="small"
+                    label
+                  >
+                    {{ statusLabel(item.status) }}
+                  </VChip>
+                </div>
+                <div class="text-body-2 text-medium-emphasis mt-1 text-truncate">
+                  {{ (item.signers || []).map(s => s.name).join(', ') }} · {{ fmtDate(item.created_at) }}
+                </div>
+              </VListItem>
+            </template>
+          </VList>
+        </template>
         <VDataTable
+          v-else
           :headers="headers"
           :items="store.items"
           :loading="store.loading"
@@ -186,7 +239,7 @@ onMounted(async () => {
           </template>
 
           <template #item.signers="{ item }">
-            <div class="d-flex align-center gap-1">
+            <div class="d-flex flex-wrap align-center gap-1">
               <VChip
                 v-for="s in item.signers"
                 :key="s.id"
@@ -200,7 +253,7 @@ onMounted(async () => {
           </template>
 
           <template #item.provider="{ item }">
-            <span class="text-body-2">{{ item.provider }}</span>
+            <span class="text-body-2">{{ providerLabel(item.provider) }}</span>
             <div class="text-caption text-medium-emphasis">
               {{ t(`signature.level.${item.signature_level}`) }} · {{ t(`signature.order.${item.signing_order}`) }}
             </div>
@@ -239,14 +292,12 @@ onMounted(async () => {
           </template>
 
           <template #no-data>
-            <div class="text-center py-8 text-medium-emphasis">
-              <VIcon
-                icon="tabler-signature"
-                size="40"
-                class="mb-2"
-              />
-              <div>{{ t('signature.empty') }}</div>
-            </div>
+            <AppEmptyState
+              compact
+              icon="tabler-signature"
+              :title="t('l7.docs.signatures.emptyTitle')"
+              :text="t('l7.docs.signatures.emptyText')"
+            />
           </template>
         </VDataTable>
       </VCardText>

@@ -132,6 +132,7 @@ test('UX5 parcours propriétaire (lecture) : hub, rôle, absence, factures, int�
   await page.waitForTimeout(800)
   read = await meter(page)
   net.mark('retour')
+  await page.locator('[data-test="planning-actions-more"]').click() // ADR-862 : folded with the export in « ⋯ » on Planning
   await page.locator('[data-test="space-preferences"]').click()
   await page.waitForURL(/\/company\/workforce\/settings\//)
   await page.locator('[data-test="settings-return"]').click()

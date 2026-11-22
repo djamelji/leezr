@@ -13420,6 +13420,49 @@
       "correctEntry": "Corriger le pointage",
       "approveTimesheet": "Valider la feuille de temps",
       "lockTimesheet": "Verrouiller la feuille de temps"
+    },
+    "docs": {
+      "compliance": {
+        "rate": "Taux de conformité",
+        "rateHelp": "Part des documents demandés qui sont présents et valides, toutes personnes et entreprise confondues.",
+        "valid": "Conformes",
+        "missing": "Manquants",
+        "renew": "À renouveler",
+        "renewHelp": "{expiring} expirent bientôt · {expired} expirés",
+        "inProgress": "En cours",
+        "inProgressHelp": "{review} en vérification · {requested} demandés · {rejected} refusés",
+        "byType": "Par type de document",
+        "byTypeHint": "Ce qui manque ou expire, type par type.",
+        "scopePerson": "Par personne",
+        "scopeCompany": "Entreprise",
+        "present": "aucun conforme sur {total} | {valid} conforme sur {total} | {valid} conformes sur {total}",
+        "line": "{missing} manquant(s) · {renew} à renouveler",
+        "exportCsv": "Exporter (CSV)",
+        "filter": "Afficher",
+        "emptyFilter": "Aucun type de document dans cet état."
+      },
+      "templates": {
+        "title": "Modèles de contrat",
+        "hint": "Exemples non validés juridiquement : Leezr ne garantit pas leur conformité, adaptez-les à votre situation.",
+        "more": "Autres actions sur le modèle « {name} »",
+        "emptyTitle": "Aucun modèle de contrat",
+        "emptyText": "Dupliquez un modèle standard pour l'adapter à votre entreprise.",
+        "meta": "{type} · v{version}"
+      },
+      "signatures": {
+        "pending": "En attente de signature",
+        "expired": "Expirées",
+        "failed": "Échecs",
+        "reconcile": "À rapprocher",
+        "reconcileHelp": "Signatures terminées chez le prestataire dont l'état doit être rapproché dans Leezr.",
+        "certs": "Certificats émis",
+        "certsHelp": "{revoked} révoqués · {preps} préparations expirées",
+        "provider": {
+          "internal": "Leezr (interne)"
+        },
+        "emptyTitle": "Aucune demande de signature",
+        "emptyText": "Les demandes que vous envoyez apparaissent ici avec leur avancement."
+      }
     }
   }
 }

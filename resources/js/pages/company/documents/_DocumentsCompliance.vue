@@ -1,37 +1,34 @@
 <script setup>
+// ADR-862 (L7 closure) — one strip of indicators (no « label: n » chips), the export next to the data it exports,
+// a list on a phone instead of an eight-column table cut on the right, rate shown as progress per type.
+import { useDisplay } from 'vuetify'
+import AppEmptyState from '@/components/app/AppEmptyState.vue'
+import AppStatStrip from '@/components/app/AppStatStrip.vue'
 import { useCompanyDocumentsStore } from '@/modules/company/documents/documents.store'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const store = useCompanyDocumentsStore()
+const { xs } = useDisplay()
 
-// ─── Compliance by Type table ───────────────────────────
-const typeHeaders = computed(() => [
-  { title: t('companyDocuments.compliance.documentType'), key: 'label' },
-  { title: t('companyDocuments.compliance.scope'), key: 'scope' },
-  { title: t('companyDocuments.compliance.total'), key: 'total' },
-  { title: t('companyDocuments.compliance.valid'), key: 'valid' },
-  { title: t('companyDocuments.compliance.missing'), key: 'missing' },
-  { title: t('companyDocuments.compliance.expiring'), key: 'expiring_soon' },
-  { title: t('companyDocuments.compliance.expired'), key: 'expired' },
-  { title: t('companyDocuments.compliance.rate'), key: 'rate' },
-])
-
-const scopeLabel = scope => {
-  return scope === 'company_user'
-    ? t('documents.scopeMember')
-    : t('documents.scopeCompany')
-}
+const scopeLabel = scope => (scope === 'company_user' ? t('l7.docs.compliance.scopePerson') : t('l7.docs.compliance.scopeCompany'))
 
 const scopeColor = scope => {
-  return scope === 'company_user' ? 'warning' : 'primary'
+  return scope === 'company_user' ? 'info' : 'primary'
 }
 
-const rateColor = rate => {
-  if (rate >= 80) return 'success'
-  if (rate >= 50) return 'warning'
+const summary = computed(() => store.compliance.summary || {})
+const rateTone = rate => (rate >= 80 ? 'success' : rate >= 50 ? 'warning' : 'error')
+const stats = computed(() => {
+  const s = summary.value
 
-  return 'error'
-}
+  return [
+    { key: 'rate', label: t('l7.docs.compliance.rate'), value: `${new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(store.complianceRate || 0)} %`, icon: 'tabler-shield-check', tone: rateTone(store.complianceRate), help: t('l7.docs.compliance.rateHelp'), testid: 'compliance-rate' },
+    { key: 'valid', label: t('l7.docs.compliance.valid'), value: s.valid ?? 0, icon: 'tabler-circle-check', tone: 'success' },
+    { key: 'missing', label: t('l7.docs.compliance.missing'), value: s.missing ?? 0, icon: 'tabler-file-off', tone: s.missing ? 'error' : 'muted' },
+    { key: 'renew', label: t('l7.docs.compliance.renew'), value: (s.expiring_soon ?? 0) + (s.expired ?? 0), icon: 'tabler-calendar-exclamation', tone: (s.expiring_soon || s.expired) ? 'warning' : 'muted', help: t('l7.docs.compliance.renewHelp', { expiring: s.expiring_soon ?? 0, expired: s.expired ?? 0 }) },
+    { key: 'progress', label: t('l7.docs.compliance.inProgress'), value: (s.pending_validation ?? 0) + (s.requested ?? 0), icon: 'tabler-hourglass', tone: 'info', help: t('l7.docs.compliance.inProgressHelp', { review: s.pending_validation ?? 0, requested: s.requested ?? 0, rejected: s.rejected ?? 0 }) },
+  ]
+})
 
 // ─── Filters ────────────────────────────────────────────
 // ADR-776 : un lien « À traiter » ouvre la conformité déjà filtrée (?status=expired|expiring|missing).
@@ -65,230 +62,184 @@ const exportCsv = () => {
     type="card, table"
   />
   <!-- Empty state (ADR-423) -->
-  <VCard
-    v-else-if="store.compliance.summary.total === 0"
-    class="text-center pa-8"
-  >
-    <VIcon
+  <VCard v-else-if="store.compliance.summary.total === 0">
+    <AppEmptyState
       icon="tabler-shield-check"
-      :size="64"
-      color="disabled"
-      class="mb-4"
+      :title="t('companyDocuments.emptyState.complianceTitle')"
+      :text="t('companyDocuments.emptyState.complianceSubtitle')"
     />
-    <h5 class="text-h5 mb-2">
-      {{ t('companyDocuments.emptyState.complianceTitle') }}
-    </h5>
-    <p class="text-body-1 text-medium-emphasis">
-      {{ t('companyDocuments.emptyState.complianceSubtitle') }}
-    </p>
   </VCard>
 
-  <div v-else>
-    <!-- Summary -->
+  <div
+    v-else
+    data-test="documents-compliance"
+  >
+    <AppStatStrip
+      :items="stats"
+      class="mb-6"
+    />
+
     <VCard>
       <VCardItem>
-        <template #prepend>
-          <VAvatar
-            color="primary"
-            variant="tonal"
-            rounded
-          >
-            <VIcon icon="tabler-shield-check" />
-          </VAvatar>
-        </template>
-        <VCardTitle>{{ t('companyDocuments.compliance.title') }}</VCardTitle>
-        <VCardSubtitle>{{ t('companyDocuments.compliance.hint') }}</VCardSubtitle>
-        <template #append>
+        <VCardTitle>{{ t('l7.docs.compliance.byType') }}</VCardTitle>
+        <VCardSubtitle class="text-wrap">
+          {{ t('l7.docs.compliance.byTypeHint') }}
+        </VCardSubtitle>
+        <template
+          v-if="!xs"
+          #append
+        >
           <div class="d-flex align-center gap-2">
+            <AppSelect
+              v-model="statusFilter"
+              :items="statusOptions"
+              :aria-label="t('l7.docs.compliance.filter')"
+              density="compact"
+              style="inline-size: 150px;"
+            />
             <VBtn
               v-can="'documents.manage'"
               variant="tonal"
               color="secondary"
-              size="small"
               prepend-icon="tabler-download"
+              data-test="compliance-export"
               @click="exportCsv"
             >
-              {{ t('companyDocuments.compliance.exportCsv') }}
+              {{ t('l7.docs.compliance.exportCsv') }}
             </VBtn>
-            <VChip
-              size="large"
-              :color="rateColor(store.complianceRate)"
-              class="font-weight-bold"
-            >
-              {{ store.complianceRate }}%
-            </VChip>
           </div>
         </template>
       </VCardItem>
-      <VCardText>
-        <div class="d-flex flex-wrap gap-3 mb-4">
-          <VChip
-            variant="tonal"
-            color="success"
-          >
-            <VIcon
-              icon="tabler-check"
-              size="14"
-              start
-            />
-            {{ t('companyDocuments.compliance.valid') }}: {{ store.compliance.summary.valid }}
-          </VChip>
-          <VChip
-            variant="tonal"
-            color="error"
-          >
-            <VIcon
-              icon="tabler-file-off"
-              size="14"
-              start
-            />
-            {{ t('companyDocuments.compliance.missing') }}: {{ store.compliance.summary.missing }}
-          </VChip>
-          <VChip
-            variant="tonal"
-            color="warning"
-          >
-            <VIcon
-              icon="tabler-file-alert"
-              size="14"
-              start
-            />
-            {{ t('companyDocuments.compliance.expiring') }}: {{ store.compliance.summary.expiring_soon }}
-          </VChip>
-          <VChip
-            variant="tonal"
-            color="error"
-          >
-            <VIcon
-              icon="tabler-file-x"
-              size="14"
-              start
-            />
-            {{ t('companyDocuments.compliance.expired') }}: {{ store.compliance.summary.expired }}
-          </VChip>
-          <!-- ADR-759/760 : états workflow (en validation / refusé / demandé) — déjà fournis par le backend -->
-          <VChip
-            v-if="store.compliance.summary.pending_validation"
-            variant="tonal"
-            color="info"
-          >
-            <VIcon
-              icon="tabler-eye-search"
-              size="14"
-              start
-            />
-            {{ t('documents.in_review') }}: {{ store.compliance.summary.pending_validation }}
-          </VChip>
-          <VChip
-            v-if="store.compliance.summary.rejected"
-            variant="tonal"
-            color="error"
-          >
-            <VIcon
-              icon="tabler-x"
-              size="14"
-              start
-            />
-            {{ t('documents.rejected') }}: {{ store.compliance.summary.rejected }}
-          </VChip>
-          <VChip
-            v-if="store.compliance.summary.requested"
-            variant="tonal"
-            color="warning"
-          >
-            <VIcon
-              icon="tabler-clock"
-              size="14"
-              start
-            />
-            {{ t('documents.requested') }}: {{ store.compliance.summary.requested }}
-          </VChip>
-        </div>
-      </VCardText>
-    </VCard>
-
-    <!-- By Type Detail -->
-    <VCard class="mt-6">
-      <VCardItem>
-        <template #prepend>
-          <VAvatar
-            color="info"
-            variant="tonal"
-            rounded
-          >
-            <VIcon icon="tabler-file-analytics" />
-          </VAvatar>
-        </template>
-        <VCardTitle>{{ t('companyDocuments.compliance.byType') }}</VCardTitle>
-        <template #append>
-          <AppSelect
-            v-model="statusFilter"
-            :items="statusOptions"
-            density="compact"
-            style="inline-size: 160px;"
-          />
-        </template>
-      </VCardItem>
-      <VCardText>
-        <VTable v-if="filteredTypes.length > 0">
-          <thead>
-            <tr>
-              <th
-                v-for="h in typeHeaders"
-                :key="h.key"
-              >
-                {{ h.title }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="type in filteredTypes"
-              :key="type.code"
-            >
-              <td>
-                {{ t(`documents.type.${type.code}`, type.label) }}
-              </td>
-              <td>
-                <VChip
-                  size="x-small"
-                  :color="scopeColor(type.scope)"
-                >
-                  {{ scopeLabel(type.scope) }}
-                </VChip>
-              </td>
-              <td>{{ type.total }}</td>
-              <td class="text-success">
-                {{ type.valid }}
-              </td>
-              <td :class="type.missing > 0 ? 'text-error font-weight-bold' : ''">
-                {{ type.missing }}
-              </td>
-              <td :class="type.expiring_soon > 0 ? 'text-warning font-weight-bold' : ''">
-                {{ type.expiring_soon }}
-              </td>
-              <td :class="type.expired > 0 ? 'text-error font-weight-bold' : ''">
-                {{ type.expired }}
-              </td>
-              <td>
-                <VChip
-                  size="small"
-                  :color="rateColor(type.rate)"
-                >
-                  {{ type.rate }}%
-                </VChip>
-              </td>
-            </tr>
-          </tbody>
-        </VTable>
-        <VAlert
-          v-else
-          type="info"
+      <div
+        v-if="xs"
+        class="d-flex align-center gap-2 px-4 pb-3"
+      >
+        <AppSelect
+          v-model="statusFilter"
+          :items="statusOptions"
+          :aria-label="t('l7.docs.compliance.filter')"
+          density="compact"
+          class="flex-grow-1"
+        />
+        <VBtn
+          v-can="'documents.manage'"
           variant="tonal"
+          color="secondary"
+          icon
+          :aria-label="t('l7.docs.compliance.exportCsv')"
+          @click="exportCsv"
         >
-          {{ t('companyDocuments.compliance.noData') }}
-        </VAlert>
-      </VCardText>
+          <VIcon icon="tabler-download" />
+        </VBtn>
+      </div>
+
+      <AppEmptyState
+        v-if="!filteredTypes.length"
+        compact
+        icon="tabler-filter-off"
+        :title="t('l7.docs.compliance.emptyFilter')"
+      />
+
+      <!-- phone : one line per type, what matters first -->
+      <VList
+        v-else-if="xs"
+        class="py-0"
+        data-test="compliance-list"
+      >
+        <template
+          v-for="(type, i) in filteredTypes"
+          :key="type.code"
+        >
+          <VDivider v-if="i" />
+          <VListItem class="py-3">
+            <div class="d-flex align-center justify-space-between gap-2">
+              <span class="font-weight-medium text-truncate">{{ t(`documents.type.${type.code}`, type.label) }}</span>
+              <VChip
+                size="small"
+                label
+                :color="rateTone(type.rate)"
+              >
+                {{ new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(type.rate || 0) }} %
+              </VChip>
+            </div>
+            <VProgressLinear
+              :model-value="type.rate"
+              :color="rateTone(type.rate)"
+              rounded
+              height="6"
+              class="my-2"
+            />
+            <div class="text-body-2 text-medium-emphasis">
+              {{ scopeLabel(type.scope) }} · {{ t('l7.docs.compliance.line', { missing: type.missing, renew: type.expiring_soon + type.expired }) }}
+            </div>
+          </VListItem>
+        </template>
+      </VList>
+
+      <VTable
+        v-else
+        class="text-no-wrap"
+      >
+        <thead>
+          <tr>
+            <th>{{ t('companyDocuments.compliance.documentType') }}</th>
+            <th>{{ t('companyDocuments.compliance.scope') }}</th>
+            <th style="min-inline-size: 220px;">
+              {{ t('l7.docs.compliance.valid') }}
+            </th>
+            <th class="text-end">
+              {{ t('l7.docs.compliance.missing') }}
+            </th>
+            <th class="text-end">
+              {{ t('l7.docs.compliance.renew') }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="type in filteredTypes"
+            :key="type.code"
+          >
+            <td class="font-weight-medium">
+              {{ t(`documents.type.${type.code}`, type.label) }}
+            </td>
+            <td>
+              <VChip
+                size="small"
+                label
+                variant="tonal"
+                :color="scopeColor(type.scope)"
+              >
+                {{ scopeLabel(type.scope) }}
+              </VChip>
+            </td>
+            <td>
+              <div class="d-flex align-center gap-3">
+                <VProgressLinear
+                  :model-value="type.rate"
+                  :color="rateTone(type.rate)"
+                  rounded
+                  height="6"
+                  style="max-inline-size: 140px;"
+                />
+                <span class="text-body-2">{{ t('l7.docs.compliance.present', { valid: type.valid, total: type.total }, type.valid) }}</span>
+              </div>
+            </td>
+            <td
+              class="text-end"
+              :class="type.missing ? 'text-error font-weight-medium' : 'text-disabled'"
+            >
+              {{ type.missing }}
+            </td>
+            <td
+              class="text-end"
+              :class="(type.expiring_soon + type.expired) ? 'text-warning font-weight-medium' : 'text-disabled'"
+            >
+              {{ type.expiring_soon + type.expired }}
+            </td>
+          </tr>
+        </tbody>
+      </VTable>
     </VCard>
   </div>
 </template>

@@ -19,7 +19,11 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+const slots = useSlots()
 const { smAndDown } = useDisplay()
+// ADR-862 (L7 closure) — a view that brings its own secondary actions (#more) gets ONE « ⋯ » menu holding them,
+// the export and the preferences : Planning went from five header controls (description squeezed at 1440 px) to three.
+const folded = computed(() => !!slots.more)
 const { can, moduleActive } = useCompanyPermissionContext()
 const space = usePersonalSpaceStore()
 // ADR-781 (UX5) — les préférences de l'espace, à un clic, seulement si l'utilisateur peut les ouvrir.
@@ -78,27 +82,65 @@ watchEffect(() => { if (!props.bare) document.title = `${pageTitle.value} · ${t
       data-test="time-space-header"
     >
       <template #actions>
-        <VBtn
-          v-if="preferencesTo && !smAndDown"
-          :to="preferencesTo"
-          variant="text"
-          color="secondary"
-          prepend-icon="tabler-adjustments"
-          data-test="space-preferences"
-        >
-          {{ t('timeSpace.preferences') }}
-        </VBtn>
-        <VBtn
-          v-if="canExport"
-          variant="tonal"
-          color="primary"
-          prepend-icon="tabler-file-export"
-          data-test="time-export-open"
-          @click="exportOpen = true"
-        >
-          {{ t('timeExport.button') }}
-        </VBtn>
+        <template v-if="!folded">
+          <VBtn
+            v-if="preferencesTo && !smAndDown"
+            :to="preferencesTo"
+            variant="text"
+            color="secondary"
+            prepend-icon="tabler-adjustments"
+            data-test="space-preferences"
+          >
+            {{ t('timeSpace.preferences') }}
+          </VBtn>
+          <VBtn
+            v-if="canExport"
+            variant="tonal"
+            color="primary"
+            prepend-icon="tabler-file-export"
+            data-test="time-export-open"
+            @click="exportOpen = true"
+          >
+            {{ t('timeExport.button') }}
+          </VBtn>
+        </template>
         <slot name="actions" />
+        <VBtn
+          v-if="folded"
+          variant="tonal"
+          color="secondary"
+          icon
+          :aria-label="t('timeSpace.more')"
+          :data-test="`${active}-actions-more`"
+        >
+          <VIcon icon="tabler-dots-vertical" />
+          <VMenu
+            activator="parent"
+            location="bottom end"
+          >
+            <VList min-width="240">
+              <slot name="more" />
+              <VDivider
+                v-if="canExport || preferencesTo"
+                class="my-1"
+              />
+              <VListItem
+                v-if="canExport"
+                prepend-icon="tabler-file-export"
+                :title="t('timeExport.button')"
+                data-test="time-export-open"
+                @click="exportOpen = true"
+              />
+              <VListItem
+                v-if="preferencesTo"
+                :to="preferencesTo"
+                prepend-icon="tabler-adjustments"
+                :title="t('timeSpace.preferences')"
+                data-test="space-preferences"
+              />
+            </VList>
+          </VMenu>
+        </VBtn>
       </template>
     </AppPageHeader>
     <div

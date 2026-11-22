@@ -2733,36 +2733,6 @@ watch(activeTab, tab => {
           >
             {{ $t('planning.prepare.open') }}
           </VBtn>
-          <VBtn
-            variant="tonal"
-            color="secondary"
-            icon="tabler-dots-vertical"
-            :aria-label="$t('timeSpace.more')"
-            data-test="planning-actions-more"
-          >
-            <VIcon icon="tabler-dots-vertical" />
-            <VMenu
-              activator="parent"
-              location="bottom end"
-            >
-              <VList min-width="240">
-                <VListItem
-                  v-if="canEditShifts"
-                  prepend-icon="tabler-copy"
-                  :title="$t('planning.bulkCreate')"
-                  data-test="bulk-create-open"
-                  @click="isBulkDrawerOpen = true"
-                />
-                <VListItem
-                  prepend-icon="tabler-template"
-                  :active="viewMode === 'templates'"
-                  data-test="plan-view-templates"
-                  :title="$t('planning.modes.templates', 'Modèles')"
-                  @click="viewMode = 'templates'"
-                />
-              </VList>
-            </VMenu>
-          </VBtn>
         </template>
         <!-- Mobile : les actions secondaires passent dans « Plus » (rien n'est retiré). -->
         <VBtn
@@ -2845,6 +2815,26 @@ watch(activeTab, tab => {
         >
           {{ $t('planning.templates.newTemplate') }}
         </VBtn>
+      </template>
+      <!-- ADR-862 — secondary actions folded with the export and the preferences in ONE « ⋯ » menu (desktop) -->
+      <template
+        v-if="!smAndDown && activeTab !== 'templates'"
+        #more
+      >
+        <VListItem
+          v-if="canEditShifts"
+          prepend-icon="tabler-copy"
+          :title="$t('planning.bulkCreate')"
+          data-test="bulk-create-open"
+          @click="isBulkDrawerOpen = true"
+        />
+        <VListItem
+          prepend-icon="tabler-template"
+          :active="viewMode === 'templates'"
+          data-test="plan-view-templates"
+          :title="$t('planning.modes.templates', 'Modèles')"
+          @click="viewMode = 'templates'"
+        />
       </template>
     </TimeSpaceHeader>
 
