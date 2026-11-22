@@ -14,6 +14,7 @@ import { useOperationalHomeStore } from '@/modules/company/home/home.store'
 import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
 import DashboardGrid from '@/components/dashboard/DashboardGrid.vue'
 import DashboardHostContainer from '@/components/dashboard/DashboardHostContainer.vue'
+import WorkspaceHero from '@/components/home/WorkspaceHero.vue'
 
 // ADR-818 (chantier D) : composant du SEUL accueil `/home`. `embedded` = bloc « Moi » d'un gestionnaire
 // (l'en-tête et la grille de widgets sont alors portés par l'accueil de gestion — jamais deux grilles).
@@ -38,7 +39,6 @@ const canDeliveries = computed(() => canModule('logistics_shipments') && can('sh
 const isEmployee = computed(() => !!clock.employee)
 
 const firstName = computed(() => auth.user?.first_name || auth.user?.name?.split(' ')?.[0] || '')
-const todayLabel = computed(() => new Date().toLocaleDateString(displayLocale(), { weekday: 'long', day: 'numeric', month: 'long' }))
 
 // ── Pointage (réutilise le store self-service — serveur = source de vérité) ──
 const busy = ref(false)
@@ -93,6 +93,38 @@ const actionCards = computed(() => {
   return out
 })
 
+// ── ADR-857 (L3) — V22 hero : what is next for ME, from my own data only ──
+const myTodo = computed(() => (canSignatures.value ? (space.counts.signatures_to_sign ?? 0) : 0) + (canDocuments.value ? (space.counts.document_requests ?? 0) : 0))
+
+const heroSentences = computed(() => {
+  const out = []
+  if (canWorkforce.value && isEmployee.value && space.can('planning')) {
+    if (emp.nextShift) out.push(t('l3.personal.nextShift', { when: relDay(emp.nextShift.start_at), time: fmtTime(emp.nextShift.start_at) }))
+    else if (!emp.loadingWorkforce) out.push(t('l3.personal.noShift'))
+  }
+  if (canDeliveries.value && !emp.loadingDeliveries && emp.deliveriesCount > 0)
+    out.push(t('l3.personal.deliveries', { n: emp.deliveriesCount }, emp.deliveriesCount))
+  if (canWorkforce.value && isEmployee.value) {
+    const st = clock.clockStatus === 'idle' ? 'not_started' : clock.clockStatus
+    if (['working', 'on_break', 'completed', 'not_started'].includes(st)) out.push(t(`l3.personal.clock.${st}`))
+  }
+  if (myTodo.value > 0) out.push(t('l3.personal.todo', { n: myTodo.value }, myTodo.value))
+  else if (space.ready && !(canDeliveries.value && emp.deliveriesCount > 0)) out.push(t('l3.personal.nothing'))
+
+  return out
+})
+
+const heroActions = computed(() => {
+  const out = []
+  if (canDeliveries.value) out.push({ key: 'my-deliveries', label: t('l3.personal.myDeliveries'), icon: 'tabler-truck-delivery', to: '/company/my-deliveries' })
+  if (canWorkforce.value && isEmployee.value && space.can('planning')) out.push({ key: 'my-planning', label: t('l3.personal.myPlanning'), icon: 'tabler-calendar-week', to: '/company/workforce/me' })
+  if (out.length < 2) out.push({ key: 'my-space', label: t('l3.personal.mySpace'), icon: 'tabler-user-circle', to: { name: 'company-my-space-tab', params: { tab: 'overview' } } })
+
+  return out.slice(0, 2)
+})
+
+const heroGreeting = computed(() => (canDeliveries.value && emp.deliveriesCount > 0 ? t('l3.personal.tour') : ''))
+
 const hasOperational = computed(() => (canWorkforce.value && isEmployee.value) || actionCards.value.length > 0)
 
 // ── Widgets personnalisables (grille conservée en secondaire) ──
@@ -131,23 +163,24 @@ onMounted(async () => {
 <template>
   <div class="employee-home">
     <!-- ═══ En-tête ═══ -->
-    <div
+    <!-- ADR-857 : « Moi » heads the manager's OWN block (it used to trail it) -->
+    <h5
+      v-if="embedded"
+      class="text-h5 mb-4"
+      data-test="home-me-title"
+    >
+      {{ t('home.meTitle') }}
+    </h5>
+    <WorkspaceHero
       v-if="!embedded"
       class="mb-6"
-    >
-      <div
-        class="text-overline text-medium-emphasis"
-        data-test="personal-home-label"
-      >
-        {{ t('nav.company.personal-home') }}
-      </div>
-      <h4 class="text-h4 mb-1">
-        {{ firstName ? t('employeeHome.greeting', { name: firstName }) : t('employeeHome.greetingNoName') }}
-      </h4>
-      <div class="text-body-1 text-medium-emphasis text-capitalize">
-        {{ todayLabel }}
-      </div>
-    </div>
+      :name="firstName"
+      :greeting="heroGreeting"
+      :company="auth.currentCompany?.name || ''"
+      :sentences="heroSentences"
+      :loading="!space.ready"
+      :actions="heroActions"
+    />
 
     <!-- ═══ AUJOURD'HUI : prochain shift + pointage (employé Workforce) ═══ -->
     <VRow
@@ -421,13 +454,6 @@ onMounted(async () => {
     </VCard>
 
     <!-- ═══ Widgets personnalisables (secondaire, conservé ; un gestionnaire a sa grille d'entreprise) ═══ -->
-    <h5
-      v-if="embedded"
-      class="text-h5 mt-2 mb-4"
-      data-test="home-me-title"
-    >
-      {{ t('home.meTitle') }}
-    </h5>
     <DashboardHostContainer v-if="!embedded">
       <template #toolbar>
         <div

@@ -9,8 +9,11 @@ import QuickActionsBar from '@/pages/company/dashboard/_QuickActionsBar.vue'
 import HomePrioritiesSection from '@/components/dashboard/HomePrioritiesSection.vue'
 import { useCan } from '@/composables/useCan'
 import { useWorkforceClockStore } from '@/core/stores/workforce-clock'
+import WorkspaceHero from '@/components/home/WorkspaceHero.vue'
+import AppEmptyState from '@/components/app/AppEmptyState.vue'
+import { buildSituation, isQuiet, topPriorities, workspaceFocus } from '@/core/surface-engine/workspaceSituation'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const auth = useAuthStore()
 const dashboardStore = useCompanyDashboardStore()
 const complianceStore = useCompanyComplianceStore()
@@ -28,7 +31,7 @@ const refreshing = ref(false)
 const refresh = async () => {
   refreshing.value = true
   try {
-    await Promise.allSettled([prioritiesRef.value?.load(), dashboardStore.resolveWidgets()])
+    await Promise.allSettled([prioritiesRef.value?.load(), dashboardStore.resolveWidgets().then(() => dashboardStore.fetchSummary())])
   }
   finally {
     refreshing.value = false
@@ -69,7 +72,7 @@ const showMySpace = computed(() => isEmployee.value) // ADR-769 : `clock.employe
 
 const canEdit = computed(() => auth.isAdministrative)
 const companyName = computed(() => auth.currentCompany?.name || '')
-const userName = computed(() => auth.user?.first_name || auth.user?.display_name || '')
+const userName = computed(() => auth.user?.first_name || auth.user?.name?.split(' ')?.[0] || auth.user?.display_name || companyName.value)
 
 // E2.1 (ADR-691): la compliance documentaire lit /company/documents/compliance (module core.documents
 // + documents.view). On NE l'émet que si le viewer détient réellement la capacité → plus de 403 inutile
@@ -129,6 +132,43 @@ const acceptSuggestion = suggestion => {
   }
 }
 
+// ── ADR-857 (L3) — V22 workspace : hero situation, priority actions, setup mode ──
+const prio = ref({ state: 'loading', priorities: [], partial: false })
+const onboarding = ref(null) // { done, total, dismissed } — owner only, from the EXISTING checklist
+const showIndicators = ref(false) // a quiet company may still open its (empty) indicators
+const focus = computed(() => workspaceFocus(dashboardStore.catalog.map(w => w.key)))
+const setup = computed(() => (onboarding.value && onboarding.value.total > 0 && onboarding.value.done < onboarding.value.total ? onboarding.value : null))
+const quiet = computed(() => dashboardStore.summaryReady && isQuiet(dashboardStore.summary))
+
+const situation = computed(() => buildSituation({
+  data: dashboardStore.summary,
+  priorities: prio.value.priorities,
+  prioritiesState: prio.value.state,
+  prioritiesPartial: prio.value.partial,
+  setup: quiet.value ? setup.value : null,
+}))
+
+const sentences = computed(() => situation.value.parts.map(p => t(p.key, p.params || {}, p.params?.n ?? 1)))
+const heroProgress = computed(() => (situation.value.progress ? { value: situation.value.progress.value, label: t(situation.value.progress.key) } : null))
+const heroLoading = computed(() => prio.value.state === 'loading' || !dashboardStore.summaryReady)
+const priorityLabel = key => (te(`home.priorities.${key}`) ? t(`home.priorities.${key}`) : key)
+
+
+// 1–2 actions : the most urgent priority first (it opens the treatment), then the first everyday action of the role
+const heroActions = computed(() => {
+  const out = topPriorities(prio.value.priorities, 1).map(p => ({ key: `prio-${p.key}`, label: priorityLabel(p.key), icon: p.icon || 'tabler-alert-circle', to: p.to }))
+  for (const a of homeActions.value) {
+    if (out.length >= 2) break
+    out.push({ key: a.key, label: t(a.label), icon: a.icon, to: a.to, test: `home-action-${a.key}` }) // ADR-775 contract : one home-action-<key> per served action
+  }
+
+  return out
+})
+
+
+// a company with nothing yet : the onboarding checklist + first operations instead of a wall of zeros
+const showFirstSteps = computed(() => quiet.value && !showIndicators.value && !customizing.value)
+
 // ADR-856 — a widget's « Retry » re-resolves the dashboard data (same engine)
 const onWidgetRetry = () => { dashboardStore.resolveWidgets() }
 
@@ -137,54 +177,47 @@ onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidget
 </script>
 
 <template>
-  <div>
-    <!-- ═══ Header ═══ -->
-    <div class="d-flex align-center flex-wrap gap-3 mb-6">
-      <div class="flex-grow-1">
-        <h4 class="text-h4">
-          {{ t('dashboard.welcome', { name: userName }) }}
-        </h4>
-        <p
-          v-if="companyName"
-          class="text-body-1 text-medium-emphasis mb-0"
-        >
-          {{ companyName }}
-        </p>
-      </div>
-      <IconBtn
-        :loading="refreshing"
-        :aria-label="t('common.refresh')"
-        :title="t('common.refresh')"
-        data-test="home-refresh"
-        @click="refresh"
+  <div class="lz-ws">
+    <!-- ═══ V22 (ADR-857) : hero + « À traiter » ═══ -->
+    <VRow class="mb-1 lz-ws-top">
+      <VCol
+        cols="12"
+        lg="8"
       >
-        <VIcon icon="tabler-refresh" />
-      </IconBtn>
-    </div>
+        <WorkspaceHero
+          :name="userName"
+          :company="companyName"
+          :sentences="sentences"
+          :loading="heroLoading"
+          :live="situation.live"
+          :progress="heroProgress"
+          :actions="heroActions"
+        />
+      </VCol>
+      <VCol
+        cols="12"
+        lg="4"
+      >
+        <HomePrioritiesSection
+          ref="prioritiesRef"
+          @loaded="prio = $event"
+        />
+      </VCol>
+    </VRow>
 
-    <!-- ═══ Onboarding (ADR-383 — self-hides once done or dismissed) ═══ -->
-    <OnboardingWidget />
+    <!-- ═══ Onboarding (ADR-383 — the ONE checklist ; self-hides once done or dismissed) ═══ -->
+    <OnboardingWidget @state="onboarding = $event" />
+
+    <!-- ═══ Actions rapides (server-filtered, V22 tiles) ═══ -->
+    <QuickActionsBar
+      v-if="!showFirstSteps"
+      tiles
+      :exclude="heroActions.map(a => a.key)"
+      class="mb-6"
+    />
 
     <!-- ═══ MOI (ADR-818) : le gestionnaire aussi salarié retrouve ses propres actions ici ═══ -->
     <slot name="personal" />
-
-    <!-- ═══ À traiter + Actions ═══ -->
-    <VRow class="mb-2">
-      <VCol
-        v-if="homeActions.length"
-        cols="12"
-        md="4"
-        class="order-first order-md-last"
-      >
-        <QuickActionsBar />
-      </VCol>
-      <VCol
-        cols="12"
-        :md="homeActions.length ? 8 : 12"
-      >
-        <HomePrioritiesSection ref="prioritiesRef" />
-      </VCol>
-    </VRow>
 
     <!-- ═══ Dashboard Host (ADR-198 — stable grid position) ═══ -->
     <DashboardHostContainer>
@@ -193,6 +226,19 @@ onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidget
           <h5 class="text-h5">
             {{ t('home.sections.overview') }}
           </h5>
+          <IconBtn
+            :loading="refreshing"
+            size="small"
+            :aria-label="t('common.refresh')"
+            :title="t('common.refresh')"
+            data-test="home-refresh"
+            @click="refresh"
+          >
+            <VIcon
+              icon="tabler-refresh"
+              size="18"
+            />
+          </IconBtn>
           <VSpacer />
           <template v-if="canEdit && customizing">
             <VBtn
@@ -256,9 +302,40 @@ onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidget
         </VAlert>
       </template>
 
+      <!-- ═══ ADR-857 : quiet company → first operations (no wall of zeros) ═══ -->
+      <VCard
+        v-if="hasDashboardWidgets && showFirstSteps"
+        class="lz-first pa-2"
+        data-test="home-first-steps"
+      >
+        <AppEmptyState
+          icon="tabler-sparkles"
+          :title="t('l3.first.title')"
+          :text="t(focus === 'logistics' ? 'l3.first.textLogistics' : 'l3.first.text')"
+        />
+        <div class="d-flex flex-wrap justify-center gap-2 pb-4">
+          <VBtn
+            v-for="a in homeActions"
+            :key="a.key"
+            :to="a.to"
+            variant="tonal"
+            :prepend-icon="a.icon"
+          >
+            {{ t(a.label) }}
+          </VBtn>
+          <VBtn
+            variant="text"
+            data-test="home-show-indicators"
+            @click="showIndicators = true"
+          >
+            {{ t('l3.first.showIndicators') }}
+          </VBtn>
+        </div>
+      </VCard>
+
       <!-- ═══ Dashboard Grid ═══ -->
       <DashboardGrid
-        v-if="hasDashboardWidgets"
+        v-else-if="hasDashboardWidgets"
         :row-height="60"
         :layout="dashboardStore.layout"
         :widget-data="dashboardStore.widgetData"
@@ -271,13 +348,18 @@ onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidget
       />
 
       <!-- ═══ Empty State ═══ -->
-      <div
-        v-else-if="!dashboardStore.isLoading"
-        class="text-body-1 text-medium-emphasis py-4"
+      <VCard
+        v-else-if="!hasDashboardWidgets && !dashboardStore.isLoading"
+        variant="flat"
+        class="lz-first"
         data-test="home-overview-empty"
       >
-        {{ canEdit ? t('home.overviewEmptyEditable') : t('home.overviewEmpty') }}
-      </div>
+        <AppEmptyState
+          compact
+          icon="tabler-layout-dashboard"
+          :title="canEdit ? t('home.overviewEmptyEditable') : t('home.overviewEmpty')"
+        />
+      </VCard>
 
       <!-- ═══ Loading State ═══ -->
       <div
@@ -364,3 +446,18 @@ onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidget
     </VNavigationDrawer>
   </div>
 </template>
+
+<style scoped>
+/* ADR-857 (L3) — V22 entrance : cards rise in sequence once (transform only : content is never hidden) */
+.lz-ws :deep(.dashboard-tile) { animation: lzr-enter .5s cubic-bezier(.22, 1, .36, 1) both; }
+.lz-ws :deep(.dashboard-tile:nth-child(2)) { animation-delay: 40ms; }
+.lz-ws :deep(.dashboard-tile:nth-child(3)) { animation-delay: 80ms; }
+.lz-ws :deep(.dashboard-tile:nth-child(4)) { animation-delay: 120ms; }
+.lz-ws :deep(.dashboard-tile:nth-child(n+5)) { animation-delay: 160ms; }
+.lz-ws-top :deep(.v-col) { display: flex; flex-direction: column; }
+.lz-ws-top :deep(.v-col > *) { flex: 1 1 auto; }
+.lz-first { border: 1px dashed rgba(var(--v-border-color), .18); }
+@media (prefers-reduced-motion: reduce) {
+  .lz-ws :deep(.dashboard-tile) { animation: none; }
+}
+</style>

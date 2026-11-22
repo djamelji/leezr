@@ -12994,5 +12994,54 @@
       "bestDays": "Best days",
       "noFailure": "No payment failure"
     }
+  },
+  "l3": {
+    "hero": {
+      "morning": "Good morning,",
+      "evening": "Good evening,",
+      "live": "{n} at work",
+      "loading": "Getting your day ready…"
+    },
+    "sit": {
+      "setup": "Setup: {done} of {total} steps done.",
+      "setupStart": "Welcome to Leezr. A few steps, and your workspace works for you.",
+      "deliveries": "{done} of {total} deliveries planned today are done.",
+      "shipToday": "{n} shipment planned today. | {n} shipments planned today.",
+      "late": "{n} late to watch. | {n} late to watch.",
+      "unassigned": "{n} shipment to assign. | {n} shipments to assign.",
+      "working": "{n} person at work right now. | {n} people at work right now.",
+      "todo": "{n} item is waiting in « To do ». | {n} items are waiting in « To do ».",
+      "nothingTodo": "Nothing is waiting for you right now.",
+      "noActivity": "No activity recorded today yet."
+    },
+    "progress": {
+      "setup": "setup",
+      "deliveries": "deliveries done",
+      "presence": "present"
+    },
+    "first": {
+      "title": "Your workspace fills up with your first operations",
+      "text": "No activity yet. Rather than indicators at zero, here is where to start.",
+      "textLogistics": "No shipments or team activity yet. Create your first operations: your indicators will appear here.",
+      "showIndicators": "Show indicators"
+    },
+    "personal": {
+      "tour": "Have a good round,",
+      "nextShift": "Next shift: {when} at {time}.",
+      "noShift": "No shift planned yet.",
+      "deliveries": "{n} delivery is assigned to you. | {n} deliveries are assigned to you.",
+      "clock": {
+        "working": "Your clock-in is running.",
+        "on_break": "You are on a break.",
+        "completed": "Your day is clocked.",
+        "not_started": "You have not clocked in today."
+      },
+      "todo": "{n} request is waiting in your space. | {n} requests are waiting in your space.",
+      "nothing": "Nothing is waiting for you right now.",
+      "myDeliveries": "My deliveries",
+      "myPlanning": "My planning",
+      "mySpace": "My space",
+      "clockIn": "Clock in"
+    }
   }
 }

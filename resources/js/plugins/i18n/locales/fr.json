@@ -13012,5 +13012,54 @@
       "bestDays": "Meilleurs jours",
       "noFailure": "Aucun échec de paiement"
     }
+  },
+  "l3": {
+    "hero": {
+      "morning": "Bonjour,",
+      "evening": "Bonsoir,",
+      "live": "{n} en activité",
+      "loading": "Nous préparons votre journée…"
+    },
+    "sit": {
+      "setup": "Mise en service : {done} étapes terminées sur {total}.",
+      "setupStart": "Bienvenue sur Leezr. Quelques étapes, et votre espace travaille pour vous.",
+      "deliveries": "{done} livraisons terminées sur {total} prévues aujourd'hui.",
+      "shipToday": "{n} expédition prévue aujourd'hui. | {n} expéditions prévues aujourd'hui.",
+      "late": "{n} en retard à surveiller. | {n} en retard à surveiller.",
+      "unassigned": "{n} expédition à affecter. | {n} expéditions à affecter.",
+      "working": "{n} personne au travail en ce moment. | {n} personnes au travail en ce moment.",
+      "todo": "{n} élément vous attend dans « À traiter ». | {n} éléments vous attendent dans « À traiter ».",
+      "nothingTodo": "Aucune action ne vous attend pour le moment.",
+      "noActivity": "Aucune activité enregistrée aujourd'hui pour l'instant."
+    },
+    "progress": {
+      "setup": "mise en service",
+      "deliveries": "livraisons terminées",
+      "presence": "présents"
+    },
+    "first": {
+      "title": "Votre espace se remplira avec vos premières opérations",
+      "text": "Aucune activité n'est encore enregistrée. Plutôt que des indicateurs à zéro, voici par où commencer.",
+      "textLogistics": "Aucune expédition ni activité d'équipe pour l'instant. Créez vos premières opérations : vos indicateurs apparaîtront ici.",
+      "showIndicators": "Afficher les indicateurs"
+    },
+    "personal": {
+      "tour": "Bonne tournée,",
+      "nextShift": "Prochain créneau : {when} à {time}.",
+      "noShift": "Aucun créneau planifié pour le moment.",
+      "deliveries": "{n} livraison vous est assignée. | {n} livraisons vous sont assignées.",
+      "clock": {
+        "working": "Votre pointage est en cours.",
+        "on_break": "Vous êtes en pause.",
+        "completed": "Votre journée est pointée.",
+        "not_started": "Vous n'avez pas encore pointé aujourd'hui."
+      },
+      "todo": "{n} demande vous attend dans votre espace. | {n} demandes vous attendent dans votre espace.",
+      "nothing": "Rien ne vous attend pour le moment.",
+      "myDeliveries": "Mes livraisons",
+      "myPlanning": "Mon planning",
+      "mySpace": "Mon espace",
+      "clockIn": "Pointer l'arrivée"
+    }
   }
 }

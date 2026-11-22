@@ -30029,3 +30029,28 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - **Conséquences** :
   - `Adr856WidgetLibraryTest` 4/4 ; `axis-labels.test.mjs` 3/3 (JS 49/49) ; E2E `audit842-widgets856-recipe` 4/4 (fixture clone `audit842-widgets856`, `WIDGETS856_STALE=1` pour l'ancienne disposition) ; fixtures `refund_ratio` 4×4 de `LayoutPacker/Validator`, `DashboardEngine` et `DashboardGridV2` ramenées à ≤ 6×3 ; PHPUnit 4908 passed / 13 skipped / 0 failed ; non-régression `audit842-cockpit855-recipe` 5/5.
   - Catalogue dans `docs/bmad/leezr-5-design/11-widget-catalog.md`, livraison dans `12-l4-delivery.md` ; restant au §6. Prochain lot recommandé : L3 (accueil Company V22).
+
+## ADR-857 — Leezr 5.0 L3 : accueil Company V22 (espace de travail selon le métier et le rôle)
+
+- **Date** : 2026-11-22
+- **Contexte** : l'accueil Company empilait un titre, la checklist, les priorités, les actions et la grille. Il n'y avait ni synthèse de la journée, ni hiérarchie, ni différence selon le métier, et une société récente voyait une dizaine de widgets à zéro. Le prototype V22 (ADR-854) et les composants L0/L4 étaient prêts.
+- **Décision** :
+  - **En-tête V22** : `WorkspaceHero` sur `AppPageHero` (workspace), avec salutation, société, date, présence, phrase de situation, anneau de progression et 1 ou 2 actions.
+  - **Situation** : `workspaceSituation.js`, fonctions pures.
+    - Elle n'affirme que ce que les données prouvent ; « rien en attente » exige une réponse complète de `/dashboard/priorities`, et une erreur n'est jamais lue comme un zéro.
+    - Les indicateurs viennent du catalogue autorisé, en réutilisant les valeurs déjà résolues ; une seule requête complète les manquants (`fetchSummary`), et aucune clé hors catalogue n'est demandée.
+  - **Actions de l'en-tête** : la priorité la plus urgente, puis la première action servie. Les tuiles d'action (`QuickActionsBar tiles`) excluent ce que l'en-tête propose ; chaque action servie reste présente une seule fois (`home-action-<clé>`, contrat ADR-775).
+  - **Métier = modules actifs** (`workspaceFocus`, jamais une clé de JobDomain, ADR-562).
+    - Avec Logistique, la disposition recommandée commence par la bande du jour, puis Logistique, Workforce et Documents.
+    - Une bande incomplète partage les 12 colonnes, et les KPI élargis restent appariés sur tablette et mobile (`useDashboardGrid`).
+    - La priorité mobile de la bande Logistique est placée en tête.
+  - **Mise en service** : si chaque indicateur connu est vide, une carte « premières opérations » remplace la grille, qui reste accessible à la demande. Pour le propriétaire, l'anneau suit la checklist ADR-383 existante (`OnboardingWidget` émet son état ; aucune seconde checklist).
+  - **Accueil personnel** (salarié, chauffeur) : même en-tête, avec prochain créneau, livraisons assignées, état du pointage, demandes à traiter, et les actions « Mes livraisons » et « Mon planning ». « Bonne tournée » s'affiche quand des livraisons sont assignées.
+  - **Animations** : entrée échelonnée des cartes et des tuiles (transformation seule), survol des actions, compteurs progressifs, respect de `prefers-reduced-motion`.
+  - **Sans changement** : backend, Billing, RBAC, droits historiques, onboarding, moteur de dashboard ; aucun module fictif.
+- **Conséquences** :
+  - JS `workspace-situation.test.mjs` 7/7 (56/56).
+  - E2E `audit842-workspace857-recipe` 10/10 (parcours propriétaire, chauffeur, société récente, autre métier, utilisateur limité, paie, et contrat de l'accueil sur 6 profils).
+  - Non-régression `widgets856` 4/4 et `cockpit855` 5/5 ; PHP ciblés 68/68.
+  - Recette sur 9 profils (desktop, tablette, mobile, clair et sombre) : 0 erreur, 0 refus, 0 débordement.
+  - Livraison dans `docs/bmad/leezr-5-design/13-l3-delivery.md` ; limites au §9 (pas d'agenda ni de liste de présents faute de lecture autorisée, pas de fil d'activité Company).

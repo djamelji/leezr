@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { $api } from '@/utils/api'
 import { useAuthStore } from '@/core/stores/auth'
 import { createSurfaceEngine } from '@/core/surface-engine/useSurfaceEngine'
+import { SUMMARY_KEYS, workspaceFocus } from '@/core/surface-engine/workspaceSituation'
 
 export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
   const engine = createSurfaceEngine({
@@ -23,6 +24,42 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     }
     catch {
       _suggestions.value = []
+    }
+  }
+
+  // ── ADR-857 (L3) — workspace summary for the hero ──
+  // Reads the few indicators the hero needs, ONLY among the viewer's permissioned catalogue : values already resolved
+  // for the grid are reused, the missing ones are asked in ONE batch (same endpoint, same server checks). Never a
+  // forbidden call : a key absent from the catalogue is never requested.
+  const _summaryExtra = ref({})
+  const summaryReady = ref(false)
+
+  const summary = computed(() => {
+    const out = {}
+    for (const k of SUMMARY_KEYS) {
+      const v = engine._widgetErrors.value[k] ? { error: true } : (engine._widgetData.value[k] ?? _summaryExtra.value[k])
+      if (v !== undefined) out[k] = v
+    }
+
+    return out
+  })
+
+  async function fetchSummary() {
+    const inCatalog = new Set(engine._catalog.value.map(w => w.key))
+    const missing = SUMMARY_KEYS.filter(k => inCatalog.has(k) && engine._widgetData.value[k] === undefined)
+    try {
+      if (missing.length) {
+        const r = await $api('/dashboard/widgets/data', { method: 'POST', body: { widgets: missing.map(key => ({ key, period: '30d' })) } })
+        const extra = {}
+        for (const x of r.results || []) extra[x.key] = x.error ? { error: true } : x.data
+        _summaryExtra.value = extra
+      }
+    }
+    catch {
+      _summaryExtra.value = Object.fromEntries(missing.map(k => [k, { error: true }]))
+    }
+    finally {
+      summaryReady.value = true
     }
   }
 
@@ -66,6 +103,11 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
       'compliance.types',
     ])
 
+    // ADR-857 (L3) — composition by the ACTIVE modules (the JobDomain assembles modules ; never a hard-coded key) :
+    // with Logistics, the day's shipment strip leads the page (today / in transit / delivered / late).
+    const focus = workspaceFocus(engine._catalog.value.map(w => w.key))
+    const LOGISTICS_STRIP = ['shipments.today', 'shipments.in_transit', 'deliveries.completed_today', 'shipments.late']
+    if (focus === 'logistics') LOGISTICS_STRIP.forEach(k => EXCLUDED_KEYS.delete(k))
     const catalog = engine._catalog.value.filter(w => !EXCLUDED_KEYS.has(w.key))
     const byKey = new Map(catalog.map(w => [w.key, w]))
     const has = k => byKey.has(k)
@@ -81,8 +123,9 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
         { key: 'compliance.rate', w: 4, h: 4 },
       ],
 
-      // Logistique — synthèse expéditions (h3) + flotte & livraisons (h3)
+      // Logistique — bande du jour (h2, ADR-857) + synthèse expéditions (h3) + flotte & livraisons (h3)
       [
+        ...LOGISTICS_STRIP.map(key => ({ key, w: 3, h: 2 })),
         { key: 'shipments.overview', w: 8, h: 3 },
         { key: 'logistics.fleet', w: 4, h: 3 },
       ],
@@ -109,11 +152,18 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
 
     const newRow = () => { cur.x = 0; cur.y += cur.rowH; cur.rowH = 0 }
 
-    for (const section of SECTIONS) {
+    // the business section first : Logistics leads when it is active, then Workforce, then Documents
+    const ORDERED = focus === 'logistics' ? [SECTIONS[1], SECTIONS[0], SECTIONS[2]] : SECTIONS
+    for (const section of ORDERED) {
       const slots = section.filter(s => has(s.key))
       if (!slots.length) continue
       newRow() // chaque section démarre sur une nouvelle rangée
-      for (const s of slots) place(s.key, s.w, s.h)
+
+      // ADR-857 — an incomplete KPI strip (role / modules removed some tiles) shares the full row : no hole that the
+      // grid compaction would fill with a tile of another section
+      const strip = slots.filter(x => x.h === 2 && x.w === 3)
+      const stripW = strip.length > 0 && strip.length < 4 ? Math.min(6, Math.floor(12 / strip.length)) : 3
+      for (const s of slots) place(s.key, strip.includes(s) ? stripW : s.w, s.h)
     }
 
     // Repli : tout widget autorisé hors sections (ex. plan badge, autres modules) — jamais
@@ -154,6 +204,7 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     }
 
     await engine.resolveWidgets()
+    await fetchSummary() // ADR-857 : the hero's indicators (reuses what the grid resolved)
   }
 
   // ADR-856 (L4) — « Disposition recommandée » : recompose the default for THIS user's catalog (role + JobDomain), save.
@@ -161,11 +212,15 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     buildSmartDefaultLayout()
     await engine.saveLayout()
     await engine.resolveWidgets()
+    await fetchSummary()
   }
 
   return {
     ...engine,
     resetToRecommended,
+    summary,
+    summaryReady,
+    fetchSummary,
     suggestions,
     fetchSuggestions,
     loadDashboard,

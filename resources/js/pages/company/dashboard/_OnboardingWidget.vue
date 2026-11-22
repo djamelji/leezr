@@ -8,6 +8,7 @@ import congoImg from '@images/illustrations/congo-illustration.png'
 import { useAuthStore } from '@/core/stores/auth'
 import { $api } from '@/utils/api'
 
+const emit = defineEmits(['state']) // ADR-857 : the workspace reads THIS checklist (never a second one)
 const { t } = useI18n()
 const auth = useAuthStore()
 
@@ -60,6 +61,7 @@ onMounted(async () => {
   }
   finally {
     loading.value = false
+    emit('state', { done: completedCount.value, total: steps.value?.length || 0, dismissed: dismissed.value })
   }
 })
 

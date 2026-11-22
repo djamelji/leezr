@@ -8,7 +8,7 @@
 | **L1 · Dashboard Platform V35** | **livré en local** : connecté aux vraies données, permissions prouvées (5 profils), desktop, tablette et mobile, clair et sombre | ADR-855, [10](10-l0-l1-delivery.md) |
 | L2 · Santé historisée | à faire (le panneau affiche l'état sans courbe inventée) | — |
 | **L4 · Widgets premium** | **livré en local** : bibliothèque unifiée (tuile KPI, liste, tendance sur les composants L0), bornes par famille avec refus expliqué, états erreur/vide/chargement, « Disposition recommandée » Company, filtrage de la disposition Company à l'écriture ; restant : [12 §6](12-l4-delivery.md) | ADR-856, [11](11-widget-catalog.md), [12](12-l4-delivery.md) |
-| L3 · Accueil Company V22 | **prochain lot recommandé** | prototype `/company/design-lab/workspace` |
+| **L3 · Accueil Company V22** | **livré en local** : en-tête de situation réelle, À traiter, actions en tuiles, composition par modules actifs (Logistique en tête), accueil chauffeur et salarié, mise en service sur la checklist existante ; restant : [13 §9](13-l3-delivery.md) | ADR-857, [13](13-l3-delivery.md) |
 | L5 · Personnes | dépréciation de « Outils › Champs » **validée** ; migration réversible avant tout retrait ([10 §8](10-l0-l1-delivery.md)) | — |
 | L6 → L8 | inchangés | — |
 

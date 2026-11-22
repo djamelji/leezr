@@ -5,6 +5,7 @@
 // here never blocks the rest of the home.
 import { $api } from '@/utils/api'
 
+const emit = defineEmits(['loaded']) // ADR-857 : the workspace hero reads the SAME answer (no second call)
 const { t, te } = useI18n()
 
 const state = ref('loading') // loading | ready | error
@@ -23,6 +24,7 @@ const load = async () => {
   catch {
     state.value = 'error'
   }
+  emit('loaded', { state: state.value, priorities: priorities.value, partial: unavailable.value.length > 0 })
 }
 
 onMounted(load)

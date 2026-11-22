@@ -39,6 +39,9 @@ export function useDashboardGrid(gridRef, catalog) {
     'compliance.rate': 50, 'shipments.overview': 60, 'documents.detail': 70, 'logistics.fleet': 80,
     'workforce.hours_trend': 90, 'compliance.roles': 100, 'compliance.types': 110,
     'workforce.timesheet_pending': 15, 'workforce.leave_pending': 25,
+
+    // ADR-857 (L3) — the day's shipment strip leads on phones too (it only exists when Logistics is active)
+    'shipments.today': 2, 'shipments.in_transit': 3, 'deliveries.completed_today': 4, 'shipments.late': 5,
   }
 
   // ADR-855 (Leezr 5.0 cockpit) — Platform cockpit keys join the business-priority path : KPI tiles (w ≤ half) are
@@ -431,7 +434,10 @@ export function useDashboardGrid(gridRef, catalog) {
         let yy = 0
         for (let i = 0; i < ordered.length;) {
           const t = ordered[i]
-          if (t.w > halfCols) {
+
+          // ADR-857 — a KPI tile (2 rows, ≤ 6 columns) stays paired even when widened on desktop (incomplete strip)
+          const isKpi = x => x.h <= 2 && x.w <= 6
+          if (t.w > halfCols && !isKpi(t)) {
             const rows = MOBILE_ROWS[t.key] ?? forceH
 
             result.push({ ...t, x: 0, y: yy, w: viewCols, h: rows })
@@ -441,7 +447,7 @@ export function useDashboardGrid(gridRef, catalog) {
             result.push({ ...t, x: 0, y: yy, w: halfCols, h: forceH })
 
             const n = ordered[i + 1]
-            if (n && n.w <= halfCols) { result.push({ ...n, x: halfCols, y: yy, w: halfCols, h: forceH }); i += 2 }
+            if (n && (n.w <= halfCols || isKpi(n))) { result.push({ ...n, x: halfCols, y: yy, w: halfCols, h: forceH }); i += 2 }
             else i += 1
             yy += forceH
           }
@@ -500,7 +506,8 @@ export function useDashboardGrid(gridRef, catalog) {
     let buffer = null
 
     for (let i = 0; i < sorted.length; i++) {
-      if (sorted[i].w <= halfCols) {
+      // ADR-857 — a widened KPI tile (2 rows, ≤ 6 canonical columns) pairs like a standard KPI
+      if (sorted[i].w <= halfCols || (sorted[i].h <= 2 && sorted[i].w <= 6)) {
         if (buffer === null) {
           buffer = i
           renderWidths[i] = halfCols
