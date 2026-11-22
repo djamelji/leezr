@@ -23,3 +23,17 @@
 2. Vérifier que les sociétés 1, 2 et 4 sont identiques à la sauvegarde : refaire les sommes de contrôle sur un dump post-déploiement.
 3. Lancer `platform1-check.sh` : le mot de passe public doit être refusé si le propriétaire l'a changé.
 4. En cas de retour arrière : `deploy/rollback.sh` **avec une cible explicite** (piège ADR-833 : sans cible, le script prend une release incomplète). Ensuite, si nécessaire, restaurer la sauvegarde ci-dessus.
+
+## Résultat du déploiement (2026-11-22, lecture seule : `dev-postflight-5-0.sh`)
+
+| Point | Constat |
+|---|---|
+| Commit et pipeline | `ce098d05` poussé sur `dev` sans force ; GitHub Actions run 45068689470 : Build artifact et Deploy to staging en **succès** |
+| Release servie | `releases/20261122205231_ce098d0` ; `/up` = 200 ; le bundle servi (`main-CKInv51b.js`) est celui du manifeste de la release et contient les écrans 5.0 |
+| Migration | `2026_12_20_000001` appliquée (lot 20), 0 en attente ; scope `NULL` pour les sociétés 1, 2 et 4 (comportement historique) |
+| SystemSync | les 4 mêmes conflits, valeurs administrées préservées |
+| Données historiques | sommes de contrôle des 14 tables **identiques** à la répétition sur la sauvegarde ; aucun poste avec activités déclarées (règles Flotte inchangées) |
+| Workers et files | deux workers actifs ; `jobs` = 0, `failed_jobs` = 0 |
+| Erreurs serveur | aucune depuis le déploiement (celles du jour datent de 03:57 et 07:12, avant) |
+| Recette navigateur | pages publiques seulement (connexion Platform et Company, inscription : 200, sans erreur console) ; **aucune recette authentifiée** : pas de compte Platform de recette, et aucun compte Company de recette autorisé pour l'agent |
+| Compte Platform n° 1 | accepte **encore** le mot de passe public : intervention du propriétaire toujours requise |
