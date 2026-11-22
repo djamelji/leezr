@@ -412,6 +412,7 @@ onMounted(() => {
             </VSwitch>
 
             <VBtn
+              :aria-label="$t('l7.a11y.runNow')"
               icon
               size="small"
               variant="text"
@@ -427,6 +428,7 @@ onMounted(() => {
             </VBtn>
 
             <VBtn
+              :aria-label="$t('l7.a11y.details')"
               icon
               size="small"
               variant="text"

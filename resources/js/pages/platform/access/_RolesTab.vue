@@ -319,7 +319,7 @@ const deleteRole = async role => {
         location="end"
         width="450"
       >
-        <AppDrawerHeaderSection
+        <AppDrawerTitle
           :title="viewingRole?.name || t('platformRoles.viewRole')"
           @cancel="isViewDrawerOpen = false"
         />
@@ -340,7 +340,7 @@ const deleteRole = async role => {
         location="end"
         width="500"
       >
-        <AppDrawerHeaderSection
+        <AppDrawerTitle
           :title="isEditMode ? t('platformRoles.editRole') : t('platformRoles.addRole')"
           @cancel="isDrawerOpen = false"
         />

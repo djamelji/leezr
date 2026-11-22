@@ -73,7 +73,7 @@ const handleDrawerModelValueUpdate = val => {
     :model-value="props.isDrawerOpen"
     @update:model-value="handleDrawerModelValueUpdate"
   >
-    <AppDrawerHeaderSection
+    <AppDrawerTitle
       :title="provider?.name ? t('platformAi.configureProvider', { name: provider.name }) : t('platformAi.configureProvider', { name: '' })"
       @cancel="closeDrawer"
     />

@@ -125,6 +125,7 @@ const referAndEarnSteps = [
 
           <div class="d-flex align-self-end gap-1">
             <VBtn
+              aria-label="Facebook"
               icon
               class="rounded"
               color="#3B5998"
@@ -138,6 +139,7 @@ const referAndEarnSteps = [
             </VBtn>
 
             <VBtn
+              aria-label="Twitter"
               icon
               class="rounded"
               color="#55ACEE"
@@ -151,6 +153,7 @@ const referAndEarnSteps = [
             </VBtn>
 
             <VBtn
+              aria-label="LinkedIn"
               icon
               class="rounded"
               color="#007BB6"

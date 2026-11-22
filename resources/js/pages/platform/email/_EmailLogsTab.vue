@@ -330,6 +330,7 @@ watch(search, debouncedSearch)
               <tr>
                 <td>
                   <VBtn
+                    :aria-label="$t('l7.a11y.toggleDetails')"
                     icon
                     variant="text"
                     size="small"

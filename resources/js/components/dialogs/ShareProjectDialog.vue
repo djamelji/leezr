@@ -132,6 +132,7 @@ const membersList = [
 
             <template #append>
               <VBtn
+                :aria-label="$t('l7.a11y.changeAccess')"
                 variant="text"
                 color="secondary"
                 :icon="$vuetify.display.xs"

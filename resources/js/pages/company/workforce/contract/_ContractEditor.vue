@@ -40,36 +40,42 @@ defineExpose({ insertAtCursor, focus: () => editor.value?.chain().focus().run() 
       class="d-flex gap-1 flex-wrap pa-2 border-b"
     >
       <VBtn
+        :aria-label="$t('l7.a11y.bold')"
         icon="tabler-bold"
         size="x-small"
         :variant="editor.isActive('bold') ? 'tonal' : 'text'"
         @click="editor.chain().focus().toggleBold().run()"
       />
       <VBtn
+        :aria-label="$t('l7.a11y.italic')"
         icon="tabler-italic"
         size="x-small"
         :variant="editor.isActive('italic') ? 'tonal' : 'text'"
         @click="editor.chain().focus().toggleItalic().run()"
       />
       <VBtn
+        :aria-label="$t('l7.a11y.heading1')"
         icon="tabler-h-1"
         size="x-small"
         :variant="editor.isActive('heading', { level: 1 }) ? 'tonal' : 'text'"
         @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
       />
       <VBtn
+        :aria-label="$t('l7.a11y.heading2')"
         icon="tabler-h-2"
         size="x-small"
         :variant="editor.isActive('heading', { level: 2 }) ? 'tonal' : 'text'"
         @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
       />
       <VBtn
+        :aria-label="$t('l7.a11y.bulletList')"
         icon="tabler-list"
         size="x-small"
         :variant="editor.isActive('bulletList') ? 'tonal' : 'text'"
         @click="editor.chain().focus().toggleBulletList().run()"
       />
       <VBtn
+        :aria-label="$t('l7.a11y.numberedList')"
         icon="tabler-list-numbers"
         size="x-small"
         :variant="editor.isActive('orderedList') ? 'tonal' : 'text'"

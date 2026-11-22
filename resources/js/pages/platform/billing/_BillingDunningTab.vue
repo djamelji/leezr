@@ -353,6 +353,7 @@ onMounted(() => load())
               @click="confirmRetry(item)"
             />
             <VBtn
+              :aria-label="$t('l7.a11y.escalate')"
               v-if="item.status === 'overdue'"
               size="x-small"
               color="warning"
@@ -363,6 +364,7 @@ onMounted(() => load())
               @click="confirmEscalate(item)"
             />
             <VBtn
+              :aria-label="$t('l7.a11y.writeOff')"
               v-if="item.status === 'overdue'"
               size="x-small"
               color="error"
@@ -372,6 +374,7 @@ onMounted(() => load())
               @click="confirmWriteOff(item)"
             />
             <VBtn
+              :aria-label="$t('l7.a11y.openCompany')"
               v-if="item.company?.id"
               size="x-small"
               variant="text"

@@ -226,6 +226,7 @@ onMounted(() => load())
         <template #item.actions="{ item }">
           <div class="d-flex gap-1">
             <VBtn
+              :aria-label="$t('l7.a11y.openCompany')"
               v-if="item.company?.id"
               size="x-small"
               variant="text"

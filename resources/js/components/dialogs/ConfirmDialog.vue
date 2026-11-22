@@ -61,6 +61,7 @@ const onCancel = () => {
     <VCard class="text-center px-10 py-6">
       <VCardText>
         <VBtn
+          aria-hidden="true" tabindex="-1"
           icon
           variant="outlined"
           color="warning"
@@ -102,6 +103,7 @@ const onCancel = () => {
     <VCard>
       <VCardText class="text-center px-10 py-6">
         <VBtn
+          aria-hidden="true" tabindex="-1"
           icon
           variant="outlined"
           color="success"
@@ -138,6 +140,7 @@ const onCancel = () => {
     <VCard>
       <VCardText class="text-center px-10 py-6">
         <VBtn
+          aria-hidden="true" tabindex="-1"
           icon
           variant="outlined"
           color="error"

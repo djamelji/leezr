@@ -3194,6 +3194,7 @@ watch(activeTab, tab => {
               </VBtn>
               <VSpacer />
               <VBtn
+                :aria-label="$t('l7.a11y.undo')"
                 v-can="'workforce.planning_manage'"
                 icon
                 variant="text"
@@ -3205,6 +3206,7 @@ watch(activeTab, tab => {
                 <VIcon icon="tabler-arrow-back-up" />
               </VBtn>
               <VBtn
+                :aria-label="$t('l7.a11y.redo')"
                 v-can="'workforce.planning_manage'"
                 icon
                 variant="text"
@@ -3640,6 +3642,7 @@ watch(activeTab, tab => {
           >
             <div class="d-flex align-center gap-2 mb-2">
               <VBtn
+                :aria-label="paletteOpen ? $t('l7.a11y.hideTemplates') : $t('l7.a11y.showTemplates')"
                 icon
                 variant="text"
                 size="x-small"
@@ -4311,6 +4314,7 @@ watch(activeTab, tab => {
             <template #item.actions="{ item }">
               <div class="d-flex gap-1">
                 <VBtn
+                  :aria-label="store.isFavorite('schedule_template', item.id) ? $t('l7.a11y.unfavorite') : $t('l7.a11y.favorite')"
                   icon
                   variant="text"
                   size="x-small"

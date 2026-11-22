@@ -126,6 +126,7 @@ async function handleAction(actionFn) {
   <!-- Only render on company pages when employee record exists -->
   <template v-if="!isPlatform && store.employee">
     <IconBtn
+      :aria-label="$t('l7.a11y.timeClock')"
       id="workforce-clock-btn"
       data-test="wfc-widget-btn"
     >

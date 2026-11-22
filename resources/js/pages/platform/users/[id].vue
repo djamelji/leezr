@@ -494,6 +494,7 @@ watchEffect(() => { if (baseFields.value?.display_name) document.title = `${base
       <VCard class="text-center px-10 py-6">
         <VCardText>
           <VBtn
+            aria-hidden="true" tabindex="-1"
             icon
             variant="outlined"
             color="warning"

@@ -292,6 +292,7 @@ function timeAgo(dateStr) {
                     <VSpacer />
 
                     <IconBtn
+                      :aria-label="n.read_at ? $t('l7.a11y.markUnread') : $t('l7.a11y.markRead')"
                       size="x-small"
                       @click.stop="toggleRead(n)"
                     >

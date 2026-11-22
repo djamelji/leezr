@@ -465,6 +465,7 @@ watchEffect(() => { document.title = `${plansStore.currentPlan?.name || route.pa
                 <span class="flex-grow-1 text-body-1">{{ feature }}</span>
 
                 <IconBtn
+                  :aria-label="$t('l7.a11y.moveUp')"
                   size="small"
                   :disabled="index === 0"
                   @click="moveFeature(index, -1)"
@@ -476,6 +477,7 @@ watchEffect(() => { document.title = `${plansStore.currentPlan?.name || route.pa
                 </IconBtn>
 
                 <IconBtn
+                  :aria-label="$t('l7.a11y.moveDown')"
                   size="small"
                   :disabled="index === featureLabels.length - 1"
                   @click="moveFeature(index, 1)"

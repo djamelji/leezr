@@ -215,10 +215,12 @@ watch(() => route.params.id, load)
               <span class="flex-grow-1">{{ d.name }}</span>
               <template v-if="!readOnly">
                 <IconBtn
+                  :aria-label="$t('l7.a11y.moveUp')"
                   size="x-small"
                   @click="moveDept(i, -1)"
                 ><VIcon icon="tabler-chevron-up" /></IconBtn>
                 <IconBtn
+                  :aria-label="$t('l7.a11y.moveDown')"
                   size="x-small"
                   @click="moveDept(i, 1)"
                 ><VIcon icon="tabler-chevron-down" /></IconBtn>

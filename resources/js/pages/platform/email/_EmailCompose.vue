@@ -306,6 +306,7 @@ watch(() => props.prefill, val => {
 
         <div class="d-flex align-center gap-x-2">
           <IconBtn
+            :aria-label="isMinimized ? $t('l7.a11y.expand') : $t('l7.a11y.minimize')"
             size="small"
             icon="tabler-minus"
             @click="isMinimized = !isMinimized"
@@ -491,6 +492,7 @@ watch(() => props.prefill, val => {
           </VBtn>
 
           <IconBtn
+            :aria-label="$t('l7.a11y.attach')"
             size="small"
             :loading="isUploading"
             @click="fileInput?.click()"

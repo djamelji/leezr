@@ -396,7 +396,7 @@ const deleteRole = async role => {
       location="end"
       width="500"
     >
-      <AppDrawerHeaderSection
+      <AppDrawerTitle
         :title="isEditMode ? t('roles.editRole') : t('roles.newRole')"
         @cancel="isDrawerOpen = false"
       />

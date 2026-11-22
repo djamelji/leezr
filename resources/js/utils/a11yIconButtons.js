@@ -14,6 +14,8 @@ export function unlabeledIconButtons(source) {
     if (!iconOnly) continue
     // a menu / tooltip activator (`v-bind="props"`) gets aria-haspopup / aria-describedby, never a NAME : it needs one too
     if (/(^|\s)(:|v-bind:)?(aria-label|title)=/.test(attrs)) continue
+    // ADR-861 : a decorative pictogram drawn with a button (pointer-events none) is hidden from assistive tech, not named
+    if (/(^|\s)aria-hidden="true"/.test(attrs) && /tabindex="-1"/.test(attrs)) continue
     out.push({ index: m.index, line: source.slice(0, m.index).split('\n').length, tag: whole.slice(0, 80) })
   }
 

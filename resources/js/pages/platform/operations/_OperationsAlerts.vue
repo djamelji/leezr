@@ -430,6 +430,7 @@ onMounted(() => {
             <div class="d-flex gap-1">
               <!-- Detail / Timeline -->
               <VBtn
+                :aria-label="$t('l7.a11y.alertTimeline')"
                 icon
                 size="small"
                 variant="text"
@@ -462,6 +463,7 @@ onMounted(() => {
 
               <!-- Resolve -->
               <VBtn
+                :aria-label="$t('l7.a11y.resolve')"
                 v-if="item.status === 'active' || item.status === 'acknowledged'"
                 icon
                 size="small"

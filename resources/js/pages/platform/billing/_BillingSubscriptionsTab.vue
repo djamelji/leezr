@@ -294,6 +294,7 @@ watch(searchQuery, () => {
               </VBtn>
             </template>
             <VBtn
+              :aria-label="$t('l7.a11y.openCompany')"
               v-if="item.company?.id"
               size="x-small"
               variant="text"

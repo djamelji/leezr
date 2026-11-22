@@ -160,7 +160,7 @@ const submit = async () => {
     data-test="person-add-drawer"
     @update:model-value="v => emit('update:modelValue', v)"
   >
-    <AppDrawerHeaderSection
+    <AppDrawerTitle
       :title="t('people.add.title')"
       @cancel="close"
     />

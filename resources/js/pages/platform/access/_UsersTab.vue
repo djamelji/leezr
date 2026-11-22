@@ -371,7 +371,7 @@ const deleteUser = async member => {
         location="end"
         width="400"
       >
-        <AppDrawerHeaderSection
+        <AppDrawerTitle
           :title="t('platformUsers.addPlatformUser')"
           @cancel="isDrawerOpen = false"
         />

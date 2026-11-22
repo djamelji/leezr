@@ -263,7 +263,7 @@ watch(() => props.thread, () => {
         </IconBtn>
 
         <!-- Read/Unread -->
-        <IconBtn @click.stop="$emit('unread'); handleClose()">
+        <IconBtn :aria-label="$t('l7.a11y.markUnread')" @click.stop="$emit('unread'); handleClose()">
           <VIcon
             icon="tabler-mail"
             size="22"
@@ -277,7 +277,7 @@ watch(() => props.thread, () => {
         </IconBtn>
 
         <!-- Move to folder -->
-        <IconBtn>
+        <IconBtn :aria-label="$t('l7.a11y.moveToFolder')">
           <VIcon
             icon="tabler-folder"
             size="22"
@@ -312,7 +312,7 @@ watch(() => props.thread, () => {
         </IconBtn>
 
         <!-- Labels -->
-        <IconBtn>
+        <IconBtn :aria-label="$t('l7.a11y.labels')">
           <VIcon
             icon="tabler-tag"
             size="22"
@@ -350,6 +350,7 @@ watch(() => props.thread, () => {
 
         <!-- Star -->
         <IconBtn
+          :aria-label="props.thread.is_starred ? $t('l7.a11y.unstar') : $t('l7.a11y.star')"
           :color="props.thread.is_starred ? 'warning' : 'default'"
           @click="props.thread.is_starred ? $emit('unstar') : $emit('star')"
         >
@@ -563,6 +564,7 @@ watch(() => props.thread, () => {
               </VBtn>
 
               <IconBtn
+                :aria-label="$t('l7.a11y.attach')"
                 size="small"
                 :loading="isUploading"
                 @click="replyFileInput?.click()"

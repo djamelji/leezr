@@ -242,6 +242,7 @@ onMounted(() => {
             class="d-flex align-center"
           >
             <VBtn
+              :aria-label="$t('l7.a11y.resetFilters')"
               icon
               size="small"
               variant="text"

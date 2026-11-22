@@ -297,6 +297,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
               </VTooltip>
             </VBtn>
             <VBtn
+              :aria-label="$t('l7.a11y.restore')"
               v-else
               icon
               variant="text"

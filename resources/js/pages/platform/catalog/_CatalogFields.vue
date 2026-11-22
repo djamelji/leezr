@@ -529,7 +529,7 @@ const scopeColor = scope => {
       location="end"
       width="420"
     >
-      <AppDrawerHeaderSection
+      <AppDrawerTitle
         :title="isDefEditMode ? t('platformFields.editDefinition') : t('platformFields.newDefinition')"
         @cancel="isDefDrawerOpen = false"
       />

@@ -24,6 +24,20 @@ test('the detector sees an unlabeled icon button and accepts a labeled one', () 
   assert.equal(unlabeledIconButtons('<VBtn prepend-icon="tabler-plus">Ajouter</VBtn>').length, 0)
   assert.equal(unlabeledIconButtons('<IconBtn v-bind="props" />').length, 1) // an activator gets no name from its menu
   assert.equal(unlabeledIconButtons('<IconBtn v-bind="props" :aria-label="t(\'x\')" />').length, 0)
+  assert.equal(unlabeledIconButtons('<VBtn icon aria-hidden="true" tabindex="-1" style="pointer-events: none;" />').length, 0) // decorative
+  assert.equal(unlabeledIconButtons('<VBtn icon aria-hidden="true" @click="x" />').length, 1) // hidden but still focusable : not accepted
+})
+
+// ADR-861 (L7.9) — the whole application : no icon-only button without a name (was 697 → 65 → 0)
+test('no unlabeled icon button anywhere in the application', () => {
+  const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => {
+    const p = path.join(d, e.name)
+    if (e.isDirectory()) return ['@core', '@layouts', 'design-lab'].includes(e.name) ? [] : walk(p)
+
+    return p.endsWith('.vue') ? [p] : []
+  })
+  const found = walk(path.resolve('resources/js')).flatMap(f => unlabeledIconButtons(fs.readFileSync(f, 'utf8')).map(x => `${path.relative(process.cwd(), f)}:${x.line}`))
+  assert.deepEqual(found, [])
 })
 
 for (const f of HARMONISED) {

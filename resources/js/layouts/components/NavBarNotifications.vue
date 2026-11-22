@@ -159,6 +159,7 @@ const viewAll = () => {
               {{ totalUnseen }} {{ t('notifications.new') }}
             </VChip>
             <IconBtn
+              :aria-label="hasUnseen ? $t('l7.a11y.markAllRead') : $t('l7.a11y.markAllUnread')"
               v-show="mappedNotifications.length"
               size="34"
               @click="markAllReadOrUnread"

@@ -770,6 +770,7 @@ onMounted(() => {
             <template #item.actions="{ item }">
               <div class="d-flex gap-1">
                 <VBtn
+                  :aria-label="isOpenEntry(item) ? $t('l7.a11y.closeEntry') : $t('l7.a11y.correctEntry')"
                   v-if="canCorrectEntry(item)"
                   icon
                   variant="text"
@@ -1042,6 +1043,7 @@ onMounted(() => {
 
                 <!-- Submitted → Approve -->
                 <VBtn
+                  :aria-label="$t('l7.a11y.approveTimesheet')"
                   v-if="item.status === 'submitted'"
                   v-can="'workforce.time_manage'"
                   icon
@@ -1079,6 +1081,7 @@ onMounted(() => {
 
                 <!-- Approved → Lock -->
                 <VBtn
+                  :aria-label="$t('l7.a11y.lockTimesheet')"
                   v-if="item.status === 'approved'"
                   v-can="'workforce.time_manage'"
                   icon

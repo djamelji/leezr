@@ -337,7 +337,7 @@ const selectAllModel = computed({
           </VTooltip>
         </IconBtn>
 
-        <IconBtn>
+        <IconBtn :aria-label="$t('l7.a11y.sort')">
           <VIcon
             icon="tabler-arrows-sort"
             size="22"
@@ -398,7 +398,7 @@ const selectAllModel = computed({
             </VTooltip>
           </IconBtn>
 
-          <IconBtn @click="handleBulkAction('read')">
+          <IconBtn :aria-label="$t('l7.a11y.markRead')" @click="handleBulkAction('read')">
             <VIcon
               icon="tabler-mail-opened"
               size="22"
@@ -411,7 +411,7 @@ const selectAllModel = computed({
             </VTooltip>
           </IconBtn>
 
-          <IconBtn @click="handleBulkAction('star')">
+          <IconBtn :aria-label="$t('l7.a11y.star')" @click="handleBulkAction('star')">
             <VIcon
               icon="tabler-star"
               size="22"
@@ -425,7 +425,7 @@ const selectAllModel = computed({
           </IconBtn>
 
           <!-- Move to menu -->
-          <IconBtn>
+          <IconBtn :aria-label="$t('l7.a11y.moveToFolder')">
             <VIcon
               icon="tabler-folder"
               size="22"
@@ -467,7 +467,7 @@ const selectAllModel = computed({
           </IconBtn>
 
           <!-- Label menu -->
-          <IconBtn>
+          <IconBtn :aria-label="$t('l7.a11y.labels')">
             <VIcon
               icon="tabler-tag"
               size="22"
@@ -559,6 +559,7 @@ const selectAllModel = computed({
             />
 
             <IconBtn
+              :aria-label="thread.is_starred ? $t('l7.a11y.unstar') : $t('l7.a11y.star')"
               :color="thread.is_starred ? 'warning' : 'default'"
               @click.stop="toggleStar(thread.id)"
             >
@@ -617,7 +618,7 @@ const selectAllModel = computed({
             </div>
 
             <div class="email-actions d-none">
-              <IconBtn @click.stop="toggleStar(thread.id)">
+              <IconBtn :aria-label="thread.is_starred ? $t('l7.a11y.unstar') : $t('l7.a11y.star')" @click.stop="toggleStar(thread.id)">
                 <VIcon
                   :icon="thread.is_starred ? 'tabler-star-filled' : 'tabler-star'"
                   size="22"
@@ -629,7 +630,7 @@ const selectAllModel = computed({
                   size="22"
                 />
               </IconBtn>
-              <IconBtn @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('read')">
+              <IconBtn :aria-label="$t('l7.a11y.markRead')" @click.stop="selectedIds = new Set([thread.id]); handleBulkAction('read')">
                 <VIcon
                   icon="tabler-mail-opened"
                   size="22"

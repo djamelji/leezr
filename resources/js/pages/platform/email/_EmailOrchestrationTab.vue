@@ -260,6 +260,7 @@ onMounted(fetchAll)
           </td>
           <td class="text-center">
             <VBtn
+              :aria-label="$t('l7.a11y.ruleSettings')"
               icon
               variant="text"
               size="small"

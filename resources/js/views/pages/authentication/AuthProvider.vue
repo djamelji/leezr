@@ -30,6 +30,7 @@ const authProviders = [
 <template>
   <div class="d-flex justify-center flex-wrap gap-1">
     <VBtn
+      :aria-label="link.icon.replace('tabler-brand-', '')"
       v-for="link in authProviders"
       :key="link.icon"
       icon

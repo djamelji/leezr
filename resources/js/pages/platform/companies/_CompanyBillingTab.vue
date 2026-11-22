@@ -903,6 +903,7 @@ watch(() => props.billing, val => {
             <VMenu v-if="['open', 'overdue', 'paid'].includes(item.status)">
               <template #activator="{ props: menuProps }">
                 <VBtn
+                  :aria-label="$t('l7.a11y.invoiceActions')"
                   icon
                   variant="text"
                   size="x-small"

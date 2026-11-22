@@ -141,6 +141,7 @@ const formatAge = ms => {
           <span class="text-subtitle-2 font-weight-bold">Runtime Debug</span>
           <div class="d-flex align-center gap-1">
             <VBtn
+              :aria-label="$t('l7.a11y.copySnapshot')"
               icon
               size="x-small"
               variant="text"

@@ -110,7 +110,7 @@ const handleSubmit = async () => {
     :model-value="props.isDrawerOpen"
     @update:model-value="handleClose"
   >
-    <AppDrawerHeaderSection
+    <AppDrawerTitle
       :title="isEditMode ? t('documents.editCustomDocument') : t('documents.createCustomDocument')"
       @cancel="handleClose"
     />

@@ -24,7 +24,7 @@ const drawerWidth = computed(() => Math.min(props.width, viewport.value || props
     :model-value="modelValue"
     @update:model-value="v => emit('update:modelValue', v)"
   >
-    <AppDrawerHeaderSection
+    <AppDrawerTitle
       :title="title"
       @cancel="emit('update:modelValue', false)"
     />
