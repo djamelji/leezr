@@ -30204,3 +30204,62 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - Les pages publiques (inscription, centre d'aide, signature, invitations) restent hors L7.
   - Le réglage Flotte n'est appliqué que sur le clone.
   - Les deux réglages « tout le monde » restent distincts (ADR-860).
+
+## ADR-862 — Leezr 5.0 L7 (clôture avant validation) : régressions de tests fermées, démarrage public vérifié, derniers défauts visuels, galerie avant / après
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - Après ADR-861, trois échecs E2E étaient attribués à des causes extérieures :
+    - m1-D et m4-A, supposés obsolètes ;
+    - la recette d'embauche, qui dépendait d'un serveur particulier.
+  - La limite de 600 appels par minute et par IP sur les deux appels de démarrage restait à justifier.
+  - Le Planning et trois onglets de Documents gardaient des défauts visuels.
+  - Une revue visuelle de Leezr 5.0 était demandée avant toute nouvelle étape.
+- **Décision** (4 commits ; détail dans [18](leezr-5-design/18-l7-closure.md)) :
+  - **L7.12 · Régressions et démarrage** (`32be846c`)
+    - Deux défauts réels sont corrigés :
+      - la tuile `billing.revenue_mtd` du cockpit V35 disait « Encaissé ce mois », alors qu'elle additionne le facturé HT du grand livre : elle redevient « Facturé ce mois (HT) », comme le prévoit ADR-841 ;
+      - les indicateurs globaux de facturation restaient périmés jusqu'à 10 minutes : leur clé de cache porte désormais le dernier identifiant du grand livre, qui est immuable.
+    - m1-D et m4-A sont réancrées sur des repères stables, avec les mêmes assertions métier.
+    - `scripts/audit842-serve.sh` est le serveur de recette versionné :
+      - il refuse toute base qui n'est pas un clone marqué ;
+      - c'est le seul endroit où le scanner simulé est activé.
+    - La recette d'embauche vérifie que ses pièces ont bien été analysées par le moteur `simulated`.
+    - Le refus du moteur simulé en production est testé.
+    - Démarrage public :
+      - `theme` et `world` sont des GET anonymes, sans écriture ;
+      - `theme` est mis en cache, avec invalidation par ses modèles source : 7 requêtes SQL ramenées à 0 ;
+      - les compteurs de limite sont distincts de ceux des autres routes publiques ;
+      - aucune autre limite de l'API n'est modifiée.
+  - **L7.13 · Derniers défauts visuels** (`dc022ad8`)
+    - Planning : l'en-tête passe de 5 actions à 3, grâce au slot `#more` de `TimeSpaceHeader`.
+    - Documents › Conformité : bande d'indicateurs, progression par type, liste sur téléphone.
+    - Documents › Modèles : une action visible par modèle et un menu nommé pour les autres ; type de contrat en clair ; avertissement juridique sans bandeau.
+    - Documents › Signatures : supervision lisible, prestataire en clair, liste tactile.
+  - **L7.14 · Titres d'onglet** (`27d520b6`)
+    - L'observateur du titre de la fiche JobDomain s'arrêtait en silence (lecture avant déclaration, TDZ) : corrigé.
+    - Le titre « Entreprises · Entreprises » est dédoublonné.
+    - Le routeur remet le titre à « Leezr » à chaque nouvelle adresse, et `AppPageHeader` fournit un titre par défaut.
+  - **Galerie** (`8d310659`) :
+    - 23 pages, desktop et mobile, clair et sombre ;
+    - « avant » = `753d5372` servi depuis un worktree, « après » = build courant ;
+    - même clone, mêmes dimensions ;
+    - index local `docs/bmad/leezr-5-design/captures/gallery/index.html`.
+  - **Flotte** :
+    - aucune activation : DEV local et clone restent sur `everyone` ;
+    - les cas qui demandent une décision métier sont documentés (collaborateurs sans poste, postes à déclarer, rôle seul, fenêtre de 90 jours) ;
+    - bascule par société sur GO distinct.
+- **Conséquences** :
+  - **PHPUnit complet** : 4 936 réussis, 13 ignorés, 0 échec.
+  - **JS** : 65/65.
+  - **Campagne E2E des recettes sur le clone** :
+    - premier passage : 84 réussis, 1 échec ;
+    - l'échec : `harmony860` effaçait les cookies sous une page ouverte, et le flux temps réel se reconnectait en 401, réponse attendue. La recette quitte désormais la page avant ;
+    - ensuite : 4/4 deux fois de suite.
+  - **Nouvelle recette `audit842-closure862`** : 3/3.
+  - **Restent** :
+    - titres d'onglet « Leezr » sur les tableaux de bord, Personnes et la fiche collaborateur ;
+    - onglets Documents qui défilent sur téléphone ;
+    - libellés tronqués de la bande d'indicateurs à 390 px ;
+    - pages publiques (lot distinct).
+  - Aucun push, aucun déploiement, aucune société historique modifiée. L8 n'est pas commencé.

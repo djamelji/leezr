@@ -105,6 +105,7 @@ test('Company : en-têtes harmonisés des familles (propriétaire et profil limi
   const PAGES = [['/company/documents/overview', 'Documents'], ['/company/shipments', 'Logistique'], ['/company/modules', 'Réglages'],
     ['/company/settings', 'Réglages'], ['/company/workforce/contracts', 'Documents'], ['/company/workforce/payroll', 'Paie'], ['/company/my-space/overview', 'Mon espace']]
   for (const width of [1440, 390]) {
+    await page.goto('about:blank') // ADR-862 : close the realtime stream before dropping the session (was : 401 on its reconnect)
     await page.context().clearCookies()
     await page.setViewportSize({ width, height: 900 })
     await loginCompany(page, 'owner@leezr.test', PASSWORD)
@@ -119,6 +120,7 @@ test('Company : en-têtes harmonisés des familles (propriétaire et profil limi
   await shot(page, 'B1-company-mobile')
 
   // a limited profile reaches only what it may : the pages it opens carry the same header, nothing is refused
+  await page.goto('about:blank')
   await page.context().clearCookies()
   await page.setViewportSize({ width: 1440, height: 900 })
   await loginCompany(page, 'consultation@leezr.test', PASSWORD)
