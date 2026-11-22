@@ -6,8 +6,8 @@ Rien n'a été poussé ni déployé. Aucun accès à DEV distant ni à la produc
 
 ## 1. Commit à déployer
 
-- `origin/dev` = `82e35416`. La branche `dev` locale le dépasse de **51 commits** et ne lui manque rien : c'est une avance rapide, sans force push.
-- **Commit final** : le commit de ce rapport, qui suit `33bf7dfd` (promo) et contient ADR-852.
+- `origin/dev` = `82e35416`. La branche `dev` locale le dépasse de **52 commits** et ne lui manque rien : c'est une avance rapide, sans force push.
+- **Commit final** : la tête de `dev`, c'est-à-dire `9edd4245` (ADR-852, code + rapport) suivi de la seule mise à jour documentaire de cette ligne ; il suit `33bf7dfd` (promo). Lot : **52 commits** depuis `82e35416`.
 - Les 5 commits ADR-833 (gardes DevSeeder et deploy.sh, runbook) font partie du lot et partent donc **en premier** dans le même push.
 
 ## 2. MariaDB : résultats sur un clone isolé
@@ -90,7 +90,7 @@ L'incident des comptes de démonstration (SEC-01/02/03) reste une urgence indép
 
 | Point | État |
 |---|---|
-| Branche `dev`, avance rapide sur `origin/dev` | ✅ 51 commits, 0 en retard |
+| Branche `dev`, avance rapide sur `origin/dev` | ✅ 52 commits, 0 en retard |
 | Workflow | ✅ `.github/workflows/deploy.yml` « Build & Deploy », déclenché sur push `dev`/`main`. Dernier run DEV : `success` (2026-11-19). Le pipeline `deploy/deploy_release.sh` ne lance **aucun** `db:seed` |
 | Ancien webhook | ✅ 0 hook GitHub ; `webhook.php` renvoie 410 ; `deploy.sh` est un stub |
 | DevSeeder | ✅ `DeploymentGuard::assertDemoSeedAllowed()` refuse une base distante peuplée ; artisan refuse de tourner depuis `releases/AAAAMMJJ_HHMMSS` |
