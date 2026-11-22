@@ -1,0 +1,204 @@
+{
+ "groups": [
+  {
+   "key": "cockpit",
+   "titleKey": "nav.groups.cockpit",
+   "items": [
+    {
+     "key": "dashboard",
+     "title": "Dashboard",
+     "to": {
+      "name": "platform-dashboard-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-dashboard",
+     "permission": "view_dashboard",
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "platform-messaging",
+     "title": "Messaging",
+     "to": {
+      "name": "platform-messaging-tab",
+      "params": {
+       "tab": "inbox"
+      }
+     },
+     "icon": "tabler-mail",
+     "permission": "manage_email",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "clients",
+   "titleKey": "nav.groups.clients",
+   "items": [
+    {
+     "key": "platform-companies",
+     "title": "Companies",
+     "to": {
+      "name": "platform-companies"
+     },
+     "icon": "tabler-building",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "communications",
+     "title": "Communications",
+     "to": {
+      "name": "platform-communications-tab",
+      "params": {
+       "tab": "support"
+      }
+     },
+     "icon": "tabler-message-circle-cog",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "finance",
+   "titleKey": "nav.groups.finance",
+   "items": [
+    {
+     "key": "platform-billing",
+     "title": "Billing",
+     "to": {
+      "name": "platform-billing-tab",
+      "params": {
+       "tab": "overview"
+      }
+     },
+     "icon": "tabler-file-invoice",
+     "permission": "view_billing",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "governance",
+   "titleKey": "nav.groups.governance",
+   "items": [
+    {
+     "key": "catalog",
+     "title": "Catalog",
+     "to": {
+      "name": "platform-catalog-tab",
+      "params": {
+       "tab": "modules"
+      }
+     },
+     "icon": "tabler-package",
+     "permission": "manage_modules",
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "platform-access",
+     "title": "Access Management",
+     "to": {
+      "name": "platform-access-tab",
+      "params": {
+       "tab": "users"
+      }
+     },
+     "icon": "tabler-user-shield",
+     "permission": null,
+     "tags": [],
+     "children": []
+    },
+    {
+     "key": "contract-templates",
+     "title": "Contract Templates",
+     "to": {
+      "name": "platform-contract-templates"
+     },
+     "icon": "tabler-file-text",
+     "permission": "manage_jobdomains",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "configuration",
+   "titleKey": "nav.groups.configuration",
+   "items": [
+    {
+     "key": "settings",
+     "title": "Settings",
+     "to": {
+      "name": "platform-settings-tab",
+      "params": {
+       "tab": "general"
+      }
+     },
+     "icon": "tabler-settings",
+     "permission": "manage_theme_settings",
+     "tags": [],
+     "children": []
+    }
+   ]
+  },
+  {
+   "key": "system",
+   "titleKey": "nav.groups.system",
+   "items": [
+    {
+     "key": "operations",
+     "title": "Operations",
+     "to": {
+      "name": "platform-operations-tab",
+      "params": {
+       "tab": "health"
+      }
+     },
+     "icon": "tabler-settings-cog",
+     "permission": null,
+     "tags": [],
+     "children": []
+    }
+   ]
+  }
+ ],
+ "header_widgets": [
+  {
+   "key": "theme-switcher",
+   "component": "NavbarThemeSwitcher",
+   "sortOrder": 50
+  }
+ ],
+ "footer_links": [
+  {
+   "key": "footer-support",
+   "label": "footer.support",
+   "to": {
+    "name": "platform-communications-tab",
+    "params": {
+     "tab": "support"
+    }
+   },
+   "href": null,
+   "icon": "tabler-message-circle-cog",
+   "sortOrder": 10
+  },
+  {
+   "key": "footer-help-center",
+   "label": "footer.helpCenter",
+   "to": null,
+   "href": "/help-center",
+   "icon": "tabler-lifebuoy",
+   "sortOrder": 20
+  }
+ ]
+}

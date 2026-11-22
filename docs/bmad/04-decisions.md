@@ -29949,3 +29949,22 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
     - comptes visés : utilisateurs 1 à 5 (@leezr.test) ;
     - sauvegarde JSON et simulation verte sur un clone du dump DEV du jour : 5 comptes, 15 empreintes, 0 écart, annulation ;
     - le compte Platform 1 (personnel) accepte lui aussi le mot de passe public sur DEV. Il est exclu du verrouillage, car `MAIL_MAILER=log` rendrait la réinitialisation impossible : son mot de passe est à changer par le propriétaire.
+
+## ADR-854 — Leezr 5.0 : audit design et prototypes visuels (aucune refonte de production)
+
+- **Date** : 2026-11-22
+- **Contexte** : l'interface 4.2 est stable (0 erreur sur 128 pages explorées) mais fade et peu homogène. Le propriétaire demande une vision premium, inspirée des références « V35 » (cockpit Platform) et « V22 » (espace de travail Company), validée sur prototypes avant toute refonte.
+- **Constats déterminants** :
+  - Le moteur de dashboard existe et est solide : 47 widgets ; disposition par utilisateur, rôle, société et métier ; présentation selon la taille réelle du conteneur (ADR-748/750, 46/47 widgets).
+  - Ses seuils uniques mettent toute tuile KPI en mode `micro` (seuil de 210 px de haut). Seuls 8 widgets ont un graphique.
+  - Trois laboratoires de design (ADR-694/741/748) n'ont jamais été généralisés ; `.lzr-card` n'est utilisé que par 2 fichiers.
+  - L'obligation d'un champ a deux sources concurrentes : `required_override`, réglé depuis Personnes › Outils, et les exigences par poste. Le sujet se règle à 4 endroits côté Company.
+- **Décision** :
+  - Livrer `docs/bmad/leezr-5-design/` (01–09, annexe de 128 pages, captures avant et après).
+  - Livrer 5 prototypes `devOnly` (`/platform/design-lab/{cockpit,widgets,components}`, `/company/design-lab/{workspace,people}`), construits sur les primitives Vuetify et Vuexy, `.lzr-card` et `useSurfacePresentation`, sans nouveau moteur.
+  - Composants expérimentaux dans `resources/js/components/lab/`, à promouvoir en presets au lot L0 seulement.
+  - Proposer des profils de taille **par famille** de widget (même mesure), des tailles refusées, et la dépréciation du tiroir « Outils › Champs » au profit des exigences par poste (migration réversible, lot L6).
+- **Conséquences** :
+  - Aucune page métier, API, donnée ou permission modifiée ; rien de supprimé.
+  - Roadmap L0→L8 soumise à validation (`08-roadmap.md`).
+  - Mesures nouvelles signalées comme telles : historique de santé Platform, module scheduling, tournées, rapport mensuel.
