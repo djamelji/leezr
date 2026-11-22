@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-637 (W-F) — assistant d'onboarding RH. Parcours métier, reprise serveur, étapes conditionnées
 // par les modules actifs, non destructif (réutilise W-E pour l'organisation). Aucun champ technique.
 definePage({
@@ -92,14 +93,11 @@ onMounted(load)
 
 <template>
   <div v-if="data">
-    <div class="mb-6">
-      <h4 class="text-h4 font-weight-bold">
-        {{ t('workforceOnboarding.title') }}
-      </h4>
-      <p class="text-body-1 text-medium-emphasis mb-0">
-        {{ t('workforceOnboarding.subtitle') }}
-      </p>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.team')"
+      :title="t('workforceOnboarding.title')"
+      :description="t('workforceOnboarding.subtitle')"
+    />
 
     <VCard>
       <VCardText>

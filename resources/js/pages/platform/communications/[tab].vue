@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import CommunicationsSupport from './_CommunicationsSupport.vue'
 import CommunicationsDocumentation from './_CommunicationsDocumentation.vue'
 import SupportAssignmentQueue from './_SupportAssignmentQueue.vue'
@@ -37,16 +38,11 @@ const activeTab = computed({
 
 <template>
   <div>
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('platformCommunications.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('platformCommunications.subtitle') }}
-        </p>
-      </div>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.companies.group')"
+      :title="t('platformCommunications.title')"
+      :description="t('platformCommunications.subtitle')"
+    />
 
     <VTabs
       v-model="activeTab"

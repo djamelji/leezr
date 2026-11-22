@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import StatusChip from '@/core/components/StatusChip.vue'
@@ -288,55 +289,48 @@ onBeforeUnmount(() => store.clearCurrentRun())
 
 <template>
   <div v-if="run">
-    <!-- A. Back button -->
-    <VBtn variant="text" :to="{ name: 'company-workforce-payroll' }" prepend-icon="tabler-arrow-left" class="mb-4">
-      {{ $t('payroll.backToList') }}
-    </VBtn>
+    <!-- ADR-861 (L7.10) : shared page header — way back, period as title, status and headcount as chips, the workflow
+         actions as page actions (same rights) -->
+    <AppPageHeader
+      :back="{ to: { name: 'company-workforce-payroll' }, label: $t('payroll.backToList') }"
+      :eyebrow="$t('l7.family.payroll')"
+      :title="formatPeriod(run)"
+      data-test="payroll-run-header"
+    >
+      <template #meta>
+        <StatusChip domain="payrollRun" :status="run.status" />
+        <span class="text-body-2 text-medium-emphasis">{{ $t('payroll.employeeCount', { n: run.employee_count }, run.employee_count) }}</span>
+      </template>
+      <template #actions>
+        <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="info" :loading="store.loading" data-test="pr-compute" @click="handleCompute">
+          <VIcon start icon="tabler-calculator" />{{ $t('payroll.actions.compute') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'computed' && !hasCalculations" v-can="'workforce.payroll_prepare'" color="info" variant="outlined" :loading="store.loading" data-test="pr-compute-calc" @click="handleComputeCalculations">
+          <VIcon start icon="tabler-math-function" />{{ $t('payroll.actions.computeCalculations') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" :disabled="blockingCount > 0" data-test="pr-validate-open" @click="showValidateDialog = true">
+          <VIcon start icon="tabler-check" />{{ $t('payroll.actions.validate') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" variant="outlined" :loading="store.loading" @click="handleGenerateDrafts">
+          <VIcon start icon="tabler-file-text" />{{ $t('payroll.actions.generateDrafts') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" color="success" :loading="store.loading" :title="$t('payroll.actions.generateOfficialHint')" @click="handleGenerateOfficial">
+          <VIcon start icon="tabler-file-certificate" />{{ $t('payroll.actions.generateOfficial') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" data-test="pr-export" :title="$t('payroll.actions.exportHint')" @click="handleExport">
+          <VIcon start icon="tabler-download" />{{ $t('payroll.actions.export') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'computed'" v-can="'workforce.payroll_prepare'" color="warning" variant="outlined" :loading="store.loading" @click="handleRecompute">
+          <VIcon start icon="tabler-refresh" />{{ $t('payroll.actions.recompute') }}
+        </VBtn>
+        <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="error" variant="outlined" :loading="store.loading" @click="showDeleteDialog = true">
+          <VIcon start icon="tabler-trash" />{{ $t('payroll.actions.delete') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <!-- Honest capability disclaimer -->
     <PayrollDisclaimer />
-
-    <!-- B. Header card -->
-    <VCard class="mb-6">
-      <VCardText>
-        <div class="d-flex align-center justify-space-between flex-wrap gap-4">
-          <div>
-            <h4 class="text-h4 font-weight-bold mb-1">{{ formatPeriod(run) }}</h4>
-            <div class="d-flex align-center gap-3">
-              <StatusChip domain="payrollRun" :status="run.status" />
-              <span class="text-body-2 text-medium-emphasis">{{ $t('payroll.employeeCount', { n: run.employee_count }, run.employee_count) }}</span>
-            </div>
-          </div>
-          <!-- Workflow actions -->
-          <div class="d-flex gap-2 flex-wrap">
-            <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="info" :loading="store.loading" data-test="pr-compute" @click="handleCompute">
-              <VIcon start icon="tabler-calculator" />{{ $t('payroll.actions.compute') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'computed' && !hasCalculations" v-can="'workforce.payroll_prepare'" color="info" variant="outlined" :loading="store.loading" data-test="pr-compute-calc" @click="handleComputeCalculations">
-              <VIcon start icon="tabler-math-function" />{{ $t('payroll.actions.computeCalculations') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'computed' && hasCalculations" v-can="'workforce.payroll_validate'" color="success" :loading="store.loading" :disabled="blockingCount > 0" data-test="pr-validate-open" @click="showValidateDialog = true">
-              <VIcon start icon="tabler-check" />{{ $t('payroll.actions.validate') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" variant="outlined" :loading="store.loading" @click="handleGenerateDrafts">
-              <VIcon start icon="tabler-file-text" />{{ $t('payroll.actions.generateDrafts') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_prepare'" color="success" :loading="store.loading" :title="$t('payroll.actions.generateOfficialHint')" @click="handleGenerateOfficial">
-              <VIcon start icon="tabler-file-certificate" />{{ $t('payroll.actions.generateOfficial') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'validated'" v-can="'workforce.payroll_export'" color="primary" :loading="store.loading" data-test="pr-export" :title="$t('payroll.actions.exportHint')" @click="handleExport">
-              <VIcon start icon="tabler-download" />{{ $t('payroll.actions.export') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'computed'" v-can="'workforce.payroll_prepare'" color="warning" variant="outlined" :loading="store.loading" @click="handleRecompute">
-              <VIcon start icon="tabler-refresh" />{{ $t('payroll.actions.recompute') }}
-            </VBtn>
-            <VBtn v-if="run.status === 'draft'" v-can="'workforce.payroll_prepare'" color="error" variant="outlined" :loading="store.loading" @click="showDeleteDialog = true">
-              <VIcon start icon="tabler-trash" />{{ $t('payroll.actions.delete') }}
-            </VBtn>
-          </div>
-        </div>
-      </VCardText>
-    </VCard>
 
     <!-- C. Workflow stepper -->
     <VCard class="mb-6">

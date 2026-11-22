@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { shipmentStatusColor } from '@/utils/shipments'
 import { formatDate } from '@/utils/datetime'
 import { $api } from '@/utils/api'
@@ -156,37 +157,40 @@ const savePlan = async () => {
 
 <template>
   <div>
-    <div class="d-flex align-center gap-x-3 mb-6">
-      <VBtn
-        :aria-label="$t('common.back')"
-        icon
-        variant="text"
-        size="small"
-        :to="{ name: 'company-shipments' }"
-      >
-        <VIcon icon="tabler-arrow-left" />
-      </VBtn>
-      <h4 class="text-h4">
-        {{ shipment?.reference || t('shipments.shipment') }}
-      </h4>
-      <VChip
+    <!-- ADR-861 (L7.10) : shared page header — way back, reference as title, status chip, plan as page action -->
+    <AppPageHeader
+      :back="{ to: { name: 'company-shipments' }, label: t('l7.family.logistics') }"
+      :eyebrow="t('shipments.shipment')"
+      :title="shipment?.reference || t('shipments.shipment')"
+      data-test="shipment-header"
+    >
+      <template
         v-if="shipment"
-        :color="shipmentStatusColor(shipment.status)"
-        size="small"
+        #meta
       >
-        {{ statusLabel(shipment.status) }}
-      </VChip>
-      <VSpacer />
-      <VBtn
+        <VChip
+          :color="shipmentStatusColor(shipment.status)"
+          size="small"
+          variant="tonal"
+          label
+        >
+          {{ statusLabel(shipment.status) }}
+        </VChip>
+      </template>
+      <template
         v-if="canPlan"
-        variant="tonal"
-        prepend-icon="tabler-calendar-event"
-        data-test="shipment-plan"
-        @click="openPlan"
+        #actions
       >
-        {{ t('shipments.plan') }}
-      </VBtn>
-    </div>
+        <VBtn
+          variant="tonal"
+          prepend-icon="tabler-calendar-event"
+          data-test="shipment-plan"
+          @click="openPlan"
+        >
+          {{ t('shipments.plan') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <AppDialog
       v-model="planOpen"

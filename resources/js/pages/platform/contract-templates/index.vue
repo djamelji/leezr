@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // W-CONTRACT-3B (ADR-650) — catalogue PLATFORM des modèles de contrat : liste filtrable, cycle de
 // vie (brouillon/publié/archivé), éditeur Tiptap partagé avec la Company (_ContractEditor), aperçu
 // PDF fidèle, et GOUVERNANCE JURIDIQUE distincte de la publication technique.
@@ -123,23 +124,21 @@ const saveEdit = async () => {
 
 <template>
   <div>
-    <div class="d-flex align-center justify-space-between mb-6 flex-wrap gap-3">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ t('platformContract.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ t('platformContract.subtitle') }}
-        </p>
-      </div>
-      <VBtn
-        color="primary"
-        prepend-icon="tabler-plus"
-        @click="createOpen = true"
-      >
-        {{ t('platformContract.create') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.catalog.family')"
+      :title="t('platformContract.title')"
+      :description="t('platformContract.subtitle')"
+    >
+      <template #actions>
+        <VBtn
+          color="primary"
+          prepend-icon="tabler-plus"
+          @click="createOpen = true"
+        >
+          {{ t('platformContract.create') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <VAlert
       type="info"

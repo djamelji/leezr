@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-638 (W-E2) — catalogue Platform des presets organisationnels. Liste réelle (DB), filtres, cycle
 // de vie (créer brouillon, publier, dupliquer, archiver). Édition visuelle sur la page [id].
 import { $platformApi } from '@/utils/platformApi'
@@ -79,23 +80,21 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ t('orgPresetAdmin.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ t('orgPresetAdmin.subtitle') }}
-        </p>
-      </div>
-      <VBtn
-        color="primary"
-        prepend-icon="tabler-plus"
-        @click="createDialog = true"
-      >
-        {{ t('orgPresetAdmin.create') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.catalog.family')"
+      :title="t('orgPresetAdmin.title')"
+      :description="t('orgPresetAdmin.subtitle')"
+    >
+      <template #actions>
+        <VBtn
+          color="primary"
+          prepend-icon="tabler-plus"
+          @click="createDialog = true"
+        >
+          {{ t('orgPresetAdmin.create') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <VCard>
       <VCardText class="d-flex flex-wrap gap-3">

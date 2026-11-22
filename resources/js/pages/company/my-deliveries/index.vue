@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { formatDate } from '@/utils/datetime'
 import { useAuthStore } from '@/core/stores/auth'
 import { useDeliveryStore } from '@/modules/logistics-shipments/stores/delivery.store'
@@ -62,14 +63,11 @@ watch(statusFilter, () => loadDeliveries(1))
 
 <template>
   <div>
-    <div class="mb-6">
-      <h4 class="text-h4 mb-1">
-        {{ t('deliveries.title') }}
-      </h4>
-      <div class="text-body-1 text-medium-emphasis">
-        {{ t('deliveries.subtitle') }}
-      </div>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.logistics')"
+      :title="t('deliveries.title')"
+      :description="t('deliveries.subtitle')"
+    />
 
     <VChipGroup
       v-model="statusFilter"

@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // E3-B / B3 (ADR-699) — détail & validation d'une feuille de temps. Aligné STRICTEMENT sur les contrats
 // serveur (champs réels : anomaly_count, daily_overtime_minutes, leave_type_code, anomalies[].details).
 // Prévu / constaté / validé distingués ; totaux lus du read model (jamais reconstitués) ; transitions via
@@ -214,75 +215,60 @@ const stateHint = computed(() => {
 })
 
 const actionLabel = a => t(`timesheets.history.${a}`, a)
+watchEffect(() => { if (period.value?.employee) document.title = `${period.value.employee.first_name} ${period.value.employee.last_name} · ${t('timeTracking.tabs.timesheets')} · Leezr` }) // ADR-861
 </script>
 
 <template>
   <div>
-    <VBtn variant="text" :to="{ name: 'company-workforce-time', params: { tab: 'timesheets' } }" prepend-icon="tabler-arrow-left" class="mb-4">
-      {{ $t('timesheets.backToList') }}
-    </VBtn>
 
     <VCard v-if="loading" class="pa-8 text-center">
       <VProgressCircular indeterminate color="primary" />
     </VCard>
 
     <template v-else-if="period">
-      <!-- En-tête : collaborateur + statut + période + actions -->
-      <VCard class="mb-5">
-        <VCardText>
-          <div class="d-flex align-center gap-4 flex-wrap">
-            <VAvatar color="primary" variant="tonal" size="56">
-              <span class="text-h6 font-weight-medium">{{ (period.employee?.first_name?.[0] || '') + (period.employee?.last_name?.[0] || '') }}</span>
-            </VAvatar>
-            <div class="flex-grow-1" style="min-inline-size: 180px;">
-              <h4 class="text-h5 font-weight-bold">{{ period.employee?.first_name }} {{ period.employee?.last_name }}</h4>
-              <div class="d-flex align-center gap-2 mt-1 flex-wrap">
-                <StatusChip :status="period.status" domain="timesheet">
-                  {{ $t(`workforce.statuses.timesheet.${period.status}`) }}
-                </StatusChip>
-                <span class="text-body-2 text-medium-emphasis">{{ fmtDate(period.period_start) }} — {{ fmtDate(period.period_end) }}</span>
-                <VChip v-if="period.anomaly_count > 0" size="small" color="error" variant="tonal" prepend-icon="tabler-alert-triangle">
-                  {{ period.anomaly_count }} {{ $t('timesheets.summary.anomalies') }}
-                </VChip>
-              </div>
-            </div>
-            <!-- Transitions : boutons libellés gated par la permission EXACTE du moteur (lecture ≠ validation). -->
-            <div class="d-flex gap-2 flex-wrap">
-              <VBtn
-                v-for="a in actions"
-                v-show="can(a.permission)"
-                :key="a.id"
-                :color="a.color || (a.danger ? 'error' : 'primary')"
-                :variant="a.variant || (a.danger ? 'outlined' : 'elevated')"
-                :prepend-icon="a.icon"
-                :loading="actionLoading"
-                :data-test="a.dataTest"
-                @click="a.handler()"
-              >
-                {{ a.label }}
-              </VBtn>
-            </div>
-          </div>
-          <VAlert v-if="stateHint" :type="period.status === 'locked' ? 'secondary' : (hasErrorAnomaly ? 'warning' : 'info')" variant="tonal" density="comfortable" class="mt-4 mb-0">
-            {{ stateHint }}
-          </VAlert>
-        </VCardText>
-      </VCard>
+      <!-- ADR-861 (L7.10) : shared page header — way back, the person as title, status/period/anomalies as chips,
+           the transitions as page actions (gated by the engine's exact permission) ; the state hint stays under it -->
+      <AppPageHeader
+        :back="{ to: { name: 'company-workforce-time', params: { tab: 'timesheets' } }, label: $t('timeTracking.tabs.timesheets') }"
+        :eyebrow="$t('timeSpace.title')"
+        :title="`${period.employee?.first_name || ''} ${period.employee?.last_name || ''}`.trim() || $t('timeTracking.tabs.timesheets')"
+        data-test="timesheet-header"
+      >
+        <template #meta>
+          <StatusChip :status="period.status" domain="timesheet">
+            {{ $t(`workforce.statuses.timesheet.${period.status}`) }}
+          </StatusChip>
+          <span class="text-body-2 text-medium-emphasis">{{ fmtDate(period.period_start) }} — {{ fmtDate(period.period_end) }}</span>
+          <VChip v-if="period.anomaly_count > 0" size="small" color="error" variant="tonal" prepend-icon="tabler-alert-triangle">
+            {{ period.anomaly_count }} {{ $t('timesheets.summary.anomalies') }}
+          </VChip>
+        </template>
+        <template #actions>
+          <VBtn
+            v-for="a in actions"
+            v-show="can(a.permission)"
+            :key="a.id"
+            :color="a.color || (a.danger ? 'error' : 'primary')"
+            :variant="a.variant || (a.danger ? 'outlined' : 'elevated')"
+            :prepend-icon="a.icon"
+            :loading="actionLoading"
+            :data-test="a.dataTest"
+            @click="a.handler()"
+          >
+            {{ a.label }}
+          </VBtn>
+        </template>
+      </AppPageHeader>
+      <VAlert v-if="stateHint" :type="period.status === 'locked' ? undefined : (hasErrorAnomaly ? 'warning' : 'info')" :color="period.status === 'locked' ? 'secondary' : undefined" :icon="period.status === 'locked' ? 'tabler-lock' : undefined" variant="tonal" density="comfortable" class="mb-5">
+        {{ stateHint }}
+      </VAlert>
 
-      <!-- Totaux distincts : planifié / constaté / heures sup. / pauses (lus du read model) -->
-      <VRow class="card-grid card-grid-xs mb-5">
-        <VCol v-for="tt in totals" :key="tt.key" cols="6" sm="3">
-          <VCard>
-            <VCardText class="d-flex align-center gap-3">
-              <VAvatar :color="tt.color" variant="tonal" rounded><VIcon :icon="tt.icon" /></VAvatar>
-              <div>
-                <div class="text-h6 font-weight-bold">{{ tt.value }}</div>
-                <div class="text-caption text-medium-emphasis">{{ $t(`timesheets.totals.${tt.key}`) }}</div>
-              </div>
-            </VCardText>
-          </VCard>
-        </VCol>
-      </VRow>
+      <!-- Totaux distincts : planifié / constaté / heures sup. / pauses (lus du read model) — ADR-861 : une bande -->
+      <AppStatStrip
+        :items="totals.map(tt => ({ key: tt.key, label: $t(`timesheets.totals.${tt.key}`), value: tt.value, icon: tt.icon, tone: tt.key === 'overtime' && tt.color === 'warning' ? 'warning' : 'muted' }))"
+        class="mb-5"
+        data-test="timesheet-totals"
+      />
 
       <!-- Grille par jour : prévu / réel / pauses / travaillé / écart / anomalies -->
       <VCard class="mb-5">

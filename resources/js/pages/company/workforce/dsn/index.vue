@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { useAppToast } from '@/composables/useAppToast'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { useDsnStore } from '@/modules/company/workforce/dsn.store'
@@ -167,27 +168,23 @@ function goToDeclaration(id) {
 <template>
   <div>
     <!-- Header -->
-    <div
+    <AppPageHeader
       v-if="!embedded"
-      class="d-flex align-center justify-space-between mb-6"
+      :eyebrow="$t('l7.family.payroll')"
+      :title="$t('dsn.title')"
+      :description="$t('dsn.subtitle')"
     >
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('dsn.title') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('dsn.subtitle') }}
-        </p>
-      </div>
-      <VBtn
-        v-can="'workforce.payroll_export'"
-        color="primary"
-        prepend-icon="tabler-file-export"
-        @click="isDrawerOpen = true"
-      >
-        {{ $t('dsn.exportDsn') }}
-      </VBtn>
-    </div>
+      <template #actions>
+        <VBtn
+          v-can="'workforce.payroll_export'"
+          color="primary"
+          prepend-icon="tabler-file-export"
+          @click="isDrawerOpen = true"
+        >
+          {{ $t('dsn.exportDsn') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <VAlert
       v-if="identityError"
