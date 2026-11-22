@@ -283,37 +283,40 @@ const actions = computed(() => {
           </div>
         </div>
       </section>
-
-      <!-- actions -->
-      <section class="lz-preview__actions lzr-enter">
-        <VBtn
-          color="primary"
-          block
-          :to="fileTo()"
-          prepend-icon="tabler-id"
-          data-test="person-preview-open"
-        >
-          {{ t('l5.preview.openFile') }}
-        </VBtn>
-        <div class="lz-preview__grid">
-          <VBtn
-            v-for="a in actions"
-            :key="a.key"
-            variant="tonal"
-            :to="a.to"
-            :prepend-icon="a.icon"
-            :data-test="`person-preview-action-${a.key}`"
-          >
-            {{ t(a.label) }}
-          </VBtn>
-        </div>
-      </section>
     </div>
+    <!-- actions : always visible footer (ADR-858 fix — the body scrolls, the actions never leave the screen) -->
+    <footer
+    v-if="state === 'ready'"
+    class="lz-preview__actions"
+  >
+      <VBtn
+        color="primary"
+        block
+        :to="fileTo()"
+        prepend-icon="tabler-id"
+        data-test="person-preview-open"
+      >
+        {{ t('l5.preview.openFile') }}
+      </VBtn>
+      <div class="lz-preview__grid">
+        <VBtn
+          v-for="a in actions"
+          :key="a.key"
+          variant="tonal"
+          :to="a.to"
+          :prepend-icon="a.icon"
+          :data-test="`person-preview-action-${a.key}`"
+        >
+          {{ t(a.label) }}
+        </VBtn>
+      </div>
+    </footer>
   </VNavigationDrawer>
 </template>
 
 <style scoped>
-.lz-preview :deep(.v-navigation-drawer__content) { display: flex; flex-direction: column; }
+.lz-preview :deep(.v-navigation-drawer__content) { display: flex; flex-direction: column; overflow: hidden !important; }
+.lz-preview__hero { flex: 0 0 auto; }
 .lz-preview__hero {
   position: relative; padding: 2rem 1.5rem 1.5rem; color: #fff;
   background: radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, .16) 0%, transparent 55%),
@@ -328,7 +331,7 @@ const actions = computed(() => {
 .lz-preview__sub { color: rgba(255, 255, 255, .82); font-size: .875rem; margin-block-start: .25rem; }
 .lz-preview__chip { background: rgba(255, 255, 255, .16) !important; color: #fff !important; }
 .lz-dot { display: inline-block; inline-size: 8px; block-size: 8px; border-radius: 50%; }
-.lz-preview__body { padding: 1.25rem 1.5rem 1.5rem; display: flex; flex-direction: column; gap: 1.375rem; }
+.lz-preview__body { flex: 1 1 auto; min-block-size: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 1.5rem 1.5rem; display: flex; flex-direction: column; gap: 1.375rem; }
 .lz-h { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(var(--v-theme-on-surface), .55); margin-block-end: .625rem; }
 .lz-kv { display: grid; grid-template-columns: auto 1fr; gap: .5rem 1rem; align-items: baseline; font-size: .875rem; }
 .lz-kv > span { color: rgba(var(--v-theme-on-surface), .6); }
@@ -338,6 +341,7 @@ const actions = computed(() => {
 .lz-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; font-size: .875rem; }
 .lz-steps li { display: flex; align-items: center; gap: .5rem; }
 .lz-steps li:not(.lz-steps--done) { color: rgba(var(--v-theme-on-surface), .75); }
-.lz-preview__actions { display: grid; gap: .625rem; margin-block-start: auto; }
-.lz-preview__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .5rem; }
+.lz-preview__actions { flex: 0 0 auto; display: grid; gap: .625rem; padding: .875rem 1.5rem 1rem; border-block-start: 1px solid rgba(var(--v-border-color), .12); background: rgb(var(--v-theme-surface)); }
+.lz-preview__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .5rem; }
+@media (max-height: 760px) { .lz-preview__hero { padding-block: 1.25rem 1rem; } .lz-preview__avatar { inline-size: 52px; block-size: 52px; font-size: 1.125rem; } }
 </style>

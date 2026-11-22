@@ -101,6 +101,9 @@ test('1-3 Équipe complète et incomplète, recherche, filtres, aperçu rapide s
   await expect(pv.locator('[data-test="person-preview-onboarding"]')).toBeVisible()
   await expect(pv).not.toContainText(/€|salaire|rémunération/i)
   await shot(page, '3-apercu')
+  // the actions never leave the screen : the body scrolls, the footer stays (ADR-858 fix)
+  await expect(pv.locator('[data-test="person-preview-open"]')).toBeInViewport()
+  expect(await pv.locator('.lz-preview__body').evaluate(e => getComputedStyle(e).overflowY)).toBe('auto')
   await pv.locator('[data-test="person-preview-open"]').click()
   await expect(page).toHaveURL(/\/company\/people\/(employee|user)-\d+/)
   expect(bad).toEqual([])
@@ -246,6 +249,7 @@ test('10-12 Desktop, tablette, mobile, clair et sombre : pas de débordement ni 
       await expect(page.locator('[data-test="people-cards"]')).toBeVisible()
       await page.locator('[data-test^="people-row-"]').first().click()
       await expect(page.locator('[data-test="person-preview"]')).toBeVisible()
+      await expect(page.locator('[data-test="person-preview-open"]')).toBeInViewport()
     }
     await shot(page, `10-${name}`)
   }
