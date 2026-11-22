@@ -70,7 +70,8 @@ test('guided import: file → mapping → preview (dry-run) → confirm → crea
   // 3. Confirmer (dry-run ne devait rien créer ; l'écriture a lieu ici)
   await page.getByRole('button', { name: /Importer \d+ collaborateur|Import \d+ employee/ }).click()
   await expect(page.getByText(/créé\(s\)|created/).first()).toBeVisible({ timeout: 10000 })
-  await page.getByRole('button', { name: /Fermer|Close/ }).click()
+  // ADR-864 : Personnes also has the quick-view « Fermer » — close the IMPORT drawer by its own text button
+  await page.locator('.v-navigation-drawer').filter({ hasText: /Importer des collaborateurs|Import employees/ }).locator('button').filter({ hasText: /^\s*(Fermer|Close)\s*$/ }).first().click()
 
   // 4. Le collaborateur importé est retrouvable par recherche.
   const search = page.locator('[data-test="people-search"] input').first()

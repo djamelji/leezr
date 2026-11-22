@@ -1,8 +1,13 @@
 // @ts-check
 // Centralized E2E helpers — real Sanctum SPA flows (no CSRF bypass, no permission bypass).
+import fs from 'node:fs'
 import { expect } from '@playwright/test'
 
-export async function loginCompany(page, email = 'owner@leezr.test', password = 'password') {
+// ADR-864 — on the marked clone the recipe accounts have the recipe secret (AUDIT_PASSWORD_FILE), not the local demo
+// value : the historical specs that rely on the default password can then run there unchanged.
+const DEFAULT_PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : 'password'
+
+export async function loginCompany(page, email = 'owner@leezr.test', password = DEFAULT_PASSWORD) {
   // Robust login (same rationale as loginPlatform): wait for the real POST /login result,
   // retry past a transient throttle (429)/5xx, and never silently proceed unauthenticated.
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -31,7 +36,7 @@ export async function loginCompany(page, email = 'owner@leezr.test', password = 
   throw new Error(`Company login did not complete for ${email} after retries`)
 }
 
-export async function loginPlatform(page, email = 'admin@leezr.com', password = 'password') {
+export async function loginPlatform(page, email = 'admin@leezr.com', password = DEFAULT_PASSWORD) {
   // Robust login: submit, wait for the real POST /login result, and retry once past a
   // transient throttle (429) / 5xx. Never silently proceed unauthenticated (would mask failures).
   for (let attempt = 0; attempt < 3; attempt++) {

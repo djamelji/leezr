@@ -13,12 +13,13 @@ test('unified employee file shows header, overview and conditional lazy sections
 
   await loginCompany(page, 'owner@leezr.test')
   await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
-  await expect(page).toHaveURL(/\/company\/people\/hr/, { timeout: 10000 })
+  await expect(page).toHaveURL(/\/company\/people(\?|$)/, { timeout: 10000 }) // ADR-864 : one Personnes interface
 
-  // Open the first employee from the list.
+  // Open the first employee from the list : Personnes opens the quick view (ADR-858), then « open the file ».
   const row = page.locator('.v-data-table tbody tr').first()
   await expect(row).toBeVisible({ timeout: 10000 })
   await row.click()
+  await page.locator('[data-test="person-preview-open"]').click()
   await expect(page).toHaveURL(/\/company\/people\/employee-\d+/, { timeout: 8000 })
 
   // Header + rubrics incl. Overview + Profile + Contracts.
