@@ -160,3 +160,66 @@ Un écart éventuel est consigné. Toute restauration (`restore-companies-1-2.ph
 - JS : 42/42. Build propre (M10).
 - Campagnes E2E : B 41/41 (ordre inverse) et C 43/43 (ordre mélangé).
 
+
+## 10. Phase finale — état au 2026-11-22
+
+### 10.1 OP-2bis PROD : procédure courte et vérifiable (par le propriétaire, accès SSH personnel)
+
+Le bundle est `docs/bmad/leezr-4-0/incident-833/prod-lock-bundle.sh`. Il sert à chaque étape, en changeant les arguments passés à `bash -s --`.
+
+```
+B=docs/bmad/leezr-4-0/incident-833/prod-lock-bundle.sh; T=jliouiprodleezr@213.32.20.37; O='--only=platform_users:2,3 --only=users:1,2,3,4,5 --allow-production'
+mkdir -p ~/leezr-backups/op2bis-prod-$(date -u +%Y%m%d) && cd $_
+```
+
+1. **Sauvegarde fraîche** des lignes visées, en JSON, avec les sessions et jetons qui seront révoqués :
+   ```
+   ssh $T "bash -s -- $O --export" < $B > accounts-backup.json && chmod 600 accounts-backup.json && shasum -a 256 accounts-backup.json
+   ```
+   La sauvegarde du 2026-11-20 n'est **pas** réutilisée.
+2. **Simulation** (aucune écriture) :
+   ```
+   ssh $T "bash -s -- $O" < $B | tee simulation.txt
+   ```
+   Attendu : 7 comptes, 0 écart sur les empreintes hors périmètre. S'arrêter au moindre « REFUSED ».
+3. **Application**, seulement après votre autorisation explicite :
+   ```
+   ssh $T "bash -s -- $O --apply --confirm-database=c1leezr" < $B | tee apply.txt
+   ```
+4. **Preuve** : relancer l'étape 2. Attendu : « REFUSED: users #1 no longer uses the public password ».
+
+**Compte super-administrateur Platform 1, vérifié séparément.** Il ne fait pas partie du verrouillage, pour ne pas vous enfermer dehors. La simulation sert de test en lecture seule :
+
+```
+ssh $T "bash -s -- --only=platform_users:1 --allow-production" < $B
+```
+
+- S'il est **listé**, le compte accepte encore le mot de passe public : changez-le immédiatement dans `https://leezr.com/platform` › *Compte*, puis relancez la commande.
+- La réponse attendue est « REFUSED: platform_users #1 no longer uses the public password ».
+
+Aucun secret ne transite par ces commandes : le script lit `shared/.env` dans un fichier temporaire en 600, et le nouveau mot de passe ne s'affiche jamais.
+
+### 10.2 Préconditions DEV : constat de l'agent
+
+| Point | Constat (méthode) | État |
+|---|---|---|
+| Accès SSH de l'agent | Aucune clé ni identité dans l'agent SSH, aucun `~/.ssh/config` : **l'agent n'a aucun accès autorisé au serveur** | bloquant pour les points serveur |
+| Méthodes SSH annoncées (sonde sans identifiant) | `jliouidevleezr` et `jliouiprodleezr` : `publickey,password`. **L'authentification par mot de passe reste ouverte** (C6 non corrigé) | à corriger (§4 de la procédure OP-2) |
+| Ancien mot de passe sur SSH DEV et ISPConfig | Non testable sans secret compromis → `verify-old-password-dead.sh` par le propriétaire | **non prouvé** |
+| Webhook GitHub | `gh api …/hooks` = 0 | ✅ |
+| CI | secrets `VPS_HOST`, `VPS_PORT`, `VPS_SSH_KEY`, `VPS_USER` présents (noms seulement) ; déploiement par clé | ✅ |
+| Branche | `origin/dev` = `82e35416`, local en avance de 52+ commits, 0 en retard | ✅ |
+| Migrations | 6 migrations validées sur MariaDB 11.8 (§2), sans nouveau rejeu | ✅ |
+| Sauvegarde DEV | **le pipeline n'en prend aucune sur DEV** (réservé à `main`) → sauvegarde fraîche par le propriétaire avec `docs/bmad/leezr-4-2-audit/release/dev-preflight.sh` | **à faire** |
+| Drapeaux, sync à blanc, workers, jobs | même script (lecture seule) | **à faire** |
+| `leezr:dev-bootstrap` (déploiement DEV) | base peuplée → `DevBootstrapSeeder` seulement. Écritures possibles : activation idempotente de 7 modules Workforce pour `leezr-logistics`, et `addon_pricing` de test pour contract/signature si nul. Déjà exécuté à chaque déploiement précédent ; aucun mot de passe, rôle ni Chauffeur touché | accepté, couvert par la comparaison des sociétés 1 et 2 |
+| 5 conflits SystemSync | aucun `--adopt` dans le pipeline | ✅ préservés |
+| Rôles Chauffeur, sociétés historiques | aucune opération prévue | ✅ inchangés |
+
+**Seuil pour demander « GO OP-4 »** : la sortie de `dev-preflight.sh` est communiquée et montre :
+- les drapeaux absents ou à false ;
+- une sauvegarde vérifiée avec son sha256, copiée hors serveur ;
+- 6 migrations en attente au plus ;
+- les 5 conflits.
+
+OP-2 doit être au minimum engagé (runbook). OP-2bis est indépendant de DEV, mais il reste prioritaire.
