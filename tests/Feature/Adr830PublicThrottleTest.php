@@ -28,10 +28,12 @@ class Adr830PublicThrottleTest extends TestCase
     public function test_each_family_keeps_its_own_limit(): void
     {
         $this->seed(\Database\Seeders\PlatformSeeder::class);
+        // ADR-861 : theme / world are the bootstrap of every page load (600 / min, Adr861PublicBootstrapBudgetTest) ;
+        // the public plans family keeps 30 / min, and exhausting it never blocks the bootstrap
         for ($i = 0; $i < 30; $i++) {
-            $this->getJson('/api/public/theme')->assertOk();
+            $this->getJson('/api/public/plans')->assertOk();
         }
-        $this->getJson('/api/public/theme')->assertStatus(429); // unchanged limit : 30 / min
-        $this->getJson('/api/public/plans')->assertOk();
+        $this->getJson('/api/public/plans')->assertStatus(429); // unchanged limit : 30 / min
+        $this->getJson('/api/public/theme')->assertOk();
     }
 }

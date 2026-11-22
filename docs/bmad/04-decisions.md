@@ -30154,3 +30154,53 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
     - Platform : Entreprises, JobDomains, Modules, Utilisateurs, Exploitation et support, Catalogue, Plans ;
     - Company : Workforce, planning et pointage ; Absences ;
     - 65 boutons-icônes sans nom, aux icônes ambiguës.
+
+## ADR-861 — Leezr 5.0 L7 (reprise, terminé) : Flotte selon l'activité réelle, 9 familles restantes, accessibilité complète, appels de démarrage non refusés
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - ADR-860 avait livré L7 en partie : 9 familles restaient à traiter, 65 boutons-icônes n'avaient pas de nom, et une soixantaine de titres étaient faits à la main.
+  - La règle Flotte avait été validée sur le principe : le permis est exigé selon l'activité réellement exercée, et non pas parce que le module est actif, ni sur la seule base du rôle d'accès.
+  - La recette Company produisait par intermittence des appels refusés juste après le build.
+- **Décision** (6 sous-lots, commits séparés) :
+  - **L7.6 · Flotte selon l'activité réelle**
+    - La migration additive `company_document_settings.module_obligation_scope` ajoute un réglage par société : `NULL` ou `everyone` garde le comportement historique, `function` limite le champ à ceux qui exercent l'activité.
+    - En mode `function`, un champ exigé par un module et porteur d'une étiquette d'activité (`required_by_modules` + `tags`) n'est exigé que des personnes qui exercent cette activité.
+    - Une personne exerce une activité si au moins une de ces trois conditions est vraie, résolue par `FunctionActivity` :
+      - son **poste** la déclare (`JobRole.metadata.activities`), ce qui couvre aussi les collaborateurs sans compte ;
+      - un **module la prouve** (contrat `FunctionActivityEvidence`) : pour Expéditions, une livraison en cours ou affectée dans les 90 derniers jours, ce qui couvre aussi le manager qui conduit de temps en temps ;
+      - le **rôle d'accès** exige l'étiquette, uniquement en autorité « rôle » (ADR-820).
+    - Les règles explicites de la société restent inchangées : « obligatoire à la saisie », règles par rôle, exigences de poste, obligation Platform.
+    - La règle est appliquée par le formulaire de membre, la fiche, la complétude de profil et la complétude du dossier RH.
+    - La simulation se fait personne par personne : motif de maintien, postes à revoir, `newly_required` toujours à 0.
+    - Le réglage n'est écrit que sur un clone marqué. Sur le clone, société 1, l'exigence passe de 76 personnes à 31 une fois le poste Livreur déclaré.
+    - **DEV et les sociétés historiques ne changent pas** : appliquer le réglage demande un GO distinct.
+  - **L7.7 · Familles Platform**
+    - `AppTabFamily` affiche les groupes puis les pages, avec fil, phrase et titre d'onglet du navigateur. Il s'applique à Exploitation (7 onglets répartis en 4 groupes), Messagerie (7 en 3), Catalogue (6 en 3) et Accès.
+    - Les titres internes qui faisaient doublon sont retirés.
+    - **Entreprises** : l'action « Nouvelle société » passe dans l'en-tête ; une bande d'indicateurs remplace 5 grandes cartes ; les segments sont placés sur la table.
+    - **Fiche entreprise** : nom et contexte dans l'en-tête ; les 7 onglets tiennent sur toute la largeur.
+    - `AppPageHeader` accepte `back` et un emplacement `meta`. Les fiches JobDomain, Module, Plan, Utilisateur Platform et Ticket les utilisent.
+  - **L7.8 · Familles Company temps et absences**
+    - Avec `TimeSpaceHeader`, « Planning & temps » devient le fil, et chaque vue reçoit son propre titre.
+    - Absences : même navigation de sections que Temps ; sur téléphone, liste tactile avec actions nommées.
+    - Les filtres de pointage sont alignés, et la fiche Poste passe sur l'en-tête commun.
+  - **L7.9 · Accessibilité**
+    - Les 65 boutons restants sont nommés un par un d'après leur fonction réelle.
+    - Les pictogrammes décoratifs sont masqués (`aria-hidden` et `tabindex="-1"`).
+    - L'en-tête de tiroir `@core`, non modifiable, est remplacé par `AppDrawerTitle`.
+    - Un test JS contrôle désormais toute l'application.
+  - **L7.10 · Titres anciens des familles L7** : Feuille de temps, Période de paie, Expédition, DSN, Intégration Workforce, Mes livraisons, Communications, Modèles de contrat, Modèles d'organisation.
+  - **L7.11 · Recette stabilisée**
+    - **Cause démontrée** : des 429 sur `/api/public/world` et `/api/public/theme`, limités à 30 appels par minute et par IP, et lus à chaque chargement complet, deux fois pour `world`.
+    - Ce n'est ni un problème de droits ni un état d'authentification : c'est un vrai défaut produit. Un bureau dont tous les postes sortent par une seule IP retombait en silence sur en-US, USD et le thème par défaut.
+    - **Correctif** :
+      - les deux appels de démarrage passent à 600 par minute ;
+      - le store `world` partage une seule requête par chargement ;
+      - le groupe API reste en `no-store`.
+- **Conséquences** :
+  - Les 9 familles sont traitées.
+  - Il ne reste plus aucun bouton-icône sans nom.
+  - Les pages publiques (inscription, centre d'aide, signature, invitations) restent hors L7.
+  - Le réglage Flotte n'est appliqué que sur le clone.
+  - Les deux réglages « tout le monde » restent distincts (ADR-860).

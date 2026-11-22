@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+let inflight = null
+
 export const useWorldStore = defineStore('world', {
   state: () => ({
     _country: 'US',
@@ -22,7 +24,14 @@ export const useWorldStore = defineStore('world', {
   actions: {
     async fetch() {
       if (this._loaded) return
+      // ADR-861 : the router guard and the public theme both ask at boot — one request, shared (was two per load)
+      if (inflight) return inflight
+      inflight = this._load().finally(() => { inflight = null })
 
+      return inflight
+    },
+
+    async _load() {
       try {
         const res = await fetch('/api/public/world')
 

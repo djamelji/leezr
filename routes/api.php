@@ -36,11 +36,14 @@ if (! app()->isProduction()) {
     Route::get('/_recipe/identity', \App\Modules\Infrastructure\System\Http\RecipeIdentityController::class)->middleware('throttle:60,1');
 }
 
+// ADR-861 (L7.11) — theme and world are read by EVERY full page load (Company, Platform, public). At 30/min per IP an
+// office behind one address (or a few reloads) got 429 and silently fell back to defaults (en-US, USD, default theme).
+// Both are platform-wide and user-independent : a bootstrap budget per IP (the api group stays no-store, NoCacheHeaders).
 // Public theme (primary color + typography for unauthenticated pages)
-Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:30,1');
+Route::get('/public/theme', PublicThemeController::class)->middleware('throttle:600,1');
 
 // Public world settings (locale, currency, timezone for all pages)
-Route::get('/public/world', PublicWorldController::class)->middleware('throttle:30,1');
+Route::get('/public/world', PublicWorldController::class)->middleware('throttle:600,1');
 
 // Public plans & pricing (ADR-100 — no auth)
 Route::prefix('public')->middleware('throttle:30,1')->group(function () {
