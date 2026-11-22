@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-769 (M7 LOT 3) — « Mon espace » : point d'entrée UNIQUE du self-service de la personne
 // connectée, indépendant de son rôle administratif et des modules de l'entreprise. Chaque rubrique
 // n'apparaît que si sa capacité existe réellement (réponse serveur `/profile/space`) ; aucun
@@ -92,14 +93,11 @@ const activityHint = computed(() => {
 
 <template>
   <div data-test="my-space">
-    <div class="mb-5">
-      <h4 class="text-h4 mb-1">
-        {{ t('mySpace.title') }}
-      </h4>
-      <p class="text-body-1 text-medium-emphasis mb-0">
-        {{ t('mySpace.subtitle') }}
-      </p>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.me')"
+      :title="t('mySpace.title')"
+      :description="t('mySpace.subtitle')"
+    />
 
     <VSkeletonLoader
       v-if="space.loading && !space.ready"

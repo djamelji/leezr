@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-822 — registre des contrats de travail de la société (lecture). La machine à états reste sur la
 // fiche collaborateur : chaque ligne y mène (section Contrat). Périmètre = celui du lecteur (serveur).
 import { $api } from '@/utils/api'
@@ -57,23 +58,21 @@ const daysLeft = d => Math.ceil((new Date(d) - new Date()) / 86400000)
 
 <template>
   <div>
-    <div class="d-flex flex-wrap align-center gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h4 class="text-h4 mb-1">
-          {{ t('contractsRegister.title') }}
-        </h4>
-        <div class="text-body-1 text-medium-emphasis">
-          {{ t('contractsRegister.subtitle') }}
-        </div>
-      </div>
-      <VBtn
-        variant="tonal"
-        prepend-icon="tabler-template"
-        :to="{ name: 'company-documents-tab', params: { tab: 'templates' } }"
-      >
-        {{ t('contractsRegister.templates') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.documents')"
+      :title="t('contractsRegister.title')"
+      :description="t('contractsRegister.subtitle')"
+    >
+      <template #actions>
+        <VBtn
+          variant="tonal"
+          prepend-icon="tabler-template"
+          :to="{ name: 'company-documents-tab', params: { tab: 'templates' } }"
+        >
+          {{ t('contractsRegister.templates') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <VCard>
       <VCardText class="d-flex flex-wrap align-center gap-4">

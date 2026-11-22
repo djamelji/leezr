@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-766 (M7) — ESPACE DOCUMENTS UNIFIÉ : une seule entrée Documents. Accès par `anyPermission`
 // (gouvernance DMS `documents.view` OU registre RH `workforce_documents.view` OU signatures
 // `workforce_signature.view`). Chaque onglet reste gated par sa permission RÉELLE ; aucun élargissement.
@@ -168,87 +169,88 @@ const { isLoading: pageLoading, isError: pageError, error: pageErrorMsg, retry: 
   <div>
     <SettingsReturnLink /> <!-- ADR-781 -->
     <!-- En-tête : titre · recherche · Nouveau · Outils -->
-    <div class="d-flex align-center flex-wrap gap-3 mb-5">
-      <h4 class="text-h4">
-        {{ t('documents.title') }}
-      </h4>
-      <VSpacer />
-      <AppTextField
-        v-model="term"
-        :placeholder="t('documents.search.placeholder')"
-        prepend-inner-icon="tabler-search"
-        clearable
-        density="compact"
-        style="max-inline-size: 320px; min-inline-size: 200px;"
-        data-test="documents-search-input"
-        @click:clear="closeSearch"
-        @keydown.enter="searching = true"
-      />
-      <VBtn
-        v-if="newActions.length"
-        color="primary"
-        prepend-icon="tabler-plus"
-        data-test="documents-new"
-      >
-        {{ t('documents.new.label') }}
-        <VMenu
-          activator="parent"
-          location="bottom end"
+    <AppPageHeader
+      :eyebrow="t('l7.family.documents')"
+      :title="t('documents.title')"
+    >
+      <template #actions>
+        <AppTextField
+          v-model="term"
+          :placeholder="t('documents.search.placeholder')"
+          prepend-inner-icon="tabler-search"
+          clearable
+          density="compact"
+          style="max-inline-size: 320px; min-inline-size: 200px;"
+          data-test="documents-search-input"
+          @click:clear="closeSearch"
+          @keydown.enter="searching = true"
+        />
+        <VBtn
+          v-if="newActions.length"
+          color="primary"
+          prepend-icon="tabler-plus"
+          data-test="documents-new"
         >
-          <VList min-width="260">
-            <VListItem
-              v-for="a in newActions"
-              :key="a.key"
-              :prepend-icon="a.icon"
-              :data-test="`documents-new-${a.key}`"
-              @click="a.run"
-            >
-              <VListItemTitle>{{ t(`documents.new.${a.key}`) }}</VListItemTitle>
-            </VListItem>
-          </VList>
-        </VMenu>
-      </VBtn>
-      <VBtn
-        v-if="toolViews.length || configModules.length"
-        variant="tonal"
-        color="secondary"
-        prepend-icon="tabler-tool"
-        data-test="documents-tools"
-      >
-        {{ t('documents.tools.label') }}
-        <VMenu
-          activator="parent"
-          location="bottom end"
-        >
-          <VList min-width="300">
-            <VListItem
-              v-for="v in toolViews"
-              :key="v.tab"
-              :prepend-icon="v.icon"
-              :to="{ name: 'company-documents-tab', params: { tab: v.tab } }"
-              :data-test="`documents-tool-${v.tab}`"
-            >
-              <VListItemTitle>{{ v.title }}</VListItemTitle>
-              <VListItemSubtitle>{{ v.hint }}</VListItemSubtitle>
-            </VListItem>
-            <template v-if="configModules.length">
-              <VDivider class="my-1" />
-              <VListSubheader>{{ t('documents.tools.configure') }}</VListSubheader>
+          {{ t('documents.new.label') }}
+          <VMenu
+            activator="parent"
+            location="bottom end"
+          >
+            <VList min-width="260">
               <VListItem
-                v-for="m in configModules"
-                :key="m.key"
-                prepend-icon="tabler-adjustments"
-                :to="`/company/modules/${m.key}`"
-                :data-test="`documents-configure-${m.key}`"
+                v-for="a in newActions"
+                :key="a.key"
+                :prepend-icon="a.icon"
+                :data-test="`documents-new-${a.key}`"
+                @click="a.run"
               >
-                <VListItemTitle>{{ m.name }}</VListItemTitle>
-                <VListItemSubtitle>{{ t(`moduleSetup.status.${m.setup_status}`) }}</VListItemSubtitle>
+                <VListItemTitle>{{ t(`documents.new.${a.key}`) }}</VListItemTitle>
               </VListItem>
-            </template>
-          </VList>
-        </VMenu>
-      </VBtn>
-    </div>
+            </VList>
+          </VMenu>
+        </VBtn>
+        <VBtn
+          v-if="toolViews.length || configModules.length"
+          variant="tonal"
+          color="secondary"
+          prepend-icon="tabler-tool"
+          data-test="documents-tools"
+        >
+          {{ t('documents.tools.label') }}
+          <VMenu
+            activator="parent"
+            location="bottom end"
+          >
+            <VList min-width="300">
+              <VListItem
+                v-for="v in toolViews"
+                :key="v.tab"
+                :prepend-icon="v.icon"
+                :to="{ name: 'company-documents-tab', params: { tab: v.tab } }"
+                :data-test="`documents-tool-${v.tab}`"
+              >
+                <VListItemTitle>{{ v.title }}</VListItemTitle>
+                <VListItemSubtitle>{{ v.hint }}</VListItemSubtitle>
+              </VListItem>
+              <template v-if="configModules.length">
+                <VDivider class="my-1" />
+                <VListSubheader>{{ t('documents.tools.configure') }}</VListSubheader>
+                <VListItem
+                  v-for="m in configModules"
+                  :key="m.key"
+                  prepend-icon="tabler-adjustments"
+                  :to="`/company/modules/${m.key}`"
+                  :data-test="`documents-configure-${m.key}`"
+                >
+                  <VListItemTitle>{{ m.name }}</VListItemTitle>
+                  <VListItemSubtitle>{{ t(`moduleSetup.status.${m.setup_status}`) }}</VListItemSubtitle>
+                </VListItem>
+              </template>
+            </VList>
+          </VMenu>
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <!-- Loading -->
     <VSkeletonLoader

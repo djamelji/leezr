@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { $api } from '@/utils/api'
 definePage({ meta: { surface: 'structure', module: 'core.modules', permission: 'modules.manage' } })
 
@@ -533,44 +534,42 @@ const doToggle = async (key, isCurrentlyEnabled, cascade = false) => {
 
     <!-- ADR-821 — catalogue unifié (Vuexy) : un filtre d'état, une carte par module (objet manipulable),
          dépendances et droits commerciaux expliqués, actions selon l'état. -->
-    <div class="d-flex flex-wrap align-center gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h4 class="text-h4 mb-1">
-          {{ t('companyModules.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('companyModules.subtitle') }}
-        </p>
-      </div>
-      <div
-        v-if="!isLoading"
-        class="d-flex flex-wrap gap-2"
-        data-test="modules-summary"
-      >
-        <VChip
-          color="success"
-          variant="tonal"
-          label
+    <AppPageHeader
+      :eyebrow="t('l7.family.settings')"
+      :title="t('companyModules.title')"
+      :description="t('companyModules.subtitle')"
+    >
+      <template #actions>
+        <div
+          v-if="!isLoading"
+          class="d-flex flex-wrap gap-2"
+          data-test="modules-summary"
         >
-          {{ t('companyModules.summaryActive', { n: activeModules.length }) }}
-        </VChip>
-        <VChip
-          color="primary"
-          variant="tonal"
-          label
-        >
-          {{ t('companyModules.summaryIncluded', { n: includedModules.length }) }}
-        </VChip>
-        <VChip
-          v-if="subscribedCount"
-          color="warning"
-          variant="tonal"
-          label
-        >
-          {{ t('companyModules.catalogSubscribed', { n: subscribedCount }) }}
-        </VChip>
-      </div>
-    </div>
+          <VChip
+            color="success"
+            variant="tonal"
+            label
+          >
+            {{ t('companyModules.summaryActive', { n: activeModules.length }) }}
+          </VChip>
+          <VChip
+            color="primary"
+            variant="tonal"
+            label
+          >
+            {{ t('companyModules.summaryIncluded', { n: includedModules.length }) }}
+          </VChip>
+          <VChip
+            v-if="subscribedCount"
+            color="warning"
+            variant="tonal"
+            label
+          >
+            {{ t('companyModules.catalogSubscribed', { n: subscribedCount }) }}
+          </VChip>
+        </div>
+      </template>
+    </AppPageHeader>
 
     <!-- Barre de recherche d'origine, avec son libellé animé (noms des modules qui défilent) -->
     <div class="search-wrap mb-4">

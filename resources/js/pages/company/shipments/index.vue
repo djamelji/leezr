@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { shipmentStatusColor } from '@/utils/shipments'
 import { formatDate } from '@/utils/datetime'
 import { useAuthStore } from '@/core/stores/auth'
@@ -81,33 +82,31 @@ const onPageChange = page => {
 <template>
   <div>
     <!-- ADR-821 — liste d'exploitation : en-tête de page, filtres d'état en un clic, trajet lisible -->
-    <div class="d-flex flex-wrap align-center gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h4 class="text-h4 mb-1">
-          {{ t('shipments.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('shipments.listSubtitle') }}
-        </p>
-      </div>
-      <VBtn
-        v-if="canViewOwnDeliveries"
-        variant="tonal"
-        color="secondary"
-        prepend-icon="tabler-truck-delivery"
-        :to="{ name: 'company-my-deliveries' }"
-      >
-        {{ t('shipments.myDeliveries') }}
-      </VBtn>
-      <VBtn
-        v-if="canManage"
-        v-can="'shipments.create'"
-        prepend-icon="tabler-plus"
-        :to="{ name: 'company-shipments-create' }"
-      >
-        {{ t('shipments.newShipment') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.logistics')"
+      :title="t('shipments.title')"
+      :description="t('shipments.listSubtitle')"
+    >
+      <template #actions>
+        <VBtn
+          v-if="canViewOwnDeliveries"
+          variant="tonal"
+          color="secondary"
+          prepend-icon="tabler-truck-delivery"
+          :to="{ name: 'company-my-deliveries' }"
+        >
+          {{ t('shipments.myDeliveries') }}
+        </VBtn>
+        <VBtn
+          v-if="canManage"
+          v-can="'shipments.create'"
+          prepend-icon="tabler-plus"
+          :to="{ name: 'company-shipments-create' }"
+        >
+          {{ t('shipments.newShipment') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <VCard>
       <VCardText class="d-flex flex-wrap align-center gap-4">

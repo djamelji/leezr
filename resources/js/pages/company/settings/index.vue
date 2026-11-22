@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-781 (Company Experience 2.0 / UX5) — RÉGLAGES : un seul point d'entrée.
 // Les entrées viennent du SERVEUR (espace `settings` de NavBuilder) : chaque module contribue les
 // siennes par son manifeste, déjà filtrées par module actif, plan, surface et permissions. Cette page
@@ -110,24 +111,22 @@ const advancedPanel = computed({ get: () => (advancedOpen.value ? 0 : null), set
 
 <template>
   <div>
-    <div class="d-flex flex-wrap align-center gap-4 mb-6">
-      <div class="flex-grow-1">
-        <h4 class="text-h4 mb-1">
-          {{ t('settingsHub.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('settingsHub.subtitle') }}
-        </p>
-      </div>
-      <AppTextField
-        v-model="search"
-        :placeholder="t('settingsHub.search')"
-        prepend-inner-icon="tabler-search"
-        clearable
-        :style="{ inlineSize: mdAndUp ? '300px' : '100%' }"
-        data-test="settings-search"
-      />
-    </div>
+    <AppPageHeader
+      :eyebrow="t('l7.family.settings')"
+      :title="t('settingsHub.title')"
+      :description="t('settingsHub.subtitle')"
+    >
+      <template #actions>
+        <AppTextField
+          v-model="search"
+          :placeholder="t('settingsHub.search')"
+          prepend-inner-icon="tabler-search"
+          clearable
+          :style="{ inlineSize: mdAndUp ? '300px' : '100%' }"
+          data-test="settings-search"
+        />
+      </template>
+    </AppPageHeader>
 
     <VCard
       v-if="!entries.length"

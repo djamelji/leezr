@@ -13258,6 +13258,16 @@
         "international": "Markets, languages and translations.",
         "feature-flags": "Progressive activation of features, per company or for everyone."
       }
+    },
+    "family": {
+      "documents": "Documents and signatures",
+      "logistics": "Logistics",
+      "settings": "Settings",
+      "payroll": "Payroll",
+      "me": "My space",
+      "team": "Team",
+      "workforce": "Time and planning",
+      "billing": "Billing"
     }
   }
 }

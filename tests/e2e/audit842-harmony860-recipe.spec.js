@@ -97,3 +97,32 @@ test('Mobile et sombre : en-tête lisible, onglets défilants, aucun débordemen
   await shot(page, 'A3-mobile-sombre')
   expect(bad).toEqual([])
 })
+
+test('Company : en-têtes harmonisés des familles (propriétaire et profil limité), desktop et mobile', async ({ page }) => {
+  test.setTimeout(5 * 60 * 1000)
+  const bad = watch(page)
+  const { loginCompany } = await import('./helpers.js')
+  const PAGES = [['/company/documents/overview', 'Documents'], ['/company/shipments', 'Logistique'], ['/company/modules', 'Réglages'],
+    ['/company/settings', 'Réglages'], ['/company/workforce/contracts', 'Documents'], ['/company/workforce/payroll', 'Paie'], ['/company/my-space/overview', 'Mon espace']]
+  for (const width of [1440, 390]) {
+    await page.context().clearCookies()
+    await page.setViewportSize({ width, height: 900 })
+    await loginCompany(page, 'owner@leezr.test', PASSWORD)
+    for (const [path, family] of PAGES) {
+      await page.goto(path, { waitUntil: 'networkidle' })
+      await page.waitForTimeout(700)
+      await expect(page.locator('[data-test="page-eyebrow"]').first(), path).toContainText(family)
+      await expect(page.locator('.app-page-header__title').first()).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${path} @${width}`).toBe(true)
+    }
+  }
+  await shot(page, 'B1-company-mobile')
+
+  // a limited profile reaches only what it may : the pages it opens carry the same header, nothing is refused
+  await page.context().clearCookies()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await loginCompany(page, 'consultation@leezr.test', PASSWORD)
+  await page.goto('/company/my-space/overview', { waitUntil: 'networkidle' })
+  await expect(page.locator('[data-test="page-eyebrow"]').first()).toContainText('Mon espace')
+  expect(bad).toEqual([])
+})

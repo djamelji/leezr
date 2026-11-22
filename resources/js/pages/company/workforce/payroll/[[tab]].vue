@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { useAppToast } from '@/composables/useAppToast'
 import { useCan } from '@/composables/useCan'
 import { usePayrollStore } from '@/modules/company/workforce/payroll.store'
@@ -195,25 +196,23 @@ const goToRun = id => {
 <template>
   <div>
     <!-- Header -->
-    <div class="d-flex align-center justify-space-between flex-wrap gap-3 mb-6">
-      <div>
-        <h4 class="text-h4 font-weight-bold">
-          {{ $t('payroll.spaceTitle') }}
-        </h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">
-          {{ $t('payroll.spaceSubtitle') }}
-        </p>
-      </div>
-      <VBtn
-        v-can="'workforce.payroll_prepare'"
-        color="primary"
-        data-test="pr-create-open"
-        prepend-icon="tabler-calendar-plus"
-        @click="isDrawerOpen = true"
-      >
-        {{ $t('payroll.newPeriod') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="$t('l7.family.payroll')"
+      :title="$t('payroll.spaceTitle')"
+      :description="$t('payroll.spaceSubtitle')"
+    >
+      <template #actions>
+        <VBtn
+          v-can="'workforce.payroll_prepare'"
+          color="primary"
+          data-test="pr-create-open"
+          prepend-icon="tabler-calendar-plus"
+          @click="isDrawerOpen = true"
+        >
+          {{ $t('payroll.newPeriod') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <!-- Honest capability disclaimer (preparation, not certified payroll / no filing) -->
     <PayrollDisclaimer />

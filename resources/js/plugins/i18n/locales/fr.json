@@ -13276,6 +13276,16 @@
         "international": "Marchés, langues et traductions.",
         "feature-flags": "Activation progressive de fonctions, par société ou pour tous."
       }
+    },
+    "family": {
+      "documents": "Documents et signatures",
+      "logistics": "Logistique",
+      "settings": "Réglages",
+      "payroll": "Paie",
+      "me": "Mon espace",
+      "team": "Équipe",
+      "workforce": "Temps et planning",
+      "billing": "Facturation"
     }
   }
 }
