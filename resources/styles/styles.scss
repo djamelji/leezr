@@ -208,6 +208,16 @@
 // Bouton posé sur un bandeau de marque (héros) : blanc + texte primaire dans les deux thèmes.
 .v-btn.lzr-on-brand { background: #fff !important; color: rgb(var(--v-theme-primary)) !important; }
 .v-btn.lzr-on-brand-outline { border-color: rgba(255, 255, 255, .7) !important; color: #fff !important; }
+// Survol / focus des boutons posés sur la bande de marque : fond violet profond, texte et icône BLANCS
+// (le voile de survol Vuetify prend la couleur du texte : violet sur violet, illisible).
+.v-btn.lzr-on-brand:hover, .v-btn.lzr-on-brand:focus-visible {
+  background: color-mix(in srgb, rgb(var(--v-theme-primary)) 62%, #0b1530) !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .75) !important;
+}
+.v-btn.lzr-on-brand-outline:hover, .v-btn.lzr-on-brand-outline:focus-visible { background: rgba(255, 255, 255, .14) !important; color: #fff !important; }
+.v-btn.lzr-on-brand > .v-btn__overlay, .v-btn.lzr-on-brand-outline > .v-btn__overlay { opacity: 0 !important; }
+.v-btn.lzr-on-brand, .v-btn.lzr-on-brand-outline { transition: background-color .18s ease, color .18s ease, box-shadow .18s ease; }
 
 // Entrée échelonnée (une fois, au montage) — `.lzr-enter` sur les enfants d'un conteneur `.lzr-stagger`.
 @keyframes lzr-enter { from { transform: translateY(10px); } to { transform: none; } } // transform only : never hides content
