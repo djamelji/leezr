@@ -529,6 +529,22 @@ const deleteRole = async role => {
                     {{ t('roles.fieldConfigTooltip') }}
                   </VTooltip>
                 </div>
+                <!-- ADR-858 (L5) : scope of this historical overlay, and where the other rules live (one place per rule) -->
+                <VAlert
+                  type="info"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                  data-test="role-fields-scope"
+                >
+                  {{ t('l5.roleFields.text') }}
+                  <RouterLink
+                    to="/company/catalogs/fields"
+                    class="font-weight-medium"
+                  >
+                    {{ t('l5.roleFields.catalog') }}
+                  </RouterLink>
+                </VAlert>
 
                 <VTable
                   density="compact"

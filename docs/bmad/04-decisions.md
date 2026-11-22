@@ -30054,3 +30054,45 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - Non-régression `widgets856` 4/4 et `cockpit855` 5/5 ; PHP ciblés 68/68.
   - Recette sur 9 profils (desktop, tablette, mobile, clair et sombre) : 0 erreur, 0 refus, 0 débordement.
   - Livraison dans `docs/bmad/leezr-5-design/13-l3-delivery.md` ; limites au §9 (pas d'agenda ni de liste de présents faute de lecture autorisée, pas de fil d'activité Company).
+
+## ADR-858 — Leezr 5.0 L5 : Company › Personnes (V22) et une interface par règle de champ
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - La page Personnes était une liste dense, sans synthèse ni prochaine étape, et un clic ouvrait directement la fiche.
+  - Le tiroir « Outils → Champs » (ADR-802) doublait Company › Catalogue (activation, création de champ) et posait aussi l'obligation `required_override`.
+  - Une même obligation pouvait donc se régler à quatre endroits (catalogue Platform, catalogue Company, poste, rôle), sans que l'origine soit visible.
+- **Décision** :
+  - **Liste** (`PeopleListReadModel`, même endpoint et même périmètre) :
+    - `summary` : total, actifs, invitations, dossiers incomplets, intégrations en cours, à traiter ;
+    - `filter_counts` par statut, équipe, poste et accès ;
+    - filtres `job_role` et `attention` ;
+    - `completeness` par compte (moteur ADR-168b), servie seulement avec les détails de compte (ADR-816) ;
+    - `next_action` déduite de la ligne visible.
+    - Un chiffre non lisible vaut `null`, jamais 0.
+  - **Écran** :
+    - `_PeopleDirectory` : tuiles qui filtrent, filtres avec compteurs, tableau V22, cartes sur mobile ;
+    - `_PersonPreview` : aperçu rapide sur la fiche filtrée par le serveur, sans rémunération ni champ sensible, actions selon `can` ;
+    - en-tête avec la phrase de synthèse et « Configurer les champs » (vers le catalogue) ;
+    - l'ajout rapide propose le poste et montre ses exigences, sans rien demander de plus.
+  - **Champs** : `FieldObligationSources` (lecture des entrées que le moteur applique déjà) donne l'origine de chaque obligation.
+    - Le catalogue Company l'affiche, explique l'héritage (Leezr → métier → société → poste) et devient l'unique endroit pour :
+      - activer un champ ;
+      - créer et modifier un champ propre ;
+      - rendre un champ obligatoire pour toute la société (`required_override`, même stockage).
+    - L'obligation de poste reste au registre `job_role:*`.
+    - Les rôles affichent la portée historique de leur `field_config`.
+  - **Retrait** : « Outils → Champs » (`_ProfileFieldsSettings.vue`) est supprimé de l'interface, sans perte de données.
+    - La suppression d'un champ propre (cascade sur les valeurs) n'est plus proposée : « Désactiver » la remplace.
+    - L'ordre est déprécié (valeurs conservées).
+  - **Migration** : `fields:rules-audit` (`FieldRuleMigrationPlanner`).
+    - Il classe chaque règle stockée.
+    - Il n'efface que les redondances, si le comportement de chaque compte (champs requis et manquants) est identique ; sauvegarde et retour arrière exacts.
+    - Écriture uniquement sur un clone marqué.
+    - Aucune obligation globale n'est convertie en obligation de poste ; les cas ambigus sont conservés et signalés.
+  - **Sans changement** : moteur de champs, RBAC, Billing, modules, sociétés historiques.
+- **Conséquences** :
+  - Clone : aucune obligation « toute la société » enregistrée (rien à migrer) ; règles par rôle opérationnelles conservées ; conflits « exigé mais masqué pour un rôle » signalés.
+  - Société fictive 101 (fixture d'ancienne configuration) : 2 redondances retirées, comportement identique pour 5 comptes, retour arrière exact.
+  - `Adr858PeopleAndFieldRulesTest` 6/6 ; `Adr802OneFunctionOnePathTest` mis à jour ; E2E `audit842-people858-recipe` 5/5 (12 points de recette) ; `m7-lot4-recette` mis à jour.
+  - Livraison : `docs/bmad/leezr-5-design/14-l5-delivery.md` (limites au §7). Rapport d'audit du clone : `l5-fields-audit-clone.json`.

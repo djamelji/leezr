@@ -13061,5 +13061,158 @@
       "mySpace": "Mon espace",
       "clockIn": "Pointer l'arrivée"
     }
+  },
+  "l5": {
+    "title": "Personnes",
+    "configureFields": "Configurer les champs",
+    "head": {
+      "people": "{n} personne | {n} personnes",
+      "active": "{n} active | {n} actives",
+      "invitations": "{n} invitation en attente | {n} invitations en attente",
+      "incomplete": "{n} dossier incomplet | {n} dossiers incomplets"
+    },
+    "summary": {
+      "all": "Toute l'équipe",
+      "to_act": "À traiter",
+      "incomplete": "Dossiers incomplets",
+      "invitations": "Invitations en attente",
+      "preparatory": "Intégrations en cours",
+      "active": "{n} active | {n} actives",
+      "to_actHint": "une action vous attend",
+      "incompleteHint": "informations à compléter",
+      "invitationsHint": "accès non encore activés",
+      "preparatoryHint": "recrues en préparation"
+    },
+    "search": "Rechercher une personne…",
+    "filters": {
+      "status": "Statut",
+      "team": "Équipe",
+      "position": "Poste",
+      "access": "Accès",
+      "clear": "Réinitialiser"
+    },
+    "col": {
+      "person": "Personne",
+      "position": "Poste & équipe",
+      "status": "Statut RH",
+      "access": "Accès à Leezr",
+      "file": "Dossier",
+      "next": "Prochaine étape"
+    },
+    "access": {
+      "connected": "Accès actif",
+      "active": "Accès prêt",
+      "invited": "Invitation envoyée",
+      "pending_acceptance": "À accepter",
+      "invitation_expired": "Invitation expirée",
+      "suspended": "Suspendu",
+      "none": "Sans accès"
+    },
+    "noPosition": "Poste non défini",
+    "noRecord": "Pas de fiche RH",
+    "fileTitle": "{filled} informations renseignées sur {total}",
+    "next": {
+      "resend_invitation": "Renvoyer l'invitation",
+      "awaiting_acceptance": "Invitation en attente",
+      "finish_onboarding": "Finaliser l'intégration",
+      "complete_file": "Compléter le dossier",
+      "none": "À jour"
+    },
+    "rowMenu": "Actions pour {name}",
+    "emptyFiltered": "Aucune personne ne correspond à ces critères.",
+    "preview": {
+      "title": "Aperçu de {name}",
+      "error": "Impossible de charger cette fiche pour le moment.",
+      "next": "Prochaine étape",
+      "position": "Poste et rattachement",
+      "jobRole": "Poste",
+      "department": "Équipe",
+      "manager": "Responsable",
+      "establishment": "Établissement",
+      "none": "Non défini",
+      "contract": "Contrat",
+      "contractType": "Type",
+      "since": "Depuis le",
+      "contractStatus": "État",
+      "onboarding": "Intégration",
+      "file": "Dossier",
+      "fileComplete": "Toutes les informations demandées sont renseignées.",
+      "fileMissing": "{n} information demandée reste à renseigner. | {n} informations demandées restent à renseigner.",
+      "openFile": "Ouvrir la fiche complète",
+      "quick": "Aperçu rapide",
+      "actions": {
+        "employment": "Emploi",
+        "access": "Gérer l'accès",
+        "invite": "Inviter à Leezr",
+        "documents": "Documents",
+        "complete": "Compléter"
+      }
+    },
+    "contractStatus": {
+      "active": "En cours",
+      "draft": "Brouillon",
+      "ended": "Terminé",
+      "pending_signature": "À signer",
+      "cancelled": "Annulé"
+    },
+    "step": {
+      "info": "Informations de base",
+      "contract": "Contrat créé",
+      "signed_contract": "Contrat signé",
+      "account": "Accès à Leezr",
+      "planning": "Premier créneau planifié"
+    },
+    "catalog": {
+      "obligation": "Obligation",
+      "optional": "Facultatif",
+      "label": "Libellé",
+      "edit": "Modifier le champ",
+      "edited": "Champ modifié.",
+      "editHint": "Les valeurs déjà saisies sont conservées.",
+      "requireAll": "Rendre obligatoire pour toute la société",
+      "unrequireAll": "Ne plus l'exiger de toute la société",
+      "requireAllHint": "Toutes les personnes, quel que soit leur poste",
+      "requiredAll": "Champ désormais obligatoire pour toute la société.",
+      "requiredAllOff": "Ce champ n'est plus exigé de toute la société.",
+      "hiddenFor": "Masqué pour {n} rôle | Masqué pour {n} rôles",
+      "src": {
+        "platform": "Leezr (catalogue)",
+        "jobdomain": "Votre métier",
+        "company": "Toute la société",
+        "roles": "{n} rôle (historique) | {n} rôles (historique)"
+      },
+      "hint": {
+        "platform": "Obligatoire partout : réglé par Leezr dans le catalogue global.",
+        "module": "Exigé par ce module tant qu'il est actif (réglé par Leezr).",
+        "jobdomain": "Recommandé comme obligatoire pour votre métier (réglé par Leezr).",
+        "company": "Réglé ici : obligatoire pour toutes les personnes de la société.",
+        "roles": "Règle historique par rôle d'accès ({roles}) — modifiable dans Rôles & autorisations.",
+        "position": "Exigé pour ce poste — modifiable sur la fiche du poste.",
+        "hidden": "Masqué dans le formulaire pour : {roles}. Vérifiez que c'est voulu."
+      },
+      "inherit": {
+        "title": "Comment un champ devient obligatoire",
+        "platform": "Leezr",
+        "platformHint": "Catalogue global : formats, contraintes, champs exigés partout ou par un module.",
+        "jobdomain": "Votre métier",
+        "jobdomainHint": "Champs recommandés par votre activité (JobDomain).",
+        "company": "Votre société",
+        "companyHint": "Ici : champs proposés, et ceux obligatoires pour tout le monde.",
+        "position": "Le poste",
+        "positionHint": "Sur chaque poste : informations et pièces exigées pour cette fonction.",
+        "rolesNote": "Votre société applique encore des obligations historiques par rôle d'accès : elles sont indiquées ci-dessous et se modifient dans Rôles & autorisations."
+      }
+    },
+    "roleFields": {
+      "text": "Ce réglage ne s'applique qu'aux personnes ayant ce rôle d'accès (règle historique). Pour exiger une information de tout le monde ou pour un poste : ",
+      "catalog": "Catalogue › Champs"
+    },
+    "add": {
+      "position": "Poste (facultatif)",
+      "positionPlaceholder": "Choisir le poste",
+      "positionNeeds": "Ce poste demande :",
+      "positionNeedsHint": "Ces informations seront demandées dans son dossier, pas maintenant.",
+      "positionNoNeeds": "Ce poste ne demande rien de plus que la société."
+    }
   }
 }

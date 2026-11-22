@@ -13043,5 +13043,158 @@
       "mySpace": "My space",
       "clockIn": "Clock in"
     }
+  },
+  "l5": {
+    "title": "People",
+    "configureFields": "Configure fields",
+    "head": {
+      "people": "{n} person | {n} people",
+      "active": "{n} active | {n} active",
+      "invitations": "{n} pending invitation | {n} pending invitations",
+      "incomplete": "{n} incomplete file | {n} incomplete files"
+    },
+    "summary": {
+      "all": "Whole team",
+      "to_act": "To do",
+      "incomplete": "Incomplete files",
+      "invitations": "Pending invitations",
+      "preparatory": "Onboardings in progress",
+      "active": "{n} active | {n} active",
+      "to_actHint": "an action is waiting for you",
+      "incompleteHint": "information to complete",
+      "invitationsHint": "access not activated yet",
+      "preparatoryHint": "recruits being prepared"
+    },
+    "search": "Search a person…",
+    "filters": {
+      "status": "Status",
+      "team": "Team",
+      "position": "Position",
+      "access": "Access",
+      "clear": "Reset"
+    },
+    "col": {
+      "person": "Person",
+      "position": "Position & team",
+      "status": "HR status",
+      "access": "Leezr access",
+      "file": "File",
+      "next": "Next step"
+    },
+    "access": {
+      "connected": "Active access",
+      "active": "Access ready",
+      "invited": "Invited",
+      "pending_acceptance": "To accept",
+      "invitation_expired": "Invitation expired",
+      "suspended": "Suspended",
+      "none": "No access"
+    },
+    "noPosition": "No position",
+    "noRecord": "No HR record",
+    "fileTitle": "{filled} of {total} requested items filled",
+    "next": {
+      "resend_invitation": "Resend the invitation",
+      "awaiting_acceptance": "Invitation pending",
+      "finish_onboarding": "Finish onboarding",
+      "complete_file": "Complete the file",
+      "none": "Up to date"
+    },
+    "rowMenu": "Actions for {name}",
+    "emptyFiltered": "Nobody matches these criteria.",
+    "preview": {
+      "title": "Overview of {name}",
+      "error": "This file cannot be loaded right now.",
+      "next": "Next step",
+      "position": "Position and reporting line",
+      "jobRole": "Position",
+      "department": "Team",
+      "manager": "Manager",
+      "establishment": "Site",
+      "none": "Not set",
+      "contract": "Contract",
+      "contractType": "Type",
+      "since": "Since",
+      "contractStatus": "State",
+      "onboarding": "Onboarding",
+      "file": "File",
+      "fileComplete": "All requested information is filled in.",
+      "fileMissing": "{n} requested item is still missing. | {n} requested items are still missing.",
+      "openFile": "Open the full file",
+      "quick": "Quick view",
+      "actions": {
+        "employment": "Employment",
+        "access": "Manage access",
+        "invite": "Invite to Leezr",
+        "documents": "Documents",
+        "complete": "Complete"
+      }
+    },
+    "contractStatus": {
+      "active": "Running",
+      "draft": "Draft",
+      "ended": "Ended",
+      "pending_signature": "To sign",
+      "cancelled": "Cancelled"
+    },
+    "step": {
+      "info": "Basic information",
+      "contract": "Contract created",
+      "signed_contract": "Contract signed",
+      "account": "Leezr access",
+      "planning": "First shift planned"
+    },
+    "catalog": {
+      "obligation": "Obligation",
+      "optional": "Optional",
+      "label": "Label",
+      "edit": "Edit the field",
+      "edited": "Field updated.",
+      "editHint": "Values already entered are kept.",
+      "requireAll": "Make it required for the whole company",
+      "unrequireAll": "Stop requiring it from the whole company",
+      "requireAllHint": "Everyone, whatever their position",
+      "requiredAll": "This field is now required for the whole company.",
+      "requiredAllOff": "This field is no longer required from the whole company.",
+      "hiddenFor": "Hidden for {n} role | Hidden for {n} roles",
+      "src": {
+        "platform": "Leezr (catalogue)",
+        "jobdomain": "Your business",
+        "company": "Whole company",
+        "roles": "{n} role (legacy) | {n} roles (legacy)"
+      },
+      "hint": {
+        "platform": "Required everywhere: set by Leezr in the global catalogue.",
+        "module": "Required by this module while it is active (set by Leezr).",
+        "jobdomain": "Recommended as required for your business (set by Leezr).",
+        "company": "Set here: required for everyone in the company.",
+        "roles": "Legacy rule per access role ({roles}) — editable in Roles & permissions.",
+        "position": "Required for this position — editable on the position page.",
+        "hidden": "Hidden in the form for: {roles}. Check that this is intended."
+      },
+      "inherit": {
+        "title": "How a field becomes required",
+        "platform": "Leezr",
+        "platformHint": "Global catalogue: formats, constraints, fields required everywhere or by a module.",
+        "jobdomain": "Your business",
+        "jobdomainHint": "Fields recommended by your activity (JobDomain).",
+        "company": "Your company",
+        "companyHint": "Here: fields offered, and those required from everyone.",
+        "position": "The position",
+        "positionHint": "On each position: information and documents required for that job.",
+        "rolesNote": "Your company still applies legacy obligations per access role: they are shown below and edited in Roles & permissions."
+      }
+    },
+    "roleFields": {
+      "text": "This setting only applies to people with this access role (legacy rule). To require information from everyone or for a position: ",
+      "catalog": "Catalogue › Fields"
+    },
+    "add": {
+      "position": "Position (optional)",
+      "positionPlaceholder": "Choose the position",
+      "positionNeeds": "This position requires:",
+      "positionNeedsHint": "They will be asked in the person's file, not now.",
+      "positionNoNeeds": "This position requires nothing beyond the company's rules."
+    }
   }
 }

@@ -59,7 +59,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
 
     public function test_former_pages_are_views_without_route_metadata(): void
     {
-        foreach (['company/people/_PeopleHrTools.vue', 'company/people/_ProfileFieldsSettings.vue', 'company/people/_MemberHealth.vue',
+        foreach (['company/people/_PeopleHrTools.vue', 'company/people/_MemberHealth.vue', 'company/people/_PeopleDirectory.vue', 'company/people/_PersonPreview.vue', // ADR-858 : _ProfileFieldsSettings retiré
             'company/workforce/signature/_SignaturesView.vue', 'company/workforce/contract/_ContractTemplatesView.vue', 'company/workforce/documents/_HrDocumentsView.vue'] as $f) {
             $this->assertStringNotContainsString('definePage(', $this->page($f), $f);
         }
@@ -70,7 +70,10 @@ class Adr802OneFunctionOnePathTest extends TestCase
         $src = $this->page('company/people/_PeopleSpace.vue'); // ADR-820 : espace monté par /people, /people/hr, /people/roles
         $this->assertStringContainsString("moduleStore.isActive('workforce') && can('workforce.view')", $src); // ex-page RH
         $this->assertStringContainsString('<PeopleHrTools v-if="tab === \'hr\' && canHr"', $src);
-        $this->assertStringContainsString("can('members.view') && can('settings.manage')", $src); // garde de l'API des champs
+        // ADR-858 : « Outils → Champs » retiré ; la configuration des champs vit dans Company › Catalogue (même garde API)
+        $this->assertStringContainsString("can('settings.manage')", $src);
+        $this->assertStringContainsString('to="/company/catalogs/fields"', $src);
+        $this->assertStringNotContainsString('ProfileFieldsSettings', $src);
         $this->assertStringContainsString('<MemberHealth v-if="tab === \'people\' && can(\'members.view\')"', $src);
         $this->assertStringNotContainsString("name: 'company-workforce-employees'", $src, 'no link to a second people page');
         $this->assertStringNotContainsString('to="/company/members"', $src);

@@ -36,11 +36,17 @@ class PeopleListReadModel
             $memberships = Membership::where('company_id', $company->id)
                 ->with(['user:id,first_name,last_name,email,avatar,password_set_at,last_login_at', 'companyRole:id,name,is_administrative'])
                 ->get();
+            // ADR-858 (L5) — complétude du dossier (moteur de champs existant, ADR-168b) : donnée d'administration des
+            // accès (ADR-816), jamais servie sans les détails de compte.
+            $completeness = $details ? \App\Company\Fields\ReadModels\CompanyUserProfileReadModel::bulkCompleteness($company, $memberships->filter(fn ($m) => $m->user)) : [];
             foreach ($memberships as $m) {
                 if (! $m->user) {
                     continue;
                 }
-                $persons['u'.$m->user_id] = self::rowFromMembership($m, $details);
+                $row = self::rowFromMembership($m, $details);
+                $c = $completeness[$m->id] ?? null;
+                $row['completeness'] = $c ? ['filled' => (int) $c['filled'], 'total' => (int) $c['total'], 'complete' => (bool) $c['complete']] : null;
+                $persons['u'.$m->user_id] = $row;
             }
         }
 
@@ -58,7 +64,13 @@ class PeopleListReadModel
             }
         }
 
-        $rows = array_values($persons);
+        $rows = array_map(fn ($r) => $r + ['next_action' => self::nextAction($r)], array_values($persons));
+
+        // ── ADR-858 (L5) — synthèse et compteurs de filtres, calculés sur ce que l'acteur PEUT voir (périmètre déjà
+        // appliqué) après la recherche : les compteurs ne révèlent rien de plus que la liste elle-même. ──
+        $searched = self::applyFilters($rows, ['search' => $filters['search'] ?? null]);
+        $summary = self::summary($rows, $details, $canHr && $hasWorkforce);
+        $filterCounts = self::filterCounts($searched, $details, $canHr && $hasWorkforce);
 
         // ── Filtres ──
         $rows = self::applyFilters($rows, $filters);
@@ -81,6 +93,8 @@ class PeopleListReadModel
             'current_page' => $page,
             'last_page' => (int) ceil($total / $perPage),
             'facets' => ['access' => $canAccess, 'account_details' => $details, 'hr' => $canHr],
+            'summary' => $summary,
+            'filter_counts' => $filterCounts,
         ];
     }
 
@@ -142,6 +156,63 @@ class PeopleListReadModel
         return $out;
     }
 
+    private const INVITATION_STATES = ['invited', 'pending_acceptance', 'invitation_expired'];
+
+    /**
+     * ADR-858 — the next useful step for a person, from what the actor can already see on the row (never a hidden
+     * fact) : an expired invitation to resend, an invitation awaiting acceptance, an onboarding to finish, a file to
+     * complete. Null = nothing to do.
+     */
+    private static function nextAction(array $r): ?string
+    {
+        return match (true) {
+            ($r['account_state'] ?? null) === 'invitation_expired' => 'resend_invitation',
+            in_array($r['account_state'] ?? null, ['invited', 'pending_acceptance'], true) => 'awaiting_acceptance',
+            ($r['employment_status'] ?? null) === 'preparatory' => 'finish_onboarding',
+            ! empty($r['completeness']) && ! $r['completeness']['complete'] => 'complete_file',
+            default => null,
+        };
+    }
+
+    /** ADR-858 — header synthesis ; a figure the actor may not read is null (never a misleading 0). */
+    private static function summary(array $rows, bool $details, bool $hr): array
+    {
+        $count = fn (callable $f) => count(array_filter($rows, $f));
+
+        return [
+            'total' => count($rows),
+            'active' => $count(fn ($r) => ($r['employment_status'] ?? null) === 'active'
+                || (($r['employment_status'] ?? null) === null && in_array($r['account_state'] ?? null, ['connected', 'active'], true))),
+            'invitations' => $details ? $count(fn ($r) => in_array($r['account_state'] ?? null, self::INVITATION_STATES, true)) : null,
+            'incomplete' => $details ? $count(fn ($r) => ! empty($r['completeness']) && ! $r['completeness']['complete']) : null,
+            'preparatory' => $hr ? $count(fn ($r) => ($r['employment_status'] ?? null) === 'preparatory') : null,
+            'to_act' => $count(fn ($r) => ($r['next_action'] ?? null) !== null),
+        ];
+    }
+
+    /** ADR-858 — counts shown in the filters (only the dimensions the actor may filter on). */
+    private static function filterCounts(array $rows, bool $details, bool $hr): array
+    {
+        $by = function (string $key) use ($rows) {
+            $out = [];
+            foreach ($rows as $r) {
+                if (($r[$key] ?? null) !== null && $r[$key] !== '') {
+                    $out[$r[$key]] = ($out[$r[$key]] ?? 0) + 1;
+                }
+            }
+            ksort($out);
+
+            return $out;
+        };
+
+        return [
+            'access_state' => $details ? $by('account_state') : null,
+            'employment_status' => $hr ? $by('employment_status') : null,
+            'department' => $hr ? $by('department') : null,
+            'job_role' => $hr ? $by('job_role') : null,
+        ];
+    }
+
     private static function applyFilters(array $rows, array $filters): array
     {
         $search = trim((string) ($filters['search'] ?? ''));
@@ -157,6 +228,18 @@ class PeopleListReadModel
         }
         if (! empty($filters['department'])) {
             $rows = array_filter($rows, fn ($r) => $r['department'] === $filters['department']);
+        }
+        if (! empty($filters['job_role'])) {
+            $rows = array_filter($rows, fn ($r) => ($r['job_role'] ?? null) === $filters['job_role']);
+        }
+        if (! empty($filters['attention'])) {
+            $rows = array_filter($rows, fn ($r) => match ($filters['attention']) {
+                'incomplete' => isset($r['completeness']) && $r['completeness'] && ! $r['completeness']['complete'],
+                'invitations' => in_array($r['account_state'] ?? null, self::INVITATION_STATES, true),
+                'preparatory' => ($r['employment_status'] ?? null) === 'preparatory',
+                'to_act' => ($r['next_action'] ?? null) !== null,
+                default => true,
+            });
         }
         if (! empty($filters['role_id'])) {
             $rid = (int) $filters['role_id'];

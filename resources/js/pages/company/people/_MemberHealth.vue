@@ -16,7 +16,8 @@ onMounted(async () => {
 })
 
 // ADR-816 : la complétude n'est servie qu'à l'administration des accès ; sans elle, aucune alerte inventée.
-const incomplete = computed(() => store.members.filter(m => m.profile_completeness && !m.profile_completeness.complete))
+// ADR-858 : les profils incomplets sont désormais une tuile et un filtre de l'annuaire (« Dossiers incomplets ») ; reste le quota.
+const incomplete = computed(() => [])
 const limitReached = computed(() => store.memberLimit !== null && store.memberCount >= store.memberLimit)
 </script>
 

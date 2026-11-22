@@ -12,6 +12,9 @@ export const usePeopleListStore = defineStore('people-list', () => {
   const total = ref(0)
   const facets = ref({ access: false, hr: false })
   const loading = ref(false)
+  const summary = ref(null) // ADR-858 : header synthesis (null figure = not readable by this actor)
+  const filterCounts = ref({})
+  const loaded = ref(false)
 
   async function fetch({ page = 1, perPage = 20, search = '', sortBy = 'name', sortDir = 'asc', filters = {} } = {}) {
     loading.value = true
@@ -20,9 +23,13 @@ export const usePeopleListStore = defineStore('people-list', () => {
       if (search) q.set('search', search)
       for (const [k, v] of Object.entries(filters)) { if (v) q.set(k, v) }
       const res = await $api(`/company/people?${q.toString()}`)
+
       rows.value = res.data || []
       total.value = res.total || 0
       facets.value = res.facets || { access: false, hr: false }
+      summary.value = res.summary || null
+      filterCounts.value = res.filter_counts || {}
+      loaded.value = true
     }
     catch {
       rows.value = []
@@ -31,5 +38,5 @@ export const usePeopleListStore = defineStore('people-list', () => {
     finally { loading.value = false }
   }
 
-  return { rows, total, facets, loading, fetch }
+  return { rows, total, facets, loading, summary, filterCounts, loaded, fetch }
 })

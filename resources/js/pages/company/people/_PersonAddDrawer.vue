@@ -12,9 +12,11 @@ import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useCan } from '@/composables/useCan'
 import { useAppToast } from '@/composables/useAppToast'
+import { $api } from '@/utils/api'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
+
   // Réponse préremplie quand le lien d'origine la porte déjà (`?action=invite|create`).
   presetAccess: { type: Boolean, default: null },
 })
@@ -33,7 +35,7 @@ const canStaff = computed(() => canModule('workforce') && can('workforce.manage'
 const asksAccess = computed(() => canInvite.value && canStaff.value)
 
 const today = () => new Date().toISOString().slice(0, 10)
-const blank = () => ({ first_name: '', last_name: '', email: '', access: null, company_role_id: null, staff: true, hire_date: today(), phone: '', employee_number: '' })
+const blank = () => ({ first_name: '', last_name: '', email: '', access: null, company_role_id: null, staff: true, hire_date: today(), phone: '', employee_number: '', job_role_id: null })
 const form = ref(blank())
 const errors = ref({})
 const message = ref('')
@@ -44,11 +46,36 @@ const more = ref(false)
 const withAccess = computed(() => (asksAccess.value ? form.value.access : canInvite.value))
 const withRecord = computed(() => canStaff.value && (withAccess.value === false || form.value.staff))
 const roleOptions = computed(() => (settings.roles || []).map(r => ({ title: r.name, value: r.id })))
+
 const ready = computed(() => form.value.first_name.trim() && form.value.last_name.trim()
   && withAccess.value !== null
   && (!withAccess.value || (form.value.email.trim() && form.value.company_role_id))
   && (!withRecord.value || form.value.hire_date))
 
+// ── ADR-858 (L5) — the position is chosen here (optional) ; what it requires is shown when the user may read it.
+// Nothing new is asked : the file collects these items later (onboarding / person file), as today.
+const positions = ref([])
+const positionNeeds = ref(null) // null = unknown (not readable or not loaded) ; [] = nothing specific
+
+const loadPositions = async () => {
+  if (!withRecord.value || positions.value.length) return
+  const list = await $api('/workforce/job-roles').catch(() => [])
+
+  positions.value = (Array.isArray(list) ? list : []).map(p => ({ title: p.department?.name ? `${p.title} · ${p.department.name}` : p.title, value: p.id }))
+}
+
+watch(() => form.value.job_role_id, async id => {
+  positionNeeds.value = null
+  if (!id) return
+  try {
+    const r = await $api(`/workforce/requirements?scope=job_role:${id}`)
+    const st = r?.state || {}
+
+    positionNeeds.value = [...(st.fields || []), ...(st.documents || [])].filter(i => (i.state ?? 'required') === 'required').map(i => i.label || i.code)
+  }
+  catch { positionNeeds.value = null }
+})
+watch(withRecord, v => { if (v) loadPositions() }, { immediate: true })
 watch(() => props.modelValue, async open => {
   if (!open) return
   form.value = { ...blank(), access: asksAccess.value ? props.presetAccess : null }
@@ -59,6 +86,7 @@ watch(() => props.modelValue, async open => {
 })
 
 const close = () => emit('update:modelValue', false)
+
 const fail = e => {
   errors.value = e?.data?.errors || {}
   message.value = Object.keys(errors.value).length ? '' : (e?.data?.message || t('common.error'))
@@ -69,6 +97,7 @@ const submit = async () => {
   saving.value = true
   errors.value = {}
   message.value = ''
+
   const f = form.value
 
   try {
@@ -77,7 +106,7 @@ const submit = async () => {
     if (withRecord.value) {
       const created = await employees.createEmployee({
         first_name: f.first_name, last_name: f.last_name, email: f.email || null, hire_date: f.hire_date,
-        phone: f.phone || null, employee_number: f.employee_number || null,
+        phone: f.phone || null, employee_number: f.employee_number || null, job_role_id: f.job_role_id || null, // ADR-858
       })
 
       employee = created?.data ?? created
@@ -255,6 +284,48 @@ const submit = async () => {
                   data-test="person-add-hire-date"
                 />
               </VCol>
+              <VCol
+                v-if="withRecord && withAccess !== null && positions.length"
+                cols="12"
+              >
+                <AppSelect
+                  v-model="form.job_role_id"
+                  :items="positions"
+                  :label="t('l5.add.position')"
+                  :placeholder="t('l5.add.positionPlaceholder')"
+                  clearable
+                  :error-messages="errors.job_role_id"
+                  data-test="person-add-position"
+                />
+                <div
+                  v-if="positionNeeds && positionNeeds.length"
+                  class="lz-needs mt-2"
+                  data-test="person-add-position-needs"
+                >
+                  <div class="text-caption font-weight-medium mb-1">
+                    {{ t('l5.add.positionNeeds') }}
+                  </div>
+                  <div class="d-flex flex-wrap gap-1">
+                    <VChip
+                      v-for="n in positionNeeds"
+                      :key="n"
+                      size="x-small"
+                      label
+                    >
+                      {{ n }}
+                    </VChip>
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-1">
+                    {{ t('l5.add.positionNeedsHint') }}
+                  </div>
+                </div>
+                <div
+                  v-else-if="positionNeeds && !positionNeeds.length"
+                  class="text-caption text-medium-emphasis mt-1"
+                >
+                  {{ t('l5.add.positionNoNeeds') }}
+                </div>
+              </VCol>
 
               <!-- Informations utiles plus tard : repliées, jamais obligatoires. -->
               <VCol
@@ -341,3 +412,7 @@ const submit = async () => {
     </div>
   </VNavigationDrawer>
 </template>
+
+<style scoped>
+.lz-needs { padding: .625rem .75rem; border-radius: 10px; background: rgba(var(--v-theme-primary), .05); }
+</style>

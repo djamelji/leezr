@@ -18,6 +18,7 @@ const tab = computed({
   get: () => (route.params.tab === 'documents' ? 'documents' : 'fields'),
   set: v => router.replace({ params: { tab: v } }),
 })
+
 const data = ref(null)
 const loading = ref(true)
 const search = ref('')
@@ -29,6 +30,7 @@ const load = async () => {
   try { data.value = await $api('/company/catalogs') }
   finally { loading.value = false }
 }
+
 onMounted(load)
 
 const canFields = computed(() => can('settings.manage'))
@@ -39,6 +41,7 @@ const docLabel = d => (te(`documents.type.${d.code}`) ? t(`documents.type.${d.co
 const ORIGIN_TONE = { standard: 'secondary', jobdomain: 'info', module: 'primary', custom: 'success' }
 const STATUS_TONE = { active: 'success', available: 'secondary', recommended: 'info' }
 const { moduleName } = useCatalogText()
+
 // ADR-820 : « Standard » n'est affiché que s'il est la seule origine (moins de bruit), modules traduits.
 const shownOrigins = list => (list.length > 1 ? list.filter(o => o.kind !== 'standard') : list)
 const originLabel = o => (o.kind === 'module' ? moduleName(o.module, o.name) : o.kind === 'jobdomain' && o.recommended ? t('catalogs.origin.jobdomainRecommended') : t(`catalogs.origin.${o.kind}`))
@@ -53,21 +56,25 @@ const rows = computed(() => {
     .filter(r => !originFilter.value || r.origins.some(o => o.kind === originFilter.value))
     .filter(r => !statusFilter.value || r.status === statusFilter.value)
 })
+
 const counts = computed(() => ({ fields: data.value?.fields?.length || 0, documents: data.value?.documents?.length || 0 }))
 const originItems = computed(() => ['standard', 'jobdomain', 'module', 'custom'].map(k => ({ value: k, title: t(`catalogs.origin.${k}`) })))
 const statusItems = computed(() => ['active', 'available', 'recommended'].map(k => ({ value: k, title: t(`catalogs.status.${k}`) })))
+
 const headers = computed(() => [
   { title: t('catalogs.col.name'), key: 'label' },
   { title: tab.value === 'fields' ? t('catalogs.col.type') : t('catalogs.col.formats'), key: 'kind', sortable: false },
   { title: t('catalogs.col.origin'), key: 'origins', sortable: false },
-  { title: t('catalogs.col.usedBy'), key: 'used_by', sortable: false },
+  { title: tab.value === 'fields' ? t('l5.catalog.obligation') : t('catalogs.col.usedBy'), key: 'used_by', sortable: false }, // ADR-858
   { title: t('catalogs.col.status'), key: 'status', align: 'end' },
 ])
 
 // ── Activation (proposé dans les formulaires de la société) — jamais une obligation ──
 const toggling = ref(null)
+
 const toggle = async row => {
   toggling.value = row.code
+
   const enable = row.status !== 'active'
   try {
     if (tab.value === 'fields')
@@ -80,6 +87,7 @@ const toggle = async row => {
   catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
   finally { toggling.value = null }
 }
+
 const canToggle = computed(() => (tab.value === 'fields' ? canFields.value : canDocs.value))
 
 // ── Exiger pour un poste (registre des exigences, même chemin que la fiche du poste) ──
@@ -88,20 +96,24 @@ const requireDialog = ref(false)
 const requireTarget = ref(null)
 const requirePosition = ref(null)
 const requiring = ref(false)
+
 const openRequire = async row => {
   requireTarget.value = row
   requirePosition.value = null
   if (!positions.value.length) {
     const list = await $api('/workforce/job-roles').catch(() => [])
     const arr = Array.isArray(list) ? list : Object.values(list || {}).filter(r => r && typeof r === 'object' && r.id)
+
     positions.value = arr.map(p => ({ title: p.title, value: p.id }))
   }
   requireDialog.value = true
 }
+
 const confirmRequire = async () => {
   requiring.value = true
   try {
     const kind = tab.value === 'fields' ? 'field' : 'document'
+
     await $api('/workforce/requirements', { method: 'POST', body: { scope: `job_role:${requirePosition.value}`, items: [{ kind, code: requireTarget.value.code, state: 'required' }] } })
     toast(t('catalogs.required'), 'success')
     requireDialog.value = false
@@ -116,13 +128,16 @@ const createDialog = ref(false)
 const form = ref({})
 const creating = ref(false)
 const FORMATS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']
+
 const openCreate = () => {
   form.value = tab.value === 'fields'
     ? { label: '', type: 'string', options: [] }
     : { label: '', accepted_types: ['pdf', 'jpg', 'png'], max_file_size_mb: 10, requires_expiration: false }
   createDialog.value = true
 }
+
 const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^(\d)/, 'f_$1').slice(0, 40) || 'champ'
+
 const create = async () => {
   creating.value = true
   try {
@@ -141,8 +156,63 @@ const create = async () => {
   catch (e) { toast(e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('common.error'), 'error') }
   finally { creating.value = false }
 }
+
 const canCreate = computed(() => (tab.value === 'fields' ? canFields.value && data.value?.can_create_fields : canDocs.value))
 const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ value: v, title: t(`catalogs.fieldType.${v}`) })))
+
+// ── ADR-858 (L5) — the field settings formerly in « Personnes › Outils → Champs », ONE place now ──
+// Obligation = where it comes from (Platform catalogue, module, JobDomain, the whole company, positions, historical
+// role overlay). « Required for the whole company » is a distinct company-wide rule (field_activations.required_override,
+// the same storage the form engine already enforces) — never confused with a position requirement.
+const authority = computed(() => data.value?.requirements_authority || 'role')
+
+const obligationChips = item => {
+  const o = item.obligation || {}
+  const out = []
+  if (o.platform) out.push({ key: 'platform', tone: 'secondary', text: t('l5.catalog.src.platform'), hint: t('l5.catalog.hint.platform') })
+  for (const m of o.modules || []) out.push({ key: `m-${m}`, tone: 'primary', text: moduleName(m, m), hint: t('l5.catalog.hint.module') })
+  if (o.jobdomain) out.push({ key: 'jobdomain', tone: 'info', text: t('l5.catalog.src.jobdomain'), hint: t('l5.catalog.hint.jobdomain') })
+  if (o.company) out.push({ key: 'company', tone: 'warning', text: t('l5.catalog.src.company'), hint: t('l5.catalog.hint.company') })
+  if (o.roles?.length) out.push({ key: 'roles', tone: 'secondary', outlined: true, text: t('l5.catalog.src.roles', { n: o.roles.length }, o.roles.length), hint: t('l5.catalog.hint.roles', { roles: o.roles.join(', ') }) })
+
+  return out
+}
+
+const savingRule = ref(null)
+
+const toggleCompanyRequired = async item => {
+  savingRule.value = item.code
+
+  const required = !item.obligation?.company
+  try {
+    await $api('/company/field-activations', { method: 'POST', body: { field_definition_id: item.id, enabled: true, required_override: required } })
+    toast(required ? t('l5.catalog.requiredAll') : t('l5.catalog.requiredAllOff'), 'success')
+    await load()
+  }
+  catch (e) { toast(e?.data?.message || t('common.error'), 'error') }
+  finally { savingRule.value = null }
+}
+
+
+// edit a company field (label, options) — the definition stays, values are never touched
+const editDialog = ref(false)
+const editForm = ref({ id: null, label: '', type: 'string', options: [] })
+const editing = ref(false)
+const openEdit = item => { editForm.value = { id: item.id, label: item.label, type: item.type, options: [...(item.options || [])] }; editDialog.value = true }
+
+const saveEdit = async () => {
+  editing.value = true
+  try {
+    const body = { label: editForm.value.label.trim() }
+    if (editForm.value.type === 'select') body.options = editForm.value.options.map(o => String(o).trim()).filter(Boolean)
+    await $api(`/company/field-definitions/${editForm.value.id}`, { method: 'PUT', body })
+    toast(t('l5.catalog.edited'), 'success')
+    editDialog.value = false
+    await load()
+  }
+  catch (e) { toast(e?.data?.message || Object.values(e?.data?.errors || {})[0]?.[0] || t('common.error'), 'error') }
+  finally { editing.value = false }
+}
 </script>
 
 <template>
@@ -183,7 +253,41 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
       </VTab>
     </VTabs>
 
+    <!-- ADR-858 : one place per rule — how a field becomes required, from the widest to the narrowest -->
+    <VCard
+      v-if="tab === 'fields'"
+      variant="flat"
+      class="lz-inherit mb-4"
+      data-test="catalog-inheritance"
+    >
+      <div class="lz-inherit__title">
+        <VIcon
+          icon="tabler-hierarchy-3"
+          size="20"
+          class="me-2"
+        />{{ t('l5.catalog.inherit.title') }}
+      </div>
+      <ol class="lz-inherit__steps">
+        <li
+          v-for="k in ['platform', 'jobdomain', 'company', 'position']"
+          :key="k"
+        >
+          <span class="lz-inherit__n">{{ ['platform', 'jobdomain', 'company', 'position'].indexOf(k) + 1 }}</span>
+          <span>
+            <strong>{{ t(`l5.catalog.inherit.${k}`) }}</strong>
+            <span class="d-block text-caption text-medium-emphasis">{{ t(`l5.catalog.inherit.${k}Hint`) }}</span>
+          </span>
+        </li>
+      </ol>
+      <div class="text-caption text-medium-emphasis mt-2">
+        {{ t('catalogs.availabilityHint') }}
+        <template v-if="authority === 'role'">
+          {{ t('l5.catalog.inherit.rolesNote') }}
+        </template>
+      </div>
+    </VCard>
     <VAlert
+      v-else
       type="info"
       variant="tonal"
       density="compact"
@@ -275,7 +379,54 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
           </div>
         </template>
         <template #item.used_by="{ item }">
-          <div class="d-flex flex-wrap gap-1 text-wrap">
+          <!-- ADR-858 : fields — every obligation with its origin ; positions link to their own page -->
+          <div
+            v-if="tab === 'fields'"
+            class="d-flex flex-wrap gap-1 text-wrap py-1"
+            :data-test="`catalog-obligation-${item.code}`"
+          >
+            <VChip
+              v-for="c in obligationChips(item)"
+              :key="c.key"
+              size="small"
+              label
+              :color="c.tone"
+              :variant="c.outlined ? 'outlined' : 'tonal'"
+              :title="c.hint"
+            >
+              {{ c.text }}
+            </VChip>
+            <VChip
+              v-for="p in item.used_by.positions"
+              :key="p.id"
+              size="small"
+              label
+              prepend-icon="tabler-briefcase"
+              :to="`/company/workforce/organization/positions/${p.id}/fields`"
+              :title="t('l5.catalog.hint.position')"
+            >
+              {{ p.title }}
+            </VChip>
+            <VChip
+              v-if="item.obligation?.hidden_for_roles?.length"
+              size="small"
+              label
+              color="error"
+              variant="outlined"
+              prepend-icon="tabler-eye-off"
+              :title="t('l5.catalog.hint.hidden', { roles: item.obligation.hidden_for_roles.join(', ') })"
+            >
+              {{ t('l5.catalog.hiddenFor', { n: item.obligation.hidden_for_roles.length }, item.obligation.hidden_for_roles.length) }}
+            </VChip>
+            <span
+              v-if="!obligationChips(item).length && !item.used_by.positions.length"
+              class="text-disabled text-body-2"
+            >{{ t('l5.catalog.optional') }}</span>
+          </div>
+          <div
+            v-else
+            class="d-flex flex-wrap gap-1 text-wrap"
+          >
             <VChip
               v-if="item.used_by.everyone || item.required_for_everyone"
               size="small"
@@ -314,7 +465,7 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
                 <IconBtn
                   v-bind="props"
                   size="small"
-                  :loading="toggling === item.code"
+                  :loading="toggling === item.code || savingRule === item.code"
                   :aria-label="t('common.actions')"
                   :data-test="`catalog-actions-${item.code}`"
                 >
@@ -327,6 +478,21 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
                   :prepend-icon="item.status === 'active' ? 'tabler-eye-off' : 'tabler-eye'"
                   :title="item.status === 'active' ? t('catalogs.deactivate') : t('catalogs.activate')"
                   @click="toggle(item)"
+                />
+                <VListItem
+                  v-if="tab === 'fields' && canFields && item.status === 'active'"
+                  :prepend-icon="item.obligation?.company ? 'tabler-asterisk-simple' : 'tabler-asterisk'"
+                  :title="item.obligation?.company ? t('l5.catalog.unrequireAll') : t('l5.catalog.requireAll')"
+                  :subtitle="t('l5.catalog.requireAllHint')"
+                  :data-test="`catalog-require-all-${item.code}`"
+                  @click="toggleCompanyRequired(item)"
+                />
+                <VListItem
+                  v-if="tab === 'fields' && canFields && item.custom"
+                  prepend-icon="tabler-pencil"
+                  :title="t('l5.catalog.edit')"
+                  :data-test="`catalog-edit-${item.code}`"
+                  @click="openEdit(item)"
                 />
                 <VListItem
                   v-if="canRequire"
@@ -347,6 +513,50 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
       </VDataTable>
     </VCard>
 
+    <!-- ADR-858 : modifier un champ propre à la société (libellé, options) -->
+    <VDialog
+      v-model="editDialog"
+      max-width="480"
+    >
+      <VCard :title="t('l5.catalog.edit')">
+        <VCardText class="d-flex flex-column gap-4">
+          <AppTextField
+            v-model="editForm.label"
+            :label="t('l5.catalog.label')"
+            data-test="catalog-edit-label"
+          />
+          <AppCombobox
+            v-if="editForm.type === 'select'"
+            v-model="editForm.options"
+            :label="t('catalogs.options')"
+            multiple
+            chips
+            closable-chips
+          />
+          <div class="text-caption text-medium-emphasis">
+            {{ t('l5.catalog.editHint') }}
+          </div>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="text"
+            @click="editDialog = false"
+          >
+            {{ t('common.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="editing"
+            :disabled="!editForm.label.trim()"
+            data-test="catalog-edit-save"
+            @click="saveEdit"
+          >
+            {{ t('common.save') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
     <!-- Exiger pour un poste -->
     <VDialog
       v-model="requireDialog"
@@ -464,3 +674,12 @@ const typeItems = computed(() => (data.value?.field_types || []).map(v => ({ val
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+/* ADR-858 — inheritance of a field obligation, widest to narrowest */
+.lz-inherit { padding: 1rem 1.25rem; border: 1px solid rgba(var(--v-theme-primary), .2); background: rgba(var(--v-theme-primary), .04); border-radius: 14px; }
+.lz-inherit__title { display: flex; align-items: center; font-weight: 600; margin-block-end: .75rem; }
+.lz-inherit__steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; }
+.lz-inherit__steps li { display: flex; gap: .625rem; align-items: flex-start; font-size: .875rem; }
+.lz-inherit__n { flex: 0 0 auto; inline-size: 24px; block-size: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 700; color: #fff; background: rgb(var(--v-theme-primary)); }
+</style>

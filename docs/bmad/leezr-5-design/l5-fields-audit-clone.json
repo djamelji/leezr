@@ -1,0 +1,433 @@
+{
+ "generated_at": "2026-11-22T10:24:10+00:00",
+ "mode": "dry-run",
+ "database": "leezr_audit842 (marked recipe clone)",
+ "companies": [
+  {
+   "company_id": 1,
+   "name": "Leezr Logistics",
+   "authority": "role",
+   "accounts": 22,
+   "counts": {
+    "conflict_hidden": 4,
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [
+    {
+     "code": "license_number",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Operations Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "license_category",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "license_expiry",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Operations Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "vehicle_type",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    }
+   ],
+   "role_historical": 31
+  },
+  {
+   "company_id": 2,
+   "name": "Trial Logistics",
+   "authority": "role",
+   "accounts": 2,
+   "counts": {
+    "conflict_hidden": 5,
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [
+    {
+     "code": "license_number",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Operations Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "license_category",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "license_expiry",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Operations Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "vehicle_type",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_fleet"
+      ],
+      "hidden_for": [
+       "Dispatcher",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    },
+    {
+     "code": "geographic_zone",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_tracking"
+      ],
+      "hidden_for": [
+       "Driver",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    }
+   ],
+   "role_historical": 31
+  },
+  {
+   "company_id": 3,
+   "name": "Pending Approval Co",
+   "authority": "role",
+   "accounts": 1,
+   "counts": {
+    "conflict_hidden": 1,
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [
+    {
+     "code": "geographic_zone",
+     "class": "conflict_hidden",
+     "detail": {
+      "required_by": [
+       "module:logistics_tracking"
+      ],
+      "hidden_for": [
+       "Driver",
+       "Manager",
+       "Propriétaire"
+      ]
+     }
+    }
+   ],
+   "role_historical": 31
+  },
+  {
+   "company_id": 4,
+   "name": "NW",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 5,
+   "name": "Beta Services",
+   "authority": "role",
+   "accounts": 1,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 6,
+   "name": "[RECETTE] Overdue Provisional",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 7,
+   "name": "[RECETTE] Healthy Paid",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 8,
+   "name": "[RECETTE] Overdue Failed",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 9,
+   "name": "[RECETTE] Financial Artifacts",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 10,
+   "name": "WT",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 11,
+   "name": "[RECETTE] Leezr Logistics (aperçu)",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 12,
+   "name": "OrgTest 6ae16b5c31ccf",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 13,
+   "name": "OrgT2 6ae16b9b14b18",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 14,
+   "name": "OrgT3 6ae16bd257463",
+   "authority": "role",
+   "accounts": 0,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 21,
+   "name": "C2 Recette Co",
+   "authority": "role",
+   "accounts": 2,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 22,
+   "name": "Sec Recette",
+   "authority": "role",
+   "accounts": 2,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 31,
+   "name": "[M6E LOAD] 5 collaborateurs",
+   "authority": "role",
+   "accounts": 1,
+   "counts": {
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [],
+   "role_historical": 31
+  },
+  {
+   "company_id": 32,
+   "name": "[M6E LOAD] 25 collaborateurs",
+   "authority": "role",
+   "accounts": 1,
+   "counts": {
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [],
+   "role_historical": 31
+  },
+  {
+   "company_id": 33,
+   "name": "[M6E LOAD] 50 collaborateurs",
+   "authority": "role",
+   "accounts": 1,
+   "counts": {
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [],
+   "role_historical": 31
+  },
+  {
+   "company_id": 34,
+   "name": "[M6E LOAD] 100 collaborateurs",
+   "authority": "role",
+   "accounts": 1,
+   "counts": {
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [],
+   "role_historical": 31
+  },
+  {
+   "company_id": 58,
+   "name": "VORTEX",
+   "authority": "role",
+   "accounts": 1,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 101,
+   "name": "E2E Recette 8091 433828",
+   "authority": "role",
+   "accounts": 5,
+   "counts": {
+    "role_historical": 31
+   },
+   "migration": null,
+   "findings": [],
+   "role_historical": 31
+  },
+  {
+   "company_id": 105,
+   "name": "Recette 834 Transports Fictifs",
+   "authority": "position",
+   "accounts": 5,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 106,
+   "name": "Audit 842 Services at4f8",
+   "authority": "role",
+   "accounts": 8,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 107,
+   "name": "Audit 842 Services 0zlhr",
+   "authority": "role",
+   "accounts": 1,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  },
+  {
+   "company_id": 108,
+   "name": "Promo promo.valide.1795304708827@audit842.test",
+   "authority": "position",
+   "accounts": 1,
+   "counts": [],
+   "migration": null,
+   "findings": [],
+   "role_historical": 0
+  }
+ ]
+}

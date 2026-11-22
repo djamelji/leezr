@@ -69,6 +69,6 @@ class Adr843CompanyWorkspaceTest extends TestCase
             file_get_contents(resource_path('js/pages/onboarding/index.vue')));
         $this->assertStringContainsString(':aria-label="t(\'onboardingWidget.dismissAria\')"',
             file_get_contents(resource_path('js/pages/company/dashboard/_OnboardingWidget.vue')));
-        $this->assertStringContainsString('person-name-missing', file_get_contents(resource_path('js/pages/company/people/_PeopleSpace.vue')));
+        $this->assertStringContainsString('person-name-missing', file_get_contents(resource_path('js/pages/company/people/_PeopleDirectory.vue'))); // ADR-858 : la liste vit dans l'annuaire
     }
 }

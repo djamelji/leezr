@@ -88,14 +88,14 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
     await expect(page.locator(`[data-test="${testId}"]`).first(), `liste salariés : action ${testId}`).toBeVisible({ timeout: 10000 })
   await page.keyboard.press('Escape')
   await visit(page, '/company/people')
-  await page.locator('[data-test="people-tools"]').click()
-  // ADR-802 : import / export vivent dans l'onglet Gestion RH (vérifié ci-dessus) ; le menu Outils ne garde que les champs
-  await expect(page.getByText('Champs personnalisés')).toBeVisible()
-  await page.keyboard.press('Escape')
+  // ADR-858 : « Outils → Champs » est retiré — la configuration des champs s'ouvre dans Company › Catalogue
+  await page.locator('[data-test="people-configure-fields"]').click()
+  await expect(page).toHaveURL(/\/company\/catalogs\/fields/)
 
   // Historique : liste → fiche → onglet → retour navigateur.
   await visit(page, '/company/people')
-  await page.locator('tbody tr').first().click()
+  await page.locator('tbody tr').first().click() // ADR-858 : la ligne ouvre l'aperçu rapide, puis la fiche
+  await page.locator('[data-test="person-preview-open"]').click()
   await expect(page).toHaveURL(/\/company\/people\/(user|employee)-\d+/, { timeout: 20000 })
   await settle(page)
   await page.getByRole('tab', { name: 'Informations & emploi' }).first().click() // ADR-777 : rubrique

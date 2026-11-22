@@ -9,7 +9,7 @@ import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 import PersonAddDrawer from './_PersonAddDrawer.vue'
 import PeopleHrTools from './_PeopleHrTools.vue'
-import ProfileFieldsSettings from './_ProfileFieldsSettings.vue'
+import PeopleDirectory from './_PeopleDirectory.vue'
 import MemberHealth from './_MemberHealth.vue'
 import RoleCapabilities from './_RoleCapabilities.vue'
 import PendingAccessReview from './_PendingAccessReview.vue'
@@ -40,6 +40,7 @@ const addPreset = ref(null)
 const canAdd = computed(() => can('members.invite') || can('workforce.manage'))
 const canHire = computed(() => canModule('workforce') && can('workforce.manage'))
 const openAdd = (preset = null) => { addPreset.value = preset; addOpen.value = true }
+
 const onPersonAdded = ({ personRef, tab }) => {
   if (personRef) router.push({ path: tab ? `/company/people/${personRef}/${tab}` : `/company/people/${personRef}` })
   else reload()
@@ -47,261 +48,168 @@ const onPersonAdded = ({ personRef, tab }) => {
 
 const canPeople = computed(() => can('members.view') || can('workforce.view'))
 const canRoles = computed(() => can('roles.view'))
+
 // ADR-802 — « Gestion RH » = l'ancienne liste /company/workforce/employees (même garde : module workforce +
 // workforce.view). « Champs du profil » = l'ancien tiroir de /company/members (members.manage).
 const moduleStore = useModuleStore()
 const canHr = computed(() => moduleStore.isActive('workforce') && can('workforce.view'))
-const fieldsRef = ref(null)
 const rolesView = ref('capabilities') // ADR-803.1
 // ADR-820 — la vue vient du chemin ; repli selon les facettes si elle n'est pas permise.
 const ROUTE = { people: 'company-people', hr: 'company-people-hr', roles: 'company-people-roles' }
+
 const initialTab = (props.section === 'roles' && canRoles.value) ? 'roles'
   : (props.section === 'hr' && canHr.value) ? 'hr'
     : (canPeople.value ? 'people' : 'roles')
+
 const tab = ref(initialTab)
+
 watch(tab, v => {
   // Changer de vue repart d'une URL propre (les filtres de la vue Gestion RH ne fuient pas ailleurs).
   if (route.name !== ROUTE[v]) router.replace({ name: ROUTE[v] })
 })
 watch(() => props.section, v => { if (v && v !== tab.value) tab.value = v })
 
-const search = ref('')
-const options = ref({ page: 1, itemsPerPage: 20, sortBy: [] })
-const filters = ref({ access_state: null, employment_status: null })
+// ADR-858 (L5) — the « Personnes » view is the V22 directory (search, filters, synthesis, quick view) ; the old
+// « Outils → Champs » drawer is retired : field settings live in Company › Catalogue (one interface per rule).
+const directory = ref(null)
+function reload() { directory.value?.reload() }
+const summary = computed(() => store.summary)
 
-const ACCOUNT_META = {
-  connected: { color: 'success', label: 'people.account.connected' },
-  active: { color: 'success', label: 'people.account.active' },
-  invited: { color: 'warning', label: 'people.account.invited' },
-  pending_acceptance: { color: 'warning', label: 'people.account.pending_acceptance' },
-  invitation_expired: { color: 'secondary', label: 'people.account.invitation_expired' },
-  suspended: { color: 'error', label: 'people.account.suspended' },
-}
-const accountStates = ['connected', 'active', 'invited', 'pending_acceptance', 'invitation_expired', 'suspended']
-const employmentStates = ['active', 'preparatory', 'inactive', 'on_leave', 'suspended', 'terminated'] // ADR-796.1 : recrue en préparation
+const headline = computed(() => {
+  const x = summary.value
+  if (!x) return t('peopleList.subtitle')
+  const parts = [t('l5.head.people', { n: x.total }, x.total), t('l5.head.active', { n: x.active }, x.active)]
+  if (x.invitations) parts.push(t('l5.head.invitations', { n: x.invitations }, x.invitations))
+  if (x.incomplete) parts.push(t('l5.head.incomplete', { n: x.incomplete }, x.incomplete))
 
-const headers = computed(() => {
-  const h = [{ title: t('peopleList.person'), key: 'name', sortable: true }]
-  // ADR-816 : l'annuaire (members.view) liste les personnes ; l'état des comptes n'est montré qu'à
-  // l'administration des accès (sinon la colonne afficherait à tort « Aucun compte »).
-  if (store.facets.access && store.facets.account_details !== false) {
-    h.push({ title: t('peopleList.access'), key: 'account_state', sortable: false })
-  }
-  if (store.facets.hr) {
-    // ADR-821 : colonnes regroupées — poste et service ensemble, responsable et contrat sous le statut
-    h.push({ title: t('peopleList.job'), key: 'job_role', sortable: false })
-    h.push({ title: t('peopleList.employment'), key: 'employment_status', sortable: false })
-  }
-  h.push({ title: '', key: 'actions', sortable: false, align: 'end' })
-
-  return h
+  return parts.join(' · ')
 })
 
-let debounce = null
-function reload() {
-  if (!canPeople.value) return
-  const sb = options.value.sortBy?.[0]
-  store.fetch({
-    page: options.value.page, perPage: options.value.itemsPerPage,
-    search: search.value, sortBy: sb?.key || 'name', sortDir: sb?.order || 'asc',
-    filters: { access_state: filters.value.access_state, employment_status: filters.value.employment_status },
-  })
-}
-watch(options, reload, { deep: true })
-watch(filters, () => { options.value.page = 1; reload() }, { deep: true })
-watch(search, () => { clearTimeout(debounce); debounce = setTimeout(() => { options.value.page = 1; reload() }, 350) })
-onMounted(() => {
-  if (canPeople.value) reload()
+const canConfigureFields = computed(() => can('settings.manage'))
 
+onMounted(() => {
   // Deep-links des anciens raccourcis (tableau de bord, onboarding) : `?action=invite|create`.
   if (route.query.action === 'invite' && can('members.invite')) openAdd(true)
   if (route.query.action === 'create' && can('workforce.manage')) openAdd(false)
 })
-
-const openFiche = row => router.push(`/company/people/${row.person_ref}`)
-const accountMeta = s => ACCOUNT_META[s] || { color: 'secondary', label: 'people.account.none' }
-const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0, 2).join('').toUpperCase()
 </script>
 
 <template>
   <div>
     <SettingsReturnLink /> <!-- ADR-781 -->
-    <div class="d-flex align-center flex-wrap gap-2 mb-4">
-      <div
-        class="flex-grow-1"
-        style="flex-basis: 320px; min-inline-size: 0;"
-      >
-        <h4 class="text-h4 mb-1">{{ t('peopleList.title') }}</h4>
-        <p class="text-body-1 text-medium-emphasis mb-0">{{ t('peopleList.subtitle') }}</p>
-      </div>
-      <!-- ADR-802 : les outils ne renvoient plus vers d'autres pages — Gestion RH est un onglet d'Équipe,
-           les champs du profil s'ouvrent ici. -->
-      <VMenu v-if="tab === 'people' && can('members.view') && can('settings.manage')">
-        <template #activator="{ props }">
-          <VBtn
-            v-bind="props"
-            variant="tonal"
-            color="secondary"
-            prepend-icon="tabler-tool"
-            data-test="people-tools"
-          >
-            {{ t('peopleList.tools') }}
-          </VBtn>
-        </template>
-        <VList>
-          <VListItem
-            data-test="people-tools-fields"
-            prepend-icon="tabler-forms"
-            @click="fieldsRef?.open()"
-            :title="t('peopleList.toolsFields')"
-            :subtitle="t('peopleList.toolsFieldsHint')"
-          />
-        </VList>
-      </VMenu>
-      <!-- ADR-843 (M6, UXC-04) : ONE primary « Add a person » action ; full hiring vs quick add asked in its menu -->
-      <VBtn
-        v-if="(tab === 'people' || tab === 'hr') && canAdd"
-        color="primary"
-        prepend-icon="tabler-user-plus"
-        :append-icon="canHire ? 'tabler-chevron-down' : undefined"
-        data-test="people-add"
-        @click="canHire ? null : openAdd()"
-      >
-        {{ t('people.add.title') }}
-        <VMenu
-          v-if="canHire"
-          activator="parent"
-          location="bottom end"
+    <!-- ═══ ADR-858 (L5) : en-tête V22 ═══ -->
+    <header class="lz-phead mb-5">
+      <div class="lz-phead__txt">
+        <h4 class="lz-phead__title">
+          {{ t('l5.title') }}
+        </h4>
+        <p
+          class="lz-phead__sub"
+          data-test="people-headline"
         >
-          <VList
-            max-width="360"
-            lines="two"
+          {{ tab === 'people' ? headline : t('peopleList.subtitle') }}
+        </p>
+      </div>
+      <div class="d-flex align-center flex-wrap gap-2">
+        <VBtn
+          v-if="tab === 'people' && canConfigureFields"
+          variant="text"
+          prepend-icon="tabler-forms"
+          to="/company/catalogs/fields"
+          data-test="people-configure-fields"
+        >
+          {{ t('l5.configureFields') }}
+        </VBtn>
+        <VBtn
+          v-if="(tab === 'people' || tab === 'hr') && canAdd"
+          color="primary"
+          prepend-icon="tabler-user-plus"
+          :append-icon="canHire ? 'tabler-chevron-down' : undefined"
+          data-test="people-add"
+          @click="canHire ? null : openAdd()"
+        >
+          {{ t('people.add.title') }}
+          <VMenu
+            v-if="canHire"
+            activator="parent"
+            location="bottom end"
           >
-            <VListItem
-              prepend-icon="tabler-user-check"
-              :title="t('people.add.choiceHire')"
-              :subtitle="t('people.add.choiceHireHint')"
-              to="/company/workforce/hiring?new=1"
-              data-test="people-hire"
-            />
-            <VListItem
-              prepend-icon="tabler-user-plus"
-              :title="t('people.add.choiceQuick')"
-              :subtitle="t('people.add.choiceQuickHint')"
-              data-test="people-add-quick"
-              @click="openAdd()"
-            />
-          </VList>
-        </VMenu>
-      </VBtn>
-    </div>
-
+            <VList
+              max-width="360"
+              lines="two"
+            >
+              <VListItem
+                prepend-icon="tabler-user-check"
+                :title="t('people.add.choiceHire')"
+                :subtitle="t('people.add.choiceHireHint')"
+                to="/company/workforce/hiring?new=1"
+                data-test="people-hire"
+              />
+              <VListItem
+                prepend-icon="tabler-user-plus"
+                :title="t('people.add.choiceQuick')"
+                :subtitle="t('people.add.choiceQuickHint')"
+                data-test="people-add-quick"
+                @click="openAdd"
+              />
+            </VList>
+          </VMenu>
+        </VBtn>
+      </div>
+    </header>
     <!-- ADR-818 : les embauches vivent dans l'espace « Embauches » (une seule liste, un seul assistant) -->
     <MemberHealth v-if="tab === 'people' && can('members.view')" />
-    <!-- Garde = celle de l'API (POST field-activations / field-definitions : settings.manage) -->
-    <ProfileFieldsSettings
-      v-if="can('members.view') && can('settings.manage')"
-      ref="fieldsRef"
+    <VTabs
+      v-model="tab"
+      class="v-tabs-pill mb-5"
+      data-test="people-tabs"
+    >
+      <VTab
+        v-if="canPeople"
+        value="people"
+      >
+        <VIcon
+          icon="tabler-users"
+          start
+          size="18"
+        />{{ t('peopleList.tabPeople') }}
+      </VTab>
+      <VTab
+        v-if="canHr"
+        value="hr"
+        data-test="people-tab-hr"
+      >
+        <VIcon
+          icon="tabler-table-options"
+          start
+          size="18"
+        />{{ t('peopleList.tabHr') }}
+      </VTab>
+      <VTab
+        v-if="canRoles"
+        value="roles"
+      >
+        <VIcon
+          icon="tabler-shield-lock"
+          start
+          size="18"
+        />{{ t('peopleList.tabRoles') }}
+      </VTab>
+    </VTabs>
+    <!-- ═══ PERSONNES (ADR-858 : annuaire V22) ═══ -->
+    <PeopleDirectory
+      v-if="tab === 'people' && canPeople"
+      ref="directory"
     />
-
-    <VCard flat border>
-      <VTabs v-model="tab" class="border-b">
-        <VTab v-if="canPeople" value="people"><VIcon icon="tabler-users" start size="18" />{{ t('peopleList.tabPeople') }}</VTab>
-        <VTab v-if="canHr" value="hr" data-test="people-tab-hr"><VIcon icon="tabler-table-options" start size="18" />{{ t('peopleList.tabHr') }}</VTab>
-        <VTab v-if="canRoles" value="roles"><VIcon icon="tabler-shield-lock" start size="18" />{{ t('peopleList.tabRoles') }}</VTab>
-      </VTabs>
-
-      <VWindow v-model="tab" class="disable-tab-transition">
-        <!-- ═══ PERSONNES ═══ -->
-        <VWindowItem value="people">
-          <VCardText class="d-flex flex-wrap gap-3">
-            <AppTextField v-model="search" :placeholder="t('peopleList.searchPlaceholder')" prepend-inner-icon="tabler-search" density="compact" style="flex: 0 1 300px; min-inline-size: 200px" clearable />
-            <AppSelect v-if="store.facets.access && store.facets.account_details !== false" v-model="filters.access_state" :items="accountStates.map(s => ({ value: s, title: t('people.account.' + s) }))" :placeholder="t('peopleList.account')" density="compact" clearable style="flex: 0 1 200px; min-inline-size: 160px" />
-            <AppSelect v-if="store.facets.hr" v-model="filters.employment_status" :items="employmentStates.map(s => ({ value: s, title: t('people.empStatus.' + s, s) }))" :placeholder="t('peopleList.employment')" density="compact" clearable style="flex: 0 1 200px; min-inline-size: 160px" />
-          </VCardText>
-          <VDivider />
-          <VDataTableServer
-            v-model:options="options"
-            :headers="headers"
-            :items="store.rows"
-            :items-length="store.total"
-            :loading="store.loading"
-            item-value="person_ref"
-            hover
-            class="text-no-wrap"
-            @click:row="(_, { item }) => openFiche(item)"
-          >
-            <template #item.name="{ item }">
-              <div class="d-flex align-center gap-3 py-2">
-                <VAvatar size="38" color="primary" variant="tonal">
-                  <VImg v-if="item.avatar" :src="item.avatar" />
-                  <span v-else class="text-caption">{{ initials(item.name) }}</span>
-                </VAvatar>
-                <div>
-                  <!-- ADR-843 (UXC-04) : no name → said so, the e-mail is not shown twice -->
-                  <div
-                    v-if="item.name && item.name !== item.email"
-                    class="font-weight-medium text-high-emphasis"
-                  >
-                    {{ item.name }}
-                  </div>
-                  <div
-                    v-else
-                    class="font-weight-medium text-medium-emphasis font-italic"
-                    data-test="person-name-missing"
-                  >
-                    {{ t('peopleList.nameMissing') }}
-                  </div>
-                  <div v-if="item.email" class="text-caption text-medium-emphasis">{{ item.email }}</div>
-                </div>
-              </div>
-            </template>
-            <!-- Accès : un seul état (puce) + le rôle en clair — pas deux colonnes de badges. -->
-            <template #item.account_state="{ item }">
-              <div v-if="item.account_state" class="d-flex align-center gap-2 flex-wrap">
-                <VChip :color="accountMeta(item.account_state).color" size="small" variant="tonal" label>{{ t(accountMeta(item.account_state).label) }}</VChip>
-                <span class="text-body-2 text-medium-emphasis">{{ item.is_owner ? t('people.owner') : (item.role?.name || '') }}</span>
-              </div>
-              <span v-else class="text-disabled">{{ t('people.account.none') }}</span>
-            </template>
-            <template #item.employment_status="{ item }">
-              <VChip
-                v-if="item.employment_status"
-                size="small"
-                label
-                variant="tonal"
-                :color="{ active: 'success', on_leave: 'info', suspended: 'warning', terminated: 'secondary', inactive: 'secondary' }[item.employment_status] || 'secondary'"
-              >
-                {{ t('people.empStatus.' + item.employment_status, item.employment_status) }}
-              </VChip>
-              <span v-else class="text-disabled">—</span>
-              <div
-                v-if="item.contract_type || item.manager"
-                class="text-caption text-medium-emphasis mt-1"
-              >
-                {{ [item.contract_type ? ($te(`employees.contractTypes.${item.contract_type}`) ? $t(`employees.contractTypes.${item.contract_type}`) : item.contract_type) : null, item.manager ? t('peopleList.managerShort', { name: item.manager }) : null].filter(Boolean).join(' · ') }}
-              </div>
-            </template>
-            <template #item.job_role="{ item }">
-              <div :class="item.job_role ? 'text-body-1' : 'text-disabled'">{{ item.job_role || '—' }}</div>
-              <div
-                v-if="item.department"
-                class="text-caption text-medium-emphasis"
-              >{{ item.department }}</div>
-            </template>
-            <template #item.department="{ item }"><span :class="item.department ? '' : 'text-disabled'">{{ item.department || '—' }}</span></template>
-            <template #item.manager="{ item }"><span :class="item.manager ? '' : 'text-disabled'">{{ item.manager || '—' }}</span></template>
-            <template #item.contract_type="{ item }"><span :class="item.contract_type ? '' : 'text-disabled'">{{ item.contract_type ? ($te(`employees.contractTypes.${item.contract_type}`) ? $t(`employees.contractTypes.${item.contract_type}`) : item.contract_type.toUpperCase()) : '—' }}</span></template>
-            <template #item.actions="{ item }"><VBtn icon variant="text" size="small" :aria-label="t('peopleList.openFile', { name: item.name })" @click.stop="openFiche(item)"><VIcon icon="tabler-chevron-right" /></VBtn></template>
-            <template #no-data>
-              <div class="text-center py-8 text-medium-emphasis">
-                <VIcon icon="tabler-users-group" size="40" class="text-disabled mb-2" />
-                <div>{{ t('peopleList.empty') }}</div>
-              </div>
-            </template>
-          </VDataTableServer>
-        </VWindowItem>
-
+    <VCard
+      v-else
+      flat
+      border
+    >
+      <VWindow
+        v-model="tab"
+        class="disable-tab-transition"
+      >
         <!-- ═══ RÔLES & AUTORISATIONS (réutilise /company/roles) ═══ -->
         <VWindowItem value="hr">
           <VCardText>
@@ -314,8 +222,10 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
             v-if="tab === 'roles' && canRoles"
             class="pa-4 pb-0"
           >
-            <!-- ADR-806 : onglets « pill » (preset DemoTabsBasicPill) — le VBtnToggle Vuexy est réservé aux icônes
-                 (largeur forcée à 36 px) : les deux libellés se chevauchaient. -->
+            <!--
+              ADR-806 : onglets « pill » (preset DemoTabsBasicPill) — le VBtnToggle Vuexy est réservé aux icônes
+              (largeur forcée à 36 px) : les deux libellés se chevauchaient. 
+            -->
             <VTabs
               v-model="rolesView"
               class="v-tabs-pill"
@@ -363,3 +273,11 @@ const initials = name => (name || '?').split(' ').map(p => p.charAt(0)).slice(0,
     />
   </div>
 </template>
+
+<style scoped>
+/* ADR-858 (L5) — V22 page header : strong title, the real headcount sentence, actions aligned to the right */
+.lz-phead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 1.5rem; }
+.lz-phead__txt { flex: 1 1 320px; min-inline-size: 0; }
+.lz-phead__title { font-size: clamp(1.75rem, 2.4vw, 2.25rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; margin: 0; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
+.lz-phead__sub { margin: .375rem 0 0; font-size: 1rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+</style>

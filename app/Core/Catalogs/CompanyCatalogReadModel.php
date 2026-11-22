@@ -115,6 +115,7 @@ final class CompanyCatalogReadModel
 
         // ── Fields (person file) ──
         $activeFields = FieldActivation::where('company_id', $company->id)->where('enabled', true)->pluck('field_definition_id')->flip();
+        $obligations = \App\Core\Fields\FieldObligationSources::forCompany($company); // ADR-858 : origin of each obligation
         $fields = FieldDefinition::where('scope', FieldDefinition::SCOPE_COMPANY_USER)
             ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $company->id))
             ->orderBy('default_order')->get()
@@ -122,7 +123,7 @@ final class CompanyCatalogReadModel
             // ADR-820 : l'ancienne adresse sur une ligne (`address`) double l'adresse structurée ; elle n'est plus
             // proposée, sauf à une société qui l'utilise déjà (ses valeurs restent intactes).
             ->reject(fn ($d) => isset(self::SUPERSEDED[$d->code]) && $d->company_id === null && ! $activeFields->has($d->id))
-            ->map(function (FieldDefinition $d) use ($company, $activeFields, $jdFields, $moduleRefs, $origins, $status, $usedBy, $locale) {
+            ->map(function (FieldDefinition $d) use ($company, $activeFields, $jdFields, $moduleRefs, $origins, $status, $usedBy, $locale, $obligations) {
                 $jd = $jdFields->get($d->code);
                 $mods = $moduleRefs['fields'][$d->code] ?? [];
                 $custom = (int) $d->company_id === $company->id;
@@ -140,6 +141,7 @@ final class CompanyCatalogReadModel
                     'ownership' => FieldOwnership::of($d),
                     'sensitive' => (bool) ($d->validation_rules['sensitive'] ?? false),
                     'used_by' => $usedBy('field', $d->code),
+                    'obligation' => $obligations[$d->code] ?? null,
                 ];
             })->values()->all();
 
@@ -182,6 +184,7 @@ final class CompanyCatalogReadModel
             'fields' => $fields,
             'documents' => $documents,
             'jobdomain' => $company->jobdomain_key,
+            'requirements_authority' => \App\Core\Requirements\RequirementAuthority::of($company->id), // ADR-858
             'can_create_fields' => (bool) $company->jobdomain?->allow_custom_fields,
             'field_types' => FieldDefinition::COMPANY_TYPES,
         ];
