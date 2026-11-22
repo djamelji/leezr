@@ -12,7 +12,7 @@ const props = defineProps({ data: { type: Object, default: null }, loading: { ty
 const { t } = useI18n()
 const root = ref(null)
 const { rootW, rootH } = useSurfacePresentation(root)
-const kpiSize = computed(() => rootW.value > 0 && (rootH.value < 230 || rootW.value < 300))
+const kpiSize = computed(() => rootW.value > 0 && (rootH.value < 200 || rootW.value < 300))
 const d = computed(() => props.data || {})
 const to = { name: 'platform-dashboard-tab', params: { tab: 'funnel' } }
 const daily = computed(() => d.value.daily || [])

@@ -44,10 +44,10 @@ class LayoutPackerTest extends TestCase
         $this->assertEquals(0, $result['packed'][0]['y']);
         $this->assertEquals(8, $result['packed'][0]['w']);
 
-        // Second widget (w=4) fits next to it at (8,0)
+        // Second widget (KPI, default w=3 since ADR-856) fits next to it at (8,0)
         $this->assertEquals(8, $result['packed'][1]['x']);
         $this->assertEquals(0, $result['packed'][1]['y']);
-        $this->assertEquals(4, $result['packed'][1]['w']);
+        $this->assertEquals(3, $result['packed'][1]['w']);
     }
 
     public function test_existing_tiles_respected(): void

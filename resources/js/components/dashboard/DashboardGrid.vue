@@ -9,6 +9,7 @@ const props = defineProps({
   layout: { type: Array, required: true },
   widgetData: { type: Object, default: () => ({}) },
   widgetErrors: { type: Object, default: () => ({}) },
+
   // ADR-855 (Leezr 5.0) — premium tile chrome (elevation, hover, staggered entrance). Platform cockpit only until L4.
   premium: { type: Boolean, default: false },
   catalog: { type: Array, default: () => [] },
@@ -23,9 +24,10 @@ const { t } = useI18n()
 const gridRef = ref(null)
 const gridInitialized = ref(false)
 const catalogRef = computed(() => props.catalog)
+
 const {
   cols, isMobile, dragging, resizing, ghostTile,
-  placementError, placementErrorKey,
+  placementError, placementErrorKey, placementErrorParams, getConstraints,
   startDrag, startResize, onMouseUp,
   applyPipeline, computeVisualLayout,
 } = useDashboardGrid(gridRef, catalogRef)
@@ -58,7 +60,13 @@ const canonicalDisplay = computed(() => {
     return [...previewLayout.value].sort((a, b) => a.y - b.y || a.x - b.x)
   }
 
-  return sortedLayout.value
+  // ADR-856 — a saved layout is DISPLAYED within the widget's current bounds (bounds can be tightened when a size
+  // proved useless) ; the next mutation persists the clamped size through the same pipeline.
+  return sortedLayout.value.map(t => {
+    const c = getConstraints(t.key)
+
+    return { ...t, w: Math.max(c.min_w, Math.min(c.max_w, t.w)), h: Math.max(c.min_h, Math.min(c.max_h, t.h)) }
+  })
 })
 
 // Derived visual layout — re-packed for current viewport, NEVER persisted
@@ -95,29 +103,29 @@ function computeDensity(h) {
  */
 function computePresentationMode(pxWidth, pxHeight, profile) {
   switch (profile) {
-    case 'kpi':
-      if (pxWidth < 180) return 'micro'
-      if (pxWidth < 320) return 'compact'
-      if (pxWidth < 600) return 'balanced'
+  case 'kpi':
+    if (pxWidth < 180) return 'micro'
+    if (pxWidth < 320) return 'compact'
+    if (pxWidth < 600) return 'balanced'
 
-      return 'hero'
-    case 'kpi-rich':
-      if (pxWidth < 250) return 'compact'
-      if (pxWidth < 500) return 'balanced'
+    return 'hero'
+  case 'kpi-rich':
+    if (pxWidth < 250) return 'compact'
+    if (pxWidth < 500) return 'balanced'
 
-      return 'expanded'
-    case 'list':
-      if (pxWidth < 280) return 'compact'
-      if (pxWidth < 480) return 'balanced'
+    return 'expanded'
+  case 'list':
+    if (pxWidth < 280) return 'compact'
+    if (pxWidth < 480) return 'balanced'
 
-      return 'expanded'
-    case 'chart':
-      if (pxWidth < 300) return 'spark'
-      if (pxWidth < 650) return 'standard'
+    return 'expanded'
+  case 'chart':
+    if (pxWidth < 300) return 'spark'
+    if (pxWidth < 650) return 'standard'
 
-      return 'detailed'
-    default:
-      return null
+    return 'detailed'
+  default:
+    return null
   }
 }
 
@@ -138,6 +146,7 @@ function getViewport(tile) {
     pxHeight: pxH,
     density: computeDensity(tile.h),
     uiProfile: profile,
+
     // Mode de présentation width+height-aware (ADR-748) — toujours fourni (dérivé des px
     // mesurés par le ResizeObserver du tile). Rétrocompatible : les widgets qui ne lisent
     // que `density` sont inchangés ; les widgets « presentation-aware » consomment `mode`.
@@ -251,6 +260,7 @@ function handleMouseUp() {
 
 onMounted(() => {
   document.addEventListener('mouseup', handleMouseUp)
+
   // Block drag/resize until grid layout settles (ADR-198)
   nextTick(() => {
     gridInitialized.value = true
@@ -344,7 +354,7 @@ onUnmounted(() => {
           <component
             :is="getComponent(tile)"
             v-if="getComponent(tile)"
-            :data="widgetData[tile.key]"
+            :data="widgetErrors[tile.key] ? { error: true, reason: widgetErrors[tile.key] } : widgetData[tile.key]"
             :loading="loading"
             :scope="tile.scope"
             :viewport="getViewport(tile)"
@@ -391,7 +401,7 @@ onUnmounted(() => {
     color="error"
     :timeout="3000"
   >
-    {{ placementErrorKey ? t(placementErrorKey) : '' }}
+    {{ placementErrorKey ? t(placementErrorKey, placementErrorParams || {}) : '' }}
   </VSnackbar>
 </template>
 

@@ -39,29 +39,66 @@ const topExposed = computed(() => {
   <div class="widget-root compliance-panel d-flex flex-column pa-5">
     <div class="d-flex align-center justify-space-between gap-2 mb-1 flex-shrink-0">
       <div>
-        <div class="text-body-1 font-weight-medium text-high-emphasis">{{ t('compliance.complianceRate') }}</div>
-        <div class="text-caption text-medium-emphasis">{{ store.totalSlots ?? 0 }} {{ t('compliance.total') }}</div>
+        <div class="text-body-1 font-weight-medium text-high-emphasis">
+          {{ t('compliance.complianceRate') }}
+        </div>
+        <div class="text-caption text-medium-emphasis">
+          {{ store.totalSlots ?? 0 }} {{ t('compliance.total') }}
+        </div>
       </div>
-      <VAvatar color="primary" variant="tonal" size="40" rounded>
-        <VIcon icon="tabler-shield-check" size="22" />
+      <VAvatar
+        color="primary"
+        variant="tonal"
+        size="40"
+        rounded
+      >
+        <VIcon
+          icon="tabler-shield-check"
+          size="22"
+        />
       </VAvatar>
     </div>
 
-    <VSkeletonLoader v-if="store.isLoading" type="image" class="bg-transparent flex-grow-1" />
-    <div v-else-if="!store.hasData" class="flex-grow-1 d-flex align-center justify-center text-medium-emphasis text-body-2">
+    <VSkeletonLoader
+      v-if="store.isLoading"
+      type="image"
+      class="bg-transparent flex-grow-1"
+    />
+    <div
+      v-else-if="!store.hasData"
+      class="flex-grow-1 d-flex align-center justify-center text-medium-emphasis text-body-2"
+    >
       {{ t('compliance.noData') }}
     </div>
 
-    <div v-else class="compliance-body flex-grow-1 d-flex flex-column">
+    <div
+      v-else
+      class="compliance-body flex-grow-1 d-flex flex-column"
+    >
       <div class="d-flex align-center justify-center flex-shrink-0">
-        <LzrGauge :value="rate" :label="t('compliance.compliant')" invert :danger="50" :warn="80" :height="gaugeH" />
+        <LzrGauge
+          :value="rate"
+          :label="t('compliance.compliant')"
+          invert
+          :danger="50"
+          :warn="80"
+          :height="gaugeH"
+        />
       </div>
 
       <VDivider class="my-2" />
 
       <div class="breakdown">
-        <div v-for="b in breakdown" :key="b.key" class="d-flex align-center gap-2 py-1">
-          <VIcon :icon="b.icon" :color="b.color" size="18" />
+        <div
+          v-for="b in breakdown"
+          :key="b.key"
+          class="d-flex align-center gap-2 py-1"
+        >
+          <VIcon
+            :icon="b.icon"
+            :color="b.color"
+            size="18"
+          />
           <span class="text-body-2 text-medium-emphasis flex-grow-1">{{ b.label }}</span>
           <span class="text-body-2 font-weight-medium text-high-emphasis">{{ b.value }}</span>
         </div>
@@ -72,7 +109,11 @@ const topExposed = computed(() => {
       <template v-if="topExposed">
         <VDivider class="my-2" />
         <div class="d-flex align-center gap-2">
-          <VIcon icon="tabler-user-exclamation" color="error" size="18" />
+          <VIcon
+            icon="tabler-user-exclamation"
+            color="error"
+            size="18"
+          />
           <span class="text-caption text-medium-emphasis flex-grow-1 text-truncate">{{ t('compliance.mostExposed') }}</span>
           <span class="text-caption font-weight-medium text-high-emphasis text-truncate">{{ topExposed.role_name || t('compliance.unspecifiedRole') }}</span>
         </div>
@@ -83,4 +124,5 @@ const topExposed = computed(() => {
 
 <style scoped>
 .widget-root { block-size: 100%; }
+.breakdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1rem; } /* ADR-856 — 2 columns : the whole breakdown fits */
 </style>

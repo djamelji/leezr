@@ -236,6 +236,7 @@ declare global {
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
   const useContainerWidth: typeof import('./resources/js/composables/useContainerWidth.js')['useContainerWidth']
   const useCookie: typeof import('./resources/js/composables/useCookie.js')['useCookie']
+  const useCountUp: typeof import('./resources/js/composables/useCountUp.js')['useCountUp']
   const useCounter: typeof import('@vueuse/core')['useCounter']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVar: typeof import('@vueuse/core')['useCssVar']
@@ -667,6 +668,7 @@ declare module 'vue' {
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
     readonly useContainerWidth: UnwrapRef<typeof import('./resources/js/composables/useContainerWidth.js')['useContainerWidth']>
     readonly useCookie: UnwrapRef<typeof import('./resources/js/composables/useCookie.js')['useCookie']>
+    readonly useCountUp: UnwrapRef<typeof import('./resources/js/composables/useCountUp.js')['useCountUp']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVar: UnwrapRef<typeof import('@vueuse/core')['useCssVar']>

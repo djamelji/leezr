@@ -17,7 +17,7 @@ class LogisticsFleetWidget implements WidgetManifest
 
     public function key(): string { return 'logistics.fleet'; }
     public function module(): string { return 'logistics_shipments'; }
-    public function layout(): array { return ['default_w' => 4, 'default_h' => 4, 'min_w' => 3, 'max_w' => 12, 'min_h' => 3, 'max_h' => 4]; }
+    public function layout(): array { return ['default_w' => 4, 'default_h' => 3, 'min_w' => 3, 'max_w' => 8, 'min_h' => 2, 'max_h' => 3]; } // ADR-856 — family size profile
     public function category(): string { return 'operations'; }
     public function component(): string { return 'LogisticsFleet'; }
     public function tags(): array { return ['deliveries', 'operations', 'fleet']; }

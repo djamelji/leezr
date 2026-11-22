@@ -31,6 +31,14 @@ const root = ref(null)
 const { mode, rootW, rootH } = useSurfacePresentation(root)
 const tight = computed(() => rootW.value > 0 && rootW.value < 420)
 const { t } = useI18n()
+
+
+// ADR-856 — « Retry » : the parent may handle it (@retry) ; the dashboards also listen to this event to re-resolve
+// their widgets through the existing engine (a widget never fetches its batch data itself).
+const retry = () => {
+  emit('retry')
+  window.dispatchEvent(new CustomEvent('lzr-dashboard-retry'))
+}
 </script>
 
 <template>
@@ -128,7 +136,7 @@ const { t } = useI18n()
           :text="mode === 'micro' ? '' : (errorText || t('appWidget.errorText'))"
           :action="t('appWidget.retry')"
           compact
-          @action="emit('retry')"
+          @action="retry"
         />
         <slot
           v-else

@@ -10,10 +10,12 @@ definePage({ meta: { layout: 'platform', platform: true, permission: 'view_dashb
 const sections = [
   { title: 'Cockpit Platform (V35)', text: 'Écran de référence Leezr 5.0, connecté aux vraies données.', to: { name: 'platform-dashboard-tab', params: { tab: 'overview' } }, icon: 'tabler-layout-dashboard', tone: 'success', status: 'En production locale (L1)' },
   { title: 'Bibliothèque de widgets', text: 'Un même widget à cinq tailles réelles, états, tailles refusées, profils par famille.', to: '/platform/design-lab/widgets', icon: 'tabler-layout-grid', tone: 'primary', status: 'Référence L0' },
+  { title: 'Matrice des widgets', text: 'Chaque widget réel, données du clone, aux tailles autorisées et dans ses états.', to: '/platform/design-lab/matrix', icon: 'tabler-layout-board', tone: 'primary', status: 'Recette L4' },
   { title: 'Composants partagés', text: 'En-têtes, actions, statuts, cartes, tiroirs, confirmations, états.', to: '/platform/design-lab/components', icon: 'tabler-components', tone: 'primary', status: 'Référence L0' },
   { title: 'Espace de travail Company (V22)', text: 'Proposition pour L3 — données fictives.', to: '/company/design-lab/workspace', icon: 'tabler-briefcase', tone: 'info', status: 'Proposition L3' },
   { title: 'Personnes', text: 'Proposition pour L5 — données fictives.', to: '/company/design-lab/people', icon: 'tabler-users', tone: 'info', status: 'Proposition L5' },
 ]
+
 const legacy = [
   { path: '/ui-lab', adr: 'ADR-741', what: 'Couche Premium (.lzr-card flat/raised/active) — reprise dans « Composants partagés » et dans styles.scss.' },
   { path: '/platform/presentation-lab', adr: 'ADR-748', what: 'Matrice de tailles du rendu adaptatif — reprise dans « Bibliothèque de widgets » (§1).' },

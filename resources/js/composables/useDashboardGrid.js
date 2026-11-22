@@ -50,9 +50,13 @@ export function useDashboardGrid(gridRef, catalog) {
     'platform.recent_activity': 280, 'platform.catalog_overview': 290, 'platform.plan_distribution': 300,
     'platform.support_overview': 310, 'platform.security_overview': 320,
   })
+
   const MOBILE_ROWS = {
     'platform.commercial_overview': 5, 'platform.system_health': 6, 'platform.trials_ending': 4,
     'platform.recent_activity': 5, 'platform.catalog_overview': 5, 'platform.plan_distribution': 5,
+
+    // ADR-856 (L4) — Company panels with no KPI presentation keep a readable mobile height (gauge, documents)
+    'compliance.rate': 4, 'documents.detail': 4,
   }
 
   // Visual breakpoint — used ONLY for CSS grid rendering, never for layout mutation
@@ -71,6 +75,7 @@ export function useDashboardGrid(gridRef, catalog) {
   const ghostTile = ref(null)
   const placementError = ref(false)
   const placementErrorKey = ref('')
+  const placementErrorParams = ref({}) // ADR-856 — size refusal explained (bounds of the widget)
 
   const DRAG_THRESHOLD = 6
   const ROW_HEIGHT = 80
@@ -248,6 +253,7 @@ export function useDashboardGrid(gridRef, catalog) {
    */
   function packRowsLeft(tiles, numCols) {
     const sorted = tiles.map(t => ({ ...t }))
+
     sorted.sort((a, b) => a.y - b.y || a.x - b.x)
 
     const rowYs = [...new Set(sorted.map(t => t.y))].sort((a, b) => a - b)
@@ -421,16 +427,19 @@ export function useDashboardGrid(gridRef, catalog) {
         const ordered = [...sorted].sort(
           (a, b) => (MOBILE_PRIORITY[a.key] ?? 900) - (MOBILE_PRIORITY[b.key] ?? 900) || a.y - b.y || a.x - b.x,
         )
+
         let yy = 0
         for (let i = 0; i < ordered.length;) {
           const t = ordered[i]
           if (t.w > halfCols) {
             const rows = MOBILE_ROWS[t.key] ?? forceH
+
             result.push({ ...t, x: 0, y: yy, w: viewCols, h: rows })
             yy += rows; i += 1
           }
           else {
             result.push({ ...t, x: 0, y: yy, w: halfCols, h: forceH })
+
             const n = ordered[i + 1]
             if (n && n.w <= halfCols) { result.push({ ...n, x: halfCols, y: yy, w: halfCols, h: forceH }); i += 2 }
             else i += 1
@@ -684,6 +693,21 @@ export function useDashboardGrid(gridRef, catalog) {
         placementError.value = true
       }
 
+      // ADR-856 — a size the widget cannot render usefully is refused WITH its reason (bounds declared by the widget)
+      else if (!placementError.value) {
+        const rawW = resizing.value.origW + deltaCols
+        if (rawW > constraints.max_w || rawH > constraints.max_h) {
+          placementErrorKey.value = 'dashboardGrid.sizeRefusedMax'
+          placementErrorParams.value = { w: constraints.max_w, h: constraints.max_h }
+          placementError.value = true
+        }
+        else if (rawW < constraints.min_w || rawH < constraints.min_h) {
+          placementErrorKey.value = 'dashboardGrid.sizeRefusedMin'
+          placementErrorParams.value = { w: constraints.min_w, h: constraints.min_h }
+          placementError.value = true
+        }
+      }
+
       // B4: Mobile — vertical resize only (freeze width)
       if (isMobile.value) {
         newW = resizing.value.origW
@@ -753,6 +777,8 @@ export function useDashboardGrid(gridRef, catalog) {
     ghostTile,
     placementError,
     placementErrorKey,
+    placementErrorParams,
+    getConstraints,
     startDrag,
     startResize,
     onMouseUp,

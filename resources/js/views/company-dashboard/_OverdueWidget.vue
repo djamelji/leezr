@@ -1,109 +1,33 @@
 <script setup>
+// ADR-856 (Leezr 5.0 L4) — « Pièces expirées » (compliance.overdue, documents.view). Client resolution (compliance store).
+import { computed } from 'vue'
+import KpiShell from './_KpiShell.vue'
 import { useCompanyComplianceStore } from '@/modules/company/dashboard/compliance.store'
 
-const props = defineProps({
-  data: { type: Object, default: null },
-  loading: { type: Boolean, default: false },
-  scope: { type: String, default: 'company' },
-  viewport: { type: Object, default: () => ({ density: 'L' }) },
-})
+defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, viewport: { type: Object, default: () => ({}) } })
 
 const { t } = useI18n()
 const store = useCompanyComplianceStore()
+const n = computed(() => store.expiredCount ?? 0)
 
-const density = computed(() => props.viewport?.density || 'L')
-const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
-const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
+const breakdown = computed(() => [
+  { label: t('compliance.statusExpired'), value: n.value, tone: n.value ? 'error' : '' },
+  { label: t('compliance.statusExpiring'), value: store.expiringSoonCount ?? 0, tone: (store.expiringSoonCount ?? 0) ? 'warning' : '' },
+])
 </script>
 
 <template>
-  <div
-    class="widget-root"
-    :class="`density-${density}`"
-  >
-    <div class="d-flex justify-space-between align-center widget-header">
-      <div class="d-flex align-center gap-2 overflow-hidden">
-        <VAvatar
-          color="error"
-          variant="tonal"
-          :size="avatarSize"
-          rounded
-        >
-          <VIcon
-            icon="tabler-alert-triangle"
-            :size="iconSize"
-          />
-        </VAvatar>
-        <span class="widget-title text-medium-emphasis">
-          {{ t('compliance.expired') }}
-        </span>
-      </div>
-    </div>
-
-    <div class="widget-body">
-      <VSkeletonLoader
-        v-if="store.isLoading"
-        type="text"
-      />
-      <div
-        v-else-if="!store.hasData"
-        class="d-flex align-center justify-center h-100 text-medium-emphasis"
-      >
-        {{ t('compliance.noData') }}
-      </div>
-      <template v-else>
-        <div class="widget-kpi font-weight-bold text-error">
-          {{ store.expiredCount }}
-        </div>
-        <div class="widget-subtext text-medium-emphasis">
-          {{ t('compliance.documentsExpired') }}
-        </div>
-      </template>
-    </div>
-  </div>
+  <KpiShell
+    icon="tabler-alert-triangle"
+    :color="n > 0 ? 'error' : 'success'"
+    :label="t('compliance.expired')"
+    :value="store.hasData ? n : null"
+    :caption="store.hasData ? (n > 0 ? t('compliance.documentsExpired') : t('l4.kpi.noneExpired')) : ''"
+    :empty-hint="t('compliance.noData')"
+    :breakdown="store.hasData ? breakdown : []"
+    :loading="store.isLoading"
+    :error="!!store.error"
+    :to="{ name: 'company-documents-tab', params: { tab: 'compliance' }, query: { status: 'expired' } }"
+    :link-label="t('l4.kpi.seeDocuments')"
+  />
 </template>
-
-<style scoped>
-.widget-root {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.density-S { padding: 12px; }
-.density-M { padding: 16px; }
-.density-L { padding: 20px; }
-
-.widget-header { flex: 0 0 auto; }
-.density-S .widget-header { margin-bottom: 6px; }
-.density-M .widget-header { margin-bottom: 8px; }
-.density-L .widget-header { margin-bottom: 12px; }
-
-.widget-title {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.widget-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  min-height: 0;
-}
-
-.density-S .widget-title { font-size: 14px; }
-.density-M .widget-title { font-size: 16px; }
-.density-L .widget-title { font-size: 18px; }
-
-.density-S .widget-kpi { font-size: 20px; }
-.density-M .widget-kpi { font-size: 28px; }
-.density-L .widget-kpi { font-size: 34px; }
-
-.density-S .widget-subtext { font-size: 12px; }
-.density-M .widget-subtext { font-size: 13px; }
-.density-L .widget-subtext { font-size: 14px; }
-</style>

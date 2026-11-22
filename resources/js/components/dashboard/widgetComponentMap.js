@@ -6,9 +6,9 @@ import { defineAsyncComponent } from 'vue'
  */
 const map = {
   // Existing (ADR-149)
-  BillingRevenueTrend: defineAsyncComponent(() => import('@/pages/platform/billing/_RevenueTrendWidget.vue')),
-  BillingRefundRatio: defineAsyncComponent(() => import('@/pages/platform/billing/_RefundRatioWidget.vue')),
-  BillingArOutstanding: defineAsyncComponent(() => import('@/pages/platform/billing/_ArOutstandingWidget.vue')),
+  BillingRevenueTrend: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingRevenueTrendChart)), // ADR-856 chart family
+  BillingRefundRatio: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingRefundRatioKpi)), // ADR-856 KPI family
+  BillingArOutstanding: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingArOutstandingKpi)), // ADR-856 KPI family
 
   // Activity (ADR-156)
   BillingLastPayments: defineAsyncComponent(() => import('@/pages/platform/billing/_LastPaymentsWidget.vue')),
@@ -18,15 +18,15 @@ const map = {
   // KPIs (ADR-156)
   // ADR-855 — Leezr 5.0 cockpit presentation (same server widget, same data, size-aware KPI)
   BillingRevenueMtd: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitCollected.vue')),
-  BillingMrr: defineAsyncComponent(() => import('@/pages/platform/billing/_MrrWidget.vue')),
+  BillingMrr: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingMrrKpi)), // ADR-856 KPI family
 
   // Risk (ADR-156)
   BillingFailedPayments7d: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitFailedPayments.vue')),
-  BillingPendingDunning: defineAsyncComponent(() => import('@/pages/platform/billing/_PendingDunningWidget.vue')),
-  BillingTopFailureReasons: defineAsyncComponent(() => import('@/pages/platform/billing/_TopFailureReasonsWidget.vue')),
+  BillingPendingDunning: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingPendingDunningKpi)), // ADR-856 KPI family
+  BillingTopFailureReasons: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/FailureReasons.vue')), // ADR-856 list family
 
   // Timeseries (ADR-156)
-  BillingCashflowTrend: defineAsyncComponent(() => import('@/pages/platform/billing/_CashflowTrendWidget.vue')),
+  BillingCashflowTrend: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.BillingCashflowTrendChart)), // ADR-856 chart family
 
   // Compliance (ADR-196)
   ComplianceRate: defineAsyncComponent(() => import('@/views/company-dashboard/_ComplianceRateWidget.vue')),
@@ -65,10 +65,10 @@ const map = {
   DeliveriesCompletedToday: defineAsyncComponent(() => import('@/views/company-dashboard/_DeliveriesCompletedTodayWidget.vue')),
 
   // AI — platform KPIs (ADR-413)
-  AiDocsAnalyzed: defineAsyncComponent(() => import('@/pages/platform/ai/_AiDocsAnalyzedWidget.vue')),
-  AiDetections: defineAsyncComponent(() => import('@/pages/platform/ai/_AiDetectionsWidget.vue')),
-  AiAutoActions: defineAsyncComponent(() => import('@/pages/platform/ai/_AiAutoActionsWidget.vue')),
-  AiConfidence: defineAsyncComponent(() => import('@/pages/platform/ai/_AiConfidenceWidget.vue')),
+  AiDocsAnalyzed: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.AiDocsAnalyzedKpi)), // ADR-856 KPI family
+  AiDetections: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.AiDetectionsKpi)), // ADR-856 KPI family
+  AiAutoActions: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.AiAutoActionsKpi)), // ADR-856 KPI family
+  AiConfidence: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/BillingKpis').then(m => m.AiConfidenceKpi)), // ADR-856 KPI family
 
   // Platform — cockpit Leezr 5.0 (ADR-855) : mêmes widgets serveur, présentation V35 adaptée à la taille réelle.
   // Les anciens composants (ADR-746) restent dans views/platform-dashboard/ jusqu'à la fin de L4.

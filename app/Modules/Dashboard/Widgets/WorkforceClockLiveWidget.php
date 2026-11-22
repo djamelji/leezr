@@ -32,8 +32,8 @@ class WorkforceClockLiveWidget implements WidgetManifest, CollectiveWidget
         return [
             'default_w' => 3,
             'default_h' => 2,
-            'min_w' => 2,
-            'max_w' => 4,
+            'min_w' => 3,
+            'max_w' => 6,
             'min_h' => 2,
             'max_h' => 3,
         ];

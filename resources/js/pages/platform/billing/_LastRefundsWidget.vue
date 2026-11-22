@@ -18,6 +18,8 @@ const { t } = useI18n()
     :title="t('platformBilling.widgets.lastRefunds')"
     :rows="data?.items || []"
     date-field="date"
+    :to="{ name: 'platform-billing-tab', params: { tab: 'credit-notes' } }"
+    :link-label="t('l4.kpi.seeCreditNotes')"
     color="error"
   />
 </template>

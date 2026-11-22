@@ -5108,7 +5108,9 @@
     "invalidPlacement": "Invalid placement. The widget was reverted to its previous position.",
     "maxHeightReached": "Maximum widget height reached (6 rows).",
     "minWidgetRequired": "At least one widget is required.",
-    "removeWidget": "Remove widget"
+    "removeWidget": "Remove widget",
+    "sizeRefusedMax": "This block stops at {w} × {h}: beyond that it would have nothing more to show.",
+    "sizeRefusedMin": "Below {w} × {h}, its content would no longer be readable."
   },
   "auth": {
     "login": "Login",
@@ -12930,6 +12932,67 @@
       "label": "Failed payments · 7 d",
       "contextSome": "To follow up from Billing",
       "contextNone": "No failure this week"
+    }
+  },
+  "l4": {
+    "kpi": {
+      "active": "active",
+      "allProvided": "All documents provided",
+      "arContext": "Issued invoices not yet paid",
+      "assign": "Assign",
+      "assigned": "assigned",
+      "autoFills": "auto-fills",
+      "autoRejects": "rejects",
+      "done": "done",
+      "dunningNone": "No reminder pending",
+      "dunningSome": "Reminders to send or in progress",
+      "expirations": "expiries",
+      "incomplete": "incomplete",
+      "leaveWaiting": "Requests awaiting an answer",
+      "mismatches": "mismatches",
+      "mrrUnsupported": "Not available for these currencies",
+      "multiCurrency": "Several currencies: see Billing",
+      "noClockData": "No clock-in today",
+      "noEmployee": "No employee recorded",
+      "noLeave": "No leave request",
+      "noneExpired": "No expired document",
+      "noPlanning": "No planning this week",
+      "noShipmentData": "No shipment recorded",
+      "notClocked": "not clocked",
+      "noTimesheet": "No timesheet",
+      "onLeave": "on leave",
+      "refundContext": "Refunds relative to revenue, 30 days",
+      "refunds": "refunded",
+      "remaining": "remaining",
+      "revenue": "revenue",
+      "seeAi": "See AI",
+      "seeClock": "See clock-ins",
+      "seeCreditNotes": "See credit notes",
+      "seeDocuments": "See documents",
+      "seeDunning": "See reminders",
+      "seeInvoices": "See invoices",
+      "seeMyDeliveries": "My deliveries",
+      "seePayments": "See payments",
+      "seePeople": "See team",
+      "seePlanning": "See planning",
+      "seeShipments": "See shipments",
+      "seeSubscriptions": "See subscriptions",
+      "timesheetsWaiting": "Timesheets ready to approve",
+      "total": "in total",
+      "unassigned": "unassigned"
+    },
+    "list": {
+      "count": "{n} item(s)",
+      "empty": "Nothing yet"
+    },
+    "trend": {
+      "period": "Last {n} days",
+      "empty": "No amount over the period",
+      "total": "Total",
+      "avg": "Average per active day",
+      "best": "Best day",
+      "bestDays": "Best days",
+      "noFailure": "No payment failure"
     }
   }
 }

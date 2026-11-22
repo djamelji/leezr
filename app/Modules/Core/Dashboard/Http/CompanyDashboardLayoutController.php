@@ -73,15 +73,26 @@ class CompanyDashboardLayoutController extends Controller
             ], 422);
         }
 
-        $companyId = $request->attributes->get('company')->id;
-        $userId = $request->user()->id;
+        $company = $request->attributes->get('company');
+        $user = $request->user();
+        // ADR-856 — same rule as Platform (ADR-855) : a widget outside the user's permissioned catalog is never STORED
+        // (the read filter of ADR-816 already never serves it).
+        $membership = $user->membershipFor($company);
+        $isOwner = $user->isOwnerOf($company);
+        $allowed = array_flip(collect(\App\Modules\Dashboard\DashboardCatalogService::forArchetype(
+            $company,
+            $membership?->companyRole?->archetype,
+            $isOwner ? [] : ($membership?->companyRole?->effectivePermissionKeys() ?? []),
+            $isOwner,
+        ))->map(fn ($w) => $w->key())->all());
+        $tiles = array_values(array_filter($validated['layout'], fn ($t) => isset($allowed[$t['key']])));
 
         CompanyDashboardLayout::updateOrCreate(
-            ['company_id' => $companyId, 'user_id' => $userId],
-            ['layout_json' => $validated['layout']],
+            ['company_id' => $company->id, 'user_id' => $user->id],
+            ['layout_json' => $tiles],
         );
 
-        return response()->json(['layout' => $validated['layout']]);
+        return response()->json(['layout' => $tiles]);
     }
 
     /**

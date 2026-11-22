@@ -272,7 +272,7 @@ class DashboardEngineTest extends TestCase
     {
         $customLayout = [
             ['key' => 'billing.ar_outstanding', 'x' => 0, 'y' => 0, 'w' => 4, 'h' => 2, 'scope' => 'global', 'config' => []],
-            ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'global', 'config' => ['period' => '7d']],
+            ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3, 'scope' => 'global', 'config' => ['period' => '7d']],
         ];
 
         $response = $this->actingAs($this->admin, 'platform')

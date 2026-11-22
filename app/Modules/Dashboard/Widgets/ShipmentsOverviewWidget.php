@@ -17,7 +17,7 @@ class ShipmentsOverviewWidget implements WidgetManifest
 
     public function key(): string { return 'shipments.overview'; }
     public function module(): string { return 'logistics_shipments'; }
-    public function layout(): array { return ['default_w' => 8, 'default_h' => 4, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 4]; }
+    public function layout(): array { return ['default_w' => 8, 'default_h' => 4, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 5]; } // ADR-856 — family size profile
     public function category(): string { return 'operations'; }
     public function component(): string { return 'ShipmentsOverview'; }
     public function tags(): array { return ['shipments', 'operations', 'overview']; }

@@ -15,7 +15,7 @@ class WorkforceHoursTrendWidget implements WidgetManifest, CollectiveWidget
 
     public function key(): string { return 'workforce.hours_trend'; }
     public function module(): string { return 'workforce'; }
-    public function layout(): array { return ['default_w' => 8, 'default_h' => 4, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 4]; }
+    public function layout(): array { return ['default_w' => 8, 'default_h' => 4, 'min_w' => 3, 'max_w' => 12, 'min_h' => 2, 'max_h' => 6]; } // ADR-856 — family size profile
     public function category(): string { return 'workforce'; }
     public function component(): string { return 'WorkforceHoursTrend'; }
     public function tags(): array { return ['workforce', 'workforce', 'kpi']; }

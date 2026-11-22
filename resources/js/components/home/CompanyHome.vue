@@ -35,6 +35,24 @@ const refresh = async () => {
   }
 }
 
+// ADR-856 (L4) — back to the recommended layout of the role / JobDomain (confirmation, same engine)
+const confirmReset = ref(false)
+const resetting = ref(false)
+
+const applyRecommended = async () => {
+  resetting.value = true
+  try {
+    await dashboardStore.resetToRecommended()
+  }
+  catch {
+    // saveError shown by the snackbar
+  }
+  finally {
+    resetting.value = false
+    confirmReset.value = false
+  }
+}
+
 const stopCustomizing = async () => {
   if (dashboardStore.isDirty) await saveAndResolve()
   customizing.value = false
@@ -66,6 +84,7 @@ onMounted(() => {
   })
   if (canCompliance.value)
     complianceStore.fetchCompliance()
+
   // Résout « suis-je salarié ? » pour proposer l'accès à l'espace opérationnel (idempotent :
   // le widget navbar peut l'avoir déjà fait ; firstOrFail → 404 silencieux si non-salarié).
   // ADR-769 : le store décide (capacités serveur) — aucun appel Workforce sans module ni fiche liée.
@@ -109,6 +128,12 @@ const acceptSuggestion = suggestion => {
     dashboardStore.addWidget(catalogEntry)
   }
 }
+
+// ADR-856 — a widget's « Retry » re-resolves the dashboard data (same engine)
+const onWidgetRetry = () => { dashboardStore.resolveWidgets() }
+
+onMounted(() => window.addEventListener('lzr-dashboard-retry', onWidgetRetry))
+onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidgetRetry))
 </script>
 
 <template>
@@ -180,6 +205,15 @@ const acceptSuggestion = suggestion => {
               {{ t('companyDashboard.addWidget') }}
             </VBtn>
             <VBtn
+              variant="text"
+              size="small"
+              prepend-icon="tabler-layout-dashboard"
+              data-test="home-recommended"
+              @click="confirmReset = true"
+            >
+              {{ t('cockpit.grid.recommended') }}
+            </VBtn>
+            <VBtn
               color="primary"
               size="small"
               data-test="home-customize-done"
@@ -232,6 +266,7 @@ const acceptSuggestion = suggestion => {
         :catalog="dashboardStore.catalog"
         :loading="dashboardStore.dataLoading"
         :editable="canEdit && customizing"
+        premium
         @update:layout="dashboardStore.updateLayout($event)"
       />
 
@@ -254,6 +289,43 @@ const acceptSuggestion = suggestion => {
     </DashboardHostContainer>
 
     <!-- ═══ Save Error ═══ -->
+    <VDialog
+      v-model="confirmReset"
+      max-width="460"
+    >
+      <VCard class="pa-6">
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          size="48"
+          class="mb-3"
+        >
+          <VIcon icon="tabler-layout-dashboard" />
+        </VAvatar>
+        <div class="text-h6 mb-1">
+          {{ t('cockpit.reset.title') }}
+        </div>
+        <div class="text-body-2 text-medium-emphasis mb-5">
+          {{ t('cockpit.reset.text') }}
+        </div>
+        <div class="d-flex gap-2 justify-end">
+          <VBtn
+            variant="text"
+            @click="confirmReset = false"
+          >
+            {{ t('cockpit.reset.cancel') }}
+          </VBtn>
+          <VBtn
+            color="primary"
+            :loading="resetting"
+            data-test="home-reset-confirm"
+            @click="applyRecommended"
+          >
+            {{ t('cockpit.reset.confirm') }}
+          </VBtn>
+        </div>
+      </VCard>
+    </VDialog>
     <VSnackbar
       :model-value="!!dashboardStore.saveError"
       color="error"

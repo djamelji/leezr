@@ -15,7 +15,7 @@ class WorkforceHeadcountWidget implements WidgetManifest, CollectiveWidget
 
     public function key(): string { return 'workforce.headcount'; }
     public function module(): string { return 'workforce'; }
-    public function layout(): array { return ['default_w' => 3, 'default_h' => 2, 'min_w' => 2, 'max_w' => 6, 'min_h' => 2, 'max_h' => 4]; }
+    public function layout(): array { return ['default_w' => 3, 'default_h' => 2, 'min_w' => 3, 'max_w' => 6, 'min_h' => 2, 'max_h' => 3]; } // ADR-856 — KPI family bounds
     public function category(): string { return 'workforce'; }
     public function component(): string { return 'WorkforceHeadcount'; }
     public function tags(): array { return ['workforce', 'workforce', 'kpi']; }

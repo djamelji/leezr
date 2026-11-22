@@ -51,11 +51,21 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     //    panneaux composites (shipments.overview, logistics.fleet, documents.detail).
     const EXCLUDED_KEYS = new Set([
       'onboarding.setup',
-      'workforce.timesheet_pending', 'workforce.leave_pending',
-      'shipments.today', 'shipments.in_transit', 'shipments.late', 'shipments.unassigned', 'drivers.active',
-      'deliveries.my_today', 'deliveries.next', 'deliveries.completed_today',
-      'compliance.pending', 'compliance.overdue', 'compliance.types',
+      'workforce.timesheet_pending',
+      'workforce.leave_pending',
+      'shipments.today',
+      'shipments.in_transit',
+      'shipments.late',
+      'shipments.unassigned',
+      'drivers.active',
+      'deliveries.my_today',
+      'deliveries.next',
+      'deliveries.completed_today',
+      'compliance.pending',
+      'compliance.overdue',
+      'compliance.types',
     ])
+
     const catalog = engine._catalog.value.filter(w => !EXCLUDED_KEYS.has(w.key))
     const byKey = new Map(catalog.map(w => [w.key, w]))
     const has = k => byKey.has(k)
@@ -70,11 +80,13 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
         { key: 'workforce.hours_trend', w: 8, h: 4 },
         { key: 'compliance.rate', w: 4, h: 4 },
       ],
+
       // Logistique — synthèse expéditions (h3) + flotte & livraisons (h3)
       [
         { key: 'shipments.overview', w: 8, h: 3 },
         { key: 'logistics.fleet', w: 4, h: 3 },
       ],
+
       // Documents — à régulariser (h3) + conformité par rôle (h3)
       [
         { key: 'documents.detail', w: 6, h: 3 },
@@ -85,6 +97,7 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     const layout = []
     const placed = new Set()
     const cur = { x: 0, y: 0, rowH: 0 }
+
     const place = (key, w, h) => {
       const ww = Math.min(w, 12)
       if (cur.x + ww > 12) { cur.x = 0; cur.y += cur.rowH; cur.rowH = 0 }
@@ -93,6 +106,7 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
       cur.x += ww
       cur.rowH = Math.max(cur.rowH, h)
     }
+
     const newRow = () => { cur.x = 0; cur.y += cur.rowH; cur.rowH = 0 }
 
     for (const section of SECTIONS) {
@@ -142,8 +156,16 @@ export const useCompanyDashboardStore = defineStore('companyDashboard', () => {
     await engine.resolveWidgets()
   }
 
+  // ADR-856 (L4) — « Disposition recommandée » : recompose the default for THIS user's catalog (role + JobDomain), save.
+  async function resetToRecommended() {
+    buildSmartDefaultLayout()
+    await engine.saveLayout()
+    await engine.resolveWidgets()
+  }
+
   return {
     ...engine,
+    resetToRecommended,
     suggestions,
     fetchSuggestions,
     loadDashboard,

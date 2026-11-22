@@ -18,6 +18,8 @@ const { t } = useI18n()
     :title="t('platformBilling.widgets.lastInvoices')"
     :rows="data?.items || []"
     date-field="date"
+    :to="{ name: 'platform-billing-tab', params: { tab: 'invoices' } }"
+    :link-label="t('l4.kpi.seeInvoices')"
     color="info"
   />
 </template>

@@ -27,6 +27,7 @@ export function createSurfaceEngine(config) {
   const _dataLoading = ref(false)
   const _dirty = ref(false)
   const _fetchLayoutSucceeded = ref(false)
+
   // ADR-816 : a layout exists server-side (possibly filtered to empty by permissions) — never auto-replace it.
   const _layoutStored = ref(false)
 
@@ -98,9 +99,23 @@ export function createSurfaceEngine(config) {
     _saveError.value = null
 
     try {
+      // ADR-856 (L4) — a layout saved before a bound was tightened (e.g. a KPI stored 4×4, now ≤ 6×3) is brought back
+      // within the CURRENT catalog bounds before writing : shrinking never creates an overlap, and the server validator
+      // (which refuses out-of-bounds tiles) never rejects a save the user did not cause.
+      const bounds = new Map(_catalog.value.map(w => [w.key, w.layout || {}]))
+
+      const clampTile = t => {
+        const l = bounds.get(t.key)
+        if (!l) return t
+        const w = Math.min(Math.max(t.w, l.min_w ?? t.w), l.max_w ?? t.w)
+        const h = Math.min(Math.max(t.h, l.min_h ?? t.h), l.max_h ?? t.h)
+
+        return w === t.w && h === t.h ? t : { ...t, w, h, x: Math.min(t.x, 12 - w) }
+      }
+
       const data = await apiFn('/dashboard/layout', {
         method: 'PUT',
-        body: { layout: _layout.value },
+        body: { layout: _layout.value.map(clampTile) },
       })
 
       _layout.value = data.layout
@@ -154,6 +169,11 @@ export function createSurfaceEngine(config) {
 
       _widgetData.value = newData
       _widgetErrors.value = newErrors
+    }
+    catch {
+      // ADR-856 (L4) — the whole batch failed (network, 5xx) : every requested widget is in ERROR (it used to stay
+      // silently empty, read as « no data »). Widgets show their error state with « Retry ».
+      _widgetErrors.value = Object.fromEntries(serverWidgets.map(item => [item.key, 'unavailable']))
     }
     finally {
       _dataLoading.value = false

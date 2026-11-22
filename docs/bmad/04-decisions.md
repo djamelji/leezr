@@ -29996,3 +29996,36 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - `Adr855PlatformCockpitTest` 8/8 ; `family-modes.test.mjs` 4/4 ; E2E `audit842-cockpit855-recipe` 5/5 (fixture clone `audit842-cockpit855`) ; non-régression M3, M5 (recherche par nom exact) et M10.
   - Recette navigateur sur 5 profils (desktop, tablette, mobile, clair et sombre) : 0 erreur, 0 refus, 0 débordement.
   - Livraison décrite dans `docs/bmad/leezr-5-design/10-l0-l1-delivery.md` ; restant pour L2, L3 et L4 au §7. Décision L5 (dépréciation de « Outils › Champs ») enregistrée au §8.
+
+## ADR-856 — Leezr 5.0 L4 : widgets premium, tailles par famille et bibliothèque unifiée
+
+- **Date** : 2026-11-22
+- **Contexte** : les widgets affichaient un contenu minuscule dans les grandes tuiles, des titres écrasés dans les petites, des dates d'axe qui se chevauchaient et des listes coupées. L'erreur et le vide montraient « 0 » ou « Aucune donnée ». Côté Company, on ne pouvait pas revenir à une disposition recommandée, et l'écriture de la disposition acceptait des widgets hors catalogue (Platform filtre déjà, ADR-855).
+- **Décision** :
+  - **Bibliothèque unifiée sur L0, sans nouveau moteur.**
+    - `_KpiShell` (Company) et l'adaptateur `KpiFromData` / `BillingKpis.js` (Platform) s'appuient sur `AppKpiTile`, qui a 5 présentations ; la ventilation, le lien métier et les états viennent du même composant.
+    - `_RecentListWidgetShell` repose sur `AppWidgetShell`, avec des lignes ajustées à la hauteur.
+    - Nouvelle famille Tendance : `BillingTrend`, et `_HoursTrendWidget` recomposé.
+  - **Bornes par famille** (`layout()`) :
+    - compteur : ≤ 6×2 ;
+    - KPI avec ventilation : ≤ 6×3 ;
+    - tendance des heures réductible à 3×2 ;
+    - `workforce.clock_live` aligné sur le minimum de la grille (3 colonnes).
+    - Un redimensionnement hors bornes est refusé avec un message (`dashboardGrid.sizeRefusedMax/Min`).
+    - L'affichage ramène les tuiles enregistrées dans les bornes courantes, et `useSurfaceEngine.saveLayout` les borne sur le catalogue avant l'écriture : une ancienne disposition (KPI 6×5) reste enregistrable, sans 422 et sans migration.
+  - **États** :
+    - si le lot de données échoue en entier, chaque widget passe en erreur ;
+    - « Réessayer » relance `resolveWidgets` par l'événement `lzr-dashboard-retry` : un widget ne récupère jamais ses données lui-même.
+  - **Company** :
+    - « Disposition recommandée » (`resetToRecommended`, même constructeur ADR-745, avec confirmation) ;
+    - `CompanyDashboardLayoutController::update` filtre selon `DashboardCatalogService::forArchetype` (le propriétaire contourne le filtre, comme pour le catalogue).
+  - **Graphes** :
+    - `thinCategories` allège les étiquettes d'axe selon la largeur mesurée, et l'infobulle garde le libellé complet ;
+    - `LzrApexChart` reçoit une prop `legend` pour ne pas réserver la place d'une légende que le widget dessine lui-même ;
+    - le donut est dimensionné sur la hauteur mesurée.
+  - **Mobile** : `MOBILE_ROWS` donne une hauteur lisible à `compliance.rate` et `documents.detail`.
+  - **Laboratoire** (devOnly) : la matrice de tous les widgets à leurs tailles et états, sur `/platform/design-lab/matrix` et `/company/design-lab/widgets`.
+  - **Sans changement** : formules financières, RBAC, moteur de dashboard, architecture des modules, sociétés historiques.
+- **Conséquences** :
+  - `Adr856WidgetLibraryTest` 4/4 ; `axis-labels.test.mjs` 3/3 (JS 49/49) ; E2E `audit842-widgets856-recipe` 4/4 (fixture clone `audit842-widgets856`, `WIDGETS856_STALE=1` pour l'ancienne disposition) ; fixtures `refund_ratio` 4×4 de `LayoutPacker/Validator`, `DashboardEngine` et `DashboardGridV2` ramenées à ≤ 6×3 ; PHPUnit 4908 passed / 13 skipped / 0 failed ; non-régression `audit842-cockpit855-recipe` 5/5.
+  - Catalogue dans `docs/bmad/leezr-5-design/11-widget-catalog.md`, livraison dans `12-l4-delivery.md` ; restant au §6. Prochain lot recommandé : L3 (accueil Company V22).

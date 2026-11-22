@@ -1,131 +1,110 @@
 <script setup>
-// ADR-745 / ADR-750 (P2.5) — hero « Heures travaillées · 7 j ». Composite barres (jour pic
-// en relief) + résumé. Rendu ADAPTATIF par surface via le Presentation Engine partagé
-// (ADR-748b) : micro = total + sparkline ; compact = KPI + barres ; wide = barres
-// panoramiques + KPI en bandeau ; standard/expanded = aside + barres. Aucun moteur parallèle.
-import { computed, ref } from 'vue'
+// ADR-856 (Leezr 5.0 L4) — « Heures travaillées » (workforce.hours_trend). Real data : { labels[7], hours[7] } (7 days).
+//   KPI size  → total of the week + bars sparkline
+//   standard  → total / average / best day + bar chart
+//   expanded  → + per-day list beside the chart
+import AppKpiTile from '@/components/app/AppKpiTile.vue'
+import AppWidgetShell from '@/components/app/AppWidgetShell.vue'
 import LzrApexChart from '@/core/components/LzrApexChart.vue'
 import { useSurfacePresentation } from '@/core/surface-engine/useSurfacePresentation'
-import { useMeasuredBlockSize } from '@/core/surface-engine/useMeasuredBlockSize'
 
-const props = defineProps({
-  data: { type: Object, default: null },
-  loading: { type: Boolean, default: false },
-  viewport: { type: Object, default: () => ({}) },
-})
-
-const d = computed(() => props.data || {})
-const labels = computed(() => (Array.isArray(d.value.labels) && d.value.labels.length) ? d.value.labels : ['', '', '', '', '', '', ''])
-const hours = computed(() => (Array.isArray(d.value.hours) && d.value.hours.length) ? d.value.hours.map(h => Number(h) || 0) : [0, 0, 0, 0, 0, 0, 0])
-const series = computed(() => [{ name: 'Heures', data: hours.value }])
-
-const total = computed(() => hours.value.reduce((a, b) => a + b, 0))
-const peakIndex = computed(() => hours.value.reduce((best, v, i) => v > hours.value[best] ? i : best, 0))
-const peakVal = computed(() => hours.value[peakIndex.value] || 0)
-const activeDays = computed(() => hours.value.filter(v => v > 0).length)
-const avgPerActive = computed(() => activeDays.value ? total.value / activeDays.value : 0)
-const hasData = computed(() => total.value > 0)
-
-const fmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1)
-const formatY = v => `${fmt(v)} h`
-
+const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, scope: { type: String, default: 'company' }, viewport: { type: Object, default: () => ({}) } })
+const { t } = useI18n()
 const root = ref(null)
-const chartHost = ref(null)
-const { mode, isMicro, isCompact, isWide } = useSurfacePresentation(root, { viewport: computed(() => props.viewport) })
-const chartPx = useMeasuredBlockSize(chartHost)
+const { rootW, rootH } = useSurfacePresentation(root)
+const kpiSize = computed(() => rootW.value > 0 && (rootH.value < 200 || rootW.value < 300))
+const d = computed(() => props.data || {})
+const hours = computed(() => (d.value.hours || []).map(Number))
+const labels = computed(() => d.value.labels || [])
+const total = computed(() => Math.round(hours.value.reduce((a, b) => a + b, 0) * 10) / 10)
+const active = computed(() => hours.value.filter(h => h > 0))
+const avg = computed(() => (active.value.length ? Math.round((total.value / active.value.length) * 10) / 10 : 0))
+const peakIdx = computed(() => hours.value.indexOf(Math.max(...hours.value, 0)))
+const has = computed(() => hours.value.length > 0)
+const state = computed(() => (props.loading && !props.data ? 'loading' : d.value.error ? 'error' : !has.value || total.value === 0 ? 'empty' : 'ready'))
+const h1 = v => `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(v)} h`
+const to = { name: 'company-workforce-time' }
+const chartH = h => Math.max(140, Math.min(380, Math.floor((h - 150) / 30) * 30))
 </script>
 
 <template>
-  <div ref="root" class="widget-root hours-panel d-flex flex-column" :class="[`mode-${mode}`, isMicro ? 'pa-4' : 'pa-5']">
-    <div class="d-flex align-center justify-space-between gap-2 flex-shrink-0" :class="isMicro ? '' : 'mb-1'">
-      <div>
-        <div class="font-weight-medium text-high-emphasis text-truncate" :class="isMicro ? 'text-body-2' : 'text-body-1'">{{ $t('workforce.widgets.hoursPanelTitle') }}</div>
-        <div v-if="!isMicro" class="text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursPanelSub') }}</div>
-      </div>
-      <VAvatar v-if="!isWide" color="primary" variant="tonal" :size="isMicro ? 34 : 40" rounded><VIcon icon="tabler-clock-hour-8" :size="isMicro ? 18 : 22" /></VAvatar>
-    </div>
-
-    <VSkeletonLoader v-if="loading && !isMicro" type="image" class="bg-transparent flex-grow-1" />
-    <VAlert v-else-if="d.error" type="error" variant="tonal" density="compact" :text="$t('workforce.widgets.loadError')" />
-
-    <!-- MICRO : total + sparkline -->
-    <template v-else-if="isMicro">
-      <div class="d-flex align-baseline gap-1 mt-1">
-        <span class="text-h5 font-weight-medium text-high-emphasis">{{ fmt(total) }}</span>
-        <span class="text-caption text-medium-emphasis text-truncate">h · {{ $t('workforce.widgets.hoursPanelSub') }}</span>
-      </div>
-      <div ref="chartHost" class="ht-host">
-        <div v-if="hasData" class="ht-fill"><LzrApexChart class="w-100" type="bar" mode="spark" :series="series" :categories="labels" :highlight-index="peakIndex" :height="chartPx" /></div>
-        <span v-else class="ht-empty text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursEmpty') }}</span>
-      </div>
-    </template>
-
-    <!-- COMPACT : KPI en ligne + barres -->
-    <template v-else-if="isCompact">
-      <div class="d-flex align-baseline gap-3 flex-wrap mt-1 flex-shrink-0">
-        <span class="d-flex align-baseline gap-1"><span class="text-h6 font-weight-medium text-high-emphasis">{{ fmt(total) }}</span><span class="text-caption text-medium-emphasis">h · {{ $t('workforce.widgets.hoursTotal') }}</span></span>
-        <span v-if="hasData" class="text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursAvg') }} {{ fmt(avgPerActive) }} h</span>
-      </div>
-      <div ref="chartHost" class="ht-host">
-        <div v-if="hasData" class="ht-fill"><LzrApexChart class="w-100" type="bar" :series="series" :categories="labels" :highlight-index="peakIndex" :format-y="formatY" :height="chartPx" /></div>
-        <span v-else class="ht-empty text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursEmpty') }}</span>
-      </div>
-    </template>
-
-    <!-- WIDE : bandeau KPI + barres panoramiques -->
-    <template v-else-if="isWide">
-      <div class="d-flex align-center gap-5 flex-wrap mt-1 flex-shrink-0">
-        <div class="d-flex align-baseline gap-1"><span class="text-h5 font-weight-medium text-high-emphasis">{{ fmt(total) }}</span><span class="text-caption text-medium-emphasis">h · {{ $t('workforce.widgets.hoursTotal') }}</span></div>
-        <div v-if="hasData" class="text-body-2 text-medium-emphasis">{{ $t('workforce.widgets.hoursAvg') }} {{ fmt(avgPerActive) }} h</div>
-        <div v-if="hasData" class="text-body-2 text-medium-emphasis">{{ $t('workforce.widgets.hoursPeak') }} · {{ labels[peakIndex] }} {{ fmt(peakVal) }} h</div>
-      </div>
-      <div ref="chartHost" class="ht-host">
-        <div v-if="hasData" class="ht-fill"><LzrApexChart class="w-100" type="bar" :series="series" :categories="labels" :highlight-index="peakIndex" :format-y="formatY" :height="chartPx" /></div>
-        <span v-else class="ht-empty text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursEmpty') }}</span>
-      </div>
-    </template>
-
-    <!-- STANDARD / EXPANDED : aside + barres -->
-    <div v-else class="hours-body flex-grow-1 d-flex gap-4" style="min-block-size: 0">
-      <div class="hours-aside d-flex flex-column justify-center gap-4 flex-shrink-0">
-        <div>
-          <div class="text-h4 font-weight-medium text-high-emphasis">{{ fmt(total) }}<span class="text-body-1 text-medium-emphasis"> h</span></div>
-          <div class="text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursTotal') }}</div>
-        </div>
-        <VDivider />
-        <div class="d-flex flex-column gap-3">
-          <div class="d-flex align-center gap-2">
-            <VAvatar size="30" variant="tonal" color="success" rounded><VIcon icon="tabler-chart-bar" size="16" /></VAvatar>
-            <div>
-              <div class="text-body-2 font-weight-medium text-high-emphasis">{{ hasData ? fmt(avgPerActive) + ' h' : '—' }}</div>
-              <div class="text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursAvg') }}</div>
-            </div>
+  <div
+    ref="root"
+    class="h-100"
+  >
+    <AppKpiTile
+      v-if="kpiSize"
+      bare
+      :label="t('workforce.widgets.hoursPanelTitle')"
+      icon="tabler-clock-hour-4"
+      color="info"
+      :value="state === 'ready' ? h1(total) : null"
+      :context="state === 'ready' ? `${t('workforce.widgets.hoursAvg')} : ${h1(avg)}` : ''"
+      :empty-hint="t('workforce.widgets.hoursEmpty')"
+      :spark="hours"
+      spark-type="bar"
+      :loading="state === 'loading'"
+      :error="state === 'error'"
+      :to="to"
+    />
+    <AppWidgetShell
+      v-else
+      bare
+      :title="t('workforce.widgets.hoursPanelTitle')"
+      :subtitle="t('workforce.widgets.hoursPanelSub')"
+      icon="tabler-clock-hour-4"
+      color="info"
+      :link="t('l4.kpi.seeClock')"
+      :to="to"
+      :state="state"
+      empty-icon="tabler-clock-off"
+      :empty-title="t('workforce.widgets.hoursEmpty')"
+    >
+      <template #default="{ mode, h }">
+        <div class="ht-kpis">
+          <div><span>{{ t('workforce.widgets.hoursTotal') }}</span><strong class="ht-big">{{ h1(total) }}</strong></div>
+          <div><span>{{ t('workforce.widgets.hoursAvg') }}</span><strong>{{ h1(avg) }}</strong></div>
+          <div v-if="mode !== 'compact'">
+            <span>{{ t('workforce.widgets.hoursPeak') }}</span><strong>{{ labels[peakIdx] }} · {{ h1(hours[peakIdx] || 0) }}</strong>
           </div>
-          <div class="d-flex align-center gap-2">
-            <VAvatar size="30" variant="tonal" color="primary" rounded><VIcon icon="tabler-flame" size="16" /></VAvatar>
-            <div>
-              <div class="text-body-2 font-weight-medium text-high-emphasis">{{ hasData ? labels[peakIndex] + ' · ' + fmt(peakVal) + ' h' : '—' }}</div>
-              <div class="text-caption text-medium-emphasis">{{ $t('workforce.widgets.hoursPeak') }}</div>
+        </div>
+        <div class="d-flex gap-5 flex-grow-1 min-w-0">
+          <div class="flex-grow-1 min-w-0">
+            <LzrApexChart
+              type="bar"
+              :series="[{ name: t('workforce.widgets.hoursPanelTitle'), data: hours }]"
+              :categories="labels"
+              :height="chartH(h)"
+              :colors="['info']"
+              :highlight-index="peakIdx"
+              :format-y="v => h1(v)"
+            />
+          </div>
+          <div
+            v-if="mode === 'expanded'"
+            class="ht-days"
+          >
+            <div
+              v-for="(l, i) in labels"
+              :key="i"
+              class="ht-day"
+              :class="{ 'ht-day--peak': i === peakIdx }"
+            >
+              <span>{{ l }}</span><strong>{{ h1(hours[i] || 0) }}</strong>
             </div>
           </div>
         </div>
-      </div>
-
-      <div ref="chartHost" class="ht-host flex-grow-1">
-        <div v-if="!hasData" class="ht-empty text-center">
-          <VIcon icon="tabler-chart-bar-off" size="30" class="text-disabled mb-2" />
-          <div class="text-body-2 text-medium-emphasis">{{ $t('workforce.widgets.hoursEmpty') }}</div>
-        </div>
-        <div v-else class="ht-fill"><LzrApexChart class="w-100" type="bar" :series="series" :categories="labels" :highlight-index="peakIndex" :format-y="formatY" :height="chartPx" /></div>
-      </div>
-    </div>
+      </template>
+    </AppWidgetShell>
   </div>
 </template>
 
 <style scoped>
-.widget-root { block-size: 100%; overflow: hidden; }
-.hours-aside { inline-size: 150px; }
-.ht-host { position: relative; flex: 1 1 auto; min-block-size: 44px; min-inline-size: 0; overflow: hidden; }
-.ht-fill { position: absolute; inset: 0; }
-.ht-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.ht-kpis { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-block-end: .5rem; }
+.ht-kpis > div { display: flex; flex-direction: column; font-size: .8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.ht-kpis strong { font-size: 1.125rem; color: rgb(var(--v-theme-on-surface)); }
+.ht-kpis .ht-big { font-size: 1.75rem; letter-spacing: -.02em; }
+.ht-days { flex: 0 0 170px; border-inline-start: 1px solid rgba(var(--v-border-color), .12); padding-inline-start: 1rem; display: flex; flex-direction: column; gap: .125rem; }
+.ht-day { display: flex; justify-content: space-between; font-size: .875rem; padding-block: .25rem; }
+.ht-day--peak { color: rgb(var(--v-theme-info)); font-weight: 600; }
 </style>

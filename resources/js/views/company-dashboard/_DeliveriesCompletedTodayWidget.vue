@@ -1,63 +1,32 @@
 <script setup>
-const props = defineProps({
-  data: { type: Object, default: null },
-  loading: { type: Boolean, default: false },
-  scope: { type: String, default: 'company' },
-  viewport: { type: Object, default: () => ({ density: 'L' }) },
-})
+// ADR-856 (Leezr 5.0 L4) — « deliveries.completed_today » (shipments.view_own). Real data : { data: { completed, total } }.
+import { computed } from 'vue'
+import KpiShell from './_KpiShell.vue'
 
+const props = defineProps({ data: { type: Object, default: null }, loading: { type: Boolean, default: false }, scope: { type: String, default: 'company' }, viewport: { type: Object, default: () => ({}) } })
 const { t } = useI18n()
-const density = computed(() => props.viewport?.density || 'L')
-const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
-const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
+const d = computed(() => props.data || {})
+const completed = computed(() => d.value.data?.completed ?? null)
+const total = computed(() => d.value.data?.total ?? 0)
+
+const breakdown = computed(() => [
+  { label: t('l4.kpi.done'), value: completed.value ?? 0, tone: 'success' },
+  { label: t('l4.kpi.remaining'), value: Math.max(0, total.value - (completed.value ?? 0)), tone: total.value - (completed.value ?? 0) > 0 ? 'primary' : '' },
+])
 </script>
 
 <template>
-  <div class="widget-root" :class="`density-${density}`">
-    <div class="d-flex justify-space-between align-center widget-header">
-      <div class="d-flex align-center gap-2 overflow-hidden">
-        <VAvatar color="success" variant="tonal" :size="avatarSize" rounded>
-          <VIcon icon="tabler-circle-check" :size="iconSize" />
-        </VAvatar>
-        <span class="widget-title text-medium-emphasis">{{ t('shipments.widgets.completedToday') }}</span>
-      </div>
-    </div>
-
-    <div class="widget-body">
-      <VSkeletonLoader v-if="loading" type="text" />
-      <div v-else-if="!data" class="d-flex align-center justify-center h-100 text-medium-emphasis">
-        {{ t('shipments.widgets.noData') }}
-      </div>
-      <template v-else>
-        <div class="widget-kpi font-weight-bold text-success">
-          {{ data.data?.completed ?? 0 }} / {{ data.data?.total ?? 0 }}
-        </div>
-        <div class="widget-subtext text-medium-emphasis">
-          {{ t('shipments.widgets.completedTodayDesc') }}
-        </div>
-      </template>
-    </div>
-  </div>
+  <KpiShell
+    icon="tabler-circle-check"
+    color="success"
+    :label="t('shipments.widgets.completedToday')"
+    :value="completed === null ? null : `${completed} / ${total}`"
+    :caption="completed === null ? '' : t('shipments.widgets.completedTodayDesc')"
+    :empty-hint="t('l4.kpi.noShipmentData')"
+    :breakdown="total ? breakdown : []"
+    :loading="loading"
+    :error="!!d.error"
+    :to="{ name: 'company-my-deliveries' }"
+    :link-label="t('l4.kpi.seeMyDeliveries')"
+  />
 </template>
-
-<style scoped>
-.widget-root { height: 100%; display: flex; flex-direction: column; }
-.density-S { padding: 12px; }
-.density-M { padding: 16px; }
-.density-L { padding: 20px; }
-.widget-header { flex: 0 0 auto; }
-.density-S .widget-header { margin-bottom: 6px; }
-.density-M .widget-header { margin-bottom: 8px; }
-.density-L .widget-header { margin-bottom: 12px; }
-.widget-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.widget-body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 12px; min-height: 0; }
-.density-S .widget-title { font-size: 14px; }
-.density-M .widget-title { font-size: 16px; }
-.density-L .widget-title { font-size: 18px; }
-.density-S .widget-kpi { font-size: 20px; }
-.density-M .widget-kpi { font-size: 28px; }
-.density-L .widget-kpi { font-size: 34px; }
-.density-S .widget-subtext { font-size: 12px; }
-.density-M .widget-subtext { font-size: 13px; }
-.density-L .widget-subtext { font-size: 14px; }
-</style>

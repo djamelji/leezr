@@ -21,17 +21,7 @@ class BillingRefundRatioWidget implements WidgetManifest
         return 'platform.billing';
     }
 
-    public function layout(): array
-    {
-        return [
-            'default_w' => 4,
-            'default_h' => 4,
-            'min_w' => 3,
-            'max_w' => 8,
-            'min_h' => 2,
-            'max_h' => 6,
-        ];
-    }
+    public function layout(): array { return ['default_w' => 3, 'default_h' => 2, 'min_w' => 3, 'max_w' => 6, 'min_h' => 2, 'max_h' => 3]; } // ADR-856 — KPI family bounds
 
     public function category(): string
     {

@@ -1,5 +1,6 @@
 <script setup>
 import { displayLocale } from '@/utils/datetime'
+
 // ADR-751 (P3) — Accueil OPÉRATIONNEL de l'employé `/home`. PAS une copie du dashboard de
 // gestion `/dashboard` : orienté ACTION (« que dois-je faire maintenant ? »). Composition
 // ADAPTATIVE par modules + capacités + données RÉELLES (self-service, tenant-scoped). La
@@ -49,6 +50,7 @@ async function act(fn) {
   catch (e) { snack.value = e?.data?.message || e?.message || t('employeeHome.actionError') }
   finally { busy.value = false }
 }
+
 const statusMeta = computed(() => ({
   working: { color: 'success', icon: 'tabler-player-play', label: t('employeeHome.clock.working') },
   on_break: { color: 'warning', icon: 'tabler-coffee', label: t('employeeHome.clock.onBreak') },
@@ -62,7 +64,9 @@ const fmtHM = sec => {
 
   return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`
 }
+
 const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString(displayLocale(), { hour: '2-digit', minute: '2-digit' }) : ''
+
 const relDay = iso => {
   if (!iso) return ''
   const d = new Date(iso); const today = new Date()
@@ -95,12 +99,15 @@ const hasOperational = computed(() => (canWorkforce.value && isEmployee.value) |
 const canEdit = computed(() => auth.hasPermission('manage-own-dashboard'))
 const showCatalogDrawer = ref(false)
 const hasWidgets = computed(() => homeStore.layout.length > 0)
+
 const availableWidgets = computed(() => {
   const keys = new Set(homeStore.layout.map(i => i.key))
 
   return homeStore.catalog.filter(w => !keys.has(w.key))
 })
+
 const addWidgetFromCatalog = w => { homeStore.addWidget(w); showCatalogDrawer.value = false }
+
 const saveAndResolve = async () => {
   try { await homeStore.saveLayout(); await homeStore.resolveWidgets() }
   catch { /* saveError → snackbar */ }
@@ -137,17 +144,34 @@ onMounted(async () => {
       <h4 class="text-h4 mb-1">
         {{ firstName ? t('employeeHome.greeting', { name: firstName }) : t('employeeHome.greetingNoName') }}
       </h4>
-      <div class="text-body-1 text-medium-emphasis text-capitalize">{{ todayLabel }}</div>
+      <div class="text-body-1 text-medium-emphasis text-capitalize">
+        {{ todayLabel }}
+      </div>
     </div>
 
     <!-- ═══ AUJOURD'HUI : prochain shift + pointage (employé Workforce) ═══ -->
-    <VRow v-if="canWorkforce && isEmployee" class="mb-2">
+    <VRow
+      v-if="canWorkforce && isEmployee"
+      class="mb-2"
+    >
       <!-- Prochain shift -->
-      <VCol v-if="space.can('planning')" cols="12" md="7">
-        <VCard class="h-100" border flat>
+      <VCol
+        v-if="space.can('planning')"
+        cols="12"
+        md="7"
+      >
+        <VCard
+          class="h-100"
+          border
+          flat
+        >
           <VCardText class="d-flex flex-column h-100">
             <div class="d-flex align-center gap-2 mb-3">
-              <VIcon icon="tabler-calendar-event" color="primary" size="20" />
+              <VIcon
+                icon="tabler-calendar-event"
+                color="primary"
+                size="20"
+              />
               <span class="text-body-1 font-weight-medium text-high-emphasis">{{ t('employeeHome.nextShift') }}</span>
             </div>
             <template v-if="emp.nextShift">
@@ -155,45 +179,127 @@ onMounted(async () => {
                 <span class="text-h5 font-weight-medium text-high-emphasis text-capitalize">{{ relDay(emp.nextShift.start_at) }}</span>
                 <span class="text-h6 text-medium-emphasis">{{ fmtTime(emp.nextShift.start_at) }}<span v-if="emp.nextShift.end_at"> – {{ fmtTime(emp.nextShift.end_at) }}</span></span>
               </div>
-              <div v-if="emp.nextShift.notes" class="text-body-2 text-medium-emphasis mt-1">{{ emp.nextShift.notes }}</div>
-              <div v-if="emp.upcomingShifts.length > 1" class="text-caption text-medium-emphasis mt-2">
+              <div
+                v-if="emp.nextShift.notes"
+                class="text-body-2 text-medium-emphasis mt-1"
+              >
+                {{ emp.nextShift.notes }}
+              </div>
+              <div
+                v-if="emp.upcomingShifts.length > 1"
+                class="text-caption text-medium-emphasis mt-2"
+              >
                 {{ t('employeeHome.moreShifts', { n: emp.upcomingShifts.length - 1 }) }}
               </div>
             </template>
-            <div v-else class="d-flex flex-column align-start text-medium-emphasis py-2">
-              <VIcon icon="tabler-calendar-off" size="26" class="mb-1 text-disabled" />
+            <div
+              v-else
+              class="d-flex flex-column align-start text-medium-emphasis py-2"
+            >
+              <VIcon
+                icon="tabler-calendar-off"
+                size="26"
+                class="mb-1 text-disabled"
+              />
               <span class="text-body-2">{{ t('employeeHome.noShift') }}</span>
             </div>
             <VSpacer />
             <div class="mt-3">
-              <VBtn variant="text" size="small" color="primary" to="/company/workforce/me" append-icon="tabler-chevron-right">{{ t('employeeHome.viewPlanning') }}</VBtn>
+              <VBtn
+                variant="text"
+                size="small"
+                color="primary"
+                to="/company/workforce/me"
+                append-icon="tabler-chevron-right"
+              >
+                {{ t('employeeHome.viewPlanning') }}
+              </VBtn>
             </div>
           </VCardText>
         </VCard>
       </VCol>
 
       <!-- Pointage -->
-      <VCol cols="12" :md="space.can('planning') ? 5 : 12">
-        <VCard class="h-100" border flat>
+      <VCol
+        cols="12"
+        :md="space.can('planning') ? 5 : 12"
+      >
+        <VCard
+          class="h-100"
+          border
+          flat
+        >
           <VCardText class="d-flex flex-column h-100">
             <div class="d-flex align-center justify-space-between gap-2 mb-3">
               <span class="text-body-1 font-weight-medium text-high-emphasis">{{ t('employeeHome.clock.title') }}</span>
-              <VChip :color="statusMeta.color" size="small" variant="tonal" label :prepend-icon="statusMeta.icon">{{ statusMeta.label }}</VChip>
+              <VChip
+                :color="statusMeta.color"
+                size="small"
+                variant="tonal"
+                label
+                :prepend-icon="statusMeta.icon"
+              >
+                {{ statusMeta.label }}
+              </VChip>
             </div>
             <div class="d-flex align-baseline gap-2">
               <span class="text-h4 font-weight-medium text-high-emphasis">{{ fmtHM(clock.workedSeconds) }}</span>
               <span class="text-caption text-medium-emphasis">{{ t('employeeHome.clock.workedToday') }}</span>
             </div>
-            <div v-if="clock.breakMinutesToday > 0" class="text-caption text-medium-emphasis">{{ t('employeeHome.clock.breakToday', { n: clock.breakMinutesToday }) }}</div>
+            <div
+              v-if="clock.breakMinutesToday > 0"
+              class="text-caption text-medium-emphasis"
+            >
+              {{ t('employeeHome.clock.breakToday', { n: clock.breakMinutesToday }) }}
+            </div>
             <VSpacer />
             <div class="d-flex gap-2 flex-wrap mt-3">
-              <VBtn v-if="clock.clockStatus === 'not_started' || clock.clockStatus === 'idle'" color="success" :loading="busy" prepend-icon="tabler-login-2" @click="act(clock.clockIn)">{{ t('employeeHome.clock.clockIn') }}</VBtn>
+              <VBtn
+                v-if="clock.clockStatus === 'not_started' || clock.clockStatus === 'idle'"
+                color="success"
+                :loading="busy"
+                prepend-icon="tabler-login-2"
+                @click="act(clock.clockIn)"
+              >
+                {{ t('employeeHome.clock.clockIn') }}
+              </VBtn>
               <template v-else-if="clock.isWorking">
-                <VBtn color="warning" variant="tonal" :loading="busy" prepend-icon="tabler-coffee" @click="act(clock.startBreak)">{{ t('employeeHome.clock.break') }}</VBtn>
-                <VBtn color="error" variant="tonal" :loading="busy" prepend-icon="tabler-logout-2" @click="act(clock.clockOut)">{{ t('employeeHome.clock.clockOut') }}</VBtn>
+                <VBtn
+                  color="warning"
+                  variant="tonal"
+                  :loading="busy"
+                  prepend-icon="tabler-coffee"
+                  @click="act(clock.startBreak)"
+                >
+                  {{ t('employeeHome.clock.break') }}
+                </VBtn>
+                <VBtn
+                  color="error"
+                  variant="tonal"
+                  :loading="busy"
+                  prepend-icon="tabler-logout-2"
+                  @click="act(clock.clockOut)"
+                >
+                  {{ t('employeeHome.clock.clockOut') }}
+                </VBtn>
               </template>
-              <VBtn v-else-if="clock.isOnBreak" color="success" :loading="busy" prepend-icon="tabler-player-play" @click="act(clock.endBreak)">{{ t('employeeHome.clock.resume') }}</VBtn>
-              <span v-else-if="clock.isCompleted" class="text-body-2 text-medium-emphasis d-flex align-center gap-1"><VIcon icon="tabler-circle-check" color="success" size="18" />{{ t('employeeHome.clock.doneForToday') }}</span>
+              <VBtn
+                v-else-if="clock.isOnBreak"
+                color="success"
+                :loading="busy"
+                prepend-icon="tabler-player-play"
+                @click="act(clock.endBreak)"
+              >
+                {{ t('employeeHome.clock.resume') }}
+              </VBtn>
+              <span
+                v-else-if="clock.isCompleted"
+                class="text-body-2 text-medium-emphasis d-flex align-center gap-1"
+              ><VIcon
+                icon="tabler-circle-check"
+                color="success"
+                size="18"
+              />{{ t('employeeHome.clock.doneForToday') }}</span>
             </div>
           </VCardText>
         </VCard>
@@ -201,30 +307,75 @@ onMounted(async () => {
     </VRow>
 
     <!-- ═══ MES DEMANDES / ACTIVITÉS : cartes d'action compactes ═══ -->
-    <VRow v-if="actionCards.length" class="mb-2">
-      <VCol v-for="c in actionCards" :key="c.key" cols="12" sm="6" md="4">
-        <VCard border flat :to="c.to" class="action-card">
+    <VRow
+      v-if="actionCards.length"
+      class="mb-2"
+    >
+      <VCol
+        v-for="c in actionCards"
+        :key="c.key"
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <VCard
+          border
+          flat
+          :to="c.to"
+          class="action-card"
+        >
           <VCardText class="d-flex align-center gap-4">
-            <VAvatar :color="c.color" variant="tonal" size="44" rounded><VIcon :icon="c.icon" size="24" /></VAvatar>
+            <VAvatar
+              :color="c.color"
+              variant="tonal"
+              size="44"
+              rounded
+            >
+              <VIcon
+                :icon="c.icon"
+                size="24"
+              />
+            </VAvatar>
             <div class="flex-grow-1">
-              <div class="text-h5 font-weight-medium text-high-emphasis">{{ c.loading ? '—' : c.value }}</div>
-              <div class="text-body-2 text-medium-emphasis">{{ c.label }}</div>
+              <div class="text-h5 font-weight-medium text-high-emphasis">
+                {{ c.loading ? '—' : c.value }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis">
+                {{ c.label }}
+              </div>
             </div>
-            <VIcon icon="tabler-chevron-right" size="18" class="text-disabled" />
+            <VIcon
+              icon="tabler-chevron-right"
+              size="18"
+              class="text-disabled"
+            />
           </VCardText>
         </VCard>
       </VCol>
     </VRow>
 
     <!-- ═══ Mes soldes de congés ═══ -->
-    <VCard v-if="space.can('leave') && isEmployee && clock.leaveBalances.length" border flat class="mb-2">
+    <VCard
+      v-if="space.can('leave') && isEmployee && clock.leaveBalances.length"
+      border
+      flat
+      class="mb-2"
+    >
       <VCardText>
         <div class="d-flex align-center gap-2 mb-3">
-          <VIcon icon="tabler-sun" color="info" size="20" />
+          <VIcon
+            icon="tabler-sun"
+            color="info"
+            size="20"
+          />
           <span class="text-body-1 font-weight-medium text-high-emphasis">{{ t('employeeHome.leaveBalances') }}</span>
         </div>
         <div class="d-flex flex-wrap gap-6">
-          <div v-for="b in clock.leaveBalances" :key="b.leave_type_id || b.label || b.name" class="d-flex flex-column">
+          <div
+            v-for="b in clock.leaveBalances"
+            :key="b.leave_type_id || b.label || b.name"
+            class="d-flex flex-column"
+          >
             <span class="text-h6 font-weight-medium text-high-emphasis">{{ ((b.available ?? b.balance_hundredths ?? 0) / 100).toLocaleString(displayLocale(), { maximumFractionDigits: 2 }) }} <span class="text-caption text-medium-emphasis">{{ t('employeeHome.days') }}</span></span>
             <span class="text-caption text-medium-emphasis">{{ b.leave_type_name || b.name || b.label }}</span>
           </div>
@@ -233,12 +384,39 @@ onMounted(async () => {
     </VCard>
 
     <!-- ═══ État vide intelligent (ni salarié, ni activité) ═══ -->
-    <VCard v-if="!hasOperational && !homeStore.isLoading && space.ready" border flat class="mb-2">
+    <VCard
+      v-if="!hasOperational && !homeStore.isLoading && space.ready"
+      border
+      flat
+      class="mb-2"
+    >
       <VCardText class="text-center py-8">
-        <VAvatar color="primary" variant="tonal" size="64" class="mb-3"><VIcon icon="tabler-coffee" size="32" /></VAvatar>
-        <div class="text-h6 mb-1">{{ t('employeeHome.empty.title') }}</div>
-        <div class="text-body-2 text-medium-emphasis">{{ t('employeeHome.empty.hint') }}</div>
-        <VBtn class="mt-4" variant="tonal" :to="{ name: 'company-my-space-tab', params: { tab: 'overview' } }" prepend-icon="tabler-user-circle" data-test="home-my-space">{{ t('mySpace.title') }}</VBtn>
+        <VAvatar
+          color="primary"
+          variant="tonal"
+          size="64"
+          class="mb-3"
+        >
+          <VIcon
+            icon="tabler-coffee"
+            size="32"
+          />
+        </VAvatar>
+        <div class="text-h6 mb-1">
+          {{ t('employeeHome.empty.title') }}
+        </div>
+        <div class="text-body-2 text-medium-emphasis">
+          {{ t('employeeHome.empty.hint') }}
+        </div>
+        <VBtn
+          class="mt-4"
+          variant="tonal"
+          :to="{ name: 'company-my-space-tab', params: { tab: 'overview' } }"
+          prepend-icon="tabler-user-circle"
+          data-test="home-my-space"
+        >
+          {{ t('mySpace.title') }}
+        </VBtn>
       </VCardText>
     </VCard>
 
@@ -252,14 +430,39 @@ onMounted(async () => {
     </h5>
     <DashboardHostContainer v-if="!embedded">
       <template #toolbar>
-        <div v-if="hasWidgets || canEdit" class="d-flex align-center mt-8 mb-4">
-          <h5 class="text-h5">{{ t('home.widgetsTitle') }}</h5>
+        <div
+          v-if="hasWidgets || canEdit"
+          class="d-flex align-center mt-8 mb-4"
+        >
+          <h5 class="text-h5">
+            {{ t('home.widgetsTitle') }}
+          </h5>
           <VSpacer />
-          <VBtn v-if="canEdit && homeStore.isDirty" variant="tonal" color="success" size="small" class="me-2" @click="saveAndResolve">
-            <VIcon start icon="tabler-device-floppy" size="18" />{{ t('home.saveLayout') }}
+          <VBtn
+            v-if="canEdit && homeStore.isDirty"
+            variant="tonal"
+            color="success"
+            size="small"
+            class="me-2"
+            @click="saveAndResolve"
+          >
+            <VIcon
+              start
+              icon="tabler-device-floppy"
+              size="18"
+            />{{ t('home.saveLayout') }}
           </VBtn>
-          <VBtn v-if="canEdit" variant="tonal" size="small" @click="showCatalogDrawer = true">
-            <VIcon start icon="tabler-plus" size="18" />{{ t('home.addWidget') }}
+          <VBtn
+            v-if="canEdit"
+            variant="tonal"
+            size="small"
+            @click="showCatalogDrawer = true"
+          >
+            <VIcon
+              start
+              icon="tabler-plus"
+              size="18"
+            />{{ t('home.addWidget') }}
           </VBtn>
         </div>
       </template>
@@ -272,23 +475,45 @@ onMounted(async () => {
         :catalog="homeStore.catalog"
         :loading="homeStore.dataLoading"
         :editable="canEdit"
+        premium
         @update:layout="homeStore.updateLayout($event)"
       />
     </DashboardHostContainer>
 
-    <VNavigationDrawer v-model="showCatalogDrawer" temporary location="end" width="360">
-      <VCardTitle class="pa-4">{{ t('home.catalogTitle') }}</VCardTitle>
+    <VNavigationDrawer
+      v-model="showCatalogDrawer"
+      temporary
+      location="end"
+      width="360"
+    >
+      <VCardTitle class="pa-4">
+        {{ t('home.catalogTitle') }}
+      </VCardTitle>
       <VDivider />
       <VList v-if="availableWidgets.length">
-        <VListItem v-for="widget in availableWidgets" :key="widget.key" @click="addWidgetFromCatalog(widget)">
+        <VListItem
+          v-for="widget in availableWidgets"
+          :key="widget.key"
+          @click="addWidgetFromCatalog(widget)"
+        >
           <VListItemTitle>{{ t(widget.label_key) }}</VListItemTitle>
           <VListItemSubtitle>{{ t(widget.description_key) }}</VListItemSubtitle>
         </VListItem>
       </VList>
-      <VCardText v-else class="text-center text-disabled">{{ t('home.allWidgetsAdded') }}</VCardText>
+      <VCardText
+        v-else
+        class="text-center text-disabled"
+      >
+        {{ t('home.allWidgetsAdded') }}
+      </VCardText>
     </VNavigationDrawer>
 
-    <VSnackbar :model-value="!!snack || !!homeStore.saveError" color="error" :timeout="5000" @update:model-value="snack = ''">
+    <VSnackbar
+      :model-value="!!snack || !!homeStore.saveError"
+      color="error"
+      :timeout="5000"
+      @update:model-value="snack = ''"
+    >
       {{ snack || homeStore.saveError }}
     </VSnackbar>
   </div>

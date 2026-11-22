@@ -144,7 +144,7 @@ class DashboardGridV2Test extends TestCase
             ->putJson('/api/platform/dashboard/layout', [
                 'layout' => [
                     ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'global', 'config' => []],
-                    ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'global', 'config' => []],
+                    ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3, 'scope' => 'global', 'config' => []],
                 ],
             ]);
 
@@ -263,7 +263,7 @@ class DashboardGridV2Test extends TestCase
             ->putJson('/api/dashboard/layout', [
                 'layout' => [
                     ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'company', 'config' => []],
-                    ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'company', 'config' => []],
+                    ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3, 'scope' => 'company', 'config' => []],
                 ],
             ]);
 
@@ -286,7 +286,7 @@ class DashboardGridV2Test extends TestCase
         $layout = [
             ['key' => 'compliance.rate', 'x' => 0, 'y' => 0, 'w' => 6, 'h' => 4, 'scope' => 'company', 'config' => ['period' => '30d']],
             ['key' => 'billing.plan_badge', 'x' => 0, 'y' => 4, 'w' => 12, 'h' => 3, 'scope' => 'company', 'config' => []],
-            ['key' => 'billing.refund_ratio', 'x' => 6, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'company', 'config' => []],
+            ['key' => 'billing.refund_ratio', 'x' => 6, 'y' => 0, 'w' => 4, 'h' => 3, 'scope' => 'company', 'config' => []],
         ];
 
         $this->actAsCompany($this->owner)

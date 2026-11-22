@@ -23,25 +23,30 @@ onMounted(() => {
 
 // ── Hero : real context only ──
 const firstName = computed(() => auth.user?.first_name || auth.user?.name?.split(' ')[0] || 'Leezr')
+
 const greeting = computed(() => {
   const h = new Date().getHours()
 
   return h < 5 ? t('cockpit.hero.evening') : h < 12 ? t('cockpit.hero.morning') : h < 18 ? t('cockpit.hero.afternoon') : t('cockpit.hero.evening')
 })
+
 const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 const attention = computed(() => dashboardStore.attentionItems)
 const attentionCount = computed(() => attention.value.reduce((s, i) => s + (i.count || 0), 0))
 const critical = computed(() => attention.value.filter(i => i.severity === 'critical').length)
+
 const subtitle = computed(() => {
   if (dashboardStore.cockpitLoading) return t('cockpit.hero.loading')
   if (!attention.value.length) return t('cockpit.hero.allClear')
 
   return t('cockpit.hero.attention', { n: attention.value.length }, attention.value.length)
 })
+
 const heroChips = computed(() => [
   { icon: 'tabler-calendar', text: today.charAt(0).toUpperCase() + today.slice(1), color: 'secondary' },
   ...(critical.value ? [{ icon: 'tabler-alert-triangle', text: t('cockpit.hero.critical', { n: critical.value }, critical.value), color: 'error' }] : []),
 ])
+
 const heroActions = computed(() => [
   auth.hasPermission('create_companies') && { label: t('cockpit.hero.newCompany'), icon: 'tabler-building-plus', to: { name: 'platform-companies-create' }, primary: true },
   auth.hasPermission('view_billing') && { label: t('cockpit.hero.billing'), icon: 'tabler-receipt', to: { name: 'platform-billing-tab', params: { tab: 'overview' } } },
@@ -55,15 +60,18 @@ const showCatalogDrawer = ref(false)
 const confirmReset = ref(false)
 const resetting = ref(false)
 const hasDashboardWidgets = computed(() => dashboardStore.layout.length > 0)
+
 const availableWidgets = computed(() => {
   const inLayout = new Set(dashboardStore.layout.map(i => i.key))
 
   return dashboardStore.catalog.filter(w => !inLayout.has(w.key))
 })
+
 const addWidgetFromCatalog = widget => {
   dashboardStore.addWidget(widget)
   showCatalogDrawer.value = false
 }
+
 const saveAndResolve = async () => {
   try {
     await dashboardStore.saveLayout()
@@ -73,6 +81,7 @@ const saveAndResolve = async () => {
     // saveError is set by the engine — UI shows snackbar
   }
 }
+
 const applyRecommended = async () => {
   resetting.value = true
   try {
@@ -86,6 +95,12 @@ const applyRecommended = async () => {
     confirmReset.value = false
   }
 }
+
+// ADR-856 — a widget's « Retry » re-resolves the dashboard data (same engine)
+const onWidgetRetry = () => { dashboardStore.resolveWidgets() }
+
+onMounted(() => window.addEventListener('lzr-dashboard-retry', onWidgetRetry))
+onBeforeUnmount(() => window.removeEventListener('lzr-dashboard-retry', onWidgetRetry))
 </script>
 
 <template>

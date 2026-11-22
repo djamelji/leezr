@@ -11,7 +11,7 @@ const props = defineProps({ data: { type: Object, default: null }, loading: { ty
 const { t } = useI18n()
 const root = ref(null)
 const { rootW, rootH } = useSurfacePresentation(root)
-const kpiSize = computed(() => rootW.value > 0 && (rootH.value < 230 || rootW.value < 300))
+const kpiSize = computed(() => rootW.value > 0 && (rootH.value < 200 || rootW.value < 300))
 const d = computed(() => props.data || {})
 const to = { name: 'platform-companies' }
 
@@ -25,6 +25,7 @@ const mix = computed(() => {
     { key: 'other', label: t('cockpit.companies.mixOther'), n: m.other || 0, color: 'secondary' },
   ].filter(x => x.n > 0 || x.key !== 'other')
 })
+
 const mixTotal = computed(() => mix.value.reduce((s, x) => s + x.n, 0))
 
 const dayLabels = computed(() => (d.value.trend_30d || []).map((_, i, a) => (i === a.length - 1 ? t('cockpit.today') : `J-${a.length - 1 - i}`)))

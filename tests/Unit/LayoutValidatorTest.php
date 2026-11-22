@@ -31,7 +31,7 @@ class LayoutValidatorTest extends TestCase
     {
         $tiles = [
             ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'global', 'config' => []],
-            ['key' => 'billing.refund_ratio', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'global', 'config' => []],
+            ['key' => 'billing.refund_ratio', 'x' => 8, 'y' => 0, 'w' => 4, 'h' => 3, /* ADR-856 : KPI with breakdown ≤ 6×3 */ 'scope' => 'global', 'config' => []],
         ];
 
         $result = LayoutValidator::validate($tiles);
@@ -80,7 +80,7 @@ class LayoutValidatorTest extends TestCase
     {
         $tiles = [
             ['key' => 'billing.revenue_trend', 'x' => 0, 'y' => 0, 'w' => 8, 'h' => 4, 'scope' => 'global', 'config' => []],
-            ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 4, 'scope' => 'global', 'config' => []],
+            ['key' => 'billing.refund_ratio', 'x' => 4, 'y' => 0, 'w' => 4, 'h' => 3, 'scope' => 'global', 'config' => []],
         ];
 
         $result = LayoutValidator::validate($tiles);

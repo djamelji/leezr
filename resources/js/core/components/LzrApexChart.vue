@@ -6,9 +6,11 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 import VueApexCharts from 'vue3-apexcharts'
+import { thinCategories } from '@/core/surface-engine/axisLabels'
 
 const props = defineProps({
   type: { type: String, default: 'area' }, // area | line | bar | donut | radial
+  legend: { type: Boolean, default: true }, // ADR-856 — false when the widget draws its own legend (Apex then reserves no space for it)
   series: { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] },
   labels: { type: Array, default: () => [] },
@@ -16,8 +18,10 @@ const props = defineProps({
   colors: { type: Array, default: null },
   mode: { type: String, default: 'full' }, // spark | standard | full
   formatY: { type: Function, default: null },
+
   // Bar uniquement : met une barre en relief (jour pic), les autres atténuées — pattern Vuexy EarningReports.
   highlightIndex: { type: Number, default: -1 },
+
   // Area/line : 2ᵉ série (N-1) rendue en pointillé sans remplissage + légende (ADR-748).
   compare: { type: Boolean, default: false },
 })
@@ -35,6 +39,12 @@ const props = defineProps({
 // qu'à GATER le 1er montage (une fois le conteneur mesurable) et ne retombe jamais à 0.
 const hostRef = ref(null)
 const measuredW = ref(0)
+
+// ADR-856 (L4) — category labels thinned to the measured width (≈ one per 70 px, no rotation) : no overlapping dates.
+// The tooltip keeps the full label of every point.
+const axisCategories = computed(() => thinCategories(props.categories, measuredW.value))
+const tooltipX = { formatter: (v, o) => (o && props.categories?.[o.dataPointIndex] !== undefined ? props.categories[o.dataPointIndex] : v) }
+
 // instanceKey : remount PROPRE du graphe à la STABILISATION d'un resize (ADR-748b).
 // ApexCharts perd parfois son canvas quand son conteneur change fortement (passage
 // mobile de la grille, re-layout) et ne le recrée pas de lui-même → récupération jamais
@@ -55,10 +65,12 @@ const ready = computed(() => measuredW.value > 0)
 // re-renders the destroyed instance (« attribute height: NaN ») : it is cancelled before every remount.
 const chartKey = computed(() => `${instanceKey.value}-${props.type}-${props.height}`)
 const apexRef = ref(null)
+
 const disarm = () => {
   const g = apexRef.value?.chart?.w?.globals
   if (g?.resizeTimer) { clearTimeout(g.resizeTimer); g.resizeTimer = null }
 }
+
 watch(chartKey, disarm, { flush: 'pre' })
 onBeforeUnmount(disarm)
 
@@ -68,8 +80,10 @@ onMounted(() => {
     const w = Math.round(entries[0]?.contentRect?.width || 0)
     if (!w) return
     const first = !measuredW.value
+
     measuredW.value = w
     if (first) return
+
     // Conteneur redimensionné → (1) remesure native ApexCharts (débouncé, pendant le drag),
     clearTimeout(rTimer)
     rTimer = setTimeout(() => { try { window.dispatchEvent(new Event('resize')) } catch (e) { /* noop */ } }, 130)
@@ -107,6 +121,7 @@ const options = computed(() => {
       toolbar: { show: false },
       sparkline: { enabled: isSpark.value },
       fontFamily: 'inherit',
+
       // Animations désactivées : rendu instantané et stable (évite le clignotement
       // blanc lors d'un resize / d'une capture fullPage). ADR-745.
       animations: { enabled: false },
@@ -114,7 +129,7 @@ const options = computed(() => {
     colors: palette.value,
     tooltip: { enabled: !isSpark.value, theme: vuetifyTheme.current.value.dark ? 'dark' : 'light' },
     dataLabels: { enabled: false },
-    legend: { show: !isSpark.value && (props.type === 'donut' || props.type === 'radial'), labels: { colors: labelColor.value } },
+    legend: { show: props.legend && !isSpark.value && (props.type === 'donut' || props.type === 'radial'), labels: { colors: labelColor.value } },
     grid: {
       show: !isSpark.value && (props.type === 'area' || props.type === 'line' || props.type === 'bar'),
       borderColor: borderColor.value,
@@ -133,21 +148,22 @@ const options = computed(() => {
         stroke: { curve: 'smooth', width: [2.5, 2], dashArray: [0, 5] },
         fill: { type: ['gradient', 'solid'], gradient: { shadeIntensity: 0.8, opacityFrom: 0.35, opacityTo: 0.03, stops: [0, 95] }, opacity: [0.35, 0] },
         legend: { show: !isSpark.value, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: labelColor.value }, markers: { width: 9, height: 9 }, itemMargin: { horizontal: 8 } },
-        tooltip: { ...base.tooltip, shared: true, y: { formatter: props.formatY || undefined } },
-        xaxis: { categories: props.categories, labels: { show: !isSpark.value, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+        tooltip: { ...base.tooltip, shared: true, x: tooltipX, y: { formatter: props.formatY || undefined } },
+        xaxis: { categories: axisCategories.value, labels: { show: !isSpark.value, rotate: 0, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
         yaxis: { labels: { show: !isSpark.value, style: { colors: labelColor.value }, formatter: props.formatY || undefined } },
       }
     }
+    
     return {
       ...base,
       stroke: { curve: 'smooth', width: props.type === 'line' ? 3 : 2 },
       fill: props.type === 'area'
         ? { type: 'gradient', gradient: { shadeIntensity: 0.9, opacityFrom: 0.5, opacityTo: 0.05, stops: [0, 95] } }
         : { type: 'solid', opacity: 1 },
-      tooltip: { ...base.tooltip, y: { formatter: props.formatY || undefined } },
+      tooltip: { ...base.tooltip, x: tooltipX, y: { formatter: props.formatY || undefined } },
       xaxis: {
-        categories: props.categories,
-        labels: { show: !isSpark.value, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '12px' } },
+        categories: axisCategories.value,
+        labels: { show: !isSpark.value, rotate: 0, hideOverlappingLabels: true, style: { colors: labelColor.value, fontSize: '12px' } },
         axisBorder: { show: false }, axisTicks: { show: false },
       },
       yaxis: { labels: { show: !isSpark.value, style: { colors: labelColor.value }, formatter: props.formatY || undefined } },
@@ -159,18 +175,21 @@ const options = computed(() => {
     const n = (props.series?.[0]?.data || []).length
     const distributed = hl >= 0 && n > 0
     const primaryHex = tc.value.primary
+
     const distColors = distributed
       ? Array.from({ length: n }, (_, i) => i === hl ? primaryHex : `rgba(${hexToRgb(primaryHex)},0.16)`)
       : palette.value
+
+    
     return {
       ...base,
       colors: distColors,
       plotOptions: { bar: { borderRadius: 6, columnWidth: distributed ? '38%' : '42%', borderRadiusApplication: 'end', distributed } },
       legend: { show: false },
-      tooltip: { ...base.tooltip, enabled: true, y: { formatter: props.formatY || undefined } },
+      tooltip: { ...base.tooltip, enabled: true, x: tooltipX, y: { formatter: props.formatY || undefined } },
       xaxis: {
-        categories: props.categories,
-        labels: { show: !isSpark.value, style: { colors: labelColor.value, fontSize: '12px' } },
+        categories: axisCategories.value,
+        labels: { show: !isSpark.value, rotate: 0, style: { colors: labelColor.value, fontSize: '12px' } },
         axisBorder: { show: false }, axisTicks: { show: false },
       },
       yaxis: { labels: { show: !isSpark.value, style: { colors: labelColor.value }, formatter: props.formatY || undefined } },

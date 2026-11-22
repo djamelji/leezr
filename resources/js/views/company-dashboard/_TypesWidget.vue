@@ -1,5 +1,7 @@
 <script setup>
 import { useCompanyComplianceStore } from '@/modules/company/dashboard/compliance.store'
+import { useSurfacePresentation } from '@/core/surface-engine/useSurfacePresentation'
+import { listRows } from '@/core/surface-engine/familyModes'
 
 const props = defineProps({
   data: { type: Object, default: null },
@@ -10,6 +12,15 @@ const props = defineProps({
 
 const { t } = useI18n()
 const store = useCompanyComplianceStore()
+
+// ADR-856 (L4) — the rows follow the REAL height (no clipped row, no inner scrollbar) ; most exposed first ;
+// what does not fit is announced (« + N autres »).
+const root = ref(null)
+const { rootH } = useSurfacePresentation(root)
+const sorted = computed(() => [...(store.byType ?? [])].sort((a, b) => ((b.missing ?? 0) + (b.expired ?? 0)) - ((a.missing ?? 0) + (a.expired ?? 0))))
+const fit = computed(() => listRows(rootH.value, 40, 96))
+const visible = computed(() => sorted.value.slice(0, fit.value))
+const hidden = computed(() => Math.max(0, sorted.value.length - fit.value))
 
 const density = computed(() => props.viewport?.density || 'L')
 const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
@@ -29,6 +40,7 @@ const rateColor = rate => {
 
 <template>
   <div
+    ref="root"
     class="widget-root"
     :class="`density-${density}`"
   >
@@ -75,9 +87,14 @@ const rateColor = rate => {
 
       <!-- Density M/L: list -->
       <template v-else>
-        <div class="widget-list" tabindex="0" role="group" :aria-label="$t('compliance.types')">
+        <div
+          class="widget-list"
+          tabindex="0"
+          role="group"
+          :aria-label="$t('compliance.types')"
+        >
           <div
-            v-for="docType in store.byType"
+            v-for="docType in visible"
             :key="docType.code"
             class="d-flex align-center justify-space-between py-2"
           >
@@ -85,13 +102,6 @@ const rateColor = rate => {
               <span class="font-weight-medium">
                 {{ docType.label }}
               </span>
-              <VChip
-                size="x-small"
-                variant="tonal"
-                color="secondary"
-              >
-                {{ docType.code }}
-              </VChip>
             </div>
             <div class="d-flex gap-2 align-center">
               <VChip
@@ -119,6 +129,12 @@ const rateColor = rate => {
               </VChip>
             </div>
           </div>
+        </div>
+        <div
+          v-if="hidden"
+          class="text-caption text-medium-emphasis pt-1"
+        >
+          {{ t('cockpit.more', { n: hidden }) }}
         </div>
       </template>
     </div>

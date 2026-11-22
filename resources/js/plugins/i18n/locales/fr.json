@@ -5109,7 +5109,9 @@
     "invalidPlacement": "Placement invalide. Le widget a été remis à sa position précédente.",
     "maxHeightReached": "Hauteur maximale du widget atteinte (6 lignes).",
     "minWidgetRequired": "Au moins un widget est requis.",
-    "removeWidget": "Retirer le widget"
+    "removeWidget": "Retirer le widget",
+    "sizeRefusedMax": "Ce bloc s'arrête à {w} × {h} : au-delà, il n'aurait rien de plus à montrer.",
+    "sizeRefusedMin": "En dessous de {w} × {h}, son contenu ne serait plus lisible."
   },
   "auth": {
     "login": "Connexion",
@@ -12948,6 +12950,67 @@
       "label": "Paiements échoués · 7 j",
       "contextSome": "À relancer depuis Facturation",
       "contextNone": "Aucun échec cette semaine"
+    }
+  },
+  "l4": {
+    "kpi": {
+      "active": "actifs",
+      "allProvided": "Toutes les pièces sont fournies",
+      "arContext": "Factures émises non encore réglées",
+      "assign": "Assigner",
+      "assigned": "assignés",
+      "autoFills": "remplissages",
+      "autoRejects": "rejets",
+      "done": "terminées",
+      "dunningNone": "Aucune relance en attente",
+      "dunningSome": "Relances à envoyer ou en cours",
+      "expirations": "échéances",
+      "incomplete": "incomplets",
+      "leaveWaiting": "Demandes en attente de réponse",
+      "mismatches": "incohérences",
+      "mrrUnsupported": "Non disponible pour ces devises",
+      "multiCurrency": "Plusieurs devises : voir Facturation",
+      "noClockData": "Aucun pointage aujourd'hui",
+      "noEmployee": "Aucun collaborateur enregistré",
+      "noLeave": "Module Congés sans demande",
+      "noneExpired": "Aucune pièce expirée",
+      "noPlanning": "Aucun planning cette semaine",
+      "noShipmentData": "Aucune expédition enregistrée",
+      "notClocked": "non pointés",
+      "noTimesheet": "Aucune feuille de temps",
+      "onLeave": "en congé",
+      "refundContext": "Remboursements rapportés au chiffre d'affaires, 30 jours",
+      "refunds": "remboursé",
+      "remaining": "restantes",
+      "revenue": "chiffre d'affaires",
+      "seeAi": "Voir l'IA",
+      "seeClock": "Voir les pointages",
+      "seeCreditNotes": "Voir les avoirs",
+      "seeDocuments": "Voir les documents",
+      "seeDunning": "Voir les relances",
+      "seeInvoices": "Voir les factures",
+      "seeMyDeliveries": "Mes livraisons",
+      "seePayments": "Voir les paiements",
+      "seePeople": "Voir l'équipe",
+      "seePlanning": "Voir le planning",
+      "seeShipments": "Voir les expéditions",
+      "seeSubscriptions": "Voir les abonnements",
+      "timesheetsWaiting": "Feuilles prêtes à valider",
+      "total": "au total",
+      "unassigned": "non assignés"
+    },
+    "list": {
+      "count": "{n} élément(s)",
+      "empty": "Rien pour le moment"
+    },
+    "trend": {
+      "period": "{n} derniers jours",
+      "empty": "Aucun montant sur la période",
+      "total": "Total",
+      "avg": "Moyenne par jour actif",
+      "best": "Meilleur jour",
+      "bestDays": "Meilleurs jours",
+      "noFailure": "Aucun échec de paiement"
     }
   }
 }

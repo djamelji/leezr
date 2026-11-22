@@ -1,294 +1,89 @@
 <script setup>
+// ADR-856 (Leezr 5.0 L4) — list family shell of the billing « last … » widgets, on the shared AppWidgetShell (L0).
+// Same props as before (+ to / linkLabel / emptyText). Rows follow the REAL height (familyModes.listRows), two
+// columns from 760 px ; an error is never shown as « no data » ; amounts are ledger CENTS (ADR-841), unchanged.
 import { formatMoney } from '@/utils/money'
 import { ledgerAmountDisplay } from '@/utils/ledgerAmount'
+import AppWidgetShell from '@/components/app/AppWidgetShell.vue'
+import { listRows } from '@/core/surface-engine/familyModes'
 
 const props = defineProps({
   data: { type: Object, default: null },
   loading: { type: Boolean, default: false },
   scope: { type: String, default: 'company' },
-  viewport: { type: Object, default: () => ({ density: 'L' }) },
+  viewport: { type: Object, default: () => ({}) },
   icon: { type: String, required: true },
   title: { type: String, required: true },
   rows: { type: Array, default: () => [] },
   dateField: { type: String, default: 'date' },
   color: { type: String, default: 'primary' },
+  to: { type: [String, Object], default: null },
+  linkLabel: { type: String, default: '' },
+  emptyText: { type: String, default: '' },
 })
 
 const { t, locale } = useI18n()
-
-const density = computed(() => props.viewport?.density || 'L')
-const pm = computed(() => props.viewport?.presentationMode)
-
-const avatarSize = computed(() => density.value === 'S' ? 28 : density.value === 'M' ? 34 : 40)
-const iconSize = computed(() => density.value === 'S' ? 16 : density.value === 'M' ? 20 : 22)
-
-// Items to display — limited to 3 in balanced mode
-const visibleRows = computed(() => {
-  if (pm.value === 'balanced') return props.rows.slice(0, 3)
-
-  return props.rows
-})
-
-function formatDate(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-
-  return d.toLocaleDateString(locale.value, { day: 'numeric', month: 'short' })
-}
-
-function formatAmount(amount, currency) {
-  // ADR-841 (M4) — the ledger datasets are integer CENTS (same fix as ADR-582 on the AR / trend widgets) : no × 100
-
-  return ledgerAmountDisplay(amount, currency, formatMoney)
-}
+const state = computed(() => (props.loading && !props.data ? 'loading' : props.data?.error ? 'error' : !props.rows.length ? 'empty' : 'ready'))
+const date = iso => (iso ? new Date(iso).toLocaleDateString(locale.value, { day: 'numeric', month: 'short' }) : '')
+const amount = r => ledgerAmountDisplay(r.amount, r.currency, formatMoney)
+const initials = s => (s || '?').replace(/\[[^\]]*\]\s*/g, '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 </script>
 
 <template>
-  <div
-    class="widget-root"
-    :class="`density-${density}`"
+  <AppWidgetShell
+    bare
+    :title="title"
+    :subtitle="rows.length ? t('l4.list.count', { n: rows.length }) : ''"
+    :icon="icon"
+    :color="color"
+    :link="linkLabel"
+    :to="to"
+    :state="state"
+    :empty-icon="icon"
+    :empty-title="emptyText || t('l4.list.empty')"
   >
-    <!-- ═══ WIL: presentationMode-driven rendering (ADR-201) ═══ -->
-
-    <!-- compact: header + chip count only, no list -->
-    <template v-if="pm === 'compact'">
-      <div class="d-flex justify-space-between align-center widget-header">
-        <div class="d-flex align-center gap-2 overflow-hidden">
-          <VAvatar
-            :color="color"
-            variant="tonal"
-            :size="avatarSize"
-            rounded
-          >
-            <VIcon
-              :icon="icon"
-              :size="iconSize"
-            />
-          </VAvatar>
-          <span class="widget-title text-medium-emphasis">
-            {{ title }}
-          </span>
-        </div>
-        <VChip
-          v-if="rows.length"
-          size="x-small"
-          variant="tonal"
-          :color="color"
-        >
-          {{ rows.length }}
-        </VChip>
-      </div>
-    </template>
-
-    <!-- balanced: header + 3 items max -->
-    <template v-else-if="pm === 'balanced' || pm === 'expanded'">
-      <div class="d-flex justify-space-between align-center widget-header">
-        <div class="d-flex align-center gap-2 overflow-hidden">
-          <VAvatar
-            :color="color"
-            variant="tonal"
-            :size="avatarSize"
-            rounded
-          >
-            <VIcon
-              :icon="icon"
-              :size="iconSize"
-            />
-          </VAvatar>
-          <span class="widget-title text-medium-emphasis">
-            {{ title }}
-          </span>
-        </div>
-        <VChip
-          v-if="rows.length"
-          size="x-small"
-          variant="tonal"
-          :color="color"
-        >
-          {{ rows.length }}
-        </VChip>
-      </div>
-
-      <div class="widget-body">
-        <VSkeletonLoader
-          v-if="loading"
-          type="list-item-two-line"
-        />
+    <template #default="{ w, h, mode }">
+      <div
+        class="rl"
+        :class="{ 'rl--cols': w >= 760 }"
+      >
         <div
-          v-else-if="!rows.length"
-          class="d-flex align-center justify-center h-100 text-medium-emphasis"
+          v-for="(r, i) in rows.slice(0, listRows(h, 52, 72) * (w >= 760 ? 2 : 1))"
+          :key="i"
+          class="rl-row"
         >
-          {{ t('platformBilling.widgets.noData') }}
-        </div>
-        <VList
-          v-else
-          density="compact"
-          class="widget-list"
-        >
-          <VListItem
-            v-for="(row, idx) in visibleRows"
-            :key="idx"
-            class="px-0"
-          >
-            <template #prepend>
-              <VAvatar
-                :color="color"
-                variant="tonal"
-                size="32"
-                rounded
-              >
-                <VIcon
-                  :icon="icon"
-                  size="16"
-                />
-              </VAvatar>
-            </template>
-            <VListItemTitle class="text-body-2">
-              {{ row.company_name || '—' }}
-            </VListItemTitle>
-            <VListItemSubtitle class="text-caption">
-              {{ formatDate(row[dateField]) }}
-            </VListItemSubtitle>
-            <template #append>
-              <span class="text-body-2 font-weight-medium">
-                {{ formatAmount(row.amount, row.currency) }}
-              </span>
-            </template>
-          </VListItem>
-        </VList>
-      </div>
-    </template>
-
-    <!-- ═══ Fallback: density-only (pm is null — flag OFF or unknown) ═══ -->
-    <template v-else>
-      <!-- Header -->
-      <div class="d-flex justify-space-between align-center widget-header">
-        <div class="d-flex align-center gap-2 overflow-hidden">
           <VAvatar
+            v-if="mode !== 'micro'"
             :color="color"
             variant="tonal"
-            :size="avatarSize"
-            rounded
+            size="32"
           >
-            <VIcon
-              :icon="icon"
-              :size="iconSize"
-            />
+            <span class="text-caption font-weight-bold">{{ initials(r.company_name) }}</span>
           </VAvatar>
-          <span class="widget-title text-medium-emphasis">
-            {{ title }}
-          </span>
+          <div class="min-w-0 flex-grow-1">
+            <div class="text-body-2 font-weight-medium text-truncate">
+              {{ r.company_name || '—' }}
+            </div>
+            <div class="text-caption text-medium-emphasis">
+              {{ date(r[dateField]) }}
+            </div>
+          </div>
+          <span class="rl-amount">{{ amount(r) }}</span>
         </div>
-        <VChip
-          v-if="rows.length"
-          size="x-small"
-          variant="tonal"
-          :color="color"
-        >
-          {{ rows.length }}
-        </VChip>
       </div>
-
-      <!-- Body -->
-      <div class="widget-body">
-        <VSkeletonLoader
-          v-if="loading"
-          type="list-item-two-line"
-        />
-        <div
-          v-else-if="!rows.length"
-          class="d-flex align-center justify-center h-100 text-medium-emphasis"
-        >
-          {{ t('platformBilling.widgets.noData') }}
-        </div>
-
-        <!-- S: count badge only (header chip) -->
-        <!-- M/L: list -->
-        <VList
-          v-else-if="density !== 'S'"
-          density="compact"
-          class="widget-list"
-        >
-          <VListItem
-            v-for="(row, idx) in rows"
-            :key="idx"
-            class="px-0"
-          >
-            <template #prepend>
-              <VAvatar
-                :color="color"
-                variant="tonal"
-                size="32"
-                rounded
-              >
-                <VIcon
-                  :icon="icon"
-                  size="16"
-                />
-              </VAvatar>
-            </template>
-            <VListItemTitle class="text-body-2">
-              {{ row.company_name || '—' }}
-            </VListItemTitle>
-            <VListItemSubtitle class="text-caption">
-              {{ formatDate(row[dateField]) }}
-            </VListItemSubtitle>
-            <template #append>
-              <span class="text-body-2 font-weight-medium">
-                {{ formatAmount(row.amount, row.currency) }}
-              </span>
-            </template>
-          </VListItem>
-        </VList>
+      <div
+        v-if="rows.length > listRows(h, 52, 72) * (w >= 760 ? 2 : 1)"
+        class="text-caption text-medium-emphasis mt-1"
+      >
+        {{ t('cockpit.more', { n: rows.length - listRows(h, 52, 72) * (w >= 760 ? 2 : 1) }) }}
       </div>
     </template>
-  </div>
+  </AppWidgetShell>
 </template>
 
 <style scoped>
-.widget-root {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.density-S { padding: 12px; }
-.density-M { padding: 16px; }
-.density-L { padding: 20px; }
-
-.widget-header { flex: 0 0 auto; }
-.density-S .widget-header { margin-bottom: 6px; }
-.density-M .widget-header { margin-bottom: 8px; }
-.density-L .widget-header { margin-bottom: 12px; }
-
-.widget-title {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.widget-body {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.widget-list {
-  background: transparent !important;
-}
-
-.density-S .widget-title { font-size: 14px; }
-.density-M .widget-title { font-size: 16px; }
-.density-L .widget-title { font-size: 18px; }
-
-/* ── WIL: container query — spacious rows when wide ── */
-
-@container dashboard-tile (min-width: 480px) {
-  .widget-list :deep(.v-list-item) {
-    padding-block: 8px;
-  }
-}
+.rl { display: grid; gap: .125rem; }
+.rl--cols { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 1.5rem; }
+.rl-row { display: flex; align-items: center; gap: .75rem; padding-block: .375rem; border-block-end: 1px dashed rgba(var(--v-border-color), .14); }
+.rl-amount { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 </style>
