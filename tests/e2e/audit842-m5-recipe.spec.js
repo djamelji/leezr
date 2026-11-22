@@ -48,7 +48,9 @@ test('Super-admin — Facturation en 5 groupes, adresses conservées, clavier, m
   // a group opens its first page ; its pages are listed below ; the group explains itself
   await page.getByTestId('billing-group-invoicing').click()
   await page.waitForURL(/\/platform\/billing\/invoices/)
-  await expect(page.getByTestId('billing-group-hint')).toContainText('encaissements')
+  // ADR-860 (L7) : the page explains itself in its header (eyebrow « Facturation › group », page title, one sentence)
+  await expect(page.locator('[data-test="billing-header"]')).toContainText('Factures émises')
+  await expect(page.locator('[data-test="page-eyebrow"]')).toContainText('Factures et paiements')
   await expect(page.getByTestId('billing-pages').getByRole('tab')).toHaveCount(6)
   await page.getByTestId('billing-page-dunning').click()
   await page.waitForURL(/\/platform\/billing\/dunning/)

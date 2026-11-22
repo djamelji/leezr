@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import BillingDashboard from './_BillingDashboard.vue'
 import BillingSubscriptionsTab from './_BillingSubscriptionsTab.vue'
 import BillingInvoicesTab from './_BillingInvoicesTab.vue'
@@ -75,28 +76,36 @@ const groups = computed(() => GROUPS
   .filter(g => g.pages.length))
 
 const activeGroup = computed(() => groups.value.find(g => g.pages.some(p => p.tab === activeTab.value)) || null)
+
+// ADR-860 (L7) — every billing page says where the user is : eyebrow « Facturation › group », the PAGE as title,
+// one sentence saying what it shows (the group explanation was a banner repeated above 14 pages titled the same).
+const { te } = useI18n()
+const activePage = computed(() => tabs.value.find(item => item.tab === activeTab.value) || null)
+const pageTitle = computed(() => activePage.value?.title || t('platformBilling.title'))
+const pageEyebrow = computed(() => [t('l7.billing.family'), activeGroup.value?.pages.length > 1 ? activeGroup.value.title : null].filter(Boolean).join(' › '))
+const pageHint = computed(() => (activePage.value && te(`l7.billing.hint.${activePage.value.tab}`)) ? t(`l7.billing.hint.${activePage.value.tab}`) : (activeGroup.value?.hint || t('platformBilling.subtitle')))
+watchEffect(() => { document.title = `${pageTitle.value} · ${t('l7.billing.family')} · Leezr` }) // distinct browser tab titles
 </script>
 
 <template>
   <div>
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h4 class="text-h4">
-          {{ t('platformBilling.title') }}
-        </h4>
-        <p class="text-body-1 mb-0">
-          {{ t('platformBilling.subtitle') }}
-        </p>
-      </div>
-      <VBtn
-        variant="tonal"
-        color="secondary"
-        prepend-icon="tabler-settings"
-        :to="{ name: 'platform-settings-tab', params: { tab: 'billing' } }"
-      >
-        {{ t('platformBilling.tabs.settings') }}
-      </VBtn>
-    </div>
+    <AppPageHeader
+      :eyebrow="pageEyebrow"
+      :title="pageTitle"
+      :description="pageHint"
+      data-test="billing-header"
+    >
+      <template #actions>
+        <VBtn
+          variant="tonal"
+          color="secondary"
+          prepend-icon="tabler-settings"
+          :to="{ name: 'platform-settings-tab', params: { tab: 'billing' } }"
+        >
+          {{ t('platformBilling.tabs.settings') }}
+        </VBtn>
+      </template>
+    </AppPageHeader>
 
     <!-- ADR-842 : business groups (primary) → pages of the group (secondary) -->
     <VTabs
@@ -126,12 +135,7 @@ const activeGroup = computed(() => groups.value.find(g => g.pages.some(p => p.ta
       v-if="activeGroup"
       class="mt-4"
     >
-      <p
-        class="text-body-2 text-medium-emphasis mb-2"
-        data-testid="billing-group-hint"
-      >
-        {{ activeGroup.hint }}
-      </p>
+      <!-- ADR-860 : no group banner — each page explains itself in the header description -->
       <VTabs
         v-if="activeGroup.pages.length > 1"
         v-model="activeTab"
