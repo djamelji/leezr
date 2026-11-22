@@ -37,20 +37,51 @@ class NativePadesSignatureService
     private function pdfsigBinary(): ?string
     {
         $configured = config('signature.pdfsig_path');
-        if (is_string($configured) && $configured !== '' && is_executable($configured)) {
+        if (is_string($configured) && $configured !== '' && self::runnable($configured)) {
             return $configured;
         }
         $fromPath = trim((string) @shell_exec('command -v pdfsig 2>/dev/null'));
-        if ($fromPath !== '' && is_executable($fromPath)) {
+        if ($fromPath !== '' && self::runnable($fromPath)) {
             return $fromPath;
         }
         foreach (['/opt/homebrew/bin/pdfsig', '/usr/local/bin/pdfsig', '/usr/bin/pdfsig'] as $candidate) {
-            if (is_executable($candidate)) {
+            if (self::runnable($candidate)) {
                 return $candidate;
             }
         }
 
         return null;
+    }
+
+    /**
+     * ADR-853 — a binary is usable when it can be stat'ed as executable or, when `open_basedir` forbids stat'ing it
+     * (php-fpm on the hosting : /usr/bin is outside the site's basedir, while executing it is allowed), when running
+     * it really answers as pdfsig. Never assumed : an unprovable binary is reported unavailable, never a 500.
+     */
+    private static function runnable(string $path): bool
+    {
+        if (self::withinOpenBasedir($path)) {
+            return is_executable($path);
+        }
+        $out = @shell_exec(escapeshellarg($path).' -v 2>&1');
+
+        return is_string($out) && preg_match('/^pdfsig version \d/mi', $out) === 1; // its own banner, not an error echoing the path
+    }
+
+    private static function withinOpenBasedir(string $path): bool
+    {
+        $basedir = (string) ini_get('open_basedir');
+        if ($basedir === '') {
+            return true;
+        }
+        foreach (explode(PATH_SEPARATOR, $basedir) as $dir) {
+            $dir = rtrim($dir, '/');
+            if ($dir === '' || $path === $dir || str_starts_with($path, $dir.'/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -29923,3 +29923,29 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - `Adr852ReleaseReadinessTest` est vert. Suite complète : 4893 passés, 0 échec. Le test ADR-832 « blank install » a été aligné sur la nouvelle exception explicite.
   - Vérifié sur MariaDB : après retrait de l'attribution puis nouvelle synchronisation, aucun rôle ne détient la permission.
   - Le déploiement reste soumis à une autorisation distincte (OP-4).
+
+## ADR-853 — Leezr 4.2 post-déploiement DEV : détection de pdfsig sous open_basedir, recette Platform, préparation OP-7
+
+- **Date** : 2026-11-22
+- **Contexte** :
+  - Sur DEV, `/api/workforce/signature/options` répondait 500, et ce depuis le 2026-10-30, donc avant la 4.2.
+  - `NativePadesSignatureService::pdfsigBinary()` appelait `is_executable('/usr/bin/pdfsig')`. Sous php-fpm, `open_basedir` (ISPConfig) exclut `/usr/bin` : l'avertissement devenait une `ErrorException`.
+  - Or `open_basedir` ne restreint que les fonctions de fichiers, pas l'exécution d'un binaire (`disable_functions` est vide). `pdfsig` 25.03 est installé et exécutable.
+  - `pdfsig` sert à la vérification cryptographique **indépendante** des signatures PAdES : options personnelles numériques, finalisation, dossier de preuve. Le catalogue déclarait déjà le motif `pdfsig_unavailable`.
+- **Décision** :
+  - La détection ne lève plus jamais d'erreur.
+  - Un chemin consultable est testé avec `is_executable`.
+  - Un chemin hors `open_basedir` n'est retenu que si son exécution répond réellement par sa bannière `pdfsig version N`. Un message d'erreur du shell, qui contient le chemin, n'est jamais pris pour une réponse.
+  - Sans preuve, le mode reste indisponible avec son motif : jamais de réussite simulée, jamais de vérification contournée.
+  - `open_basedir` n'est pas élargi : aucune nécessité technique.
+- **Conséquences** :
+  - `Adr853PdfsigOpenBasedirTest` (sous-processus soumis à un `open_basedir` qui exclut `pdfsig`) vérifie que :
+    - `pdfsig` est détecté ;
+    - un binaire qui n'est pas `pdfsig`, ou un binaire absent, est refusé ;
+    - une signature authentique est vérifiée, et un document altéré n'est jamais validé.
+  - Les 67 tests signature sont verts.
+  - **Recette Platform sur DEV** : non réalisée, faute de session Platform de recette autorisée. Le seul compte Platform de DEV est le compte personnel du propriétaire, qui n'est pas utilisé. Les parcours Platform restent prouvés sur clone (campagnes M10 B/C).
+  - **OP-7 préparé, non appliqué** :
+    - comptes visés : utilisateurs 1 à 5 (@leezr.test) ;
+    - sauvegarde JSON et simulation verte sur un clone du dump DEV du jour : 5 comptes, 15 empreintes, 0 écart, annulation ;
+    - le compte Platform 1 (personnel) accepte lui aussi le mot de passe public sur DEV. Il est exclu du verrouillage, car `MAIL_MAILER=log` rendrait la réinitialisation impossible : son mot de passe est à changer par le propriétaire.
