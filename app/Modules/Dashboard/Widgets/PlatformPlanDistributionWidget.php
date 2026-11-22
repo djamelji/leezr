@@ -14,7 +14,7 @@ class PlatformPlanDistributionWidget implements WidgetManifest
 
     public function key(): string { return 'platform.plan_distribution'; }
     public function module(): string { return 'platform.billing'; }
-    public function layout(): array { return ['default_w' => 4, 'default_h' => 4, 'min_w' => 3, 'max_w' => 12, 'min_h' => 3, 'max_h' => 5]; }
+    public function layout(): array { return ['default_w' => 4, 'default_h' => 4, 'min_w' => 3, 'max_w' => 12, 'min_h' => 3, 'max_h' => 6]; } // ADR-855 — family size profile (bounds only relaxed)
     public function category(): string { return 'commercial'; }
     public function component(): string { return 'PlatformPlanDistribution'; }
     public function tags(): array { return ['billing', 'plans', 'distribution']; }

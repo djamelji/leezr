@@ -431,6 +431,7 @@
     "journeyId": true,
     "passedSteps": true,
     "trafficSource": true,
-    "useRegistrationFunnel": true
+    "useRegistrationFunnel": true,
+    "useCountUp": true
   }
 }

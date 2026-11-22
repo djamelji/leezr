@@ -140,7 +140,7 @@ class DashboardEngineTest extends TestCase
             ->getJson('/api/platform/dashboard/widgets/catalog');
 
         $response->assertOk();
-        $this->assertCount(19, $response->json('widgets')); // +7 panneaux composites platform (ADR-746)
+        $this->assertCount(22, $response->json('widgets')); // +7 panneaux composites platform (ADR-746) +3 cockpit (ADR-855)
 
         // Viewer without view_billing sees 0
         $response = $this->actingAs($this->viewer, 'platform')
@@ -326,7 +326,8 @@ class DashboardEngineTest extends TestCase
         $this->assertCount(1, $adminLayout);
         $this->assertEquals('billing.revenue_trend', $adminLayout[0]['key']);
 
-        $this->assertCount(1, $viewerLayout);
-        $this->assertEquals('billing.ar_outstanding', $viewerLayout[0]['key']);
+        // ADR-855 — a user never stores nor gets back a widget outside his permissioned catalog : the viewer
+        // (no view_billing) cannot keep billing.ar_outstanding, and the admin's layout is untouched (independence).
+        $this->assertSame([], $viewerLayout);
     }
 }

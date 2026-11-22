@@ -1,5 +1,17 @@
 # Leezr 5.0 — 08 · Plan de transformation coordonné
 
+## État au 2026-11-22
+
+| Lot | État | Référence |
+|---|---|---|
+| **L0 · Fondations** | **livré en local** : bibliothèque unique `components/app/`, jetons `styles.scss`, profils par famille, laboratoire unique `/platform/design-lab` | ADR-855, [10](10-l0-l1-delivery.md) |
+| **L1 · Dashboard Platform V35** | **livré en local** : connecté aux vraies données, permissions prouvées (5 profils), desktop, tablette et mobile, clair et sombre | ADR-855, [10](10-l0-l1-delivery.md) |
+| L2 · Santé historisée | à faire (le panneau affiche l'état sans courbe inventée) | — |
+| L4 · Widgets responsives | prochain lot recommandé (restant détaillé en [10 §7](10-l0-l1-delivery.md)) | — |
+| L3 · Accueil Company V22 | après L4 | prototype `/company/design-lab/workspace` |
+| L5 · Personnes | dépréciation de « Outils › Champs » **validée** ; migration réversible avant tout retrait ([10 §8](10-l0-l1-delivery.md)) | — |
+| L6 → L8 | inchangés | — |
+
 > **Rien de ceci n'est lancé.** Chaque lot démarre sur une validation explicite (« GO L… »).
 >
 > Ordre imposé par les dépendances : **fondations d'abord**. Sans jetons, gabarits et profils de taille communs, chaque écran refait serait une nouvelle variante.

@@ -1,11 +1,11 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — Company › Personnes proposal. Prototype: fictitious data, nothing connected.
+// Leezr 5.0 (L0) — Company › Personnes proposal. Prototype: fictitious data, nothing connected.
 // Decisions shown (docs/bmad/leezr-5-design/05-obsolete-ux.md §1):
 //  - the « Outils › Champs du profil » drawer disappears from People: fields are governed in ONE place
 //    (Réglages › Catalogues), obligation is set by POSITION (ADR-819), never company-wide from the people list;
 //  - the list answers « who needs what » : segments with counts, completeness, next action per person;
 //  - a quick-view drawer replaces a full page jump for the common checks.
-import LabBanner from '@/components/lab/LabBanner.vue'
+import LabBanner from '@/components/design-lab/LabBanner.vue'
 
 definePage({ meta: { devOnly: true } })
 

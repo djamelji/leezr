@@ -129,7 +129,7 @@ class DashboardCockpitController extends Controller
                     'count' => $unassignedTickets,
                     'severity' => 'warning',
                     'icon' => 'tabler-headset',
-                    'route' => ['name' => 'platform-support'],
+                    'route' => ['name' => 'platform-communications-tab', 'params' => ['tab' => 'support']] /* ADR-855 : route renamed (ADR-801.1), the old name did not resolve */,
                 ];
             }
         }
@@ -144,7 +144,7 @@ class DashboardCockpitController extends Controller
                     'count' => $criticalAlerts,
                     'severity' => 'critical',
                     'icon' => 'tabler-alert-triangle',
-                    'route' => ['name' => 'platform-alerts'],
+                    'route' => ['name' => 'platform-operations-tab', 'params' => ['tab' => 'alerts']] /* ADR-855 : idem */,
                 ];
             }
         }

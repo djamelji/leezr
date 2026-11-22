@@ -197,3 +197,41 @@
 // ADR-775 (Company Experience 2.0 / UX0) — typographie : les libellés gardent leur casse d'origine.
 // La mise en capitales initiales du thème produisait « Ajouter Un Employé », « Vue D'ensemble ».
 .v-btn.v-btn, .v-tab.v-tab { text-transform: none; }
+
+// ──────────────────────────────────────────────────────────────────
+// LEEZR 5.0 — Fondations communes (L0, ADR-855). Prolonge la couche Premium (ADR-741) :
+// même jetons Vuetify, aucune couleur métier codée en dur, clair/sombre, mouvement réduit.
+// ──────────────────────────────────────────────────────────────────
+// Vuetify n'a pas cet utilitaire : un enfant flex doit pouvoir rétrécir pour que text-truncate fonctionne.
+.min-w-0 { min-inline-size: 0; }
+
+// Bouton posé sur un bandeau de marque (héros) : blanc + texte primaire dans les deux thèmes.
+.v-btn.lzr-on-brand { background: #fff !important; color: rgb(var(--v-theme-primary)) !important; }
+.v-btn.lzr-on-brand-outline { border-color: rgba(255, 255, 255, .7) !important; color: #fff !important; }
+
+// Entrée échelonnée (une fois, au montage) — `.lzr-enter` sur les enfants d'un conteneur `.lzr-stagger`.
+@keyframes lzr-enter { from { transform: translateY(10px); } to { transform: none; } } // transform only : never hides content
+.lzr-enter { animation: lzr-enter .45s cubic-bezier(.22, 1, .36, 1) both; }
+.lzr-stagger > :nth-child(1) { animation-delay: 0ms; }
+.lzr-stagger > :nth-child(2) { animation-delay: 60ms; }
+.lzr-stagger > :nth-child(3) { animation-delay: 120ms; }
+.lzr-stagger > :nth-child(4) { animation-delay: 180ms; }
+.lzr-stagger > :nth-child(n+5) { animation-delay: 240ms; }
+
+// Pulsation réservée aux statuts « en direct » réels.
+@keyframes lzr-pulse { 70% { box-shadow: 0 0 0 7px rgba(var(--v-theme-success), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--v-theme-success), 0); } }
+.lzr-live-dot { inline-size: 8px; block-size: 8px; border-radius: 50%; display: inline-block; background: rgb(var(--v-theme-success)); box-shadow: 0 0 0 0 rgba(var(--v-theme-success), .6); animation: lzr-pulse 1.8s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lzr-enter, .lzr-live-dot { animation: none; }
+}
+
+// Barre de progression qui se remplit une fois (entonnoirs, adoption).
+@keyframes lzr-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lzr-grow { transform-origin: left center; animation: lzr-grow .7s cubic-bezier(.22, 1, .36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .lzr-grow { animation: none; } }
+
+// Listes filtrées (TransitionGroup name="lzr-list").
+.lzr-list-enter-active, .lzr-list-leave-active { transition: opacity .22s ease, transform .22s ease; }
+.lzr-list-enter-from, .lzr-list-leave-to { opacity: 0; transform: translateY(6px); }
+@media (prefers-reduced-motion: reduce) { .lzr-list-enter-active, .lzr-list-leave-active { transition: none; } }

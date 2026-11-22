@@ -1,13 +1,13 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — trend widget (prototype) with a layout PER presentation mode, measured on the real
-// container by the existing engine (through LzWidget). Content is recomposed, never scaled down:
+// Leezr 5.0 (L0) — trend widget (prototype) with a layout PER presentation mode, measured on the real
+// container by the existing engine (through AppWidgetShell). Content is recomposed, never scaled down:
 //   micro    → value + delta + sparkline
 //   compact  → value, delta, small chart
 //   standard → header KPIs + full chart
 //   wide     → chart dominant, KPIs in a band
 //   expanded → chart + breakdown aside + action
 import { useTheme } from 'vuetify'
-import LzWidget from './LzWidget.vue'
+import AppWidgetShell from '@/components/app/AppWidgetShell.vue'
 
 const props = defineProps({
   title: { type: String, default: 'Revenu récurrent (MRR)' },
@@ -37,7 +37,7 @@ const opts = (spark, h) => {
 </script>
 
 <template>
-  <LzWidget
+  <AppWidgetShell
     :title="title"
     subtitle="HT · 12 derniers mois"
     icon="tabler-chart-arrows-vertical"
@@ -195,7 +195,7 @@ const opts = (spark, h) => {
         </div>
       </template>
     </template>
-  </LzWidget>
+  </AppWidgetShell>
 </template>
 
 <style scoped>

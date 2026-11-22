@@ -1,9 +1,9 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — shared components proposal (one visual language for Platform and Company).
+// Leezr 5.0 (L0) — shared components proposal (one visual language for Platform and Company).
 // Built only from Vuetify/Vuexy primitives + the existing Leezr Premium layer (.lzr-card, ADR-741). Prototype.
-import LabBanner from '@/components/lab/LabBanner.vue'
+import LabBanner from '@/components/design-lab/LabBanner.vue'
 
-definePage({ meta: { layout: 'platform', platform: true, devOnly: true } })
+definePage({ meta: { layout: 'platform', platform: true, permission: 'view_dashboard', devOnly: true } })
 
 const drawerStep = ref(1)
 const confirm = ref(false)

@@ -2,9 +2,10 @@
 // Leezr 4.2 M5 (ADR-842) — Platform ergonomics, browser recipe with REAL navigation on the MARKED clone (ADR-831).
 // « Before » captures : docs/bmad/leezr-4-2-audit/captures/ (audit ADR-836). « After » : docs/bmad/leezr-4-2-audit/m5/.
 import fs from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import { loginPlatform } from './helpers'
-import { prepare } from './recipe-fixtures'
+import { CLONE_ENV, prepare } from './recipe-fixtures'
 
 test.skip(!process.env.AUDIT_PASSWORD_FILE, 'Leezr 4.2 M5 recipe only (AUDIT_PASSWORD_FILE)')
 const PASSWORD = process.env.AUDIT_PASSWORD_FILE ? fs.readFileSync(process.env.AUDIT_PASSWORD_FILE, 'utf8').trim() : ''
@@ -86,7 +87,9 @@ test('Super-admin — fiche entreprise sans doublon, changement d’offre avec a
   const problems = watch(page)
   await loginPlatform(page, 'admin@leezr.com', PASSWORD)
   await open(page, '/platform/companies')
-  await page.getByPlaceholder(/Rechercher/).first().fill('Audit 842 Services')
+  // ADR-855 — other recipes create « Audit 842 Services … » companies too : search THIS company's exact name
+  const companyName = execFileSync('php', ['-r', `require 'vendor/autoload.php'; $app = require 'bootstrap/app.php'; $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); echo DB::table('companies')->where('id', ${COMPANY})->value('name');`], { env: CLONE_ENV }).toString().trim()
+  await page.getByPlaceholder(/Rechercher/).first().fill(companyName)
   await page.waitForTimeout(1500)
   await expect(page.locator('body')).not.toContainText(' ago')
   await expect(page.getByRole('button', { name: 'Ouvrir la fiche' }).first()).toBeVisible() // named icon button

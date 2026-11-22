@@ -9,6 +9,8 @@ const props = defineProps({
   layout: { type: Array, required: true },
   widgetData: { type: Object, default: () => ({}) },
   widgetErrors: { type: Object, default: () => ({}) },
+  // ADR-855 (Leezr 5.0) — premium tile chrome (elevation, hover, staggered entrance). Platform cockpit only until L4.
+  premium: { type: Boolean, default: false },
   catalog: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   editable: { type: Boolean, default: false },
@@ -265,6 +267,7 @@ onUnmounted(() => {
   <div
     ref="gridRef"
     class="dashboard-grid"
+    :class="{ 'dashboard-grid--premium': premium }"
     :style="{ '--dashboard-cols': cols, '--dashboard-gap': cols <= 6 ? '10px' : '16px', '--dashboard-row': `${rowHeight}px` }"
   >
     <div
@@ -393,6 +396,27 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* ADR-855 — premium chrome (opt-in) */
+.dashboard-grid--premium .dashboard-tile { animation: dashboard-enter .45s cubic-bezier(.22, 1, .36, 1) both; }
+.dashboard-grid--premium .dashboard-tile:nth-child(2) { animation-delay: 50ms; }
+.dashboard-grid--premium .dashboard-tile:nth-child(3) { animation-delay: 100ms; }
+.dashboard-grid--premium .dashboard-tile:nth-child(4) { animation-delay: 150ms; }
+.dashboard-grid--premium .dashboard-tile:nth-child(n+5) { animation-delay: 200ms; }
+.dashboard-grid--premium .dashboard-widget {
+  border-radius: 16px;
+  border: 1px solid rgba(var(--v-border-color), .07);
+  box-shadow: 0 2px 6px rgba(47, 43, 61, .07), 0 1px 2px rgba(47, 43, 61, .05);
+  transition: box-shadow .22s cubic-bezier(.4, 0, .2, 1), border-color .22s;
+}
+.dashboard-grid--premium .dashboard-widget:hover { box-shadow: 0 10px 28px rgba(47, 43, 61, .12), 0 2px 6px rgba(47, 43, 61, .07); }
+.v-theme--dark .dashboard-grid--premium .dashboard-widget { border-color: rgba(var(--v-border-color), .14); box-shadow: 0 2px 8px rgba(0, 0, 0, .32); }
+/* transform only : an entrance must never be able to HIDE content (a tile mounted late below the fold kept
+   its from-state at opacity 0 in a full-page render) */
+@keyframes dashboard-enter { from { transform: translateY(12px); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-grid--premium .dashboard-tile { animation: none; }
+  .dashboard-grid--premium .dashboard-widget { transition: none; }
+}
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(var(--dashboard-cols, 12), 1fr);

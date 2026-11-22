@@ -38,9 +38,11 @@ const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab
 
 <template>
   <div>
+    <!-- ADR-855 — compact section switch (same VTabs, same permissions) : the cockpit hero is the page's top -->
     <VTabs
       v-model="activeTab"
-      class="v-tabs-pill"
+      class="cockpit-tabs"
+      density="compact"
       :mandatory="false"
     >
       <VTab
@@ -50,7 +52,7 @@ const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab
         :to="{ name: 'platform-dashboard-tab', params: { tab: item.tab } }"
       >
         <VIcon
-          size="20"
+          size="17"
           start
           :icon="item.icon"
         />
@@ -72,7 +74,7 @@ const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab
     <VWindow
       v-else
       v-model="activeTab"
-      class="mt-6 disable-tab-transition"
+      class="mt-4 disable-tab-transition"
       :touch="false"
     >
       <VWindowItem value="overview">
@@ -89,3 +91,8 @@ const tabAllowed = computed(() => tabs.value.some(item => item.tab === activeTab
     </VWindow>
   </div>
 </template>
+
+<style scoped>
+.cockpit-tabs { border-block-end: 1px solid rgba(var(--v-border-color), .1); }
+.cockpit-tabs :deep(.v-tab) { font-size: .875rem; min-inline-size: 0; padding-inline: .875rem; letter-spacing: 0; }
+</style>

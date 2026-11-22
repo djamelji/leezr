@@ -1,12 +1,12 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — Company workspace proposal (V22-inspired). Prototype: fictitious data, nothing connected.
+// Leezr 5.0 (L0) — Company workspace proposal (V22-inspired). Prototype: fictitious data, nothing connected.
 // Composition depends on the JobDomain AND the role; a young company sees a guided start instead of empty widgets.
 // Only data Leezr already has (shipments, planning shifts, clock entries, leaves, timesheets, documents) is used;
 // the « Services » variant shows where a missing horizontal module (scheduling, ADR-563) would plug in.
-import LabBanner from '@/components/lab/LabBanner.vue'
-import LzHero from '@/components/lab/LzHero.vue'
-import LzKpiTile from '@/components/lab/LzKpiTile.vue'
-import LzWidget from '@/components/lab/LzWidget.vue'
+import LabBanner from '@/components/design-lab/LabBanner.vue'
+import AppPageHero from '@/components/app/AppPageHero.vue'
+import AppKpiTile from '@/components/app/AppKpiTile.vue'
+import AppWidgetShell from '@/components/app/AppWidgetShell.vue'
 import { useTheme } from 'vuetify'
 
 definePage({ meta: { devOnly: true } })
@@ -124,7 +124,7 @@ const isDriver = computed(() => role.value === 'driver')
         cols="12"
         lg="8"
       >
-        <LzHero
+        <AppPageHero
           variant="workspace"
           :greeting="isDriver ? 'Bonne tournée,' : 'Bonjour,'"
           :name="isDriver ? 'Karim' : 'Marie'"
@@ -142,7 +142,7 @@ const isDriver = computed(() => role.value === 'driver')
         >
           <template #actions>
             <VBtn
-              class="lz-on-brand"
+              class="lzr-on-brand"
               :prepend-icon="isDriver ? 'tabler-route' : domain === 'logistique' ? 'tabler-truck' : 'tabler-calendar-plus'"
             >
               {{ isDriver ? 'Démarrer ma tournée' : domain === 'logistique' ? 'Nouvelle expédition' : 'Planifier' }}
@@ -155,7 +155,7 @@ const isDriver = computed(() => role.value === 'driver')
               Planning du jour
             </VBtn>
           </template>
-        </LzHero>
+        </AppPageHero>
 
         <!-- young company: guided start instead of empty widgets -->
         <VRow
@@ -214,7 +214,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile
+              <AppKpiTile
                 label="Livraisons du jour"
                 icon="tabler-truck-delivery"
                 :value="14"
@@ -228,7 +228,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile
+              <AppKpiTile
                 label="En retard"
                 icon="tabler-clock-exclamation"
                 :value="2"
@@ -241,7 +241,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile
+              <AppKpiTile
                 label="Chauffeurs actifs"
                 icon="tabler-steering-wheel"
                 :value="6"
@@ -253,7 +253,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile
+              <AppKpiTile
                 label="Non assignées"
                 icon="tabler-package"
                 :value="2"
@@ -273,7 +273,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile v-bind="k" />
+              <AppKpiTile v-bind="k" />
             </VCol>
           </template>
           <template v-else>
@@ -288,7 +288,7 @@ const isDriver = computed(() => role.value === 'driver')
               cols="6"
               md="3"
             >
-              <LzKpiTile v-bind="k" />
+              <AppKpiTile v-bind="k" />
             </VCol>
           </template>
         </VRow>
@@ -299,7 +299,7 @@ const isDriver = computed(() => role.value === 'driver')
         cols="12"
         lg="4"
       >
-        <LzWidget
+        <AppWidgetShell
           title="Lundi 23 novembre"
           subtitle="Planning du jour"
           icon="tabler-calendar"
@@ -359,7 +359,7 @@ const isDriver = computed(() => role.value === 'driver')
               </div>
             </div>
           </div>
-        </LzWidget>
+        </AppWidgetShell>
       </VCol>
 
       <!-- Quick actions -->
@@ -403,7 +403,7 @@ const isDriver = computed(() => role.value === 'driver')
           md="6"
           lg="4"
         >
-          <LzWidget
+          <AppWidgetShell
             title="Livraisons — état du jour"
             subtitle="Mis à jour en continu"
             icon="tabler-chart-donut"
@@ -430,7 +430,7 @@ const isDriver = computed(() => role.value === 'driver')
                 </div>
               </div>
             </div>
-          </LzWidget>
+          </AppWidgetShell>
         </VCol>
 
         <VCol
@@ -438,7 +438,7 @@ const isDriver = computed(() => role.value === 'driver')
           md="6"
           :lg="domain === 'logistique' && !isDriver ? 4 : 6"
         >
-          <LzWidget
+          <AppWidgetShell
             v-model:period="week"
             :title="isDriver ? 'Mes heures' : 'Heures pointées vs planifiées'"
             subtitle="Source : pointages et planning publiés"
@@ -452,7 +452,7 @@ const isDriver = computed(() => role.value === 'driver')
               :options="hoursOptions"
               :series="[{ name: 'Pointées', data: [62, 71, 68, 74, 70, 22] }, { name: 'Planifiées', data: [64, 70, 70, 72, 72, 24] }]"
             />
-          </LzWidget>
+          </AppWidgetShell>
         </VCol>
 
         <!-- Team -->
@@ -462,7 +462,7 @@ const isDriver = computed(() => role.value === 'driver')
           md="6"
           :lg="domain === 'logistique' ? 4 : 6"
         >
-          <LzWidget
+          <AppWidgetShell
             title="Équipe en ce moment"
             :subtitle="`${team.filter(t => t.color === 'success').length} en activité · 1 absente`"
             icon="tabler-users"
@@ -498,7 +498,7 @@ const isDriver = computed(() => role.value === 'driver')
                 </div>
               </div>
             </div>
-          </LzWidget>
+          </AppWidgetShell>
         </VCol>
 
         <!-- Services: missing module, proposed with its data source -->
@@ -539,7 +539,7 @@ const isDriver = computed(() => role.value === 'driver')
           :md="isDriver ? 6 : 6"
           :lg="isDriver ? 6 : (domain === 'logistique' ? 12 : 6)"
         >
-          <LzWidget
+          <AppWidgetShell
             title="Fil d'activité"
             subtitle="Ce qui vient de se passer dans votre société"
             icon="tabler-bell"
@@ -591,7 +591,7 @@ const isDriver = computed(() => role.value === 'driver')
                 />
               </div>
             </TransitionGroup>
-          </LzWidget>
+          </AppWidgetShell>
         </VCol>
       </template>
     </VRow>
@@ -635,5 +635,4 @@ const isDriver = computed(() => role.value === 'driver')
   .lz-grid > [class*='v-col'] { animation: none; }
   .lz-action:hover { transform: none; }
 }
-.lz-on-brand.v-btn { background: #fff !important; color: rgb(var(--v-theme-primary)) !important; }
 </style>

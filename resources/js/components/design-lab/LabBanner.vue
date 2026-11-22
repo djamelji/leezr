@@ -1,5 +1,5 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — mandatory banner on every prototype: fictitious data, not connected.
+// Leezr 5.0 (L0) — mandatory banner on every prototype: fictitious data, not connected.
 defineProps({ name: { type: String, required: true }, compare: { type: String, default: '' } })
 </script>
 
@@ -18,8 +18,3 @@ defineProps({ name: { type: String, required: true }, compare: { type: String, d
   </VAlert>
 </template>
 
-<style>
-/* Leezr 5.0 lab — utility missing from Vuetify (flex children must be allowed to shrink for text-truncate).
-   To move to resources/styles/styles.scss in lot L0. */
-.min-w-0 { min-inline-size: 0; }
-</style>

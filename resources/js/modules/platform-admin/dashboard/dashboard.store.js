@@ -86,22 +86,30 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     const byKey = new Map(catalog.map(w => [w.key, w]))
     const has = k => byKey.has(k)
 
+    // ADR-855 (Leezr 5.0, V35) — cockpit composition : a band of 4 KPI tiles, then the revenue analysis next to
+    // the dark live supervision, then growth / trials / modules, then the journal. Each section keeps only the
+    // widgets of the user's permissioned catalog ; widths sum to 12 so a missing widget never leaves a hole
+    // that the packer cannot fill (the packer left-packs, ADR-152).
     const SECTIONS = [
-      // Commercial — hero (h4)
       [
-        { key: 'platform.commercial_overview', w: 8, h: 4 },
+        { key: 'platform.companies_overview', w: 3, h: 2 },
+        { key: 'platform.signups', w: 3, h: 2 },
+        { key: 'billing.revenue_mtd', w: 3, h: 2 },
+        { key: 'billing.failed_payments_7d', w: 3, h: 2 },
+      ],
+      [
+        { key: 'platform.commercial_overview', w: 8, h: 5 },
+        { key: 'platform.system_health', w: 4, h: 5 },
+      ],
+      [
+        { key: 'platform.trials_ending', w: 4, h: 4 },
+        { key: 'platform.catalog_overview', w: 4, h: 4 },
         { key: 'platform.plan_distribution', w: 4, h: 4 },
       ],
-      // Opérationnel (h3)
       [
-        { key: 'platform.companies_overview', w: 6, h: 3 },
-        { key: 'platform.system_health', w: 6, h: 3 },
-      ],
-      // Support / Sécurité / Catalogue (h3)
-      [
-        { key: 'platform.support_overview', w: 4, h: 3 },
-        { key: 'platform.security_overview', w: 4, h: 3 },
-        { key: 'platform.catalog_overview', w: 4, h: 3 },
+        { key: 'platform.recent_activity', w: 6, h: 4 },
+        { key: 'platform.support_overview', w: 3, h: 2 },
+        { key: 'platform.security_overview', w: 3, h: 2 },
       ],
     ]
     const templated = new Set(SECTIONS.flat().map(s => s.key))
@@ -135,6 +143,13 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
     engine._dirty.value = true
   }
 
+  // ADR-855 — « Disposition recommandée » : recompose the cockpit for THIS user's permissions, then save.
+  async function resetToRecommended() {
+    buildSmartDefaultLayout()
+    await engine.saveLayout()
+    await engine.resolveWidgets()
+  }
+
   // Override loadDashboard — compose l'éditorial quand aucun layout utilisateur n'existe.
   async function loadDashboard() {
     await Promise.all([engine.fetchCatalog(), engine.fetchLayout()])
@@ -158,6 +173,7 @@ export const useDashboardStore = defineStore('platformDashboard', () => {
   return {
     ...engine,
     presets,
+    resetToRecommended,
     fetchPresets,
     updateTile,
     updateWidgetScope,

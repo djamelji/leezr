@@ -41,6 +41,20 @@ export function useDashboardGrid(gridRef, catalog) {
     'workforce.timesheet_pending': 15, 'workforce.leave_pending': 25,
   }
 
+  // ADR-855 (Leezr 5.0 cockpit) — Platform cockpit keys join the business-priority path : KPI tiles (w ≤ half) are
+  // paired, panels go full width with a READABLE mobile height (rows) instead of the uniform 2 rows that squeezed the
+  // supervision panel and the lists. Keys not listed here keep the previous behaviour (company dashboards unchanged).
+  Object.assign(MOBILE_PRIORITY, {
+    'platform.companies_overview': 210, 'platform.signups': 220, 'billing.revenue_mtd': 230, 'billing.failed_payments_7d': 240,
+    'platform.commercial_overview': 250, 'platform.system_health': 260, 'platform.trials_ending': 270,
+    'platform.recent_activity': 280, 'platform.catalog_overview': 290, 'platform.plan_distribution': 300,
+    'platform.support_overview': 310, 'platform.security_overview': 320,
+  })
+  const MOBILE_ROWS = {
+    'platform.commercial_overview': 5, 'platform.system_health': 6, 'platform.trials_ending': 4,
+    'platform.recent_activity': 5, 'platform.catalog_overview': 5, 'platform.plan_distribution': 5,
+  }
+
   // Visual breakpoint — used ONLY for CSS grid rendering, never for layout mutation
   // 6 cols on mobile/tablet so S widgets (w=3) fit 2 per row on all viewports
   const cols = computed(() => {
@@ -411,8 +425,9 @@ export function useDashboardGrid(gridRef, catalog) {
         for (let i = 0; i < ordered.length;) {
           const t = ordered[i]
           if (t.w > halfCols) {
-            result.push({ ...t, x: 0, y: yy, w: viewCols, h: forceH })
-            yy += forceH; i += 1
+            const rows = MOBILE_ROWS[t.key] ?? forceH
+            result.push({ ...t, x: 0, y: yy, w: viewCols, h: rows })
+            yy += rows; i += 1
           }
           else {
             result.push({ ...t, x: 0, y: yy, w: halfCols, h: forceH })

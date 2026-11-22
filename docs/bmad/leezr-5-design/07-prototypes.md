@@ -7,12 +7,15 @@
 
 ## Accès
 
+**Point d'entrée unique depuis L0 :** `/platform/design-lab` (en développement seulement).
+
+
 1. Lancer `pnpm dev` (Vite), puis ouvrir l'application locale (`https://leezr.test` ou le serveur de recette du clone).
 2. Se connecter avec un compte du clone : un administrateur Platform pour les pages `/platform/design-lab/*`, un propriétaire Company pour `/company/design-lab/*`.
 
 | Proposition | Adresse | Captures | À comparer avec |
 |---|---|---|---|
-| 1. Cockpit Platform (V35) | `/platform/design-lab/cockpit` | [desktop](captures/proto/platform-cockpit-desktop.jpg) · [mobile](captures/proto/platform-cockpit-mobile.jpg) · [sombre](captures/proto/platform-cockpit-desktop-dark.jpg) | [actuel](captures/current/shots/p-superadmin/platform_dashboard_overview.jpg) |
+| 1. Cockpit Platform (V35) — **remplacé par le vrai dashboard (L1)** | `/platform/dashboard/overview` (prototype retiré, conservé dans l'historique `753d5372`) | [desktop](captures/proto/platform-cockpit-desktop.jpg) · [mobile](captures/proto/platform-cockpit-mobile.jpg) · [sombre](captures/proto/platform-cockpit-desktop-dark.jpg) | [actuel](captures/current/shots/p-superadmin/platform_dashboard_overview.jpg) |
 | 2. Espace de travail Company (V22) | `/company/design-lab/workspace` | [desktop](captures/proto/company-workspace-desktop.jpg) · [mobile](captures/proto/company-workspace-mobile.jpg) · [sombre](captures/proto/company-workspace-desktop-dark.jpg) | [actuel](captures/current/shots/c1-owner/home.jpg) |
 | 3. Personnes | `/company/design-lab/people` (`?preview=1` ouvre la consultation rapide) | [liste](captures/proto/company-people-desktop.jpg) · [consultation rapide](captures/proto/company-people-quickview-desktop.jpg) · [mobile](captures/proto/company-people-mobile.jpg) | [actuel](captures/current/shots/c1-owner/company_people.jpg) |
 | 4. Bibliothèque de widgets | `/platform/design-lab/widgets` | [desktop](captures/proto/platform-widgets-desktop.jpg) · [mobile](captures/proto/platform-widgets-mobile.jpg) | `/platform/presentation-lab` |

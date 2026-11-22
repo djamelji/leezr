@@ -18,7 +18,7 @@ class PlatformCommercialOverviewWidget implements WidgetManifest
 
     public function key(): string { return 'platform.commercial_overview'; }
     public function module(): string { return 'platform.billing'; }
-    public function layout(): array { return ['default_w' => 8, 'default_h' => 4, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 5]; }
+    public function layout(): array { return ['default_w' => 8, 'default_h' => 5, 'min_w' => 3, 'max_w' => 12, 'min_h' => 2, 'max_h' => 8]; } // ADR-855 — family size profile (bounds only relaxed)
     public function category(): string { return 'commercial'; }
     public function component(): string { return 'PlatformCommercialOverview'; }
     public function tags(): array { return ['billing', 'commercial', 'overview']; }

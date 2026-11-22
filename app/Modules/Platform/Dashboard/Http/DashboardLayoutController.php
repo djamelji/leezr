@@ -21,8 +21,10 @@ class DashboardLayoutController extends Controller
         $layout = PlatformUserDashboardLayout::where('user_id', $userId)->first();
         $tiles = $layout?->layout_json ?? self::defaultLayout();
 
+        // ADR-855 — a saved layout never brings back a widget the user may no longer see (role changed, Support
+        // operator with a finance widget saved) : tiles are filtered by the SAME permissioned catalog as « add ».
         return response()->json([
-            'layout' => DashboardWidgetRegistry::filterLayout($tiles),
+            'layout' => DashboardWidgetRegistry::filterLayout(self::allowedTiles($request, $tiles)),
         ]);
     }
 
@@ -52,13 +54,14 @@ class DashboardLayoutController extends Controller
         }
 
         $userId = $request->user('platform')->id;
+        $tiles = self::allowedTiles($request, $validated['layout']); // ADR-855 — never store a forbidden widget
 
         PlatformUserDashboardLayout::updateOrCreate(
             ['user_id' => $userId],
-            ['layout_json' => $validated['layout']],
+            ['layout_json' => $tiles],
         );
 
-        return response()->json(['layout' => $validated['layout']]);
+        return response()->json(['layout' => $tiles]);
     }
 
     /**
@@ -76,6 +79,14 @@ class DashboardLayoutController extends Controller
                 'version' => $d->version,
             ])->values()->all(),
         ]);
+    }
+
+    /** Tiles whose widget is in the user's permissioned catalog (audience, module, permissions). */
+    private static function allowedTiles(Request $request, array $tiles): array
+    {
+        $allowed = array_flip(array_map(fn ($w) => $w->key(), DashboardWidgetRegistry::catalogForUser($request->user('platform'))));
+
+        return array_values(array_filter($tiles, fn ($t) => isset($allowed[$t['key'] ?? ''])));
     }
 
     /**

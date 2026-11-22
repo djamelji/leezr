@@ -10158,7 +10158,13 @@
         "vsN1": "Même point N-1",
         "mrrShort": "revenu mensuel (MRR, HT)"
       },
-      "activeSubsShort": "abonnement(s) actif(s)"
+      "activeSubsShort": "abonnement(s) actif(s)",
+      "signups": "Inscriptions",
+      "signupsDesc": "Parcours d'inscription mesuré sur 30 jours (ADR-849).",
+      "trialsEnding": "Essais qui se terminent",
+      "trialsEndingDesc": "Essais en cours, du plus proche au plus lointain.",
+      "recentActivity": "Activité récente",
+      "recentActivityDesc": "Journal Platform, sans les connexions."
     }
   },
   "invitations": {
@@ -12734,5 +12740,214 @@
     "title": "Entreprise suspendue",
     "message": "L'accès à cette entreprise est suspendu : ses fonctionnalités ne sont pas disponibles pour le moment.",
     "hint": "Rapprochez-vous du propriétaire ou d'un administrateur de l'entreprise. Vos données ne sont pas supprimées."
+  },
+  "appWidget": {
+    "emptyTitle": "Pas encore de données",
+    "errorTitle": "Données indisponibles",
+    "errorText": "Le chargement a échoué. Réessayez dans un instant.",
+    "retry": "Réessayer"
+  },
+  "cockpit": {
+    "unavailable": "Donnée indisponible",
+    "today": "Auj.",
+    "more": "+ {n} autre(s)",
+    "period": {
+      "week": "Semaine",
+      "month": "Mois",
+      "year": "Année"
+    },
+    "hero": {
+      "morning": "Bonjour,",
+      "afternoon": "Bon après-midi,",
+      "evening": "Bonsoir,",
+      "loading": "Lecture de la situation…",
+      "allClear": "Aucune intervention requise. Leezr tourne normalement.",
+      "attention": "Un point demande votre attention aujourd'hui. | {n} points demandent votre attention aujourd'hui.",
+      "critical": "{n} critique | {n} critiques",
+      "newCompany": "Nouvelle société",
+      "billing": "Facturation",
+      "operations": "Opérations"
+    },
+    "priorities": {
+      "title": "À traiter",
+      "subtitle": "Du plus urgent au moins urgent",
+      "none": "Rien en attente",
+      "clearTitle": "Tout est à jour",
+      "clearText": "Aucune facture, paiement, abonnement ou ticket n'attend d'action."
+    },
+    "grid": {
+      "title": "Votre cockpit",
+      "subtitle": "Déplacez et redimensionnez les blocs ; la disposition est enregistrée pour vous.",
+      "recommended": "Disposition recommandée",
+      "emptyTitle": "Aucun bloc affiché",
+      "emptyText": "Appliquez la disposition recommandée pour votre rôle, ou ajoutez des blocs."
+    },
+    "catalog": {
+      "subtitle": "Blocs autorisés pour votre rôle.",
+      "size": "Taille par défaut : {w} × {h}"
+    },
+    "reset": {
+      "title": "Appliquer la disposition recommandée ?",
+      "text": "Votre disposition actuelle sera remplacée par celle conçue pour votre rôle. Vous pourrez ensuite la réorganiser.",
+      "cancel": "Annuler",
+      "confirm": "Appliquer"
+    },
+    "revenue": {
+      "title": "Revenus récurrents",
+      "subtitle": "MRR HT",
+      "link": "Facturation",
+      "mrr": "MRR",
+      "mrrShort": "MRR · HT",
+      "arr": "ARR",
+      "active": "Abonnements actifs",
+      "trials": "Essais en cours",
+      "compare": "N-1",
+      "previousYear": "Même période N-1",
+      "vsPrevious": "vs mois précédent",
+      "health": "Ce mois",
+      "mrrChange": "Variation du MRR",
+      "churn": "Attrition",
+      "trialConversion": "Conversion des essais",
+      "subscriptions": "Voir les abonnements",
+      "emptyTitle": "Pas encore de revenu récurrent",
+      "emptyText": "La courbe apparaîtra dès le premier abonnement payant."
+    },
+    "companies": {
+      "title": "Sociétés",
+      "subtitle": "Activité et statut commercial",
+      "link": "Sociétés",
+      "active": "Sociétés actives",
+      "context": "+{n} sur 30 jours · {s} suspendue(s)",
+      "activeOf": "actives sur {total}",
+      "new30": "nouvelles sur 30 jours",
+      "suspended": "suspendues",
+      "mixActive": "Payantes",
+      "mixTrial": "En essai",
+      "mixPastDue": "Impayé",
+      "mixOther": "Autre",
+      "created": "{n} création(s)",
+      "newShort": "nouvelles sociétés"
+    },
+    "signups": {
+      "title": "Inscriptions",
+      "subtitle": "Parcours mesuré · totaux 30 j, courbe 7 j",
+      "link": "Parcours",
+      "kpi": "Inscriptions · 30 j",
+      "vsPrevious": "vs 30 j précédents",
+      "context": "{started} parcours commencés · conversion {rate} %",
+      "completed": "terminées",
+      "started": "commencées",
+      "conversion": "conversion",
+      "emptyTitle": "Aucune inscription commencée",
+      "emptyText": "Le parcours public n'a pas été ouvert sur les 30 derniers jours.",
+      "step": {
+        "started": "Démarrage",
+        "industry": "Métier",
+        "plan": "Offre",
+        "addons": "Options",
+        "company": "Société",
+        "account": "Compte",
+        "completed": "Terminée"
+      }
+    },
+    "health": {
+      "eyebrow": "État à {time}",
+      "title": "Santé de la plateforme",
+      "allGood": "Tous les services répondent normalement.",
+      "issues": "{n} service(s) à surveiller",
+      "open": "Ouvrir Opérations",
+      "status": {
+        "ok": "Opérationnel",
+        "warning": "À surveiller",
+        "critical": "Incident",
+        "unknown": "Inconnu"
+      },
+      "section": {
+        "healthy": "OK",
+        "warning": "À surveiller",
+        "critical": "Critique"
+      }
+    },
+    "trials": {
+      "title": "Essais",
+      "subtitle": "{total} en cours · {soon} se terminent sous 7 jours",
+      "link": "Sociétés",
+      "expired": "Expiré depuis {n} j",
+      "today": "Se termine aujourd'hui",
+      "inDays": "Dans {n} j",
+      "emptyTitle": "Aucun essai en cours"
+    },
+    "modules": {
+      "title": "Activité des modules",
+      "subtitle": "Sociétés équipées · {n} modules suivis",
+      "link": "Catalogue",
+      "byDomain": "Par métier",
+      "emptyTitle": "Aucun module activé"
+    },
+    "plans": {
+      "title": "Répartition par offre",
+      "subtitle": "{n} sociétés",
+      "link": "Offres",
+      "companies": "sociétés",
+      "emptyTitle": "Aucun abonnement"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "subtitle": "Journal Platform, hors connexions",
+      "link": "Journal",
+      "system": "Système",
+      "emptyTitle": "Aucun événement récent",
+      "actions": {
+        "company_created_by_platform": "société créée depuis Platform",
+        "company_suspended": "société suspendue",
+        "company_reactivated": "société réactivée",
+        "company_export_exceptional_rejected": "export exceptionnel refusé",
+        "company_export_exceptional_requested": "export exceptionnel demandé",
+        "company_export_exceptional_approved": "export exceptionnel approuvé",
+        "automation_task_disabled": "automatisation désactivée",
+        "automation_task_enabled": "automatisation activée",
+        "billing_drift_detected": "écart de facturation détecté",
+        "billing_wallet_admin_credit": "crédit de portefeuille ajouté",
+        "company_export_exceptional_blocked": "export exceptionnel bloqué",
+        "company_export_revoked": "export révoqué",
+        "jobdomain_company_field_reset": "champ métier réinitialisé",
+        "jobdomain_company_field_updated": "champ métier modifié",
+        "jobdomain_preset_recommendations_updated": "recommandations du métier modifiées",
+        "organization_preset_created": "préréglage d'organisation créé",
+        "organization_preset_duplicated": "préréglage dupliqué",
+        "organization_preset_published": "préréglage publié",
+        "organization_preset_updated": "préréglage modifié",
+        "platform_user_created": "administrateur Platform créé",
+        "preset_draft_updated": "brouillon de préréglage modifié",
+        "preset_drafted_from_legacy": "brouillon créé depuis l'existant",
+        "preset_version_opened": "nouvelle version de préréglage",
+        "role_created": "rôle créé",
+        "role_deleted": "rôle supprimé",
+        "role_updated": "rôle modifié",
+        "subscription_plan_change_executed": "changement d'offre appliqué",
+        "subscription_plan_change_requested": "changement d'offre demandé",
+        "two_factor_disable_refused": "désactivation 2FA refusée",
+        "two_factor_disabled": "2FA désactivée",
+        "two_factor_enabled": "2FA activée"
+      }
+    },
+    "support": {
+      "label": "Tickets ouverts",
+      "context": "{u} non attribué(s) · {r} résolu(s)"
+    },
+    "security": {
+      "label": "Alertes sécurité",
+      "context": "{c} critique(s) · {h} élevée(s) · {m} moyenne(s)"
+    },
+    "collected": {
+      "label": "Encaissé ce mois",
+      "context": "Paiements reçus depuis le 1er",
+      "multi": "Plusieurs devises : voir Facturation"
+    },
+    "failed": {
+      "label": "Paiements échoués · 7 j",
+      "contextSome": "À relancer depuis Facturation",
+      "contextNone": "Aucun échec cette semaine"
+    }
   }
 }

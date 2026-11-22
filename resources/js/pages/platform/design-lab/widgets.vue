@@ -1,12 +1,12 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — widget library proposal: the SAME widget at real container sizes (the content is
+// Leezr 5.0 (L0) — widget library proposal: the SAME widget at real container sizes (the content is
 // recomposed per presentation mode, measured by the existing engine), its states, and the sizes a family refuses.
 // Prototype: fictitious data.
-import LabBanner from '@/components/lab/LabBanner.vue'
-import LzKpiTile from '@/components/lab/LzKpiTile.vue'
-import LzTrendWidget from '@/components/lab/LzTrendWidget.vue'
+import LabBanner from '@/components/design-lab/LabBanner.vue'
+import AppKpiTile from '@/components/app/AppKpiTile.vue'
+import LabTrendDemo from '@/components/design-lab/LabTrendDemo.vue'
 
-definePage({ meta: { layout: 'platform', platform: true, devOnly: true } })
+definePage({ meta: { layout: 'platform', platform: true, permission: 'view_dashboard', devOnly: true } })
 
 const trendSizes = [
   { label: 'Petite · micro', w: 300, h: 170 },
@@ -61,7 +61,7 @@ const families = [
           {{ s.label }} · {{ s.w }} × {{ s.h }} px
         </div>
         <div :style="{ inlineSize: `${s.w}px`, blockSize: `${s.h}px`, maxInlineSize: '100%' }">
-          <LzTrendWidget />
+          <LabTrendDemo />
         </div>
       </div>
     </div>
@@ -82,7 +82,7 @@ const families = [
           {{ s.label }} px
         </div>
         <div :style="{ inlineSize: `${s.w}px`, blockSize: `${s.h}px`, maxInlineSize: '100%' }">
-          <LzKpiTile
+          <AppKpiTile
             label="Livraisons du jour"
             icon="tabler-truck-delivery"
             :value="14"
@@ -110,7 +110,7 @@ const families = [
         md="4"
       >
         <div style="block-size: 280px;">
-          <LzTrendWidget :state="st" />
+          <LabTrendDemo :state="st" />
         </div>
       </VCol>
     </VRow>

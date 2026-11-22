@@ -1,5 +1,5 @@
 <script setup>
-// Leezr 5.0 DESIGN LAB — greeting hero (prototype). Two variants of the SAME identity:
+// Leezr 5.0 (L0, ADR-855) — page hero. Two variants of the SAME identity:
 //   cockpit   (Platform, V35-inspired): typographic greeting, live context chips, period + report actions.
 //   workspace (Company, V22-inspired): deep brand band, team presence, the day's priority and primary actions.
 const props = defineProps({
@@ -35,7 +35,7 @@ const props = defineProps({
         >
           <span
             v-if="c.live"
-            class="lz-pulse me-2"
+            class="lzr-live-dot me-2"
           />
           <VIcon
             v-else-if="c.icon"
@@ -135,16 +135,14 @@ const props = defineProps({
 .lz-stack__item { border: 2px solid rgba(255, 255, 255, .9); margin-inline-start: -8px; }
 .lz-stack__more { margin-inline-start: .5rem; font-size: .8125rem; color: rgba(255, 255, 255, .85); }
 
-.lz-pulse { inline-size: 8px; block-size: 8px; border-radius: 50%; background: rgb(var(--v-theme-success)); box-shadow: 0 0 0 0 rgba(var(--v-theme-success), .6); animation: lz-pulse 1.8s infinite; display: inline-block; }
 
 @keyframes lz-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes lz-pulse { 70% { box-shadow: 0 0 0 7px rgba(var(--v-theme-success), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--v-theme-success), 0); } }
 
 @media (max-width: 700px) {
   .lz-hero { flex-direction: column; align-items: stretch; padding: 1.25rem; }
   .lz-hero__aside { flex-direction: row; justify-content: space-between; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lz-hero, .lz-pulse { animation: none; }
+  .lz-hero { animation: none; }
 }
 </style>

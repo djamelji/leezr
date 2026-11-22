@@ -29968,3 +29968,31 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - Aucune page métier, API, donnée ou permission modifiée ; rien de supprimé.
   - Roadmap L0→L8 soumise à validation (`08-roadmap.md`).
   - Mesures nouvelles signalées comme telles : historique de santé Platform, module scheduling, tournées, rapport mensuel.
+
+## ADR-855 — Leezr 5.0 L0 + L1 : fondations visuelles communes et dashboard Platform V35 connecté
+
+- **Date** : 2026-11-22
+- **Contexte** : la direction V35 (Platform) et V22 (Company) est validée (ADR-854). L'accueil Platform empilait des cartes Vuexy génériques. Les tuiles KPI restaient en mode `micro` à cause du seuil unique des graphiques. Trois laboratoires de design concurraient. Une disposition enregistrée n'était filtrée que par module, et deux alertes « attention » pointaient vers des routes renommées.
+- **Décision** :
+  - **L0**
+    - Une seule bibliothèque `components/app/` : `AppPageHero`, `AppKpiTile`, `AppWidgetShell`, `AppLivePanel`, `AppSegmented`, `AppEmptyState`, `AppStatusChip`, plus `useCountUp`.
+    - Jetons dans `styles.scss` (couche Premium ADR-741).
+    - Profils de taille par famille (`familyModes.js`), qui délèguent au moteur ADR-748 pour les graphiques.
+    - Laboratoire unique `/platform/design-lab` (`devOnly`). Le prototype cockpit est retiré ; les laboratoires historiques sont conservés et inventoriés.
+  - **L1**
+    - Même moteur, même grille et même catalogue. L'accueil est rebâti à partir de vraies données ; le flux « attention » devient un panneau de priorités cliquable.
+    - Nouvelle composition par défaut (store) et action « Disposition recommandée ».
+    - Présentations adaptées à la taille réelle pour les widgets Platform : nouvelles vues sur les mêmes clés serveur.
+    - Trois widgets serveur sur des sources existantes : `platform.signups` (ADR-849, `view_usage_monitoring`), `platform.trials_ending` (`view_companies`), `platform.recent_activity` (`view_audit_logs`, sans connexions ni IP).
+    - Clés ajoutées, sans rien retirer, à `companies_overview` (tendance 30 j, statuts commerciaux) et `catalog_overview` (noms des modules).
+    - Bornes de taille seulement élargies.
+    - Disposition de layout filtrée par le catalogue permissionné, en lecture comme en écriture.
+    - Routes des alertes support et alertes critiques corrigées.
+    - Politique mobile par priorité (ADR-745) étendue aux clés du cockpit, avec hauteur par panneau.
+    - Habillage `premium` de la grille, optionnel, Platform seulement.
+    - Animation d'entrée en `transform` uniquement.
+  - **Sans changement** : Billing (formules), RBAC (permissions), moteur de dashboard, menus.
+- **Conséquences** :
+  - `Adr855PlatformCockpitTest` 8/8 ; `family-modes.test.mjs` 4/4 ; E2E `audit842-cockpit855-recipe` 5/5 (fixture clone `audit842-cockpit855`) ; non-régression M3, M5 (recherche par nom exact) et M10.
+  - Recette navigateur sur 5 profils (desktop, tablette, mobile, clair et sombre) : 0 erreur, 0 refus, 0 débordement.
+  - Livraison décrite dans `docs/bmad/leezr-5-design/10-l0-l1-delivery.md` ; restant pour L2, L3 et L4 au §7. Décision L5 (dépréciation de « Outils › Champs ») enregistrée au §8.

@@ -10157,7 +10157,13 @@
         "vsN1": "Same point last year",
         "mrrShort": "monthly revenue (MRR, excl. tax)"
       },
-      "activeSubsShort": "active subs"
+      "activeSubsShort": "active subs",
+      "signups": "Sign-ups",
+      "signupsDesc": "Measured sign-up funnel over 30 days (ADR-849).",
+      "trialsEnding": "Trials ending",
+      "trialsEndingDesc": "Running trials, soonest end first.",
+      "recentActivity": "Recent activity",
+      "recentActivityDesc": "Platform journal, without sign-ins."
     }
   },
   "invitations": {
@@ -12716,5 +12722,214 @@
     "title": "Company suspended",
     "message": "Access to this company is suspended: its features are not available for now.",
     "hint": "Contact the owner or an administrator of the company. Your data is not deleted."
+  },
+  "appWidget": {
+    "emptyTitle": "No data yet",
+    "errorTitle": "Data unavailable",
+    "errorText": "Loading failed. Try again in a moment.",
+    "retry": "Retry"
+  },
+  "cockpit": {
+    "unavailable": "Data unavailable",
+    "today": "Today",
+    "more": "+ {n} more",
+    "period": {
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
+    "hero": {
+      "morning": "Good morning,",
+      "afternoon": "Good afternoon,",
+      "evening": "Good evening,",
+      "loading": "Reading the situation…",
+      "allClear": "Nothing needs your attention. Leezr is running normally.",
+      "attention": "One item needs your attention today. | {n} items need your attention today.",
+      "critical": "{n} critical | {n} critical",
+      "newCompany": "New company",
+      "billing": "Billing",
+      "operations": "Operations"
+    },
+    "priorities": {
+      "title": "To handle",
+      "subtitle": "Most urgent first",
+      "none": "Nothing pending",
+      "clearTitle": "All caught up",
+      "clearText": "No invoice, payment, subscription or ticket is waiting for action."
+    },
+    "grid": {
+      "title": "Your cockpit",
+      "subtitle": "Move and resize blocks; the layout is saved for you.",
+      "recommended": "Recommended layout",
+      "emptyTitle": "No block displayed",
+      "emptyText": "Apply the layout recommended for your role, or add blocks."
+    },
+    "catalog": {
+      "subtitle": "Blocks allowed for your role.",
+      "size": "Default size: {w} × {h}"
+    },
+    "reset": {
+      "title": "Apply the recommended layout?",
+      "text": "Your current layout will be replaced by the one designed for your role. You can rearrange it afterwards.",
+      "cancel": "Cancel",
+      "confirm": "Apply"
+    },
+    "revenue": {
+      "title": "Recurring revenue",
+      "subtitle": "MRR excl. tax",
+      "link": "Billing",
+      "mrr": "MRR",
+      "mrrShort": "MRR · excl. tax",
+      "arr": "ARR",
+      "active": "Active subscriptions",
+      "trials": "Trials",
+      "compare": "Last year",
+      "previousYear": "Same period last year",
+      "vsPrevious": "vs previous month",
+      "health": "This month",
+      "mrrChange": "MRR change",
+      "churn": "Churn",
+      "trialConversion": "Trial conversion",
+      "subscriptions": "See subscriptions",
+      "emptyTitle": "No recurring revenue yet",
+      "emptyText": "The curve appears with the first paying subscription."
+    },
+    "companies": {
+      "title": "Companies",
+      "subtitle": "Activity and commercial status",
+      "link": "Companies",
+      "active": "Active companies",
+      "context": "+{n} in 30 days · {s} suspended",
+      "activeOf": "active out of {total}",
+      "new30": "new in 30 days",
+      "suspended": "suspended",
+      "mixActive": "Paying",
+      "mixTrial": "Trial",
+      "mixPastDue": "Past due",
+      "mixOther": "Other",
+      "created": "{n} created",
+      "newShort": "new companies"
+    },
+    "signups": {
+      "title": "Sign-ups",
+      "subtitle": "Measured funnel · 30-day totals, 7-day curve",
+      "link": "Funnel",
+      "kpi": "Sign-ups · 30 d",
+      "vsPrevious": "vs previous 30 d",
+      "context": "{started} journeys started · {rate} % conversion",
+      "completed": "completed",
+      "started": "started",
+      "conversion": "conversion",
+      "emptyTitle": "No sign-up started",
+      "emptyText": "The public sign-up was not opened in the last 30 days.",
+      "step": {
+        "started": "Start",
+        "industry": "Industry",
+        "plan": "Plan",
+        "addons": "Add-ons",
+        "company": "Company",
+        "account": "Account",
+        "completed": "Completed"
+      }
+    },
+    "health": {
+      "eyebrow": "Status at {time}",
+      "title": "Platform health",
+      "allGood": "All services respond normally.",
+      "issues": "{n} service(s) to watch",
+      "open": "Open Operations",
+      "status": {
+        "ok": "Operational",
+        "warning": "Watch",
+        "critical": "Incident",
+        "unknown": "Unknown"
+      },
+      "section": {
+        "healthy": "OK",
+        "warning": "Watch",
+        "critical": "Critical"
+      }
+    },
+    "trials": {
+      "title": "Trials",
+      "subtitle": "{total} running · {soon} end within 7 days",
+      "link": "Companies",
+      "expired": "Expired {n} d ago",
+      "today": "Ends today",
+      "inDays": "In {n} d",
+      "emptyTitle": "No trial running"
+    },
+    "modules": {
+      "title": "Module activity",
+      "subtitle": "Equipped companies · {n} modules tracked",
+      "link": "Catalog",
+      "byDomain": "By industry",
+      "emptyTitle": "No module enabled"
+    },
+    "plans": {
+      "title": "Plan mix",
+      "subtitle": "{n} companies",
+      "link": "Plans",
+      "companies": "companies",
+      "emptyTitle": "No subscription"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "subtitle": "Platform journal, without sign-ins",
+      "link": "Journal",
+      "system": "System",
+      "emptyTitle": "No recent event",
+      "actions": {
+        "company_created_by_platform": "company created from Platform",
+        "company_suspended": "company suspended",
+        "company_reactivated": "company reactivated",
+        "company_export_exceptional_rejected": "exceptional export rejected",
+        "company_export_exceptional_requested": "exceptional export requested",
+        "company_export_exceptional_approved": "exceptional export approved",
+        "automation_task_disabled": "automation disabled",
+        "automation_task_enabled": "automation enabled",
+        "billing_drift_detected": "billing drift detected",
+        "billing_wallet_admin_credit": "wallet credit added",
+        "company_export_exceptional_blocked": "exceptional export blocked",
+        "company_export_revoked": "export revoked",
+        "jobdomain_company_field_reset": "industry field reset",
+        "jobdomain_company_field_updated": "industry field updated",
+        "jobdomain_preset_recommendations_updated": "industry recommendations updated",
+        "organization_preset_created": "organization preset created",
+        "organization_preset_duplicated": "preset duplicated",
+        "organization_preset_published": "preset published",
+        "organization_preset_updated": "preset updated",
+        "platform_user_created": "Platform administrator created",
+        "preset_draft_updated": "preset draft updated",
+        "preset_drafted_from_legacy": "draft created from existing",
+        "preset_version_opened": "new preset version",
+        "role_created": "role created",
+        "role_deleted": "role deleted",
+        "role_updated": "role updated",
+        "subscription_plan_change_executed": "plan change applied",
+        "subscription_plan_change_requested": "plan change requested",
+        "two_factor_disable_refused": "2FA disable refused",
+        "two_factor_disabled": "2FA disabled",
+        "two_factor_enabled": "2FA enabled"
+      }
+    },
+    "support": {
+      "label": "Open tickets",
+      "context": "{u} unassigned · {r} resolved"
+    },
+    "security": {
+      "label": "Security alerts",
+      "context": "{c} critical · {h} high · {m} medium"
+    },
+    "collected": {
+      "label": "Collected this month",
+      "context": "Payments received since the 1st",
+      "multi": "Several currencies: see Billing"
+    },
+    "failed": {
+      "label": "Failed payments · 7 d",
+      "contextSome": "To follow up from Billing",
+      "contextNone": "No failure this week"
+    }
   }
 }

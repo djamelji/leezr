@@ -75,4 +75,9 @@ return [
     \App\Modules\Dashboard\Widgets\PlatformSupportOverviewWidget::class,
     \App\Modules\Dashboard\Widgets\PlatformSecurityOverviewWidget::class,
     \App\Modules\Dashboard\Widgets\PlatformCatalogOverviewWidget::class,
+
+    // Platform — cockpit Leezr 5.0 (ADR-855) : sources existantes (parcours ADR-849, abonnements, journal d'audit)
+    \App\Modules\Dashboard\Widgets\PlatformSignupsWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformTrialsEndingWidget::class,
+    \App\Modules\Dashboard\Widgets\PlatformRecentActivityWidget::class,
 ];

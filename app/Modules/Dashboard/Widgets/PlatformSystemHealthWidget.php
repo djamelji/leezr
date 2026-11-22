@@ -13,7 +13,7 @@ class PlatformSystemHealthWidget implements WidgetManifest
 
     public function key(): string { return 'platform.system_health'; }
     public function module(): string { return 'platform.dashboard'; }
-    public function layout(): array { return ['default_w' => 6, 'default_h' => 3, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 4]; }
+    public function layout(): array { return ['default_w' => 4, 'default_h' => 5, 'min_w' => 4, 'max_w' => 12, 'min_h' => 3, 'max_h' => 8]; } // ADR-855 — family size profile (bounds only relaxed)
     public function category(): string { return 'operations'; }
     public function component(): string { return 'PlatformSystemHealth'; }
     public function tags(): array { return ['system', 'health', 'operations']; }

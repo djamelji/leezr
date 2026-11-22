@@ -96,15 +96,20 @@ Tout bouton-icône a un **libellé accessible** et une infobulle. Il y a 697 bou
 
 `prefers-reduced-motion: reduce` coupe toutes les animations et transformations. C'est implémenté dans chaque composant du prototype.
 
-## 9. Composants Leezr proposés (cohérents avec Vuexy)
+## 9. Composants Leezr (L0 livré, ADR-855)
 
-| Composant | Rôle | Construit avec | État |
-|---|---|---|---|
-| `LzHero` | accueil cockpit ou espace de travail | VChip, VProgressCircular, VAvatar | prototype |
-| `LzKpiTile` | tuile KPI à profil de taille propre, compteur, mini-courbe | VCard, VueApexCharts, `useSurfacePresentation` | prototype |
-| `LzWidget` | enveloppe commune de widget (en-tête, période, lien, mode mesuré) | VCard, `useSurfacePresentation` | prototype |
-| `LzLivePanel` | panneau sombre de supervision | VCard `theme="dark"`, ApexCharts | prototype |
-| `LzTrendWidget` | tendance recomposée par mode | `LzWidget` | prototype |
-| segment « lz-seg » | choix court de 2 à 4 options (période, vue, rôle) | boutons natifs et jetons | prototype ; à extraire en `AppSegmented` |
+| Composant (`components/app/`) | Rôle |
+|---|---|
+| `AppPageHero` | accueil de page, variantes cockpit (Platform) et espace de travail (Company) |
+| `AppKpiTile` | tuile KPI à profil de taille propre (`resolveKpiMode`), compteur joué une fois, mini-courbe ; valeur absente = « — » avec sa raison ; mode intégré dans une tuile de grille |
+| `AppWidgetShell` | enveloppe commune : en-tête, période (`AppSegmented`), lien, états chargement, vide et erreur, mode mesuré transmis au contenu ; mode intégré dans une tuile de grille |
+| `AppLivePanel` | surface sombre de supervision, une seule par page ; le point « en direct » ne pulse que si la donnée est réellement rafraîchie |
+| `AppSegmented` | choix court de 2 à 4 options, accessible au clavier |
+| `AppEmptyState` | état vide ou erreur avec l'action suivante |
+| `AppStatusChip` | statut sémantique (une couleur = un sens) |
 
-**Politique UI (CLAUDE.md).** Ces composants **assemblent** des primitives Vuetify et Vuexy ; ils n'inventent aucune interaction. Avant tout usage métier, ils doivent être enregistrés comme presets Leezr dans `resources/ui/presets/` et documentés dans `docs/bmad/06-ui-policy.md` (lot L0). Aujourd'hui, ils ne vivent que dans `resources/js/components/lab/`, utilisés par les pages `design-lab` (`devOnly`).
+Composable : `composables/useCountUp`. Profils : `core/surface-engine/familyModes.js` (KPI, liste ; la famille graphique délègue au moteur ADR-748). Graphiques : `core/components/LzrApexChart.vue` (existant).
+
+**Règle du mouvement (apprise en L1).** Une animation d'entrée ne fait varier que la **position**, jamais l'opacité. Une tuile montée tardivement sous la ligne de flottaison est restée invisible, son fondu figé à l'état initial.
+
+**Politique UI.** Ces composants assemblent des primitives Vuetify et Vuexy existantes, sans interaction inventée ; ils sont consignés ici et dans l'ADR-855.

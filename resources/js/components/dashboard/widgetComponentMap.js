@@ -16,11 +16,12 @@ const map = {
   BillingLastRefunds: defineAsyncComponent(() => import('@/pages/platform/billing/_LastRefundsWidget.vue')),
 
   // KPIs (ADR-156)
-  BillingRevenueMtd: defineAsyncComponent(() => import('@/pages/platform/billing/_RevenueMtdWidget.vue')),
+  // ADR-855 — Leezr 5.0 cockpit presentation (same server widget, same data, size-aware KPI)
+  BillingRevenueMtd: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitCollected.vue')),
   BillingMrr: defineAsyncComponent(() => import('@/pages/platform/billing/_MrrWidget.vue')),
 
   // Risk (ADR-156)
-  BillingFailedPayments7d: defineAsyncComponent(() => import('@/pages/platform/billing/_FailedPayments7dWidget.vue')),
+  BillingFailedPayments7d: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitFailedPayments.vue')),
   BillingPendingDunning: defineAsyncComponent(() => import('@/pages/platform/billing/_PendingDunningWidget.vue')),
   BillingTopFailureReasons: defineAsyncComponent(() => import('@/pages/platform/billing/_TopFailureReasonsWidget.vue')),
 
@@ -69,14 +70,18 @@ const map = {
   AiAutoActions: defineAsyncComponent(() => import('@/pages/platform/ai/_AiAutoActionsWidget.vue')),
   AiConfidence: defineAsyncComponent(() => import('@/pages/platform/ai/_AiConfidenceWidget.vue')),
 
-  // Platform — panneaux composites éditoriaux (ADR-746, P2)
-  PlatformCommercialOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCommercialWidget.vue')),
-  PlatformPlanDistribution: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformPlanDistributionWidget.vue')),
-  PlatformCompaniesOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCompaniesWidget.vue')),
-  PlatformSystemHealth: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSystemHealthWidget.vue')),
-  PlatformSupportOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSupportWidget.vue')),
-  PlatformSecurityOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformSecurityWidget.vue')),
-  PlatformCatalogOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/_PlatformCatalogWidget.vue')),
+  // Platform — cockpit Leezr 5.0 (ADR-855) : mêmes widgets serveur, présentation V35 adaptée à la taille réelle.
+  // Les anciens composants (ADR-746) restent dans views/platform-dashboard/ jusqu'à la fin de L4.
+  PlatformCommercialOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitRevenue.vue')),
+  PlatformPlanDistribution: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitPlans.vue')),
+  PlatformCompaniesOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitCompanies.vue')),
+  PlatformSystemHealth: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitHealth.vue')),
+  PlatformSupportOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitSupport.vue')),
+  PlatformSecurityOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitSecurity.vue')),
+  PlatformCatalogOverview: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitModules.vue')),
+  PlatformSignups: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitSignups.vue')),
+  PlatformTrialsEnding: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitTrials.vue')),
+  PlatformRecentActivity: defineAsyncComponent(() => import('@/views/platform-dashboard/cockpit/CockpitActivity.vue')),
 }
 
 export function resolveWidgetComponent(componentKey) {
