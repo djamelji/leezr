@@ -11,7 +11,7 @@ Livré en local sur `dev`, sans push ni déploiement. La seule migration est add
 | L7.8 · Familles Company temps et absences | `53695159` | Planning, Temps et Absences ont chacun leur titre ; Absences s'affiche en liste tactile sur téléphone ; filtres de pointage alignés ; fiche Poste |
 | L7.9 · Accessibilité | `860bcba1` | 65 boutons-icônes nommés (il n'en reste aucun sans nom) ; tiroirs avec une fermeture nommée ; test sur toute l'application |
 | L7.10 · Titres anciens | `c9765f92` | Feuille de temps, Période de paie, Expédition, DSN, Intégration, Mes livraisons, Communications, Modèles de contrat, Modèles d'organisation |
-| L7.11 · Recette stabilisée | (voir §7) | cause démontrée : 429 sur les appels de démarrage ; correctif et non-régression |
+| L7.11 · Recette stabilisée | `efc3ea20` | cause démontrée : 429 sur les appels de démarrage ; correctif et non-régression |
 
 ## 2. Les neuf familles
 
