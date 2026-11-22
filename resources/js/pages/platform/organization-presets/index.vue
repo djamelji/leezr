@@ -5,7 +5,7 @@ import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
 
-definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: 'manage_jobdomains', navActiveLink: 'platform-catalog-tab' } }) // ADR-802 : rangé sous Catalogue (plus de menu dédié)
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: ['manage_jobdomains', 'view_jobdomains'], navActiveLink: 'platform-catalog-tab' } }) // ADR-802 : rangé sous Catalogue (plus de menu dédié)
 
 const { t } = useI18n()
 const router = useRouter()
@@ -87,6 +87,7 @@ onMounted(load)
     >
       <template #actions>
         <VBtn
+          v-platform-can="'manage_jobdomains'"
           color="primary"
           prepend-icon="tabler-plus"
           @click="createDialog = true"
@@ -158,6 +159,7 @@ onMounted(load)
               <VIcon :icon="item.status === 'published' ? 'tabler-eye' : 'tabler-edit'" />
             </IconBtn>
             <IconBtn
+              v-platform-can="'manage_jobdomains'"
               v-if="item.status === 'draft'"
               size="small"
               :title="t('orgPresetAdmin.publish')"
@@ -166,6 +168,7 @@ onMounted(load)
               <VIcon icon="tabler-rocket" />
             </IconBtn>
             <IconBtn
+              v-platform-can="'manage_jobdomains'"
               size="small"
               :title="t('orgPresetAdmin.duplicate')"
               @click="duplicate(item)"
@@ -173,6 +176,7 @@ onMounted(load)
               <VIcon icon="tabler-copy" />
             </IconBtn>
             <IconBtn
+              v-platform-can="'manage_jobdomains'"
               v-if="item.status !== 'archived'"
               size="small"
               :title="t('orgPresetAdmin.archive')"

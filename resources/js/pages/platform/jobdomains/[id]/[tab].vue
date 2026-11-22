@@ -17,7 +17,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.jobdomains',
-    permission: 'manage_jobdomains',
+    permission: ['manage_jobdomains', 'view_jobdomains'],
     navActiveLink: 'platform-catalog-tab',
   },
 })
@@ -333,6 +333,7 @@ const advanced = ref(null)
                 class="flex-grow-1"
               />
               <IconBtn
+                v-platform-can="'manage_jobdomains'"
                 :aria-label="t('presetEditor.remove')"
                 @click="refs.splice(refs.indexOf(r), 1)"
               >
@@ -340,6 +341,7 @@ const advanced = ref(null)
               </IconBtn>
             </div>
             <VBtn
+              v-platform-can="'manage_jobdomains'"
               size="small"
               variant="text"
               prepend-icon="tabler-plus"
@@ -355,6 +357,7 @@ const advanced = ref(null)
         </VCardText>
         <VCardActions class="justify-end">
           <VBtn
+            v-platform-can="'manage_jobdomains'"
             color="primary"
             variant="elevated"
             :loading="saving"
@@ -406,6 +409,7 @@ const advanced = ref(null)
             />
             <div class="d-flex justify-end mt-4">
               <VBtn
+                v-platform-can="'manage_jobdomains'"
                 color="primary"
                 :loading="saving"
                 data-test="jd-save-experience"
@@ -474,6 +478,7 @@ const advanced = ref(null)
           </template>
           <template #item.compatible="{ item }">
             <VCheckbox
+              v-platform-can:disable="'manage_jobdomains'"
               :model-value="isCompatible(item.key)"
               :disabled="isStart(item.key) || isRecommended(item.key)"
               hide-details
@@ -484,6 +489,7 @@ const advanced = ref(null)
           <template #item.start="{ item }">
             <div class="d-flex align-center gap-2">
               <VCheckbox
+                v-platform-can:disable="'manage_jobdomains'"
                 :model-value="isStart(item.key)"
                 :disabled="!!startDeps[item.key]"
                 hide-details
@@ -506,6 +512,7 @@ const advanced = ref(null)
           </template>
           <template #item.recommended="{ item }">
             <VCheckbox
+              v-platform-can:disable="'manage_jobdomains'"
               :model-value="isRecommended(item.key)"
               :disabled="isStart(item.key) || !!recommendedDeps[item.key]"
               hide-details
@@ -543,6 +550,7 @@ const advanced = ref(null)
         </VDataTable>
         <VCardActions class="justify-end">
           <VBtn
+            v-platform-can="'manage_jobdomains'"
             color="primary"
             variant="elevated"
             :loading="saving"
@@ -612,6 +620,7 @@ const advanced = ref(null)
               <VListItem :title="t('jobdomainExperience.activeLabel')">
                 <template #append>
                   <VSwitch
+                    v-platform-can:disable="'manage_jobdomains'"
                     :model-value="!!profile.identity.is_active"
                     :disabled="saving"
                     hide-details
@@ -624,6 +633,7 @@ const advanced = ref(null)
               <VListItem :title="t('jobdomainProfile.signupAvailable')">
                 <template #append>
                   <VSwitch
+                    v-platform-can:disable="'manage_jobdomains'"
                     :model-value="!!profile.identity.signup_available"
                     :disabled="saving || !profile.identity.is_active"
                     hide-details
@@ -722,6 +732,7 @@ const advanced = ref(null)
                 style="flex: 1 1 280px"
               />
               <VBtn
+                v-platform-can="'manage_jobdomains'"
                 color="primary"
                 :loading="saving"
                 @click="saveOrganization"

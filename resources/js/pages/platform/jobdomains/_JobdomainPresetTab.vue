@@ -107,6 +107,7 @@ onMounted(async () => {
         >{{ t('jobdomainTabs.shared', { list: state.shared_with.join(', ') }) }}</span>
       </div>
       <VBtn
+        v-platform-can="'manage_jobdomains'"
         variant="tonal"
         prepend-icon="tabler-edit"
         :loading="busy"
@@ -116,6 +117,7 @@ onMounted(async () => {
         {{ state.draft ? t('jobdomainTabs.continue') : t('jobdomainTabs.edit') }}
       </VBtn>
       <VBtn
+        v-platform-can="'manage_jobdomains'"
         v-if="state.draft"
         color="primary"
         :loading="busy"
@@ -140,6 +142,7 @@ onMounted(async () => {
         style="flex: 1 1 260px"
       />
       <VBtn
+        v-platform-can="'manage_jobdomains'"
         variant="tonal"
         :disabled="!shareChoice"
         @click="emit('link', shareChoice)"
@@ -260,6 +263,7 @@ onMounted(async () => {
           </VBtn>
           <VSpacer />
           <VBtn
+            v-platform-can="'manage_jobdomains'"
             variant="tonal"
             :loading="busy"
             data-test="jd-publish-variant"
@@ -268,6 +272,7 @@ onMounted(async () => {
             {{ t('jobdomainTabs.publishVariant') }}
           </VBtn>
           <VBtn
+            v-platform-can="'manage_jobdomains'"
             color="primary"
             :loading="busy"
             data-test="jd-publish-shared"

@@ -97,6 +97,7 @@ onMounted(async () => {
         {{ t('platformJobdomains.title') }}
         <VSpacer />
         <VBtn
+          v-platform-can="'manage_jobdomains'"
           size="small"
           prepend-icon="tabler-plus"
           @click="isCreateDialogOpen = true"
@@ -140,6 +141,7 @@ onMounted(async () => {
               {{ t('platformJobdomains.manage') }}
             </VBtn>
             <VBtn
+              v-platform-can="'manage_jobdomains'"
               :aria-label="$t('common.delete')"
               :title="$t('common.delete')"
               icon

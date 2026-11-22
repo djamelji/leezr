@@ -51,3 +51,8 @@ Les captures sont dans `captures/dev-recette/` (`<compte>-<thème>-<format>-<pag
 ## Platform
 
 Recette **non réalisée** : aucun compte Platform de recette n'existe sur DEV. La procédure de création, limitée et révocable, est dans [PLATFORM-RECIPE-ACCOUNT-DEV.md](PLATFORM-RECIPE-ACCOUNT-DEV.md).
+
+## Suite (ADR-863, en local, non déployé)
+
+- **A1 à A4** : corrigés. Avant/après sur le clone, aux tailles qui révélaient chaque défaut : `captures/dev-recette/a864/`.
+- **Recette Platform** : les droits de lecture `view_jobdomains`, `view_modules` et `view_document_catalog` sont prêts, avec un profil de recette prouvé sur le clone (`captures/dev-recette/platform-ro/`). La procédure est dans [PLATFORM-RECIPE-ACCOUNT-DEV.md](PLATFORM-RECIPE-ACCOUNT-DEV.md).

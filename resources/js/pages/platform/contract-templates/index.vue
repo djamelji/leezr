@@ -7,7 +7,7 @@ import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
 import ContractEditor from '@/pages/company/workforce/contract/_ContractEditor.vue'
 
-definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: 'manage_jobdomains' } })
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: ['manage_jobdomains', 'view_jobdomains'] } })
 
 const { t } = useI18n()
 const { toast } = useAppToast()
@@ -131,6 +131,7 @@ const saveEdit = async () => {
     >
       <template #actions>
         <VBtn
+          v-platform-can="'manage_jobdomains'"
           color="primary"
           prepend-icon="tabler-plus"
           @click="createOpen = true"
@@ -204,6 +205,7 @@ const saveEdit = async () => {
             <td><VChip :color="statusColor(tpl.status)" size="x-small" variant="tonal">{{ t('contractTpl.status.' + tpl.status, tpl.status) }}</VChip></td>
             <td>
               <AppSelect
+                v-platform-can:disable="'manage_jobdomains'"
                 :model-value="tpl.legal_status"
                 :items="legalOptions"
                 density="compact"
@@ -214,10 +216,10 @@ const saveEdit = async () => {
             </td>
             <td>
               <div class="d-flex gap-1 justify-end">
-                <VBtn v-if="tpl.status === 'draft'" size="x-small" variant="tonal" prepend-icon="tabler-edit" @click="openEdit(tpl)">{{ t('common.edit') }}</VBtn>
-                <VBtn v-if="tpl.status === 'draft'" size="x-small" color="success" variant="tonal" :loading="busyId === tpl.id" @click="onPublish(tpl)">{{ t('contractTpl.publish') }}</VBtn>
-                <VBtn v-if="tpl.status === 'published'" size="x-small" variant="tonal" prepend-icon="tabler-versions" :loading="busyId === tpl.id" @click="onVersion(tpl)">{{ t('contractTpl.newVersion') }}</VBtn>
-                <VBtn v-if="tpl.status !== 'archived'" size="x-small" variant="text" color="error" :loading="busyId === tpl.id" @click="onArchive(tpl)">{{ t('contractTpl.archive') }}</VBtn>
+                <VBtn v-platform-can="'manage_jobdomains'" v-if="tpl.status === 'draft'" size="x-small" variant="tonal" prepend-icon="tabler-edit" @click="openEdit(tpl)">{{ t('common.edit') }}</VBtn>
+                <VBtn v-platform-can="'manage_jobdomains'" v-if="tpl.status === 'draft'" size="x-small" color="success" variant="tonal" :loading="busyId === tpl.id" @click="onPublish(tpl)">{{ t('contractTpl.publish') }}</VBtn>
+                <VBtn v-platform-can="'manage_jobdomains'" v-if="tpl.status === 'published'" size="x-small" variant="tonal" prepend-icon="tabler-versions" :loading="busyId === tpl.id" @click="onVersion(tpl)">{{ t('contractTpl.newVersion') }}</VBtn>
+                <VBtn v-platform-can="'manage_jobdomains'" v-if="tpl.status !== 'archived'" size="x-small" variant="text" color="error" :loading="busyId === tpl.id" @click="onArchive(tpl)">{{ t('contractTpl.archive') }}</VBtn>
               </div>
             </td>
           </tr>
@@ -238,7 +240,7 @@ const saveEdit = async () => {
         </VCardText>
         <VCardText class="d-flex justify-end gap-3 pt-0">
           <VBtn variant="outlined" color="secondary" @click="createOpen = false">{{ t('common.cancel') }}</VBtn>
-          <VBtn color="primary" :loading="creating" :disabled="!createForm.name" @click="createTpl">{{ t('common.create') }}</VBtn>
+          <VBtn v-platform-can="'manage_jobdomains'" color="primary" :loading="creating" :disabled="!createForm.name" @click="createTpl">{{ t('common.create') }}</VBtn>
         </VCardText>
       </VCard>
     </VDialog>
@@ -265,10 +267,10 @@ const saveEdit = async () => {
         </div>
         <div class="text-caption text-medium-emphasis mb-1">{{ t('contractTpl.body') }}</div>
         <ContractEditor ref="editorRef" v-model="editForm.body_html" :placeholder="t('contractTpl.body')" class="mb-3" />
-        <VBtn variant="tonal" size="small" prepend-icon="tabler-file-type-pdf" :loading="previewing" class="mb-3" @click="previewPdf">{{ t('contractTpl.previewPdf') }}</VBtn>
+        <VBtn v-platform-can="'manage_jobdomains'" variant="tonal" size="small" prepend-icon="tabler-file-type-pdf" :loading="previewing" class="mb-3" @click="previewPdf">{{ t('contractTpl.previewPdf') }}</VBtn>
         <div class="d-flex gap-3 justify-end">
           <VBtn variant="outlined" @click="editOpen = false">{{ t('common.cancel') }}</VBtn>
-          <VBtn color="primary" :loading="editSaving" @click="saveEdit">{{ t('common.save') }}</VBtn>
+          <VBtn v-platform-can="'manage_jobdomains'" color="primary" :loading="editSaving" @click="saveEdit">{{ t('common.save') }}</VBtn>
         </div>
       </div>
     </VNavigationDrawer>

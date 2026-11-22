@@ -5004,7 +5004,12 @@
     "manager": "Responsable",
     "contract": "Contrat",
     "managerShort": "resp. {name}",
-    "nameMissing": "Nom non renseigné"
+    "nameMissing": "Nom non renseigné",
+    "tabShort": {
+      "people": "Personnes",
+      "hr": "Gestion RH",
+      "roles": "Rôles"
+    }
   },
   "home": {
     "title": "Accueil",
@@ -10274,6 +10279,12 @@
       "sentOn": "Envoyé le {date}",
       "external": "signature gérée par le prestataire, via l'e-mail reçu",
       "sign": "Signer"
+    },
+    "tabsShort": {
+      "overview": "Aperçu",
+      "documents": "Documents",
+      "payslips": "Bulletins",
+      "signatures": "Signatures"
     }
   },
   "actions": {

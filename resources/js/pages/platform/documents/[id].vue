@@ -7,7 +7,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.documents',
-    permission: 'manage_document_catalog', // ADR-801
+    permission: ['manage_document_catalog', 'view_document_catalog'], // ADR-801
     navActiveLink: 'platform-catalog-tab', // ADR-801.1 : ancien nom inexistant
   },
 })
@@ -325,6 +325,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                   <VCol cols="12">
                     <div class="d-flex gap-3 justify-end">
                       <VBtn
+                        v-platform-can="'manage_document_catalog'"
                         v-if="!documentType.is_archived"
                         variant="tonal"
                         color="warning"
@@ -335,6 +336,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                         {{ t('platformDocumentTypes.archive') }}
                       </VBtn>
                       <VBtn
+                        v-platform-can="'manage_document_catalog'"
                         v-else
                         variant="tonal"
                         color="success"
@@ -345,6 +347,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
                         {{ t('platformDocumentTypes.restore') }}
                       </VBtn>
                       <VBtn
+                        v-platform-can="'manage_document_catalog'"
                         type="submit"
                         :loading="saveLoading"
                       >

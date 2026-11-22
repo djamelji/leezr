@@ -16,6 +16,8 @@ import PendingAccessReview from './_PendingAccessReview.vue'
 import { useModuleStore } from '@/core/stores/module'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
+import { useDisplay } from 'vuetify'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 
 // ADR-767 : plus de `surface: 'structure'` — un manager/RH NON administratif détenant la facette RH
 // (`workforce.view`) doit atteindre ses collaborateurs. L'accès reste décidé par permission (facettes)
@@ -62,6 +64,16 @@ const initialTab = (props.section === 'roles' && canRoles.value) ? 'roles'
     : (canPeople.value ? 'people' : 'roles')
 
 const tab = ref(initialTab)
+
+// ADR-862 (A4) — on a phone the three views are whole buttons spread over the width (same navigation as Documents) :
+// « Rôles & autorisations » is never half hidden at the edge of a scroll strip.
+const { smAndDown } = useDisplay()
+
+const peopleSections = computed(() => [
+  canPeople.value && { value: 'people', icon: 'tabler-users', label: t('peopleList.tabPeople'), short: t('peopleList.tabShort.people') },
+  canHr.value && { value: 'hr', icon: 'tabler-table-options', label: t('peopleList.tabHr'), short: t('peopleList.tabShort.hr') },
+  canRoles.value && { value: 'roles', icon: 'tabler-shield-lock', label: t('peopleList.tabRoles'), short: t('peopleList.tabShort.roles') },
+].filter(Boolean))
 
 watch(tab, v => {
   // Changer de vue repart d'une URL propre (les filtres de la vue Gestion RH ne fuient pas ailleurs).
@@ -161,9 +173,18 @@ onMounted(() => {
     </header>
     <!-- ADR-818 : les embauches vivent dans l'espace « Embauches » (une seule liste, un seul assistant) -->
     <MemberHealth v-if="tab === 'people' && can('members.view')" />
+    <AppSectionNavigation
+      v-if="smAndDown"
+      v-model="tab"
+      class="mb-5"
+      :sections="peopleSections"
+      data-test="people-tabs-mobile"
+    />
     <VTabs
+      v-else
       v-model="tab"
       class="v-tabs-pill mb-5"
+      show-arrows
       data-test="people-tabs"
     >
       <VTab

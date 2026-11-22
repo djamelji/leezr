@@ -3,8 +3,9 @@
 // sans JSON brut. Contrôles de déplacement explicites (fiables), validation serveur au save/publish.
 import { $platformApi } from '@/utils/platformApi'
 import { useAppToast } from '@/composables/useAppToast'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
-definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: 'manage_jobdomains', navActiveLink: 'platform-catalog-tab' } }) // ADR-802 : rangé sous Catalogue (plus de menu dédié)
+definePage({ meta: { layout: 'platform', platform: true, module: 'platform.jobdomains', permission: ['manage_jobdomains', 'view_jobdomains'], navActiveLink: 'platform-catalog-tab' } }) // ADR-802 : rangé sous Catalogue (plus de menu dédié)
 
 const { t } = useI18n()
 const route = useRoute()
@@ -21,7 +22,8 @@ const roleDialog = ref(false)
 const deptForm = ref({ key: null, name: '', parent_key: null })
 const roleForm = ref({ key: null, title: '', department_key: null, level: '' })
 
-const readOnly = computed(() => preset.value?.status !== 'draft')
+const platformAuth = usePlatformAuthStore()
+const readOnly = computed(() => preset.value?.status !== 'draft' || !platformAuth.hasPermission('manage_jobdomains')) // ADR-863 : a reader never edits
 
 const load = async () => {
   preset.value = await $platformApi(`/organization-presets/${route.params.id}`)
@@ -151,6 +153,7 @@ watch(() => route.params.id, load)
           {{ t('orgPresetAdmin.publish') }}
         </VBtn>
         <VBtn
+          v-platform-can="'manage_jobdomains'"
           variant="tonal"
           prepend-icon="tabler-copy"
           @click="duplicate"

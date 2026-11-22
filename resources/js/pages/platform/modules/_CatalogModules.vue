@@ -192,6 +192,7 @@ const onPlatformRowClick = (_event, { item }) => {
           {{ t('platformModules.title') }}
         </div>
         <VBtn
+          v-platform-can="'manage_modules'"
           variant="tonal"
           color="secondary"
           size="small"
@@ -364,6 +365,7 @@ const onPlatformRowClick = (_event, { item }) => {
             </template>
             <template #item.status="{ item }">
               <VSwitch
+                v-platform-can:disable="'manage_modules'"
                 :model-value="item.is_enabled_globally"
                 :loading="togglingKey === item.key"
                 :disabled="item.type === 'core'"
@@ -451,6 +453,7 @@ const onPlatformRowClick = (_event, { item }) => {
             <template #item.status="{ item }">
               <div @click.stop>
                 <VSwitch
+                  v-platform-can:disable="'manage_modules'"
                   :model-value="item.is_enabled_globally"
                   :loading="togglingKey === item.key"
                   :disabled="togglingKey === item.key"

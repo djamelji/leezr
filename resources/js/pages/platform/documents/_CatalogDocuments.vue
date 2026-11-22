@@ -189,6 +189,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
         {{ t('platformDocumentTypes.title') }}
         <VSpacer />
         <VBtn
+          v-platform-can="'manage_document_catalog'"
           size="small"
           variant="tonal"
           color="secondary"
@@ -199,6 +200,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
           {{ t('platformDocumentTypes.syncFromCatalog') }}
         </VBtn>
         <VBtn
+          v-platform-can="'manage_document_catalog'"
           size="small"
           prepend-icon="tabler-plus"
           @click="isCreateDialogOpen = true"
@@ -279,6 +281,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
               {{ t('common.manage') }}
             </VBtn>
             <VBtn
+              v-platform-can="'manage_document_catalog'"
               :aria-label="$t('common.archive')"
               v-if="!item.is_archived"
               icon
@@ -297,6 +300,7 @@ const formatSuggestions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']
               </VTooltip>
             </VBtn>
             <VBtn
+              v-platform-can="'manage_document_catalog'"
               :aria-label="$t('l7.a11y.restore')"
               v-else
               icon

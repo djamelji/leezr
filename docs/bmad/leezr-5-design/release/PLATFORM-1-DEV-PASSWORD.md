@@ -18,6 +18,11 @@ Le compte n'est pas verrouillé, et ne doit pas l'être tant qu'une récupérati
   1. demander « Mot de passe oublié » sur `https://dev.leezr.com/platform/forgot-password` ;
   2. le message de réinitialisation, avec son lien à usage unique, est écrit dans `/var/www/clients/client1/web3/shared/storage/logs/` ;
   3. le lire depuis un accès SSH au serveur web3.
+- **Vérifié par l'agent le 2026-11-22, en lecture seule** (ADR-863). Aucune réinitialisation n'a été déclenchée, aucun jeton créé.
+  - `MAIL_MAILER=log`, et le canal de log par défaut est `stack` → `single`. Le message de réinitialisation est donc écrit dans `shared/storage/logs/laravel.log`.
+  - Ce dossier appartient à `web3`, le compte même de l'accès SSH `leezr-dev`, qui le lit.
+  - Les routes `POST /api/platform/forgot-password` et `POST /api/platform/reset-password` existent, limitées à 5 essais par minute.
+  - Une réinitialisation ferme toutes les sessions ouvertes (`AccountSecurity::revokeSessions`, ADR-838).
 - **À confirmer par le propriétaire avant l'étape 1** : il ouvre bien une session SSH sur web3, avec sa propre clé ou l'alias `leezr-dev`, et liste ce dossier de logs. Si ce n'est pas le cas, on s'arrête là.
 
 ## 1. Changer le mot de passe (propriétaire)

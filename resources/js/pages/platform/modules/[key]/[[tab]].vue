@@ -9,7 +9,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.modules',
-    permission: 'manage_modules',
+    permission: ['manage_modules', 'view_modules'],
     navActiveLink: 'platform-catalog-tab',
   },
 })
@@ -624,6 +624,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
           <div class="d-flex align-center gap-2">
             <span class="text-body-2 text-medium-emphasis">{{ t('platformModules.global') }}</span>
             <VSwitch
+              v-platform-can:disable="'manage_modules'"
               :model-value="mod.is_enabled_globally"
               :loading="togglingGlobal"
               :aria-label="t('platformModules.global')"
@@ -847,6 +848,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
 
           <!-- Save button -->
           <VBtn
+            v-platform-can="'manage_modules'"
             :loading="isSaving"
             :disabled="!isDirty"
             :variant="isDirty ? 'elevated' : 'tonal'"
@@ -1021,6 +1023,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
           </VCard>
           <!-- Save button -->
           <VBtn
+            v-platform-can="'manage_modules'"
             :loading="isSaving"
             :disabled="!isDirty"
             :variant="isDirty ? 'elevated' : 'tonal'"
@@ -1139,12 +1142,14 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
             <VCardText>
               <div class="d-flex flex-column gap-y-4">
                 <VSwitch
+                  v-platform-can:disable="'manage_modules'"
                   v-model="platformConfig.is_listed"
                   :label="t('platformModules.listedInCatalog')"
                   color="primary"
                   hide-details
                 />
                 <VSwitch
+                  v-platform-can:disable="'manage_modules'"
                   v-model="platformConfig.is_sellable"
                   :label="t('platformModules.sellable')"
                   color="primary"
@@ -1185,6 +1190,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
             <VCardText>
               <!-- ADR-207: Addon pricing toggle -->
               <VSwitch
+                v-platform-can:disable="'manage_modules'"
                 v-model="addonEnabled"
                 :label="addonEnabled ? t('platformModules.addonPricingEnabled') : t('platformModules.addonPricingDisabled')"
                 :disabled="!canHaveAddonPricing"
@@ -1459,6 +1465,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
                         class="d-flex align-end"
                       >
                         <IconBtn
+                          v-platform-can="'manage_modules'"
                           :aria-label="$t('common.close')"
                           v-if="tiers.length > 1"
                           color="error"
@@ -1470,6 +1477,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
                     </VRow>
                   </div>
                   <VBtn
+                    v-platform-can="'manage_modules'"
                     variant="tonal"
                     size="small"
                     prepend-icon="tabler-plus"
@@ -1525,6 +1533,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
 
           <!-- Save button -->
           <VBtn
+            v-platform-can="'manage_modules'"
             :loading="isSaving"
             :disabled="!isDirty"
             :variant="isDirty ? 'elevated' : 'tonal'"
@@ -1658,6 +1667,7 @@ watchEffect(() => { if (mod.value) document.title = `${mod.value.name} · ${t(`p
 
           <!-- Save button -->
           <VBtn
+            v-platform-can="'manage_modules'"
             :loading="isSaving"
             :disabled="!isDirty"
             :variant="isDirty ? 'elevated' : 'tonal'"

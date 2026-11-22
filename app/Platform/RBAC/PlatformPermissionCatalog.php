@@ -18,6 +18,19 @@ class PlatformPermissionCatalog
     public const EXPLICIT_GRANT_ONLY = ['exceptional_company_export'];
 
     /**
+     * ADR-863 — read-only catalog rights (JobDomains, Modules, Document catalog had a manage right only). They exist
+     * for a dedicated reader role (e.g. a DEV recipe account) : never offered automatically to a historical role
+     * (admin already holds the manage rights, a superset).
+     */
+    public const CATALOG_READ_ONLY = ['view_jobdomains', 'view_modules', 'view_document_catalog'];
+
+    /** Permissions the admin role is never offered automatically, and that « every permission » does not count. */
+    public static function notOfferedToAdmin(): array
+    {
+        return [...self::EXPLICIT_GRANT_ONLY, ...self::CATALOG_READ_ONLY];
+    }
+
+    /**
      * All platform permissions, aggregated from module manifests.
      *
      * @return array<array{key: string, label: string, module_key: string, is_admin: bool}>

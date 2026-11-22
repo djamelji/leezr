@@ -28,7 +28,7 @@ const TABS = [
   { value: 'payslips', icon: 'tabler-receipt', cap: 'payslips' },
   { value: 'signatures', icon: 'tabler-writing-sign', cap: 'signatures' },
 ]
-const sections = computed(() => TABS.filter(x => space.can(x.cap)).map(x => ({ value: x.value, icon: x.icon, label: t(`mySpace.tabs.${x.value}`) })))
+const sections = computed(() => TABS.filter(x => space.can(x.cap)).map(x => ({ value: x.value, icon: x.icon, label: t(`mySpace.tabs.${x.value}`), short: t(`mySpace.tabsShort.${x.value}`) }))) // ADR-862 (A2) : whole phone labels
 const currentTab = computed({
   get: () => route.params.tab,
   set: tab => router.push({ name: 'company-my-space-tab', params: { tab } }),

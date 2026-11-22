@@ -64,7 +64,8 @@ export const usePlatformAuthStore = defineStore('platformAuth', {
     hasPermission(key) {
       if (this.isSuperAdmin) return true
 
-      return Array.isArray(this._permissions) && this._permissions.includes(key)
+      // ADR-863 — an array means « any of » (read OR manage right), as for the company store
+      return Array.isArray(this._permissions) && [].concat(key).some(k => this._permissions.includes(k))
     },
 
     async login({ email, password }) {

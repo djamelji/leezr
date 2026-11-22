@@ -30295,3 +30295,41 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
   - le changement de mot de passe est laissé au propriétaire ([PLATFORM-1-DEV-PASSWORD.md](leezr-5-design/release/PLATFORM-1-DEV-PASSWORD.md)) ;
   - la méthode de récupération doit être confirmée avant toute action ;
   - le contrôle en lecture seule `platform1-check.sh` sert à vérifier le résultat.
+
+## ADR-863 — Leezr 5.0 fin de recette DEV : quatre défauts visuels corrigés, droits de lecture des catalogues Platform
+
+- **Date** : 2026-11-22.
+- **Contexte** :
+  - La recette navigateur sur DEV (`ce098d05`, comptes fictifs `@leezr.test`) est validée : 149 chargements, 0 erreur, 0 refus API, 0 écriture. Elle a relevé quatre défauts visuels, A1 à A4.
+  - La recette Platform n'a pas pu être faite : JobDomains, Modules et Catalogue documentaire n'avaient qu'un droit de gestion (`manage_*`). Un compte de recette aurait donc dû recevoir des droits d'écriture.
+- **Décision**
+  - **A1 Expéditions, téléphone** : une carte par expédition (référence, état, trajet complet, chauffeur), avec le même lien que la ligne du tableau. Les filtres d'état passent à la ligne, la recherche prend toute la largeur. Les droits sont inchangés : mêmes données, mêmes actions.
+  - **A2 Mon espace, téléphone** : libellés courts entiers (Aperçu, Documents, Bulletins, Signatures). Le regroupement « Plus » existant reste actif quand la place manque.
+  - **A3 Bande d'indicateurs** : le libellé passe à la ligne dès que **sa cellule** est trop étroite, quelle que soit la largeur d'écran (auparavant seulement sous 599 px). Un mot n'est coupé que s'il est à lui seul plus large que la cellule.
+  - **A4 Personnes, téléphone** : les trois vues deviennent la navigation mobile commune (`AppSectionNavigation`, libellés courts), sans bande à défilement. Sur ordinateur, `show-arrows` signale les onglets supplémentaires.
+  - **Droits de lecture** : `view_jobdomains`, `view_modules` et `view_document_catalog` sont déclarés par leurs modules, chacun avec un bundle « lecture seule ».
+    - Le middleware `platform.permission:manage_x,view_x` accepte le droit de lecture **pour GET et HEAD seulement**. Toute écriture exige toujours `manage_x`, y compris un POST qui ne fait que lire, comme l'aperçu PDF. Une route sans second argument se comporte exactement comme avant.
+  - **Pas d'attribution automatique** : ces droits ne sont **jamais proposés** au rôle `admin` (`PlatformPermissionCatalog::notOfferedToAdmin()`), et la mesure « toutes les permissions » ne les compte pas. Les rôles historiques sont inchangés.
+  - **Interface**
+    - Les pages et la navigation acceptent la lecture.
+    - `platformAuth.hasPermission` accepte un tableau, au sens « l'un de ».
+    - La nouvelle directive `v-platform-can` masque les actions d'écriture ; avec `:disable`, elle laisse visibles mais inertes les interrupteurs qui montrent un état.
+    - L'éditeur de presets d'organisation passe en lecture seule pour un lecteur.
+- **Preuves**
+  - **Captures** : avant/après sur le clone, aux tailles qui révélaient chaque défaut (390 px et 1024 px), dans `captures/dev-recette/a864/`.
+    - Avant : tableau des expéditions coupé ; « Mes docu… » ; « Taux de conf… » ; « Rôles & autorisations » hors écran.
+    - Après : 0 libellé coupé, 0 élément hors écran, 0 débordement.
+  - **Test `Adr863CatalogReadOnlyTest`** :
+    - un lecteur lit les 6 familles d'API, et 10 écritures lui sont refusées (403) ;
+    - sans droit, les lectures restent refusées ;
+    - un droit de lecture n'ouvre que sa propre famille ;
+    - `manage_modules` écrit toujours ;
+    - le rôle `admin` ne reçoit pas les nouveaux droits, même après une seconde synchronisation.
+  - **Profil de recette sur le clone, dans Chrome** : un rôle `recette_lecture` de 12 droits de lecture, sur ordinateur clair et sur mobile sombre.
+    - Toutes les pages V35 et catalogues sont lues, sans erreur JavaScript ni refus API.
+    - Aucun bouton d'écriture visible, aucun interrupteur actif.
+    - Utilisateurs et Rôles ne montrent que le journal autorisé.
+    - Révocation : suppression de l'utilisateur puis du rôle ; la connexion répond ensuite 401.
+- **Conséquences**
+  - Le compte Platform de recette sur DEV n'aura **aucun droit de gestion**. Sa création reste un GO distinct du propriétaire, après le déploiement de ce lot : `release/PLATFORM-RECIPE-ACCOUNT-DEV.md`.
+  - Le compte Platform n° 1 de DEV accepte toujours le mot de passe public. La voie de récupération a été vérifiée sans être déclenchée (`release/PLATFORM-1-DEV-PASSWORD.md`).

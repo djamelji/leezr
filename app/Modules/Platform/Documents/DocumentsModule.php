@@ -22,6 +22,7 @@ class DocumentsModule implements ModuleDefinition
             ),
             permissions: [
                 ['key' => 'manage_document_catalog', 'label' => 'Manage Document Type Catalog'],
+                ['key' => 'view_document_catalog', 'label' => 'View the document type catalog (read only)'], // ADR-863
             ],
             bundles: [
                 [
@@ -29,6 +30,12 @@ class DocumentsModule implements ModuleDefinition
                     'label' => 'Document Catalog',
                     'hint' => 'Manage system document types, validation rules, and archival.',
                     'permissions' => ['manage_document_catalog'],
+                ],
+                [
+                    'key' => 'documents.catalog.reader', // ADR-863
+                    'label' => 'Document Catalog (read only)',
+                    'hint' => 'See the document types without changing them.',
+                    'permissions' => ['view_document_catalog'],
                 ],
             ],
             scope: 'admin',

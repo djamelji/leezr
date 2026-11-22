@@ -43,7 +43,7 @@ class PlatformSeeder extends Seeder
         // included) ; a permission an administrator removed from it in Platform is never re-imposed.
         // ADR-852 — EXCEPT the permissions decided « granted explicitly only » (two-operator procedures) : never offered
         // automatically, even to admin (ADR-846 : exceptional company data export).
-        $byKey = array_diff_key(PlatformPermission::pluck('id', 'key')->all(), array_flip(\App\Platform\RBAC\PlatformPermissionCatalog::EXPLICIT_GRANT_ONLY));
+        $byKey = array_diff_key(PlatformPermission::pluck('id', 'key')->all(), array_flip(\App\Platform\RBAC\PlatformPermissionCatalog::notOfferedToAdmin())); // ADR-863 : + catalog read-only rights
         $attach = SystemSync::offerMembers('platform_role_permission', 'admin', array_keys($byKey),
             $admin->permissions()->pluck('platform_permissions.key')->all(), $freshPermissions, $admin->wasRecentlyCreated);
         if ($attach !== []) {

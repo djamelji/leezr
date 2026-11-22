@@ -115,7 +115,7 @@ class Adr801RationalizationP0Test extends TestCase
             if (str_contains($meta, 'public: true') || in_array($page, self::PLATFORM_PAGES_WITHOUT_PERMISSION, true)) {
                 continue;
             }
-            if (! preg_match("/\bpermission:\s*'([^']+)'/", $meta, $single) && ! preg_match('/anyPermission:\s*\[([^\]]+)\]/', $meta, $any)) {
+            if (! preg_match("/\bpermission:\s*'([^']+)'/", $meta, $single) && ! preg_match('/\b(?:anyPermission|permission):\s*\[([^\]]+)\]/', $meta, $any) /* ADR-863 : permission: [manage, view] */) {
                 $missing[] = $page;
 
                 continue;

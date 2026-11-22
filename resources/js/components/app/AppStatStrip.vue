@@ -55,8 +55,11 @@ const cols = computed(() => Math.min(Math.max(props.items.length, 2), 5))
 }
 .app-stat-strip__cell { padding: 14px 18px; min-inline-size: 0; }
 .app-stat-strip__cell + .app-stat-strip__cell { border-inline-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
-.app-stat-strip__label { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.app-stat-strip__text { overflow: hidden; text-overflow: ellipsis; }
+/* ADR-862 (A3) — the label wraps whenever ITS cell is too narrow (tablet with 5 cells, side panel, phone), never
+   « Taux de conf… » : the cell width decides, not a viewport breakpoint. Words break only when a single word is wider. */
+.app-stat-strip__label { display: flex; align-items: flex-start; gap: 6px; font-size: 0.8125rem; line-height: 1.3; color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity)); }
+.app-stat-strip__text { min-inline-size: 0; overflow-wrap: break-word; }
+.app-stat-strip__label :deep(.v-icon) { margin-block-start: 1px; flex-shrink: 0; }
 .app-stat-strip__value { margin-block-start: 4px; font-size: 1.25rem; font-weight: 600; line-height: 1.3; color: rgba(var(--v-theme-on-surface), var(--v-high-emphasis-opacity)); }
 .app-stat-strip__icon--muted { color: rgba(var(--v-theme-on-surface), var(--v-disabled-opacity)); }
 .app-stat-strip__icon--success { color: rgb(var(--v-theme-success)); }
@@ -67,10 +70,6 @@ const cols = computed(() => Math.min(Math.max(props.items.length, 2), 5))
   .app-stat-strip__cell:nth-child(odd) { border-inline-start: 0; }
   .app-stat-strip__cell:nth-child(n+3) { border-block-start: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); }
   .app-stat-strip__cell { padding: 12px 14px; }
-  /* ADR-862 — on a phone the label wraps (two lines at most) instead of « Taux de conf… » ; the help stays at the end */
-  .app-stat-strip__label { align-items: flex-start; white-space: normal; line-height: 1.3; }
-  .app-stat-strip__text { overflow: visible; overflow-wrap: anywhere; }
-  .app-stat-strip__label :deep(.v-icon) { margin-block-start: 1px; flex-shrink: 0; }
   /* an odd last cell spans the row (no lone half-cell) */
   .app-stat-strip__cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }

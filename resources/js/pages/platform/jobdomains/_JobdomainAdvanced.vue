@@ -354,6 +354,7 @@ const classTone = { certain: 'text-success', partial: 'text-warning', legacy_onl
           data-test="jd-from-legacy"
         />
         <VBtn
+          v-platform-can="'manage_jobdomains'"
           variant="tonal"
           :loading="planLoading"
           data-test="jd-load-plan"

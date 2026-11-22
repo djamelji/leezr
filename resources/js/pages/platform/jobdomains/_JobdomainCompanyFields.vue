@@ -208,6 +208,7 @@ watch(() => draft.value.visible, visible => {
           </td>
           <td class="text-end">
             <IconBtn
+              v-platform-can="'manage_jobdomains'"
               :aria-label="t('common.edit')"
               :data-test="`jd-field-edit-${f.code}`"
               @click="open(f)"
@@ -215,6 +216,7 @@ watch(() => draft.value.visible, visible => {
               <VIcon icon="tabler-pencil" />
             </IconBtn>
             <IconBtn
+              v-platform-can="'manage_jobdomains'"
               v-if="f.custom"
               :aria-label="t('jobdomainCompanyFields.reset')"
               :disabled="saving"

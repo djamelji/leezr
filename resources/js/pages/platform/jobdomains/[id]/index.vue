@@ -6,7 +6,7 @@ definePage({
     layout: 'platform',
     platform: true,
     module: 'platform.jobdomains',
-    permission: 'manage_jobdomains',
+    permission: ['manage_jobdomains', 'view_jobdomains'],
     navActiveLink: 'platform-catalog-tab',
   },
 })

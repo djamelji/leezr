@@ -1,5 +1,6 @@
 // ADR-433: Global directives registration
 import { useAuthStore } from '@/core/stores/auth'
+import { usePlatformAuthStore } from '@/core/stores/platformAuth'
 
 /**
  * v-can directive — hides element if user lacks the specified permission.
@@ -20,6 +21,28 @@ export default function registerDirectives(app) {
       updateVisibility(el, binding)
     },
   })
+
+  // ADR-863 — Platform twin of v-can (read-only catalog roles) : `v-platform-can="'manage_modules'"` hides a write
+  // control ; `v-platform-can:disable="…"` keeps it visible (a switch shows the state) but inert. The server refuses
+  // the write anyway (403) : this only keeps a reader from meeting buttons that cannot work.
+  const platformCan = (el, binding) => {
+    const auth = usePlatformAuthStore()
+    const ok = [].concat(binding.value).some(p => auth.hasPermission(p))
+    if (binding.arg === 'disable') {
+      el.style.pointerEvents = ok ? '' : 'none'
+      el.style.opacity = ok ? '' : '0.6'
+      el.setAttribute('aria-disabled', ok ? 'false' : 'true')
+      if (!ok) el.querySelectorAll('input,button').forEach(x => { x.disabled = true }) // never re-enables what Vue disabled
+    }
+    else if (!ok) {
+      el.style.setProperty('display', 'none', 'important')
+    }
+    else {
+      el.style.removeProperty('display')
+    }
+  }
+
+  app.directive('platform-can', { mounted: platformCan, updated: platformCan })
 }
 
 function updateVisibility(el, binding) {

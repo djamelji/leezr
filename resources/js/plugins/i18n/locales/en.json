@@ -5003,7 +5003,12 @@
     "manager": "Manager",
     "contract": "Contract",
     "managerShort": "mgr. {name}",
-    "nameMissing": "Name not provided"
+    "nameMissing": "Name not provided",
+    "tabShort": {
+      "people": "People",
+      "hr": "HR",
+      "roles": "Roles"
+    }
   },
   "home": {
     "title": "Home",
@@ -10273,6 +10278,12 @@
       "sentOn": "Sent on {date}",
       "external": "signature handled by the provider, through the e-mail you received",
       "sign": "Sign"
+    },
+    "tabsShort": {
+      "overview": "Overview",
+      "documents": "Documents",
+      "payslips": "Payslips",
+      "signatures": "Signatures"
     }
   },
   "actions": {

@@ -55,7 +55,7 @@ const suggestionGroups = computed(() => [
         icon: 'tabler-briefcase',
         title: t('globalSearch.jobDomains'),
         url: { name: 'platform-catalog-tab', params: { tab: 'jobdomains' } }, // ADR-801.1 : ancien nom inexistant
-        permission: 'manage_jobdomains',
+        permission: ['manage_jobdomains', 'view_jobdomains'],
       },
       {
         icon: 'tabler-forms',
@@ -67,7 +67,7 @@ const suggestionGroups = computed(() => [
         icon: 'tabler-puzzle',
         title: t('globalSearch.modules'),
         url: { name: 'platform-catalog-tab', params: { tab: 'modules' } },
-        permission: 'manage_modules',
+        permission: ['manage_modules', 'view_modules'],
       },
       {
         icon: 'tabler-settings',

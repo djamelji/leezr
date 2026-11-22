@@ -234,7 +234,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Modules
-    Route::middleware(['module.active:platform.modules', 'platform.permission:manage_modules'])->group(function () {
+    Route::middleware(['module.active:platform.modules', 'platform.permission:manage_modules,view_modules'])->group(function () { // ADR-863 : GET also with view_modules
         Route::get('/modules', [ModuleController::class, 'index']);
         Route::post('/modules/sync', [ModuleController::class, 'sync']);
         Route::get('/modules/{key}', [ModuleController::class, 'show']);
@@ -312,7 +312,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     });
 
     // Document Type Catalog (ADR-182 → platform.documents module)
-    Route::middleware(['module.active:platform.documents', 'platform.permission:manage_document_catalog'])->group(function () {
+    Route::middleware(['module.active:platform.documents', 'platform.permission:manage_document_catalog,view_document_catalog'])->group(function () { // ADR-863 : GET also with view_document_catalog
         Route::get('/documents', [DocumentTypeCatalogController::class, 'index']);
         Route::get('/documents/{id}', [DocumentTypeCatalogController::class, 'show']);
         Route::post('/documents', [DocumentTypeCatalogController::class, 'store']);
@@ -601,7 +601,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
     Route::post('/heartbeat', fn () => response()->noContent());
 
     // Job Domains (CRUD)
-    Route::middleware(['module.active:platform.jobdomains', 'platform.permission:manage_jobdomains'])->group(function () {
+    Route::middleware(['module.active:platform.jobdomains', 'platform.permission:manage_jobdomains,view_jobdomains'])->group(function () { // ADR-863 : GET also with view_jobdomains
         Route::get('/jobdomains', [JobdomainController::class, 'index']);
         Route::get('/jobdomains/{id}', [JobdomainController::class, 'show']);
         Route::post('/jobdomains', [JobdomainController::class, 'store']);
@@ -663,7 +663,7 @@ Route::middleware(['auth:platform', 'session.governance'])->group(function () {
         $pe = \App\Modules\Platform\Presets\Http\PlatformPresetEditorController::class;
         $jm = \App\Modules\Platform\Jobdomains\Http\JobdomainModernizationController::class;
         $kinds = ['catalog', 'rbac', 'requirements', 'planning', 'organization'];
-        Route::middleware('platform.permission:manage_jobdomains|presets.view')->group(function () use ($pp, $pe, $jm, $kinds) {
+        Route::middleware('platform.permission:manage_jobdomains|presets.view|view_jobdomains')->group(function () use ($pp, $pe, $jm, $kinds) {
             Route::get('/presets', [$pp, 'index']);
             Route::get('/presets/meta', [$pe, 'meta']);
             Route::get('/presets/{kind}/{from}/diff/{to}', [$pp, 'diff'])->whereIn('kind', $kinds);
