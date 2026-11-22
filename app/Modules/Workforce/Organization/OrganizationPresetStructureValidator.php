@@ -73,6 +73,10 @@ class OrganizationPresetStructureValidator
             if ($dk !== null && $dk !== '' && ! isset($deptSet[$dk])) {
                 $errors[] = "job_role_department_unknown:{$r['key']}";
             }
+            // ADR-862 : activities a position normally exercises — only known activities (FunctionActivity)
+            if (array_diff((array) ($r['activities'] ?? []), \App\Core\Fields\TagDictionary::ACTIVITIES)) {
+                $errors[] = "job_role_activity_unknown:{$r['key']}";
+            }
         }
 
         return array_values(array_unique($errors));

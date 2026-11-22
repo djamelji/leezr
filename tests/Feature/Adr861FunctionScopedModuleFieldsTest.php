@@ -112,10 +112,14 @@ class Adr861FunctionScopedModuleFieldsTest extends TestCase
         $this->assertFalse($this->required($this->office, 'bureau'), 'office worker : no activity, no licence');
         $this->assertFalse($this->required($this->manager, 'bureau'));
 
-        // the manager who drives now and then : a delivery assigned → licence asked (evidence, not the access role)
+        // the manager who drives now and then : ADR-862 — a delivery assigned is a HINT, not a durable obligation ...
         Shipment::create(['company_id' => $this->company->id, 'created_by_user_id' => $this->driver->id, 'assigned_to_user_id' => $this->manager->id,
             'reference' => 'L76-'.uniqid(), 'status' => Shipment::STATUS_PLANNED, 'origin_address' => 'A', 'destination_address' => 'B']);
-        $this->assertTrue($this->required($this->manager, 'bureau'));
+        $this->assertFalse($this->required($this->manager, 'bureau'), 'deliveries alone never require the licence');
+        $this->assertTrue(FunctionActivity::hinted($this->company->id, $this->manager->id, 'driving'), '… they hint that someone should declare it');
+        // ... the explicit declaration on the person's file does (business declaration, durable)
+        $this->employee(['user_id' => $this->manager->id, 'metadata' => ['activities' => ['driving']]]);
+        $this->assertTrue($this->required($this->manager, 'bureau'), 'declared on the person : licence asked');
 
         // the form follows the same rule (no tags passed = person unknown → role tags only)
         $this->flushCaches();

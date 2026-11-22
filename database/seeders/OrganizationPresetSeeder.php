@@ -34,7 +34,7 @@ class OrganizationPresetSeeder extends Seeder
                     'job_roles' => [
                         ['key' => 'ops_manager', 'title' => "Responsable d'exploitation", 'department_key' => 'exploitation', 'level' => 'manager'],
                         ['key' => 'planner', 'title' => 'Planification', 'department_key' => 'exploitation', 'level' => 'agent'],
-                        ['key' => 'driver', 'title' => 'Livreur', 'department_key' => 'exploitation', 'level' => 'agent'],
+                        ['key' => 'driver', 'title' => 'Livreur', 'department_key' => 'exploitation', 'level' => 'agent', 'activities' => ['driving']], // ADR-862 : a delivery driver drives ; the operations manager does not by default
                         ['key' => 'admin_officer', 'title' => 'Gestionnaire administratif', 'department_key' => 'administration', 'level' => 'agent'],
                     ],
                 ],

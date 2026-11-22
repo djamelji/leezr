@@ -17,4 +17,7 @@ final class TagDictionary
     const DRIVING = 'driving';
     const DISPATCHING = 'dispatching';
     const MANAGEMENT = 'management';
+
+    /** ADR-862 — the activities a position or a person can declare (FunctionActivity) */
+    const ACTIVITIES = [self::DRIVING, self::DISPATCHING, self::MANAGEMENT];
 }

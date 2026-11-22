@@ -211,7 +211,7 @@ final class FieldRuleMigrationPlanner
         // for a person when the company asked it explicitly (everyone / that role) or the person exercises the activity.
         $sources = FieldObligationSources::forCompany($company);
         $defs = FieldDefinition::where('scope', FieldDefinition::SCOPE_COMPANY_USER)->whereNull('company_id')->get()->keyBy('code');
-        $employees = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('status', '!=', 'terminated')->get(['id', 'user_id', 'job_role_id']);
+        $employees = \App\Core\Workforce\Employee::withoutGlobalScopes()->where('company_id', $company->id)->where('status', '!=', 'terminated')->get(['id', 'user_id', 'job_role_id', 'metadata']);
         $members = Membership::where('company_id', $company->id)->with('companyRole:id,key,required_tags')->get()->keyBy('user_id');
 
         return FunctionActivity::simulate($company->id, function () use ($company, $sources, $defs, $employees, $members) {
@@ -221,7 +221,9 @@ final class FieldRuleMigrationPlanner
                     continue;
                 }
                 $tags = (array) ($defs[$code]->validation_rules['tags'] ?? []);
-                $kept = ['company' => 0, 'role_rule' => 0, 'position' => 0, 'evidence' => 0, 'role' => 0];
+                // ADR-862 : 'person' = declared on the person's file ; module evidence is no source, it counts in `to_declare`
+                $kept = ['company' => 0, 'role_rule' => 0, 'position' => 0, 'person' => 0, 'role' => 0];
+                $toDeclare = 0;
                 $people = ['without_account' => ['kept' => 0, 'released' => 0], 'with_account' => ['kept' => 0, 'released' => 0]];
                 $released = 0;
                 foreach ($employees as $e) {
@@ -233,7 +235,7 @@ final class FieldRuleMigrationPlanner
                         $reasons[] = 'role_rule';
                     } else {
                         foreach ($tags as $tag) {
-                            $reasons = array_merge($reasons, FunctionActivity::reasons($company->id, $e->user_id ? (int) $e->user_id : null, $e->job_role_id ? (int) $e->job_role_id : null, $tag, (array) ($role?->required_tags ?? [])));
+                            $reasons = array_merge($reasons, FunctionActivity::reasons($company->id, $e->user_id ? (int) $e->user_id : null, $e->job_role_id ? (int) $e->job_role_id : null, $tag, (array) ($role?->required_tags ?? []), (int) $e->id));
                         }
                     }
                     $bucket = $e->user_id ? 'with_account' : 'without_account';
@@ -243,6 +245,10 @@ final class FieldRuleMigrationPlanner
                     } else {
                         $released++;
                         $people[$bucket]['released']++;
+                        // a module hints at the activity (e.g. recent deliveries) : someone should declare it, nobody is forced
+                        if ($e->user_id && array_filter($tags, fn ($tag) => FunctionActivity::hinted($company->id, (int) $e->user_id, $tag))) {
+                            $toDeclare++;
+                        }
                     }
                 }
                 // positions the company should review BEFORE switching : a holder already drives (role / deliveries) but the
@@ -252,14 +258,15 @@ final class FieldRuleMigrationPlanner
                     if (! $jobRoleId) {
                         continue;
                     }
-                    $driving = $holders->filter(fn ($e) => $e->user_id && array_intersect($tags, FunctionActivity::tagsForUser($company->id, (int) $e->user_id, (array) ($members->get($e->user_id)?->companyRole?->required_tags ?? []))))->count();
-                    $declared = (bool) array_intersect($tags, FunctionActivity::tagsForEmployee($company->id, $holders->first()));
+                    $driving = $holders->filter(fn ($e) => $e->user_id && (array_intersect($tags, FunctionActivity::tagsForUser($company->id, (int) $e->user_id, (array) ($members->get($e->user_id)?->companyRole?->required_tags ?? [])))
+                        || array_filter($tags, fn ($tag) => FunctionActivity::hinted($company->id, (int) $e->user_id, $tag))))->count();
+                    $declared = (bool) array_intersect($tags, FunctionActivity::tagsForEmployee($company->id, $holders->first()->replicate()->forceFill(['user_id' => null, 'metadata' => null])));
                     if ($driving && ! $declared) {
                         $review[] = ['job_role_id' => (int) $jobRoleId, 'holders' => $holders->count(), 'holders_without_account' => $holders->whereNull('user_id')->count(), 'holders_with_signal' => $driving];
                     }
                 }
                 $out[] = ['code' => $code, 'modules' => $o['modules'], 'tags' => $tags, 'everyone' => $employees->count(), 'positions_to_review' => $review,
-                    'by_function' => $employees->count() - $released, 'kept_by' => $kept, 'released' => $released,
+                    'by_function' => $employees->count() - $released, 'kept_by' => $kept, 'released' => $released, 'to_declare' => $toDeclare,
                     'newly_required' => 0, // narrowing only : nobody becomes required who was not before
                     'people' => $people];
             }

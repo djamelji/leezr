@@ -17,9 +17,13 @@ use Illuminate\Support\Facades\DB;
  *
  * A person exercises an activity when ANY of these is true (never the access role alone) :
  *   - position  : the position (JobRole) declares it in `metadata.activities` (covers people without a Leezr account) ;
- *   - evidence  : a module proves it (e.g. deliveries assigned — the manager who drives now and then) ;
+ *   - person    : ADR-862 — the person's file declares it explicitly in `workforce_employees.metadata.activities`
+ *                 (the occasional driver : a business declaration, durable, with or without an account) ;
  *   - role tags : the access role requires the tag — ROLE authority only (ADR-820 : with the POSITION authority the
  *                 access role never makes a field required).
+ * ADR-862 — module evidence (e.g. deliveries assigned in the last 90 days) is a HINT, never a source : it is reported
+ * (simulation « to declare », reasons) so that someone declares the activity, but it does not by itself make a field
+ * required (an expiring history is not a durable obligation).
  * What the company configured explicitly (catalogue « required for all », per-role rules, position requirements,
  * Platform « required ») is untouched : this only narrows the module-wide part.
  */
@@ -54,7 +58,7 @@ final class FunctionActivity
     public static function tagsForUser(int $companyId, int $userId, ?array $roleTags = null): array
     {
         $m = self::memo($companyId);
-        $tags = array_merge($m['by_user'][$userId] ?? [], $m['positions'][$m['position_of_user'][$userId] ?? 0] ?? []);
+        $tags = array_merge($m['declared_user'][$userId] ?? [], $m['positions'][$m['position_of_user'][$userId] ?? 0] ?? []);
         if (! $m['position_authority']) {
             $tags = array_merge($tags, (array) $roleTags);
         }
@@ -70,20 +74,28 @@ final class FunctionActivity
         }
         $m = self::memo($companyId);
 
-        return array_values(array_unique($m['positions'][(int) $e->job_role_id] ?? []));
+        return array_values(array_unique(array_merge($m['positions'][(int) $e->job_role_id] ?? [], $m['declared_employee'][(int) $e->id] ?? [])));
     }
 
     /** Why a person exercises a tag — for the simulation report. @return list<string> */
-    public static function reasons(int $companyId, ?int $userId, ?int $jobRoleId, string $tag, ?array $roleTags = null): array
+    public static function reasons(int $companyId, ?int $userId, ?int $jobRoleId, string $tag, ?array $roleTags = null, ?int $employeeId = null): array
     {
         $m = self::memo($companyId);
         $jobRoleId ??= $userId ? ($m['position_of_user'][$userId] ?? null) : null;
+        $declared = ($userId && in_array($tag, $m['declared_user'][$userId] ?? [], true))
+            || ($employeeId && in_array($tag, $m['declared_employee'][$employeeId] ?? [], true));
 
         return array_values(array_filter([
             in_array($tag, $m['positions'][(int) $jobRoleId] ?? [], true) ? 'position' : null,
-            $userId && in_array($tag, $m['by_user'][$userId] ?? [], true) ? 'evidence' : null,
+            $declared ? 'person' : null,
             ! $m['position_authority'] && in_array($tag, (array) $roleTags, true) ? 'role' : null,
         ]));
+    }
+
+    /** ADR-862 — a module's evidence for this person (a hint to declare the activity, never an obligation). */
+    public static function hinted(int $companyId, ?int $userId, string $tag): bool
+    {
+        return $userId !== null && in_array($tag, self::memo($companyId)['hints'][$userId] ?? [], true);
     }
 
     /** Writes the switch (callers guard WHO may write : clone-only command, explicit company action). Returns the previous value. */
@@ -125,7 +137,7 @@ final class FunctionActivity
             return self::$memo[$key];
         }
         $scope = $force ?? (DB::table('company_document_settings')->where('company_id', $companyId)->value('module_obligation_scope') ?: self::SCOPE_EVERYONE);
-        $m = ['scope' => $scope, 'position_authority' => RequirementAuthority::isPosition($companyId), 'positions' => [], 'position_of_user' => [], 'by_user' => []];
+        $m = ['scope' => $scope, 'position_authority' => RequirementAuthority::isPosition($companyId), 'positions' => [], 'position_of_user' => [], 'declared_user' => [], 'declared_employee' => [], 'hints' => []];
         if ($scope === self::SCOPE_FUNCTION) {
             foreach (JobRole::withoutGlobalScopes()->where('company_id', $companyId)->get(['id', 'metadata']) as $jr) {
                 $acts = array_values(array_filter((array) ($jr->metadata['activities'] ?? []), 'is_string'));
@@ -133,12 +145,24 @@ final class FunctionActivity
                     $m['positions'][$jr->id] = $acts;
                 }
             }
-            $m['position_of_user'] = Employee::withoutGlobalScopes()->where('company_id', $companyId)->whereNotNull('user_id')
-                ->where('status', '!=', 'terminated')->pluck('job_role_id', 'user_id')->map(fn ($v) => (int) $v)->all();
+            $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->where('status', '!=', 'terminated')
+                ->get(['id', 'user_id', 'job_role_id', 'metadata']);
+            foreach ($employees as $e) {
+                if ($e->user_id) {
+                    $m['position_of_user'][(int) $e->user_id] = (int) $e->job_role_id;
+                }
+                $acts = array_values(array_filter((array) ($e->metadata['activities'] ?? []), 'is_string'));
+                if ($acts) {
+                    $m['declared_employee'][$e->id] = $acts;
+                    if ($e->user_id) {
+                        $m['declared_user'][(int) $e->user_id] = $acts;
+                    }
+                }
+            }
             foreach (self::$providers as $tag => $classes) {
                 foreach ($classes as $class) {
                     foreach ($class::holders($companyId) as $uid) {
-                        $m['by_user'][(int) $uid][] = $tag;
+                        $m['hints'][(int) $uid][] = $tag;
                     }
                 }
             }

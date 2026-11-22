@@ -151,9 +151,13 @@ class OrganizationPresetService
                     continue;
                 }
                 $deptId = isset($r['department_key']) && $r['department_key'] ? ($deptIdByKey[$r['department_key']] ?? null) : null;
+                // ADR-862 : the preset may say what the position normally does (e.g. Livreur → driving) — set at CREATION only ;
+                // an existing position (skipped / title clash above) keeps what the company configured.
+                $activities = array_values(array_intersect((array) ($r['activities'] ?? []), \App\Core\Fields\TagDictionary::ACTIVITIES));
                 JobRole::withoutCompanyScope()->create([
                     'company_id' => $company->id, 'department_id' => $deptId, 'title' => $r['title'],
                     'level' => $r['level'] ?? null, 'source' => 'preset', 'preset_item_key' => $key,
+                    'metadata' => $activities ? ['activities' => $activities] : null,
                 ]);
                 $created[] = "job_role:{$key}";
             }
