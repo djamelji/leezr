@@ -88,7 +88,10 @@ test('1-3 Équipe complète et incomplète, recherche, filtres, aperçu rapide s
   ])
   await page.keyboard.press('Escape')
   await page.waitForTimeout(600)
-  for (const cell of await page.locator('tbody tr td:nth-child(2)').allInnerTexts()) expect(cell).toContain('Livreur')
+  // ADR-864 : the selection column (HR tools) may come first — find the « Poste » column by its header
+  const posCol = 1 + (await page.locator('thead th').allInnerTexts()).findIndex(h => /poste/i.test(h))
+  expect(posCol, 'position column').toBeGreaterThan(0)
+  for (const cell of await page.locator(`tbody tr td:nth-child(${posCol})`).allInnerTexts()) expect(cell).toContain('Livreur')
   await shot(page, '2-filtre-poste')
 
   // quick view : position, onboarding, file — never the pay

@@ -1,7 +1,7 @@
 // @ts-check
 // ADR-640 (W-C) — unified employee file: header + overview + conditional lazy sections. Real browser.
 // ADR-831 (D-21 bis) — the employee list and file moved into Équipe (ADR-802/777/820) : the legacy URLs redirect to
-// /company/people/hr and /company/people/employee-:id ; the former tabs are grouped into server-decided rubrics.
+// /company/people (ADR-864) and /company/people/employee-:id ; the former tabs are grouped into server-decided rubrics.
 // Same checks : header, overview synthesis, profile + contract rubrics, a lazy section that renders content,
 // no horizontal overflow, no JS error.
 import { expect, test } from '@playwright/test'

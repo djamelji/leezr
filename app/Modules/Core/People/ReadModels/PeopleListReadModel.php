@@ -153,6 +153,12 @@ class PeopleListReadModel
             // ADR-818 (chantier B) : responsable et contrat en cours, sans ouvrir la fiche.
             'manager' => $e->manager ? trim($e->manager->first_name.' '.$e->manager->last_name) : null,
             'contract_type' => $e->currentContract?->contract_type,
+            // ADR-864 — the former « Gestion RH » list (one Personnes interface) : HR facet only, as before.
+            'employee_number' => $e->employee_number,
+            'hire_date' => $e->hire_date?->toDateString(),
+            'department_id' => $e->department_id,
+            'job_role_id' => $e->job_role_id,
+            'manager_id' => $e->manager_id,
         ];
         // Identité : garder celle du compte si déjà présente (facette accès), sinon fiche RH.
         if (! $existing || empty($existing['name'])) {
@@ -220,6 +226,8 @@ class PeopleListReadModel
             'employment_status' => $hr ? $by('employment_status') : null,
             'department' => $hr ? $by('department') : null,
             'job_role' => $hr ? $by('job_role') : null,
+            'contract_type' => $hr ? $by('contract_type') : null, // ADR-864
+            'manager' => $hr ? $by('manager') : null,
         ];
     }
 
@@ -228,7 +236,8 @@ class PeopleListReadModel
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $needle = mb_strtolower($search);
-            $rows = array_filter($rows, fn ($r) => str_contains(mb_strtolower((string) $r['name']), $needle) || str_contains(mb_strtolower((string) ($r['email'] ?? '')), $needle));
+            $rows = array_filter($rows, fn ($r) => str_contains(mb_strtolower((string) $r['name']), $needle) || str_contains(mb_strtolower((string) ($r['email'] ?? '')), $needle)
+                || str_contains(mb_strtolower((string) ($r['employee_number'] ?? '')), $needle)); // ADR-864 : matricule (HR rows only)
         }
         if (! empty($filters['employment_status'])) {
             $rows = array_filter($rows, fn ($r) => $r['employment_status'] === $filters['employment_status']);
@@ -241,6 +250,12 @@ class PeopleListReadModel
         }
         if (! empty($filters['job_role'])) {
             $rows = array_filter($rows, fn ($r) => ($r['job_role'] ?? null) === $filters['job_role']);
+        }
+        if (! empty($filters['contract_type'])) { // ADR-864
+            $rows = array_filter($rows, fn ($r) => ($r['contract_type'] ?? null) === $filters['contract_type']);
+        }
+        if (! empty($filters['manager'])) {
+            $rows = array_filter($rows, fn ($r) => ($r['manager'] ?? null) === $filters['manager']);
         }
         if (! empty($filters['attention'])) {
             $rows = array_filter($rows, fn ($r) => match ($filters['attention']) {

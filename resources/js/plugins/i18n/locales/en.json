@@ -13098,7 +13098,9 @@
       "team": "Team",
       "position": "Position",
       "access": "Access",
-      "clear": "Reset"
+      "clear": "Reset",
+      "contract": "Contract",
+      "manager": "Manager"
     },
     "col": {
       "person": "Person",
@@ -13223,7 +13225,10 @@
       "positionNeeds": "This position requires:",
       "positionNeedsHint": "They will be asked in the person's file, not now.",
       "positionNoNeeds": "This position requires nothing beyond the company's rules."
-    }
+    },
+    "hrTools": "HR tools: import and export",
+    "matricule": "No. {n}",
+    "since": "since {date}"
   },
   "l6": {
     "modules": {

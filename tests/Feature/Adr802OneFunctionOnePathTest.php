@@ -30,7 +30,7 @@ class Adr802OneFunctionOnePathTest extends TestCase
     public static function redirects(): array
     {
         return [
-            'liste RH' => ['company/workforce/employees/index.vue', "definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })", "name: 'company-people-hr'"],
+            'liste RH' => ['company/workforce/employees/index.vue', "definePage({ meta: { module: 'workforce', permission: 'workforce.view' } })", "name: 'company-people'"], // ADR-864
             'liste membres' => ['company/members/index.vue', "definePage({ meta: { module: 'core.members', surface: 'structure', permission: 'members.view' } })", "path: '/company/people'"],
             'signatures' => ['company/workforce/signature/index.vue', "permission: 'workforce_signature.view'", "'/company/documents/signatures'"],
             'modèles de contrat' => ['company/workforce/contract/templates.vue', "definePage({ meta: { module: 'workforce_contract', permission: 'workforce_contract.view' } })", "'/company/documents/templates'"],
@@ -54,12 +54,19 @@ class Adr802OneFunctionOnePathTest extends TestCase
         foreach (['q', 'status', 'dept', 'role', 'manager', 'contract'] as $k) {
             $this->assertStringContainsString("'{$k}'", $src);
         }
-        $this->assertStringContainsString("name: 'company-people-hr'", $src); // ADR-820 : vue dans le chemin
+        $this->assertStringContainsString("name: 'company-people'", $src); // ADR-864 : une seule interface Personnes
+        // ADR-864 — /company/people/hr is itself a redirect to Personnes, filters kept, same guard as the page
+        $hr = $this->page('company/people/hr.vue');
+        foreach (['q', 'status', 'dept', 'role', 'manager', 'contract'] as $k) {
+            $this->assertStringContainsString("'{$k}'", $hr);
+        }
+        $this->assertStringContainsString("router.replace({ name: 'company-people', query })", $hr);
+        $this->assertStringNotContainsString('PeopleSpace', $hr, 'a redirect, not a second view');
     }
 
     public function test_former_pages_are_views_without_route_metadata(): void
     {
-        foreach (['company/people/_PeopleHrTools.vue', 'company/people/_MemberHealth.vue', 'company/people/_PeopleDirectory.vue', 'company/people/_PersonPreview.vue', // ADR-858 : _ProfileFieldsSettings retiré
+        foreach (['company/people/_MemberHealth.vue', 'company/people/_PeopleDirectory.vue', 'company/people/_PersonPreview.vue', // ADR-858 : _ProfileFieldsSettings retiré
             'company/workforce/signature/_SignaturesView.vue', 'company/workforce/contract/_ContractTemplatesView.vue', 'company/workforce/documents/_HrDocumentsView.vue'] as $f) {
             $this->assertStringNotContainsString('definePage(', $this->page($f), $f);
         }
@@ -68,8 +75,14 @@ class Adr802OneFunctionOnePathTest extends TestCase
     public function test_team_page_hosts_the_specialised_views_with_their_original_guards(): void
     {
         $src = $this->page('company/people/_PeopleSpace.vue'); // ADR-820 : espace monté par /people, /people/hr, /people/roles
-        $this->assertStringContainsString("moduleStore.isActive('workforce') && can('workforce.view')", $src); // ex-page RH
-        $this->assertStringContainsString('<PeopleHrTools v-if="tab === \'hr\' && canHr"', $src);
+        // ADR-864 — the former HR list is no second view : its tools live in Personnes, behind the HR facet + module
+        $this->assertStringNotContainsString('PeopleHrTools', $src);
+        $this->assertFileDoesNotExist(base_path('resources/js/pages/company/people/_PeopleHrTools.vue'));
+        $dir = $this->page('company/people/_PeopleDirectory.vue');
+        $this->assertStringContainsString("!!store.facets.hr && moduleStore.isActive('workforce')", $dir);
+        foreach (["can('workforce.manage')", "can('workforce.export')", "can('workforce.import')"] as $right) {
+            $this->assertStringContainsString($right, $dir);
+        }
         // ADR-858 : « Outils → Champs » retiré ; la configuration des champs vit dans Company › Catalogue (même garde API)
         $this->assertStringContainsString("can('settings.manage')", $src);
         $this->assertStringContainsString('to="/company/catalogs/fields"', $src);
@@ -78,11 +91,8 @@ class Adr802OneFunctionOnePathTest extends TestCase
         $this->assertStringNotContainsString("name: 'company-workforce-employees'", $src, 'no link to a second people page');
         $this->assertStringNotContainsString('to="/company/members"', $src);
 
-        // Un seul formulaire de création : la vue RH déclenche « Ajouter » d'Équipe.
-        $hr = $this->page('company/people/_PeopleHrTools.vue');
-        $this->assertStringNotContainsString('createEmployee(', $hr);
-        $this->assertStringContainsString("emit('create')", $hr);
-        $this->assertStringNotContainsString("tab: 'hr'", $hr, 'ADR-820 : la vue RH est dans le chemin (/company/people/hr), ses filtres seuls en query');
+        // Un seul formulaire de création : « Ajouter » d'Équipe (ADR-864 : aucune création dans l'annuaire).
+        $this->assertStringNotContainsString('createEmployee(', $dir);
     }
 
     public function test_documents_space_embeds_the_views(): void

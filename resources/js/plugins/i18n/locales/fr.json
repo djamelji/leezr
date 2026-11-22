@@ -13116,7 +13116,9 @@
       "team": "Équipe",
       "position": "Poste",
       "access": "Accès",
-      "clear": "Réinitialiser"
+      "clear": "Réinitialiser",
+      "contract": "Contrat",
+      "manager": "Responsable"
     },
     "col": {
       "person": "Personne",
@@ -13241,7 +13243,10 @@
       "positionNeeds": "Ce poste demande :",
       "positionNeedsHint": "Ces informations seront demandées dans son dossier, pas maintenant.",
       "positionNoNeeds": "Ce poste ne demande rien de plus que la société."
-    }
+    },
+    "hrTools": "Outils RH : import et export",
+    "matricule": "Mat. {n}",
+    "since": "depuis le {date}"
   },
   "l6": {
     "modules": {

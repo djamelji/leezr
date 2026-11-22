@@ -3,18 +3,59 @@
 // perimeter decided server-side) : synthesis tiles that filter, search, filters with counts, identity / position /
 // HR status / access / file completeness / next step, and a quick view on click. A figure or a column the actor may
 // not read is simply absent (the server sends null). Phones get a compact card list. Sub-component.
+// ADR-864 — ONE Personnes interface : the former « Gestion RH » list (/company/people/hr) is folded in here — HR
+// filters (contract, manager), matricule and hire date, multi-select + grouped actions, CSV import / export, filters in
+// the URL. Every HR addition stays behind the HR facet decided by the server and the same permissions as before.
 import { useDisplay } from 'vuetify'
 import { usePeopleListStore } from '@/modules/company/people/people-list.store'
+import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
+import { useCan } from '@/composables/useCan'
+import { useModuleStore } from '@/core/stores/module'
+import { useAppToast } from '@/composables/useAppToast'
+import EmployeeImportDrawer from '@/pages/company/workforce/employees/_EmployeeImportDrawer.vue'
+import EmployeeBulkActionDialog from '@/pages/company/workforce/employees/_EmployeeBulkActionDialog.vue'
 import PersonPreview from './_PersonPreview.vue'
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const store = usePeopleListStore()
+const employees = useEmployeesStore()
+const { can } = useCan()
+const moduleStore = useModuleStore()
+const { toast } = useAppToast()
 const { smAndDown } = useDisplay()
 
-const search = ref('')
+// ── filters live in the URL (shareable, back button, and the former HR list links keep working) ──
+const URL_KEYS = { q: 'search', status: 'employment_status', dept: 'department', role: 'job_role', contract: 'contract_type', manager: 'manager', access: 'access_state', attention: 'attention' }
+const FILTER_KEYS = ['attention', 'employment_status', 'department', 'job_role', 'contract_type', 'manager', 'access_state']
+const emptyFilters = () => Object.fromEntries(FILTER_KEYS.map(k => [k, null]))
+const fromQuery = k => (typeof route.query[k] === 'string' && route.query[k] !== '' ? route.query[k] : null)
+
+const search = ref(fromQuery('q') || '')
 const options = ref({ page: 1, itemsPerPage: 20, sortBy: [] })
-const filters = ref({ attention: null, employment_status: null, department: null, job_role: null, access_state: null })
+const filters = ref({ ...emptyFilters(), ...Object.fromEntries(Object.entries(URL_KEYS).filter(([q, k]) => k !== 'search' && fromQuery(q)).map(([q, k]) => [k, fromQuery(q)])) })
+
+function syncUrl() {
+  const query = {}
+  for (const [q, k] of Object.entries(URL_KEYS)) {
+    const v = k === 'search' ? search.value : filters.value[k]
+    if (v) query[q] = v
+  }
+  router.replace({ query }).catch(() => {})
+}
+
+// The former HR list put ids in its links (?dept=3, ?role=5, ?manager=12) ; Personnes filters by name.
+async function resolveLegacyIds() {
+  const ids = { department: filters.value.department, job_role: filters.value.job_role, manager: filters.value.manager }
+  if (!Object.values(ids).some(v => v && /^\d+$/.test(v))) return
+  try {
+    if (/^\d+$/.test(ids.department || '')) { await employees.fetchDepartments(); filters.value.department = employees.departments.find(d => d.id === Number(ids.department))?.name || null }
+    if (/^\d+$/.test(ids.job_role || '')) { await employees.fetchJobRoles(); filters.value.job_role = employees.jobRoles.find(r => r.id === Number(ids.job_role))?.title || null }
+    if (/^\d+$/.test(ids.manager || '')) { const m = await employees.fetchEmployee(Number(ids.manager)); const e = m?.employee || m; filters.value.manager = e ? `${e.first_name} ${e.last_name}`.trim() : null }
+  }
+  catch { for (const k of Object.keys(ids)) if (/^\d+$/.test(filters.value[k] || '')) filters.value[k] = null }
+}
 
 let debounce = null
 function reload() {
@@ -26,10 +67,10 @@ function reload() {
     filters: { ...filters.value },
   })
 }
-watch(options, reload, { deep: true })
-watch(filters, () => { options.value.page = 1; reload() }, { deep: true })
-watch(search, () => { clearTimeout(debounce); debounce = setTimeout(() => { options.value.page = 1; reload() }, 300) })
-onMounted(reload)
+watch(options, () => { selected.value = []; reload() }, { deep: true })
+watch(filters, () => { options.value.page = 1; selected.value = []; syncUrl(); reload() }, { deep: true })
+watch(search, () => { clearTimeout(debounce); debounce = setTimeout(() => { options.value.page = 1; selected.value = []; syncUrl(); reload() }, 300) })
+onMounted(async () => { await resolveLegacyIds(); reload() })
 defineExpose({ reload })
 
 // ── synthesis tiles (real figures ; a null figure is not readable by this actor → no tile) ──
@@ -66,12 +107,14 @@ const selects = computed(() => {
     mk('employment_status', 'l5.filters.status', empLabel),
     mk('department', 'l5.filters.team'),
     mk('job_role', 'l5.filters.position'),
+    mk('contract_type', 'l5.filters.contract', v => contractType(v)), // ADR-864
+    mk('manager', 'l5.filters.manager'),
     mk('access_state', 'l5.filters.access', accessLabel),
   ].filter(Boolean)
 })
 
 const activeFilters = computed(() => Object.entries(filters.value).filter(([k, v]) => v && k !== 'attention').length)
-const clearFilters = () => { filters.value = { attention: null, employment_status: null, department: null, job_role: null, access_state: null }; search.value = '' }
+const clearFilters = () => { filters.value = emptyFilters(); search.value = '' }
 
 // ── columns by facet ──
 const hasCompleteness = computed(() => (store.facets.account_details !== false && store.facets.access) || store.facets.hr) // ADR-859 : HR files too
@@ -107,6 +150,52 @@ const open = row => { current.value = row; preview.value = true }
 const goNext = row => router.push(fileTo(row, NEXT[row.next_action]?.tab))
 
 const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.value.itemsPerPage)))
+const hireDate = d => (d ? new Date(d).toLocaleDateString(locale.value) : null)
+
+// ── ADR-864 : HR tools (same rights as the former HR list ; the server refuses anyway) ──
+const hr = computed(() => !!store.facets.hr && moduleStore.isActive('workforce')) // module off → no HR tool, as before
+const canBulk = computed(() => hr.value && can('workforce.manage'))
+const canExport = computed(() => hr.value && can('workforce.export'))
+const canImport = computed(() => hr.value && can('workforce.import'))
+const selected = ref([]) // person_refs of the visible page ; only rows with an HR record are selectable
+const selectedEmployeeIds = computed(() => store.rows.filter(r => selected.value.includes(r.person_ref) && r.employee_id).map(r => r.employee_id))
+const bulkOpen = ref(false)
+const bulkAction = ref('set_department')
+const openBulk = a => { bulkAction.value = a; bulkOpen.value = true }
+const onBulkDone = () => { selected.value = []; reload() }
+const importOpen = ref(false)
+const onImported = () => { toast(t('employees.import.done'), 'success'); reload() }
+
+// Export = the HR records matching the HR filters (status, team, position, contract, manager, search) ; the export
+// endpoint applies the actor's HR perimeter itself. Name filters → ids from a matching visible row.
+const exporting = ref(false)
+async function exportCsv() {
+  exporting.value = true
+  try {
+    const idOf = (key, idKey) => (filters.value[key] ? store.rows.find(r => r[key] === filters.value[key])?.[idKey] : undefined)
+    const blob = await employees.exportEmployees({
+      search: search.value || undefined,
+      status: filters.value.employment_status && filters.value.employment_status !== 'preparatory' ? filters.value.employment_status : undefined,
+      contractType: filters.value.contract_type || undefined,
+      departmentId: idOf('department', 'department_id'),
+      jobRoleId: idOf('job_role', 'job_role_id'),
+      managerId: idOf('manager', 'manager_id'),
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    a.href = url
+    a.download = 'collaborateurs.csv'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  }
+  catch {
+    toast(t('common.error'), 'error')
+  }
+  finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -176,7 +265,91 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
         >
           {{ t('l5.filters.clear') }}
         </VBtn>
+        <VSpacer />
+        <!-- ADR-864 : HR tools of the former « Gestion RH » list, same rights -->
+        <VBtn
+          v-if="canExport || canImport"
+          icon
+          variant="tonal"
+          color="secondary"
+          size="small"
+          :aria-label="t('l5.hrTools')"
+          data-test="emp-more"
+        >
+          <VIcon icon="tabler-dots-vertical" />
+          <VMenu
+            activator="parent"
+            location="bottom end"
+          >
+            <VList
+              density="compact"
+              min-width="240"
+            >
+              <VListItem
+                v-if="canExport"
+                prepend-icon="tabler-file-export"
+                :disabled="exporting"
+                data-test="emp-export"
+                @click="exportCsv"
+              >
+                <VListItemTitle>{{ t('employees.export.button') }}</VListItemTitle>
+              </VListItem>
+              <VListItem
+                v-if="canImport"
+                prepend-icon="tabler-file-import"
+                data-test="emp-import"
+                @click="importOpen = true"
+              >
+                <VListItemTitle>{{ t('employees.import.button') }}</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
+        </VBtn>
       </div>
+
+      <!-- ADR-864 : grouped actions on the selected HR records (workforce.manage, as before) -->
+      <VExpandTransition>
+        <div
+          v-if="canBulk && selected.length"
+          class="d-flex align-center gap-3 px-5 py-2 bg-primary-lighten-5 flex-wrap"
+          data-test="people-bulk-bar"
+        >
+          <span class="font-weight-medium">{{ t('employees.bulk.selected', { count: selectedEmployeeIds.length }) }}</span>
+          <VSpacer />
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-hierarchy-2"
+            data-test="people-bulk-department"
+            @click="openBulk('set_department')"
+          >
+            {{ t('employees.bulk.actions.set_department') }}
+          </VBtn>
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-briefcase"
+            @click="openBulk('set_job_role')"
+          >
+            {{ t('employees.bulk.actions.set_job_role') }}
+          </VBtn>
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-user-check"
+            @click="openBulk('set_manager')"
+          >
+            {{ t('employees.bulk.actions.set_manager') }}
+          </VBtn>
+          <VBtn
+            size="small"
+            variant="text"
+            @click="selected = []"
+          >
+            {{ t('employees.bulk.clear') }}
+          </VBtn>
+        </div>
+      </VExpandTransition>
 
       <!-- phones : compact cards -->
       <div
@@ -260,7 +433,10 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
       <!-- desktop / tablet : table -->
       <VDataTableServer
         v-else
+        v-model="selected"
         v-model:options="options"
+        :show-select="canBulk"
+        :item-selectable="r => !!r.employee_id"
         :items-per-page="options.itemsPerPage"
         :headers="headers"
         :items="store.rows"
@@ -302,10 +478,10 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
                 {{ item.name && item.name !== item.email ? item.name : t('peopleList.nameMissing') }}
               </button>
               <div
-                v-if="item.email"
+                v-if="item.email || item.employee_number"
                 class="text-caption text-medium-emphasis text-truncate"
               >
-                {{ item.email }}
+                {{ [item.email, item.employee_number && t('l5.matricule', { n: item.employee_number })].filter(Boolean).join(' · ') }}
               </div>
             </div>
           </div>
@@ -336,10 +512,10 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
             class="text-disabled"
           >{{ t('l5.noRecord') }}</span>
           <div
-            v-if="item.contract_type"
+            v-if="item.contract_type || item.hire_date"
             class="text-caption text-medium-emphasis mt-1"
           >
-            {{ contractType(item.contract_type) }}
+            {{ [item.contract_type && contractType(item.contract_type), item.hire_date && t('l5.since', { date: hireDate(item.hire_date) })].filter(Boolean).join(' · ') }}
           </div>
         </template>
         <template #item.account_state="{ item }">
@@ -478,6 +654,18 @@ const pageCount = computed(() => Math.max(1, Math.ceil(store.total / options.val
     <PersonPreview
       v-model="preview"
       :row="current"
+    />
+    <EmployeeImportDrawer
+      v-if="canImport"
+      v-model="importOpen"
+      @imported="onImported"
+    />
+    <EmployeeBulkActionDialog
+      v-if="canBulk"
+      v-model="bulkOpen"
+      :action="bulkAction"
+      :employee-ids="selectedEmployeeIds"
+      @done="onBulkDone"
     />
   </div>
 </template>

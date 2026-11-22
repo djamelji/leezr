@@ -30333,3 +30333,48 @@ Les décisions à valider sont listées dans `docs/bmad/leezr-4-2-audit/m8/READM
 - **Conséquences**
   - Le compte Platform de recette sur DEV n'aura **aucun droit de gestion**. Sa création reste un GO distinct du propriétaire, après le déploiement de ce lot : `release/PLATFORM-RECIPE-ACCOUNT-DEV.md`.
   - Le compte Platform n° 1 de DEV accepte toujours le mot de passe public. La voie de récupération a été vérifiée sans être déclenchée (`release/PLATFORM-1-DEV-PASSWORD.md`).
+
+## ADR-864 — Une seule interface Personnes : la vue « Gestion RH » (`/company/people/hr`) est intégrée à Personnes
+
+- **Date** : 2026-11-22.
+- **Contexte** : après L5 et L6, `/company/people` (annuaire V22) est le point d'entrée des collaborateurs. L'onglet « Gestion RH » (`/company/people/hr`, ADR-802/820, ancienne liste `/company/workforce/employees`) affichait les mêmes personnes une seconde fois. Inventaire de ce qu'il apportait encore :
+  - **Filtres** : statut, service et poste (déjà dans Personnes) ; **responsable** et **type de contrat**, absents de Personnes ; le tout gardé dans l'URL.
+  - **Colonnes** : nom, statut et contrat (déjà dans Personnes) ; **matricule** et **date d'entrée**, absents de Personnes.
+  - **Actions** :
+    - **sélection multiple et actions groupées** (changer de service, de poste ou de responsable), avec `workforce.manage` ;
+    - **export CSV**, avec `workforce.export` ;
+    - **import guidé**, avec `workforce.import`.
+  - **Accès** : module `workforce` et `workforce.view`, avec le périmètre RH du serveur (ADR-767). Aucun autre module ne construisait de lien filtré vers cette vue. Seuls l'écran d'intégration et le retour de l'ancienne fiche salarié y renvoyaient.
+- **Décision**
+  - **Personnes reprend tout** ; il n'y a pas de nouvel onglet RH.
+    - Le serveur (`GET /company/people`) sert, **sur la facette RH seulement** et dans le périmètre RH existant : matricule, date d'entrée, et identifiants de service, de poste et de responsable.
+    - Il accepte les filtres `contract_type` et `manager` (par nom, comme Équipe et Poste) et les compte. La recherche couvre le matricule.
+  - **Interface Personnes**
+    - Elle affiche les filtres Contrat et Responsable, ainsi que le matricule et la date « depuis le ».
+    - Ses filtres sont gardés dans l'URL.
+    - Elle propose la sélection des lignes qui ont une fiche RH et la barre d'actions groupées (mêmes dialogues), plus le menu ⋯ Exporter / Importer (mêmes composants et mêmes droits).
+    - Tout outil RH exige la facette RH **et** le module `workforce` actif.
+  - **Doublon retiré** : l'onglet « Gestion RH » et `_PeopleHrTools.vue` sont supprimés. L'espace Équipe a deux vues, Personnes et Rôles.
+  - **Anciennes adresses** : `/company/people/hr` (même garde), `/company/workforce/employees` et `?tab=hr` mènent à `/company/people`, avec leurs filtres. Les anciens identifiants (`dept`, `role`, `manager`) sont traduits en filtres de Personnes. Les liens internes sont corrigés.
+- **Preuves**
+  - **Test `Adr864OnePeopleInterfaceTest`** :
+    - un profil RH reçoit les colonnes et les filtres RH ;
+    - un profil « comptes » seul n'en reçoit aucun et ne peut pas chercher par matricule ;
+    - un responsable reste limité à son périmètre.
+  - **`Adr802OneFunctionOnePathTest`** a été mis à jour.
+  - **Recettes E2E du clone** qui touchent Personnes (12 specs) : 41/41. Deux attentes ont été ajustées au changement voulu, avec la même assertion métier : `?tab=hr` mène à Personnes, et la colonne Poste est retrouvée par son en-tête depuis l'ajout de la colonne de sélection.
+  - **Recette Chrome ciblée sur le clone : 36 contrôles.**
+    - Propriétaire, module RH actif :
+      - aucun onglet « Gestion RH » ;
+      - 5 filtres RH, matricule et date d'entrée affichés ;
+      - export CSV téléchargé, import accessible ;
+      - 19 lignes sélectionnables ; la barre « 2 sélectionné(s) » s'affiche, le dialogue groupé s'ouvre puis se ferme sans rien appliquer ;
+      - filtre responsable gardé dans l'URL ;
+      - `/people/hr?status=active&dept=1` mène à `/people?status=active&dept=Direction`, et `/workforce/employees?q=Bob` garde sa recherche ;
+      - sur téléphone : deux vues, outils RH accessibles, aucun débordement.
+    - Dispatcher (sans `workforce.view`) : aucun outil ni filtre RH, aucune sélection.
+    - Société sans module RH : Personnes fonctionne sans outil RH ; l'ancienne liste reste gardée par la page « module indisponible ».
+    - Sur l'ensemble : 0 erreur JavaScript, 0 refus API, 0 écriture (hors export).
+- **Conséquences**
+  - La fiche personne reste l'unique fiche (ADR-768).
+  - Les actions groupées ne sont pas proposées sur téléphone, où l'annuaire est une liste de cartes. Les actions individuelles passent par la fiche.

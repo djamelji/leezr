@@ -8,12 +8,10 @@ import { usePeopleListStore } from '@/modules/company/people/people-list.store'
 import { useCan } from '@/composables/useCan'
 import RolesManager from '@/pages/company/roles.vue'
 import PersonAddDrawer from './_PersonAddDrawer.vue'
-import PeopleHrTools from './_PeopleHrTools.vue'
 import PeopleDirectory from './_PeopleDirectory.vue'
 import MemberHealth from './_MemberHealth.vue'
 import RoleCapabilities from './_RoleCapabilities.vue'
 import PendingAccessReview from './_PendingAccessReview.vue'
-import { useModuleStore } from '@/core/stores/module'
 import { useCompanySettingsStore } from '@/modules/company/settings/settings.store'
 import { useAppToast } from '@/composables/useAppToast'
 import { useDisplay } from 'vuetify'
@@ -51,16 +49,13 @@ const onPersonAdded = ({ personRef, tab }) => {
 const canPeople = computed(() => can('members.view') || can('workforce.view'))
 const canRoles = computed(() => can('roles.view'))
 
-// ADR-802 — « Gestion RH » = l'ancienne liste /company/workforce/employees (même garde : module workforce +
-// workforce.view). « Champs du profil » = l'ancien tiroir de /company/members (members.manage).
-const moduleStore = useModuleStore()
-const canHr = computed(() => moduleStore.isActive('workforce') && can('workforce.view'))
+// ADR-864 — the former « Gestion RH » list (ADR-802) now lives inside Personnes (HR facet, same rights).
 const rolesView = ref('capabilities') // ADR-803.1
 // ADR-820 — la vue vient du chemin ; repli selon les facettes si elle n'est pas permise.
-const ROUTE = { people: 'company-people', hr: 'company-people-hr', roles: 'company-people-roles' }
+// ADR-864 — two views only : Personnes (its HR tools included, the former « Gestion RH » list) and Rôles.
+const ROUTE = { people: 'company-people', roles: 'company-people-roles' }
 
 const initialTab = (props.section === 'roles' && canRoles.value) ? 'roles'
-  : (props.section === 'hr' && canHr.value) ? 'hr'
     : (canPeople.value ? 'people' : 'roles')
 
 const tab = ref(initialTab)
@@ -71,7 +66,6 @@ const { smAndDown } = useDisplay()
 
 const peopleSections = computed(() => [
   canPeople.value && { value: 'people', icon: 'tabler-users', label: t('peopleList.tabPeople'), short: t('peopleList.tabShort.people') },
-  canHr.value && { value: 'hr', icon: 'tabler-table-options', label: t('peopleList.tabHr'), short: t('peopleList.tabShort.hr') },
   canRoles.value && { value: 'roles', icon: 'tabler-shield-lock', label: t('peopleList.tabRoles'), short: t('peopleList.tabShort.roles') },
 ].filter(Boolean))
 
@@ -80,7 +74,7 @@ watch(tab, v => {
   if (route.name !== ROUTE[v]) router.replace({ name: ROUTE[v] })
 })
 // ADR-862 — « Personnes · Équipe · Leezr » (the tab name was the bare « Leezr »)
-watchEffect(() => { document.title = [{ people: t('peopleList.tabPeople'), hr: t('peopleList.tabHr'), roles: t('peopleList.tabRoles') }[tab.value] || t('l5.title'), t('l7.tabTitle.people'), 'Leezr'].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ') })
+watchEffect(() => { document.title = [{ people: t('peopleList.tabPeople'), roles: t('peopleList.tabRoles') }[tab.value] || t('l5.title'), t('l7.tabTitle.people'), 'Leezr'].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ') })
 watch(() => props.section, v => { if (v && v !== tab.value) tab.value = v })
 
 // ADR-858 (L5) — the « Personnes » view is the V22 directory (search, filters, synthesis, quick view) ; the old
@@ -135,7 +129,7 @@ onMounted(() => {
           {{ t('l5.configureFields') }}
         </VBtn>
         <VBtn
-          v-if="(tab === 'people' || tab === 'hr') && canAdd"
+          v-if="tab === 'people' && canAdd"
           color="primary"
           prepend-icon="tabler-user-plus"
           :append-icon="canHire ? 'tabler-chevron-down' : undefined"
@@ -198,17 +192,6 @@ onMounted(() => {
         />{{ t('peopleList.tabPeople') }}
       </VTab>
       <VTab
-        v-if="canHr"
-        value="hr"
-        data-test="people-tab-hr"
-      >
-        <VIcon
-          icon="tabler-table-options"
-          start
-          size="18"
-        />{{ t('peopleList.tabHr') }}
-      </VTab>
-      <VTab
         v-if="canRoles"
         value="roles"
       >
@@ -234,11 +217,6 @@ onMounted(() => {
         class="disable-tab-transition"
       >
         <!-- ═══ RÔLES & AUTORISATIONS (réutilise /company/roles) ═══ -->
-        <VWindowItem value="hr">
-          <VCardText>
-            <PeopleHrTools v-if="tab === 'hr' && canHr" @create="openAdd(false)" />
-          </VCardText>
-        </VWindowItem>
         <VWindowItem value="roles">
           <!-- ADR-803.1 : vue simple « par capacité » (même moteur que l'assistant de module) ; « par rôle » = vue avancée -->
           <div

@@ -65,7 +65,8 @@ test('routes : anciennes routes, chemins nus, deep-links et historique (proprié
     ['/account-settings', /\/account-settings\/account$/, 'paramètres du compte sans onglet'],
     // Surfaces historiques CONSERVÉES (fonctions sans équivalent).
     ['/company/members', /\/company\/people$/, 'liste membres → Équipe'], // ADR-802 : une fonction, un chemin
-    ['/company/workforce/employees', /\/company\/people\/hr$/, 'liste salariés → Équipe › Gestion RH'], // ADR-802 + ADR-820 (vue dans le chemin)
+    ['/company/workforce/employees', /\/company\/people$/, 'liste salariés → Personnes (outils RH inclus)'], // ADR-802 + ADR-864 : une seule interface
+    ['/company/people/hr', /\/company\/people$/, 'ancienne vue Gestion RH → Personnes'], // ADR-864
     [`/company/members/${someone.id}?legacy=1`, new RegExp(`/company/members/${someone.id}\\?legacy=1$`), 'ancienne fiche membre sur demande'],
     // Surfaces cibles.
     ['/company/people', /\/company\/people$/, 'Collaborateurs'],

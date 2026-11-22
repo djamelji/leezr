@@ -10,27 +10,19 @@ test('annuaire refondu : en-tête, compteur, recherche, filtres repliables', asy
 
   await loginCompany(page, 'owner@leezr.test')
   await page.goto('/company/workforce/employees', { waitUntil: 'domcontentloaded' })
-  await page.waitForResponse(r => r.url().includes('/workforce/employees') && r.request().method() === 'GET', { timeout: 15000 }).catch(() => {})
+  await page.waitForResponse(r => r.url().includes('/company/people') && r.request().method() === 'GET', { timeout: 15000 }).catch(() => {})
 
-  // Compteur total visible dans le titre.
-  await expect(page.locator('[data-test="emp-count"]')).toBeVisible({ timeout: 10000 })
-
-  // Action primaire + overflow (export/import regroupés).
-  // ADR-802 : la création passe par « Ajouter » d'Équipe (vue Gestion RH = /company/people?tab=hr)
+  // ADR-864 : l'ancienne liste RH est Personnes — tableau, « Ajouter », outils RH (⋯), filtres RH visibles.
+  await expect(page).toHaveURL(/\/company\/people(\?|$)/, { timeout: 15000 })
+  await expect(page.locator('[data-test="people-table"]')).toBeVisible({ timeout: 10000 })
   await expect(page.locator('[data-test="people-add"]')).toBeVisible()
   await expect(page.locator('[data-test="emp-more"]')).toBeVisible()
-
-  // Filtres avancés (AppFilterPanel) repliés par défaut, révélés au clic (« Département » = filtres).
-  await expect(page.locator('[data-test="fp-toggle"]')).toBeVisible()
-  await expect(page.getByText('Département', { exact: true })).toHaveCount(0)
-  await page.locator('[data-test="fp-toggle"]').click()
-  await page.waitForTimeout(700)
-  await expect(page.getByText('Département', { exact: true }).first()).toBeVisible()
+  await expect(page.locator('[data-test="people-filter-employment_status"]')).toBeVisible()
 
   // Recherche fonctionnelle (déclenche un fetch).
   const [resp] = await Promise.all([
-    page.waitForResponse(r => r.url().includes('/workforce/employees') && r.url().includes('search='), { timeout: 10000 }).catch(() => null),
-    page.locator('[data-test="fp-search"] input').fill('Thomas'),
+    page.waitForResponse(r => r.url().includes('/company/people') && r.url().includes('search='), { timeout: 10000 }).catch(() => null),
+    page.locator('[data-test="people-search"] input').fill('Thomas'),
   ])
   expect(resp, 'la recherche déclenche un appel serveur').not.toBeNull()
 

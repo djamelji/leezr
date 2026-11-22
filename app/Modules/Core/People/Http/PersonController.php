@@ -28,7 +28,7 @@ class PersonController extends Controller
         /** @var Company $company */
         $company = $request->attributes->get('company');
 
-        $filters = $request->only(['search', 'employment_status', 'access_state', 'department', 'job_role', 'attention', 'role_id', 'sort_by', 'sort_dir']); // ADR-858 : poste + « à traiter »
+        $filters = $request->only(['search', 'employment_status', 'access_state', 'department', 'job_role', 'contract_type', 'manager', 'attention', 'role_id', 'sort_by', 'sort_dir']); // ADR-858 : poste + « à traiter » ; ADR-864 : contrat, responsable
 
         return response()->json(PeopleListReadModel::list(
             $company,

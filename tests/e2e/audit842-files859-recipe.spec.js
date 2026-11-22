@@ -295,7 +295,8 @@ test('Droits RH limités, règles par rôle, isolation, anciennes interfaces et 
   await shot(page, '4-modules-menu')
 
   // old URLs still lead to the right place
-  for (const [from, to] of [['/company/members', /\/company\/people/], ['/company/roles', /\/company\/people\/roles/], ['/company/people?tab=hr', /\/company\/people\/hr/]]) {
+  // ADR-864 : one Personnes interface — the former HR view (?tab=hr, /people/hr) lands on Personnes itself
+  for (const [from, to] of [['/company/members', /\/company\/people/], ['/company/roles', /\/company\/people\/roles/], ['/company/people?tab=hr', /\/company\/people(\?|$)/], ['/company/people/hr', /\/company\/people(\?|$)/]]) {
     await page.goto(from, { waitUntil: 'networkidle' })
     await expect(page).toHaveURL(to)
   }

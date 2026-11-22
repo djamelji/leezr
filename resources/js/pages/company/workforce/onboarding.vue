@@ -261,7 +261,7 @@ onMounted(load)
             <VBtn
               color="primary"
               prepend-icon="tabler-user-plus"
-              @click="go('/company/people/hr')"
+              @click="go('/company/people')"
             >
               {{ t('workforceOnboarding.addEmployee') }}
             </VBtn>

@@ -6,16 +6,14 @@ import { apiRequest, loginCompany } from './helpers'
 import { createRun } from './run-ledger.js'
 import fs from 'node:fs'
 
-// ADR-831 (D-21 bis) — /company/workforce/employees redirects to Équipe › Gestion RH (/company/people/hr, ADR-802) :
+// ADR-831 (D-21 bis) / ADR-864 — /company/workforce/employees redirects to Personnes (/company/people, HR tools included) :
 // same list, filters (server-side, URL-synced), guided import, export and bulk actions. Since ADR-817 the
 // advanced filters sit behind the « Filtres » toggle (AppFilterPanel) and import/export in the « ⋯ » menu.
 // Screenshots go to the test output dir ; the imported employee is recorded in the run ledger.
 const run = createRun('wg2-employees')
 test.afterAll(() => { console.log('teardown', JSON.stringify(run.teardown())) })
-const openFilters = async page => {
-  await page.locator('[data-test="fp-toggle"]').click()
-  await page.waitForTimeout(400)
-}
+// ADR-864 : the list is Personnes (/company/people) ; its filters are always visible (no toggle any more).
+const openFilters = async page => { await page.waitForTimeout(200) }
 const openMore = async (page, item) => {
   await page.locator('[data-test="emp-more"]').click()
   await page.locator(`[data-test="emp-${item}"]`).click()
@@ -75,7 +73,7 @@ test('guided import: file → mapping → preview (dry-run) → confirm → crea
   await page.getByRole('button', { name: /Fermer|Close/ }).click()
 
   // 4. Le collaborateur importé est retrouvable par recherche.
-  const search = page.locator('[data-test="fp-search"] input').first()
+  const search = page.locator('[data-test="people-search"] input').first()
   await search.fill(ref)
   await page.waitForTimeout(800)
   await expect(page.locator('.v-data-table tbody').getByText(run.name('Import'))).toBeVisible({ timeout: 8000 })

@@ -59,7 +59,7 @@ test('capture responsive (mobile 390 / tablette 768) sur écrans corrigés', asy
     await page.screenshot({ path: shot(`audit-leave-${tag}.png`), fullPage: false })
     await page.goto('/company/workforce/employees', { waitUntil: 'networkidle' })
     // ADR-831 (D-21 bis) — the HR list (Équipe › Gestion RH) renders cards below md : open the first row either way.
-    await page.locator('[data-test^="emp-row-"]').first().click()
+    await page.locator('[data-test^="people-row-"]').first().click() // ADR-864 : Personnes
     await page.waitForTimeout(700)
     await page.screenshot({ path: shot(`audit-fiche-${tag}.png`), fullPage: false })
   }

@@ -7,7 +7,7 @@ definePage({ meta: { module: 'core.members', anyPermission: ['members.view', 'wo
 
 const route = useRoute()
 const router = useRouter()
-const legacy = { hr: 'company-people-hr', roles: 'company-people-roles' }[route.query.tab]
+const legacy = { roles: 'company-people-roles' }[route.query.tab] // ADR-864 : ?tab=hr = Personnes itself
 if (legacy) {
   const { tab: _, ...query } = route.query
 
