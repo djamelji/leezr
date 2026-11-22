@@ -1,4 +1,5 @@
 <script setup>
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 // ADR-817 (L1) — fiche d'un POSTE MÉTIER : ce que fait la personne et ce qui est attendu d'elle.
 // Les exigences viennent du registre des exigences (éditeur partagé) ; la « reprise » montre ce que les
 // RÔLES D'ACCÈS imposent aujourd'hui aux personnes de ce poste, à adopter explicitement — jamais automatiquement.
@@ -53,6 +54,7 @@ const startEdit = async () => {
 const ACTIVITIES = ['driving', 'dispatching', 'management']
 const activities = computed(() => position.value?.metadata?.activities || [])
 const savingActivity = ref(null)
+watchEffect(() => { if (position.value) document.title = `${position.value.title} · ${t('positions.back')} · Leezr` })
 const toggleActivity = async (key, on) => {
   savingActivity.value = key
   try {
@@ -182,16 +184,6 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
 
 <template>
   <div>
-    <RouterLink
-      to="/company/workforce/organization/positions"
-      class="text-body-2 d-inline-flex align-center gap-1 mb-3"
-    >
-      <VIcon
-        icon="tabler-arrow-left"
-        size="16"
-      />{{ t('positions.back') }}
-    </RouterLink>
-
     <VAlert
       v-if="notFound"
       type="warning"
@@ -202,61 +194,66 @@ const STATUS_TONE = { new: 'primary', partial: 'warning', configured: 'success',
     />
 
     <template v-else-if="position">
-      <div class="d-flex flex-wrap align-center gap-3 mb-1">
-        <VAvatar
-          color="primary"
-          variant="tonal"
-          rounded
-          size="44"
-        >
-          <VIcon icon="tabler-briefcase" />
-        </VAvatar>
-        <div class="flex-grow-1">
-          <h4 class="text-h4">
-            {{ position.title }}
-          </h4>
-          <div class="d-flex flex-wrap gap-2 mt-1">
-            <VChip
-              v-if="position.department?.name"
-              size="small"
-              label
-              color="info"
-              variant="tonal"
-              prepend-icon="tabler-sitemap"
-            >
-              {{ position.department.name }}
-            </VChip>
-            <VChip
-              v-if="position.level"
-              size="small"
-              label
-              variant="tonal"
-            >
-              {{ position.level }}
-            </VChip>
-            <VChip
-              size="small"
-              label
-              variant="tonal"
-              prepend-icon="tabler-users"
-            >
-              {{ t('positions.peopleCount', { n: position.employees_count ?? 0 }) }}
-            </VChip>
-          </div>
-        </div>
-        <VBtn
+      <!-- ADR-861 (L7.8) : shared page header — way back, chips under the title, edit as the page action -->
+      <AppPageHeader
+        :back="{ to: '/company/workforce/organization/positions', label: t('positions.back') }"
+        :title="position.title"
+        :description="t('positions.subtitle')"
+        data-test="position-header"
+      >
+        <template #meta>
+          <VChip
+            v-if="position.department?.name"
+            size="small"
+            label
+            color="info"
+            variant="tonal"
+            prepend-icon="tabler-sitemap"
+          >
+            {{ position.department.name }}
+          </VChip>
+          <VChip
+            v-if="position.level"
+            size="small"
+            label
+            variant="tonal"
+          >
+            {{ position.level }}
+          </VChip>
+          <VChip
+            size="small"
+            label
+            variant="tonal"
+            prepend-icon="tabler-users"
+          >
+            {{ t('positions.peopleCount', { n: position.employees_count ?? 0 }) }}
+          </VChip>
+          <VChip
+            v-for="a in activities"
+            :key="a"
+            size="small"
+            label
+            color="primary"
+            variant="tonal"
+            prepend-icon="tabler-steering-wheel"
+          >
+            {{ t(`l7.activity.${a}`) }}
+          </VChip>
+        </template>
+        <template
           v-if="canEditInfo && tab === 'overview' && !editing"
-          variant="tonal"
-          prepend-icon="tabler-edit"
-          data-test="position-edit"
-          @click="startEdit"
+          #actions
         >
-          {{ t('common.edit') }}
-        </VBtn>
-      </div>
-      <p class="text-body-2 text-medium-emphasis mb-4">
-        {{ t('positions.subtitle') }}
-      </p>
+          <VBtn
+            variant="tonal"
+            prepend-icon="tabler-edit"
+            data-test="position-edit"
+            @click="startEdit"
+          >
+            {{ t('common.edit') }}
+          </VBtn>
+        </template>
+      </AppPageHeader>
 
       <VTabs
         v-model="tab"

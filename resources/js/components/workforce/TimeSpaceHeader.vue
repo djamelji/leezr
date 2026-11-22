@@ -10,6 +10,7 @@ import { useCompanyPermissionContext } from '@/composables/useCompanyPermissionC
 import { usePersonalSpaceStore } from '@/modules/company/me/personal-space.store'
 import { useSettingsEntry } from '@/composables/useSettingsEntry'
 import TimeExportDialog from '@/components/workforce/TimeExportDialog.vue'
+import AppPageHeader from '@/components/app/AppPageHeader.vue'
 
 const props = defineProps({
   active: { type: String, required: true }, // planning | time | leave | me
@@ -59,30 +60,26 @@ const views = computed(() => [
     show: space.can('time_clock'),
   },
 ].filter(v => v.show || v.key === props.active))
+
+// ADR-861 (L7.8) — the four views no longer share one bare title : « Planning & temps » becomes the family line,
+// each view gets its own title, sentence and browser-tab title (same pattern as Billing / Settings / Documents).
+const pageTitle = computed(() => (props.active === 'me' ? t('timeSpace.meTitle') : t(`timeSpace.views.${props.active}`)))
+watchEffect(() => { if (!props.bare) document.title = `${pageTitle.value} · ${t('timeSpace.title')} · Leezr` })
 </script>
 
 <template>
   <div class="time-space-header mb-5">
-    <div class="d-flex align-center flex-wrap gap-3 mb-3">
-      <div
-        v-if="!bare"
-        class="min-w-0 flex-grow-1"
-      >
-        <!-- ADR-823 : « Mon activité » pour l'espace personnel (le titre collectif « Planning & temps » prêtait à confusion) -->
-        <h4 class="text-h4">
-          {{ active === 'me' ? t('timeSpace.meTitle') : t('timeSpace.title') }}
-        </h4>
-        <p
-          v-if="subtitle && !smAndDown"
-          class="text-body-2 text-medium-emphasis mb-0"
-        >
-          {{ subtitle }}
-        </p>
-      </div>
-      <VSpacer v-else />
-      <div class="d-flex align-center flex-wrap gap-2">
+    <AppPageHeader
+      v-if="!bare"
+      :eyebrow="t('timeSpace.title')"
+      :title="pageTitle"
+      :description="smAndDown ? '' : subtitle"
+      class="time-space-header__head"
+      data-test="time-space-header"
+    >
+      <template #actions>
         <VBtn
-          v-if="preferencesTo && !bare && !smAndDown"
+          v-if="preferencesTo && !smAndDown"
           :to="preferencesTo"
           variant="text"
           color="secondary"
@@ -92,7 +89,7 @@ const views = computed(() => [
           {{ t('timeSpace.preferences') }}
         </VBtn>
         <VBtn
-          v-if="canExport && !bare"
+          v-if="canExport"
           variant="tonal"
           color="primary"
           prepend-icon="tabler-file-export"
@@ -102,7 +99,13 @@ const views = computed(() => [
           {{ t('timeExport.button') }}
         </VBtn>
         <slot name="actions" />
-      </div>
+      </template>
+    </AppPageHeader>
+    <div
+      v-else
+      class="d-flex align-center justify-end flex-wrap gap-2 mb-3"
+    >
+      <slot name="actions" />
     </div>
     <VTabs
       v-if="!bare && views.length > 1"
@@ -143,6 +146,7 @@ const views = computed(() => [
 </template>
 
 <style scoped>
+.time-space-header__head { margin-block-end: 16px; }
 .time-space-header :deep(.v-tab) { min-inline-size: 0; padding-inline: 8px; }
 .time-space-header :deep(.v-slide-group__prev),
 .time-space-header :deep(.v-slide-group__next) { display: none; }

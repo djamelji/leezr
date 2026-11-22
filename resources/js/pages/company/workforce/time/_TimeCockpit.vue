@@ -134,7 +134,7 @@ const submitCorrect = async () => {
 
 <template>
   <div>
-    <!-- Filtres -->
+    <!-- Filtres (ADR-861 L7.8 : four labelled fields on one line, aligned) -->
     <VCard class="mb-4">
       <VCardText>
         <VRow>
@@ -150,7 +150,7 @@ const submitCorrect = async () => {
             <AppSelect
               v-model="department"
               :items="departmentOptions"
-              :placeholder="t('employees.filters.department')"
+              :label="t('employees.filters.department')"
               clearable
               density="compact"
             />
@@ -162,7 +162,7 @@ const submitCorrect = async () => {
             <AppSelect
               v-model="statusFilter"
               :items="statusOptions"
-              :placeholder="t('timeCockpit.status.label')"
+              :label="t('timeCockpit.status.label')"
               clearable
               density="compact"
             />

@@ -1,10 +1,13 @@
 <script setup>
+import AppResponsiveDataView from '@/core/components/AppResponsiveDataView.vue'
+import AppSectionNavigation from '@/core/components/AppSectionNavigation.vue'
 import { useLeavesStore } from '@/modules/company/workforce/leaves.store'
 import { useEmployeesStore } from '@/modules/company/workforce/employees.store'
 import { formatDays, formatMinutes, daysToHundredths, hundredthsToDays } from '@/utils/workUnits'
 import TimeSpaceHeader from '@/components/workforce/TimeSpaceHeader.vue'
 import { useDisplay } from 'vuetify'
 import { useAppToast } from '@/composables/useAppToast'
+import { useCan } from '@/composables/useCan'
 import StatusChip from '@/core/components/StatusChip.vue'
 import { $api } from '@/utils/api'
 import EmployeePicker from '@/components/workforce/EmployeePicker.vue'
@@ -17,6 +20,7 @@ definePage({ name: 'company-workforce-leave', meta: { module: 'workforce_leave',
 const { t, locale } = useI18n()
 const { width: viewportWidth } = useDisplay()
 const { toast } = useAppToast()
+const { can } = useCan()
 const store = useLeavesStore()
 const employeesStore = useEmployeesStore()
 
@@ -76,10 +80,10 @@ const statusOptions = [
 
 const headers = computed(() => [
   { title: t('leaves.columns.employee'), key: 'employee', sortable: false },
-  { title: t('leaves.columns.type'), key: 'leave_type', sortable: false, width: 160 },
-  { title: t('leaves.columns.dates'), key: 'dates', sortable: true, width: 200 },
-  { title: t('leaves.columns.duration'), key: 'days_count_hundredths', sortable: true, width: 100 },
-  { title: t('leaves.columns.status'), key: 'status', sortable: true, width: 120 },
+  { title: t('leaves.columns.type'), key: 'leave_type', sortable: false, width: 160, priority: 'important' },
+  { title: t('leaves.columns.dates'), key: 'dates', sortable: true, width: 200, priority: 'essential' },
+  { title: t('leaves.columns.duration'), key: 'days_count_hundredths', sortable: true, width: 100, priority: 'secondary' },
+  { title: t('leaves.columns.status'), key: 'status', sortable: true, width: 120, priority: 'essential' },
   { title: '', key: 'actions', sortable: false, width: 120 },
 ])
 
@@ -560,6 +564,20 @@ watch(activeTab, tab => {
     fetchAllLeaveTypes()
   }
 })
+
+// ADR-861 (L7.8) — leave sections (same four, same order)
+const leaveSections = computed(() => [
+  { value: 'requests', label: t('leaves.tabs.requests'), icon: 'tabler-list' },
+  { value: 'calendar', label: t('leaves.tabs.calendar'), icon: 'tabler-calendar' },
+  { value: 'balances', label: t('leaves.tabs.balances'), icon: 'tabler-chart-bar' },
+  { value: 'config', label: t('leaves.tabs.config'), icon: 'tabler-settings' },
+])
+// ADR-861 (L7.8) — the actions a row offers on a phone (same rules as the desktop buttons : approve/reject need the right)
+const rowActions = item => [
+  item.status === 'pending' && can('workforce.leave_approve') && { key: 'approve', icon: 'tabler-check', color: 'success', label: t('leaves.actions.approve') },
+  item.status === 'pending' && can('workforce.leave_approve') && { key: 'reject', icon: 'tabler-x', color: 'error', label: t('leaves.actions.reject') },
+  (item.status === 'pending' || item.status === 'approved') && { key: 'cancel', icon: 'tabler-ban', color: 'secondary', label: t('leaves.actions.cancel') },
+].filter(Boolean)
 </script>
 
 <template>
@@ -593,40 +611,13 @@ watch(activeTab, tab => {
       </template>
     </TimeSpaceHeader>
 
-    <!-- Tabs -->
-    <VTabs
+    <!-- ADR-861 (L7.8) : the same section navigation as « Temps & pointages » (was a second pill bar under the views) -->
+    <AppSectionNavigation
       v-model="activeTab"
-      class="v-tabs-pill mb-6"
-    >
-      <VTab value="requests">
-        <VIcon
-          icon="tabler-list"
-          class="me-2"
-        />
-        {{ $t('leaves.tabs.requests') }}
-      </VTab>
-      <VTab value="calendar">
-        <VIcon
-          icon="tabler-calendar"
-          class="me-2"
-        />
-        {{ $t('leaves.tabs.calendar') }}
-      </VTab>
-      <VTab value="balances">
-        <VIcon
-          icon="tabler-chart-bar"
-          class="me-2"
-        />
-        {{ $t('leaves.tabs.balances') }}
-      </VTab>
-      <VTab value="config">
-        <VIcon
-          icon="tabler-settings"
-          class="me-2"
-        />
-        {{ $t('leaves.tabs.config') }}
-      </VTab>
-    </VTabs>
+      :sections="leaveSections"
+      class="mb-6"
+      data-test="leave-sections"
+    />
 
     <VWindow v-model="activeTab">
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -713,14 +704,50 @@ watch(activeTab, tab => {
             </VRow>
           </VCardText>
 
-          <VDataTableServer
+          <!-- ADR-861 (L7.8) : table on desktop, compact touch list on a phone (was a table scrolling sideways) -->
+          <AppResponsiveDataView
             v-model:options="options"
             :headers="headers"
             :items="store.leaveRequests"
             :items-length="store.totalRequests"
             :loading="loading"
-            class="text-no-wrap"
+            data-test="leave-requests"
           >
+            <template #mobile-item="{ item }">
+              <div class="d-flex align-center justify-space-between gap-2">
+                <span class="font-weight-medium text-truncate">{{ item.employee?.first_name }} {{ item.employee?.last_name }}</span>
+                <StatusChip
+                  :status="item.status"
+                  domain="leave"
+                  size="x-small"
+                >
+                  {{ $t(`workforce.statuses.leave.${item.status}`) }}
+                </StatusChip>
+              </div>
+              <div class="text-caption text-medium-emphasis mt-1">
+                {{ item.leave_type?.name || '\u2014' }} · {{ formatDate(item.date_from) }} → {{ formatDate(item.date_to) }} · {{ formatDuration(item.days_count_hundredths) }}
+              </div>
+            </template>
+            <template #mobile-append="{ item }">
+              <div class="d-flex">
+                <VBtn
+                  v-for="a in rowActions(item)"
+                  :key="a.key"
+                  icon
+                  variant="text"
+                  size="small"
+                  :color="a.color"
+                  :title="a.label"
+                  :aria-label="a.label"
+                  @click.stop="openConfirm(a.key, item)"
+                >
+                  <VIcon
+                    :icon="a.icon"
+                    size="18"
+                  />
+                </VBtn>
+              </div>
+            </template>
             <!-- Employee -->
             <template #item.employee="{ item }">
               <div class="d-flex align-center gap-3 py-2">
@@ -851,7 +878,7 @@ watch(activeTab, tab => {
                 </VBtn>
               </div>
             </template>
-          </VDataTableServer>
+          </AppResponsiveDataView>
         </VCard>
       </VWindowItem>
 
